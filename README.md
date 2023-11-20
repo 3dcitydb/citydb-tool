@@ -6,7 +6,7 @@ The citydb-tool is licensed under the [Apache License, Version 2.0](http://www.a
 See the `LICENSE` file for more details.
 
 ## Latest release
-The latest stable release of the citydb-tool is `6.0.0-beta.1`.
+The latest stable release of the citydb-tool is `0.5-beta`.
 
 ## Contributing
 * To file bugs found in the software create a GitHub issue.
