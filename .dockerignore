@@ -1,0 +1,21 @@
+# Git and GitHub
+.github/
+.git/
+.gitignore
+.gitattributes
+
+# Gradle
+.gradle/
+**/build/
+
+# Docker
+.dockerignore
+Dockerfile*
+
+# Unused resources
+resources/3dcitydb
+resources/javadoc
+resources/license
+resources/samples
+LICENSE
+*.md
