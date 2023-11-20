@@ -6,14 +6,14 @@ The citydb-tool is licensed under the [Apache License, Version 2.0](http://www.a
 See the `LICENSE` file for more details.
 
 ## Latest release
-The latest stable release of the citydb-tool is `6.0.0-rc.1`.
+The latest stable release of the citydb-tool is `6.0.0-beta.1`.
 
 ## Contributing
 * To file bugs found in the software create a GitHub issue.
 * To contribute code for fixing filed issues create a pull request with the issue id.
 * To propose a new feature create a GitHub issue and open a discussion.
 
-## Using citydb-tools
+## Using
 Download and unzip the latest release or [build](https://github.com/3dcitydb/citydb-tool#building) the program from
 source. Afterwards, open a shell environment and run the `citydb` script from the program folder to launch the
 program.
