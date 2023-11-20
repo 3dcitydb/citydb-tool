@@ -1,0 +1,71 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id 'application'
+}
+
+dependencies {
+    api project(':citydb-io')
+    api project(':citydb-io-citygml')
+    api project(':citydb-logging')
+    api project(':citydb-database')
+    api project(':citydb-operation')
+    api project(':citydb-database-postgres')
+    api 'info.picocli:picocli:4.7.5'
+}
+
+processResources {
+    outputs.upToDateWhen { false }
+    filteringCharset = 'ISO-8859-1'
+    filesMatching('**/application.properties') {
+        filter(ReplaceTokens, tokens: [
+                name: project.appName,
+                version: project.version,
+                copyrightYear: project.appCopyrightYear,
+                vendor: project.vendorName
+        ])
+    }
+}
+
+application {
+    mainModule = 'org.citydb.cli'
+    mainClass = 'org.citydb.cli.Launcher'
+    applicationName = project.appCliCommand
+    executableDir = ''
+
+    startScripts {
+        doLast {
+            def windows = getWindowsScript()
+            def unix = getUnixScript()
+            windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
+                    .replaceFirst(' -classpath "%CLASSPATH%" ', '')
+            unix.text = unix.text.replaceFirst('\nAPP_HOME=.*', '$0\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
+                    .replaceFirst('-classpath "\\$CLASSPATH"', '')
+        }
+    }
+}
+
+distributions {
+    main {
+        distributionBaseName = project.appDistName
+        contents {
+            into('license') {
+                from "$rootDir/resources/license/APACHE-2.0.txt"
+                from processLicense
+            }
+            into('3dcitydb') {
+                from "$rootDir/resources/3dcitydb"
+            }
+            into('samples') {
+                from "$rootDir/resources/samples"
+            }
+        }
+    }
+}
+
+tasks.register('buildBundle', Zip) {
+    dependsOn installDist
+    from "$projectDir/build/install/$project.appDistName"
+    destinationDirectory = distZip.destinationDirectory.get()
+    archiveFileName = project.appDistName + '-' + project.version + '.zip'
+}

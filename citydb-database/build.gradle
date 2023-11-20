@@ -1,0 +1,6 @@
+dependencies {
+    api project(':citydb-core')
+    api project(':citydb-logging')
+    api project(':citydb-model')
+    implementation 'org.apache.tomcat:tomcat-jdbc:10.1.13'
+}

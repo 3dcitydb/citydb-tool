@@ -1,0 +1,17 @@
+ext {
+    date = new Date()
+
+    appName = '3D City Database Command-Line Tool'
+    appDistName = '3DCityDB-Command-Line-Tool'
+    appCliCommand = 'citydb'
+    appDescription = 'Command-line tool for the 3D City Database'
+    appWebsiteUrl = 'https://github.com/3dcitydb'
+    appGitHubUrl = 'https://github.com/3dcitydb/importer-exporter'
+    appGitConnection = appGitHubUrl + '.git'
+    appIssueTrackerUrl = 'https://github.com/3dcitydb/importer-exporter/issues'
+    appCopyrightYear = '2022-' + date.format('yyyy')
+
+    vendorName = 'virtualcitysystems GmbH'
+    vendorCountry = 'Germany'
+    vendorWebsiteUrl = 'https://vc.systems'
+}

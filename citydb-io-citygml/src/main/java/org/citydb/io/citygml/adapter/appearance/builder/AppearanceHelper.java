@@ -1,0 +1,286 @@
+/*
+ * citydb-tool - Command-line tool for the 3D City Database
+ * https://www.3dcitydb.org/
+ *
+ * Copyright 2022-2023
+ * Virtual City Systems, Germany
+ * https://vc.systems/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.citydb.io.citygml.adapter.appearance.builder;
+
+import org.citydb.io.citygml.builder.ModelBuildException;
+import org.citydb.io.citygml.reader.ModelBuilderHelper;
+import org.citydb.model.appearance.GeoreferencedTexture;
+import org.citydb.model.appearance.ParameterizedTexture;
+import org.citydb.model.appearance.X3DMaterial;
+import org.citydb.model.appearance.*;
+import org.citydb.model.common.Child;
+import org.citydb.model.geometry.LinearRing;
+import org.citydb.model.geometry.Polygon;
+import org.citydb.model.geometry.Surface;
+import org.citygml4j.core.model.appearance.Appearance;
+import org.citygml4j.core.model.appearance.*;
+import org.citygml4j.core.model.core.AbstractAppearance;
+import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.gml.model.GMLObject;
+import org.xmlobjects.gml.model.feature.FeatureProperty;
+import org.xmlobjects.gml.model.geometry.AbstractGeometry;
+import org.xmlobjects.gml.model.geometry.GeometryProperty;
+import org.xmlobjects.gml.model.geometry.primitives.AbstractSurfacePatch;
+import org.xmlobjects.gml.visitor.GeometryWalker;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+public class AppearanceHelper {
+    private final ModelBuilderHelper helper;
+    private final AppearanceBuilder builder;
+    private final AppearanceProcessor processor = new AppearanceProcessor();
+    private final Map<AbstractSurfaceData, SurfaceData<?>> surfaceData = new IdentityHashMap<>();
+    private final Map<GMLObject, List<TargetContext<Surface<?>>>> surfaces = new IdentityHashMap<>();
+    private final Map<GMLObject, List<TargetContext<LinearRing>>> rings = new IdentityHashMap<>();
+
+    public AppearanceHelper(ModelBuilderHelper helper) {
+        this.helper = helper;
+        builder = new AppearanceBuilder(this);
+    }
+
+    public org.citydb.model.appearance.Appearance getAppearance(AbstractAppearance source) throws ModelBuildException {
+        if (source instanceof org.citygml4j.core.model.appearance.Appearance) {
+            org.citydb.model.appearance.Appearance target = org.citydb.model.appearance.Appearance.newInstance();
+            builder.build((Appearance) source, target, helper);
+            return target;
+        } else {
+            return null;
+        }
+    }
+
+    public void addSurfaceData(SurfaceData<?> surfaceData, AbstractSurfaceData source) {
+        if (surfaceData != null && source != null) {
+            this.surfaceData.put(source, surfaceData);
+        }
+    }
+
+    public void addTarget(Surface<?> surface, GMLObject source, GeometryProperty<?> parent) {
+        if (surface != null && source != null) {
+            surfaces.computeIfAbsent(source, v -> new ArrayList<>()).add(new TargetContext<>(surface, parent));
+        }
+    }
+
+    public void addTarget(LinearRing ring, AbstractGeometry source, GeometryProperty<?> parent) {
+        if (ring != null && source != null) {
+            rings.computeIfAbsent(source, v -> new ArrayList<>()).add(new TargetContext<>(ring, parent));
+        }
+    }
+
+    public void processTargets(AbstractFeature feature) {
+        AppearanceCollector collector = new AppearanceCollector();
+        collector.collect(feature).forEach(processor::process);
+    }
+
+    public void reset() {
+        surfaceData.clear();
+        surfaces.clear();
+        rings.clear();
+    }
+
+    private static class AppearanceCollector extends ObjectWalker {
+        private final Map<Appearance, Set<GeometryProperty<?>>> appearances = new IdentityHashMap<>();
+
+        Map<Appearance, Set<GeometryProperty<?>>> collect(AbstractFeature feature) {
+            feature.accept(this);
+            return appearances;
+        }
+
+        @Override
+        public void visit(FeatureProperty<?> property) {
+            if (property.getObject() instanceof Appearance) {
+                Set<GeometryProperty<?>> contexts = Collections.newSetFromMap(new IdentityHashMap<>());
+                property.getParent(AbstractFeature.class).accept(new ObjectWalker() {
+                    @Override
+                    public void visit(GeometryProperty<?> property) {
+                        contexts.add(property);
+                        super.visit(property);
+                    }
+                });
+
+                appearances.put((Appearance) property.getObject(), contexts);
+            } else {
+                super.visit(property);
+            }
+        }
+    }
+
+    private class AppearanceProcessor extends ObjectWalker {
+        private Set<GeometryProperty<?>> contexts;
+
+        void process(Appearance appearance, Set<GeometryProperty<?>> contexts) {
+            this.contexts = contexts;
+            appearance.accept(this);
+            this.contexts = null;
+        }
+
+        @Override
+        public void visit(org.citygml4j.core.model.appearance.ParameterizedTexture texture) {
+            ParameterizedTexture target = getSurfaceData(texture, ParameterizedTexture.class);
+            if (target != null && texture.isSetTextureParameterizations()) {
+                for (TextureAssociationProperty property : texture.getTextureParameterizations()) {
+                    if (property != null
+                            && property.getObject() != null
+                            && property.getObject().getTarget() != null
+                            && property.getObject().getTextureParameterization() != null) {
+                        GeometryReference reference = property.getObject().getTarget();
+                        AbstractTextureParameterization parameterization = property.getObject()
+                                .getTextureParameterization().getObject();
+                        if (parameterization instanceof TexCoordList) {
+                            addMapping(reference, (TexCoordList) parameterization, target);
+                        } else if (parameterization instanceof TexCoordGen) {
+                            addMapping(reference, (TexCoordGen) parameterization, target);
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void visit(org.citygml4j.core.model.appearance.GeoreferencedTexture texture) {
+            GeoreferencedTexture target = getSurfaceData(texture, GeoreferencedTexture.class);
+            if (target != null && texture.isSetTargets()) {
+                texture.getTargets().forEach(reference -> getTargets(reference).forEach(target::addTarget));
+            }
+        }
+
+        @Override
+        public void visit(org.citygml4j.core.model.appearance.X3DMaterial material) {
+            X3DMaterial target = getSurfaceData(material, X3DMaterial.class);
+            if (target != null && material.isSetTargets()) {
+                material.getTargets().forEach(reference -> getTargets(reference).forEach(target::addTarget));
+            }
+        }
+
+        private void addMapping(GeometryReference reference, TexCoordList texCoordList, ParameterizedTexture target) {
+            if (texCoordList.isSetTextureCoordinates()) {
+                for (TextureCoordinates textureCoordinates : texCoordList.getTextureCoordinates()) {
+                    GMLObject source = textureCoordinates.getRing().isSetReferencedObject() ?
+                            textureCoordinates.getRing().getReferencedObject() :
+                            reference.getReferencedObject();
+
+                    rings.getOrDefault(source, Collections.emptyList()).stream()
+                            .filter(this::isValidContext)
+                            .map(TargetContext::getTarget)
+                            .forEach(ring -> target.addTextureCoordinates(ring,
+                                    createTextureCoordinates(textureCoordinates, ring)));
+                }
+            }
+        }
+
+        private void addMapping(GeometryReference reference, TexCoordGen texCoordGen, ParameterizedTexture target) {
+            if (texCoordGen.getWorldToTexture() != null) {
+                getTargets(reference).forEach(surface ->
+                        target.addWorldToTextureMapping(surface, texCoordGen.getWorldToTexture().toRowMajorList()));
+            }
+        }
+
+        private List<TextureCoordinate> createTextureCoordinates(TextureCoordinates textureCoordinates, LinearRing target) {
+            if (textureCoordinates.isSetValue()) {
+                List<Double> coordinates = textureCoordinates.getValue();
+                if (coordinates.size() % 2 != 0) {
+                    coordinates.add(0.0);
+                }
+
+                Polygon polygon = target.getParent(Polygon.class);
+                if (polygon != null && polygon.isReversed()) {
+                    for (int i = coordinates.size() - 2, j = 0; j < coordinates.size() / 2; i -= 2, j += 2) {
+                        double s = coordinates.get(j);
+                        double t = coordinates.get(j + 1);
+                        coordinates.set(j, coordinates.get(i));
+                        coordinates.set(j + 1, coordinates.get(i + 1));
+                        coordinates.set(i, s);
+                        coordinates.set(i + 1, t);
+                    }
+                }
+
+                return TextureCoordinate.of(coordinates);
+            } else {
+                return Collections.emptyList();
+            }
+        }
+
+        private <T extends SurfaceData<?>> T getSurfaceData(AbstractSurfaceData source, Class<T> type) {
+            SurfaceData<?> target = surfaceData.get(source);
+            return type.isInstance(target) ? type.cast(target) : null;
+        }
+
+        private List<Surface<?>> getTargets(GeometryReference reference) {
+            if (reference.isSetReferencedObject()) {
+                List<TargetContext<Surface<?>>> contexts = surfaces.get(reference.getReferencedObject());
+                if (contexts != null) {
+                    return contexts.stream()
+                            .filter(this::isValidContext)
+                            .map(TargetContext::getTarget)
+                            .collect(Collectors.toList());
+                } else {
+                    List<Surface<?>> targets = new ArrayList<>();
+                    reference.getReferencedObject().accept(new GeometryWalker() {
+                        @Override
+                        public void visit(AbstractGeometry geometry) {
+                            process(geometry);
+                        }
+
+                        @Override
+                        public void visit(AbstractSurfacePatch surfacePatch) {
+                            process(surfacePatch);
+                        }
+
+                        private void process(GMLObject geometry) {
+                            surfaces.getOrDefault(geometry, Collections.emptyList()).stream()
+                                    .filter(context -> isValidContext(context))
+                                    .map(TargetContext::getTarget)
+                                    .forEach(targets::add);
+                        }
+                    });
+
+                    return targets;
+                }
+            } else {
+                return Collections.emptyList();
+            }
+        }
+
+        private boolean isValidContext(TargetContext<?> context) {
+            return context.getParent() == null || contexts.contains(context.getParent());
+        }
+    }
+
+    private static class TargetContext<T extends Child> {
+        private final T target;
+        private final GeometryProperty<?> parent;
+
+        TargetContext(T target, GeometryProperty<?> parent) {
+            this.target = target;
+            this.parent = parent;
+        }
+
+        T getTarget() {
+            return target;
+        }
+
+        GeometryProperty<?> getParent() {
+            return parent;
+        }
+    }
+}

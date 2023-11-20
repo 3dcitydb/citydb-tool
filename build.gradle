@@ -1,0 +1,147 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
+plugins {
+    id 'org.gradlex.extra-java-module-info' version '1.+'
+}
+
+apply from: 'properties.gradle'
+
+version '6.0.0-rc.1'
+
+allprojects {
+    group 'org.citydb'
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+    apply plugin: 'org.gradlex.extra-java-module-info'
+
+    version parent.version
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(11)
+        }
+        compileJava {
+            options.javaModuleVersion = provider { project.version }
+            options.encoding = 'UTF-8'
+        }
+        withJavadocJar()
+        withSourcesJar()
+    }
+
+    repositories {
+        maven {
+            url 'https://repo.osgeo.org/repository/release'
+        }
+        maven {
+            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
+        maven {
+            url 'https://3dcitydb.org/maven'
+        }
+        mavenCentral()
+    }
+
+    dependencies {
+        testImplementation(platform('org.junit:junit-bom:5.9.2'))
+        testImplementation('org.junit.jupiter:junit-jupiter')
+    }
+
+    extraJavaModuleInfo {
+        module('tomcat-jdbc-10.1.13.jar', 'org.apache.tomcat.jdbc', '10.1.13') {
+            requires('java.sql')
+            requires('java.management')
+            requires('org.apache.tomcat.juli')
+            exports('org.apache.tomcat.jdbc.pool')
+        }
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+
+    task processLicense(type: Copy) {
+        from("$rootDir/resources/license/LICENSE.txt") {
+            filteringCharset = 'UTF-8'
+            filter(ReplaceTokens, tokens: [
+                    name: project.appName
+            ])
+        }
+        into "$projectDir/build/tmp/license"
+    }
+
+    javadoc {
+        options {
+            overview "$projectDir/build/tmp/javadoc/overview.html"
+            header "${project.name} ${project.version}"
+            bottom """
+                <a href="${appIssueTrackerUrl}">Report a bug or suggest an enhancement</a><br>
+                ${project.name} is open source and licensed under the <a target="_blank" href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.<br>
+                Official website and more information at: <a target="_blank" href="${project.appWebsiteUrl}">${project.appWebsiteUrl}</a><br>
+                Copyright &copy; ${project.appCopyrightYear}<br>
+                ${project.vendorName}, ${project.vendorCountry}<br>
+                <a target="_blank" href="${project.vendorWebsiteUrl}">${project.vendorWebsiteUrl}</a>
+                """.replaceAll("[\r|\n]+", "")
+            addStringOption('doctitle', project.name + ' - ' + project.version)
+            addStringOption('Xdoclint:none', '-quiet')
+        }
+
+        doFirst {
+            copy {
+                from("$rootDir/resources/javadoc/overview.html") {
+                    filteringCharset = 'UTF-8'
+                    filter(ReplaceTokens, tokens: [
+                            name: project.name,
+                            version: project.version,
+                            appName: project.appName,
+                    ])
+                }
+                into "$projectDir/build/tmp/javadoc"
+            }
+        }
+    }
+
+    jar {
+        manifest {
+            attributes('Implementation-Title': project.appName,
+                    'Implementation-Version': project.version,
+                    'Implementation-Vendor': project.vendorName
+            )
+        }
+        into('META-INF') {
+            from "$rootDir/resources/license/APACHE-2.0.txt"
+            from processLicense
+        }
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java
+                pom {
+                    name = project.name
+                    url = project.vendorWebsiteUrl
+                    scm {
+                        url = project.appGitHubUrl
+                        connection = 'scm:git:' + project.appGitConnection
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                url project.hasProperty('gitLab_maven_url') ? project.property('gitLab_maven_url') : System.getenv('GITLAB_MAVEN_URL')
+                name 'gitlab-maven'
+                credentials(HttpHeaderCredentials) {
+                    name = 'Private-Token'
+                    value = project.hasProperty('gitLab_private_token') ? project.property('gitLab_private_token') : System.getenv('GITLAB_PRIVATE_TOKEN')
+                }
+                authentication {
+                    header(HttpHeaderAuthentication)
+                }
+            }
+        }
+    }
+}
