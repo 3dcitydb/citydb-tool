@@ -84,3 +84,6 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ env.PLATFORMS }}
+    -
+      name: Image digest
+      run: echo ${{ steps.docker_build.outputs.digest }}
