@@ -5,11 +5,11 @@
 
 # Fetch & build stage #########################################################
 # ARGS
-ARG BUILDER_IMAGE_TAG='11-jdk-slim'
-ARG RUNTIME_IMAGE_TAG='11-slim'
+ARG BUILDER_IMAGE_TAG='11-jdk-jammy'
+ARG RUNTIME_IMAGE_TAG='11-jdk-jammy'
 
 # Base image
-FROM openjdk:${BUILDER_IMAGE_TAG} AS builder
+FROM eclipse-temurin:${BUILDER_IMAGE_TAG} AS builder
 
 # Copy source code
 WORKDIR /build
@@ -20,7 +20,7 @@ RUN chmod u+x ./gradlew && ./gradlew installDist
 
 # Runtime stage ###############################################################
 # Base image
-FROM openjdk:${RUNTIME_IMAGE_TAG} AS runtime
+FROM eclipse-temurin:${RUNTIME_IMAGE_TAG} AS runtime
 
 # Version info
 ARG CITYDB_TOOL_VERSION
@@ -41,9 +41,3 @@ USER 1000
 
 ENTRYPOINT ["citydb"]
 CMD ["--help"]
-
-# Labels ######################################################################
-LABEL maintainer="Bruno Willenborg"
-LABEL maintainer.email="b.willenborg(at)tum.de"
-LABEL maintainer.organization="Chair of Geoinformatics, Technical University of Munich (TUM)"
-LABEL source.repo="https://github.com/3dcitydb/importer-exporter"
