@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - docker
 env:
   IMAGE_NAME: citydb-tool
   PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
