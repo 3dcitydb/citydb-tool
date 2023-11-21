@@ -2,11 +2,9 @@ name: docker-build-push-edge
 
 on:
   workflow_dispatch:
-  pull_request:
   push:
     branches:
       - main
-      - docker
 env:
   IMAGE_NAME: citydb-tool
   PLATFORMS: linux/amd64,linux/arm64,linux/arm/v7
@@ -44,7 +42,6 @@ jobs:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
     -
       name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -53,7 +50,6 @@ jobs:
     -
       name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-
     -
       name: Extract metadata (tags, labels) for docker image
       id: meta
@@ -65,15 +61,15 @@ jobs:
         flavor: |
           latest=false
         tags: |
-          type=edge,branch=docker
+          type=edge,branch=main
         labels: |
           maintainer=Bruno Willenborg
           maintainer.email=b.willenborg(at)tum.de
           maintainer.organization=Chair of Geoinformatics, Technical University of Munich (TUM)
           org.opencontainers.image.authors=Bruno Willenborg
           org.opencontainers.image.vendor=3DCityDB Steering Committee
-          org.opencontainers.image.title=3D City Database Tool Docker image
-          org.opencontainers.image.description=Docker image for the 3D City Database Tool
+          org.opencontainers.image.title=3D City Database 5.0 CLI tool Docker image
+          org.opencontainers.image.description=3D City Database 5.0 CLI to import/export city model data and to run database operations
           org.opencontainers.image.url=https://github.com/3dcitydb/
           org.opencontainers.image.documentation=https://github.com/3dcitydb/citydb-tool
           org.opencontainers.image.source=https://github.com/3dcitydb/citydb-tool
