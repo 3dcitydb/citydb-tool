@@ -63,6 +63,8 @@ The citydb-tool can be run on any platform providing appropriate Java support.
 
 ## Docker
 
+[![Docker edge image build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/docker-build-push-edge.yml?label=edge&logo=docker)](https://github.com/users/3dcitydb/packages/container/package/citydb-tool)
+
 Currently, we offer an `edge` Docker image of the tool, which is built
 from the latest commit to the `main` branch. The image supports the most
 common architectures (`amd64`, `arm64`, `arm/v7`) and is available from
