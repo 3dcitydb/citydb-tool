@@ -1,3 +1,5 @@
+![Gradle build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/build-citydb-tool.yml?logo=Gradle&logoColor=white&style=flat-square)
+
 # citydb-tool
 
 3D City Database 5.0 CLI to import/export city model data and to run database operations
