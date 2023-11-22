@@ -1,4 +1,4 @@
-![Gradle build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/build-citydb-tool.yml?logo=Gradle&logoColor=white&style=flat-square)
+![Gradle build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/build-citydb-tool.yml?logo=Gradle&logoColor=white&style=flat-square) [![Docker edge image build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/docker-build-push-edge.yml?label=edge&logo=docker)](https://github.com/users/3dcitydb/packages/container/package/citydb-tool)
 
 # citydb-tool
 
@@ -64,8 +64,6 @@ the command you want to learn more about:
 The citydb-tool can be run on any platform providing appropriate Java support.
 
 ## Docker
-
-[![Docker edge image build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/docker-build-push-edge.yml?label=edge&logo=docker)](https://github.com/users/3dcitydb/packages/container/package/citydb-tool)
 
 Currently, we offer an `edge` Docker image of the tool, which is built
 from the latest commit to the `main` branch. The image supports the most
