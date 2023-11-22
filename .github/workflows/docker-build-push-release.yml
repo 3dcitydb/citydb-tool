@@ -58,7 +58,7 @@ jobs:
           ${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
           ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
         flavor: |
-          latest=$${{ !github.event.release.prerelease }}
+          latest=${{ !github.event.release.prerelease }}
         tags: |
           type=semver,pattern={{version}}
         labels: |
