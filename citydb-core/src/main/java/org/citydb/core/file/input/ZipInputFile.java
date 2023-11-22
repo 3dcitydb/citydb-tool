@@ -78,6 +78,14 @@ public class ZipInputFile extends InputFile {
     private FileSystem getFileSystem() {
         if (fileSystem == null) {
             try {
+                fileSystem = FileSystems.getFileSystem(fileURI);
+            } catch (Throwable e) {
+                //
+            }
+        }
+
+        if (fileSystem == null) {
+            try {
                 fileSystem = FileSystems.newFileSystem(fileURI, Collections.emptyMap());
             } catch (IOException e) {
                 throw new RuntimeException("Failed to open ZIP file " + getFile() + ".");
