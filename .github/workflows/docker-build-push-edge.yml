@@ -71,16 +71,19 @@ jobs:
           org.opencontainers.image.title=3D City Database 5.0 CLI tool Docker image
           org.opencontainers.image.description=3D City Database 5.0 CLI to import/export city model data and to run database operations
           org.opencontainers.image.url=https://github.com/3dcitydb/
-          org.opencontainers.image.documentation=https://github.com/3dcitydb/citydb-tool
+          org.opencontainers.image.documentation=https://github.com/3dcitydb/citydb-tool#docker
           org.opencontainers.image.source=https://github.com/3dcitydb/citydb-tool
     -
       name: Build and publish
       uses: docker/build-push-action@v5
+      id: docker_build
       with:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ env.PLATFORMS }}
+        build-args: |
+          CITYDB_TOOL_VERSION=${{ steps.short-sha.outputs.sha }}
     -
       name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
