@@ -29,12 +29,10 @@ ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 # Copy from builder
 COPY --from=builder /build/citydb-cli/build/install/3DCityDB-Command-Line-Tool /opt/citydb-tool
 
-# Run as non-root user
+# Run as non-root user, put start script in path and set permissions
 RUN groupadd --gid 1000 -r citydb-tool && \
-    useradd --uid 1000 --gid 1000 -d /data -m -r --no-log-init citydb-tool
-
-# Put start script in path and set permissions
-RUN ln -sf /opt/citydb-tool/citydb /usr/local/bin
+    useradd --uid 1000 --gid 1000 -d /data -m -r --no-log-init citydb-tool && \
+    ln -sf /opt/citydb-tool/citydb /usr/local/bin
 
 WORKDIR /data
 USER 1000
