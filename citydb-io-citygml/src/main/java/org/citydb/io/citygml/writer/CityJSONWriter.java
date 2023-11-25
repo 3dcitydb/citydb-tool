@@ -106,8 +106,13 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
             countLatch.increment();
             service.execute(() -> {
                 try {
-                    writer.writeCityObject(helpers.get().getTopLevelFeature(feature));
-                    result.complete(true);
+                    AbstractFeature converted = helpers.get().getTopLevelFeature(feature);
+                    if (converted != null) {
+                        writer.writeCityObject(converted);
+                        result.complete(true);
+                    } else {
+                        result.complete(false);
+                    }
                 } catch (Throwable e) {
                     shouldRun = false;
                     result.completeExceptionally(new WriteException("Failed to write feature.", e));
