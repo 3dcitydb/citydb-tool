@@ -59,11 +59,11 @@ public class DataTypeHelper {
         }
     }
 
-    public int getDataTypeId(Name name) {
+    public Integer getDataTypeId(Name name) {
         return dataTypesByName.get(name);
     }
 
-    public int getDataTypeId(String localName, String namespace) {
+    public Integer getDataTypeId(String localName, String namespace) {
         return getDataTypeId(Name.of(localName, namespace));
     }
 
