@@ -40,25 +40,25 @@ public class AppearancePropertyImporter extends PropertyImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, feature_id, parent_id, root_id, datatype_id, namespace_id, name, " +
+                "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
                 "val_appearance_id) " +
-                "values (" + String.join(",", Collections.nCopies(8, "?")) + ")";
+                "values (" + String.join(",", Collections.nCopies(7, "?")) + ")";
     }
 
     public PropertyDescriptor doImport(AppearanceProperty property, long featureId) throws ImportException, SQLException {
         long propertyId = nextSequenceValue(Sequence.PROPERTY);
-        return doImport(property, propertyId, propertyId, propertyId, featureId);
+        return doImport(property, propertyId, propertyId, featureId);
     }
 
-    PropertyDescriptor doImport(AppearanceProperty property, long parentId, long rootId, long featureId) throws ImportException, SQLException {
-        return doImport(property, nextSequenceValue(Sequence.PROPERTY), parentId, rootId, featureId);
+    PropertyDescriptor doImport(AppearanceProperty property, long parentId, long featureId) throws ImportException, SQLException {
+        return doImport(property, nextSequenceValue(Sequence.PROPERTY), parentId, featureId);
     }
 
-    PropertyDescriptor doImport(AppearanceProperty property, long propertyId, long parentId, long rootId, long featureId) throws ImportException, SQLException {
-        stmt.setLong(8, tableHelper.getOrCreateImporter(AppearanceImporter.class)
+    PropertyDescriptor doImport(AppearanceProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
+        stmt.setLong(7, tableHelper.getOrCreateImporter(AppearanceImporter.class)
                 .doImport(property.getObject(), featureId, AppearanceImporter.Type.FEATURE)
                 .getId());
 
-        return super.doImport(property, propertyId, parentId, rootId, featureId);
+        return super.doImport(property, propertyId, parentId, featureId);
     }
 }

@@ -63,8 +63,7 @@ public class PropertyExporter extends DatabaseExporter {
                     .setGenericContent(rs.getString("val_content"))
                     .setGenericContentMimeType(rs.getString("val_content_mime_type"))
                     .setDescriptor(PropertyDescriptor.of(rs.getLong("id"), featureId)
-                            .setParentId(rs.getLong("parent_id"))
-                            .setRootId(rs.getLong("root_id")));
+                            .setParentId(rs.getLong("parent_id")));
         } else {
             return null;
         }

@@ -26,7 +26,6 @@ import org.citydb.model.common.DatabaseDescriptor;
 public class PropertyDescriptor extends DatabaseDescriptor {
     private final long featureId;
     private long parentId;
-    private long rootId;
 
     private PropertyDescriptor(long id, long featureId) {
         super(id);
@@ -48,14 +47,5 @@ public class PropertyDescriptor extends DatabaseDescriptor {
 
     public long getParentId() {
         return parentId;
-    }
-
-    public PropertyDescriptor setRootId(long rootId) {
-        this.rootId = rootId;
-        return this;
-    }
-
-    public long getRootId() {
-        return rootId;
     }
 }

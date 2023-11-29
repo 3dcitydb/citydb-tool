@@ -45,41 +45,41 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, feature_id, parent_id, root_id, datatype_id, namespace_id, name, " +
+                "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
                 "val_lod, val_implicitgeom_id, val_implicitgeom_refpoint, val_array, " +
                 "val_reference_type) " +
-                "values (" + String.join(",", Collections.nCopies(12, "?")) + ")";
+                "values (" + String.join(",", Collections.nCopies(11, "?")) + ")";
     }
 
     public PropertyDescriptor doImport(ImplicitGeometryProperty property, long featureId) throws ImportException, SQLException {
         long propertyId = nextSequenceValue(Sequence.PROPERTY);
-        return doImport(property, propertyId, propertyId, propertyId, featureId);
+        return doImport(property, propertyId, propertyId, featureId);
     }
 
-    PropertyDescriptor doImport(ImplicitGeometryProperty property, long parentId, long rootId, long featureId) throws ImportException, SQLException {
-        return doImport(property, nextSequenceValue(Sequence.PROPERTY), parentId, rootId, featureId);
+    PropertyDescriptor doImport(ImplicitGeometryProperty property, long parentId, long featureId) throws ImportException, SQLException {
+        return doImport(property, nextSequenceValue(Sequence.PROPERTY), parentId, featureId);
     }
 
-    PropertyDescriptor doImport(ImplicitGeometryProperty property, long propertyId, long parentId, long rootId, long featureId) throws ImportException, SQLException {
-        stmt.setString(8, property.getLod().orElse(null));
+    PropertyDescriptor doImport(ImplicitGeometryProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
+        stmt.setString(7, property.getLod().orElse(null));
 
         ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
         if (implicitGeometry != null) {
-            stmt.setLong(9, tableHelper.getOrCreateImporter(ImplicitGeometryImporter.class)
+            stmt.setLong(8, tableHelper.getOrCreateImporter(ImplicitGeometryImporter.class)
                     .doImport(implicitGeometry, featureId));
-            stmt.setNull(12, Types.INTEGER);
+            stmt.setNull(11, Types.INTEGER);
         } else if (property.getReference().isPresent()) {
             Reference reference = property.getReference().get();
             cacheReference(CacheType.IMPLICIT_GEOMETRY, reference, propertyId);
-            stmt.setNull(9, Types.BIGINT);
-            stmt.setInt(12, reference.getType().getDatabaseValue());
+            stmt.setNull(8, Types.BIGINT);
+            stmt.setInt(11, reference.getType().getDatabaseValue());
         }
 
         Object referencePoint = getGeometry(property.getReferencePoint().orElse(null), true);
         if (referencePoint != null) {
-            stmt.setObject(10, referencePoint, adapter.getGeometryAdapter().getGeometrySQLType());
+            stmt.setObject(9, referencePoint, adapter.getGeometryAdapter().getGeometrySQLType());
         } else {
-            stmt.setNull(10, adapter.getGeometryAdapter().getGeometrySQLType(),
+            stmt.setNull(9, adapter.getGeometryAdapter().getGeometrySQLType(),
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 
@@ -88,11 +88,11 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
                 .map(JSONArray::toString)
                 .orElse(null);
         if (transformationMatrix != null) {
-            stmt.setObject(11, transformationMatrix, Types.OTHER);
+            stmt.setObject(10, transformationMatrix, Types.OTHER);
         } else {
-            stmt.setNull(11, Types.OTHER);
+            stmt.setNull(10, Types.OTHER);
         }
 
-        return super.doImport(property, propertyId, parentId, rootId, featureId);
+        return super.doImport(property, propertyId, parentId, featureId);
     }
 }

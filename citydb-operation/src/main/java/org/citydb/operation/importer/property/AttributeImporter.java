@@ -42,48 +42,48 @@ public class AttributeImporter extends PropertyImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, feature_id, parent_id, root_id, datatype_id, namespace_id, name, " +
+                "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
                 "val_int, val_double, val_string, val_timestamp, val_uri, val_codespace, val_uom, val_array, " +
                 "val_content, val_content_mime_type) " +
-                "values (" + String.join(",", Collections.nCopies(17, "?")) + ")";
+                "values (" + String.join(",", Collections.nCopies(16, "?")) + ")";
     }
 
     public PropertyDescriptor doImport(Attribute attribute, long featureId) throws ImportException, SQLException {
         long propertyId = nextSequenceValue(Sequence.PROPERTY);
-        return doImport(attribute, propertyId, propertyId, propertyId, featureId);
+        return doImport(attribute, propertyId, propertyId, featureId);
     }
 
-    PropertyDescriptor doImport(Attribute attribute, long parentId, long rootId, long featureId) throws ImportException, SQLException {
-        return doImport(attribute, nextSequenceValue(Sequence.PROPERTY), parentId, rootId, featureId);
+    PropertyDescriptor doImport(Attribute attribute, long parentId, long featureId) throws ImportException, SQLException {
+        return doImport(attribute, nextSequenceValue(Sequence.PROPERTY), parentId, featureId);
     }
 
-    private PropertyDescriptor doImport(Attribute attribute, long propertyId, long parentId, long rootId, long featureId) throws ImportException, SQLException {
+    private PropertyDescriptor doImport(Attribute attribute, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
         Long intValue = attribute.getIntValue().orElse(null);
         if (intValue != null) {
-            stmt.setLong(8, intValue);
+            stmt.setLong(7, intValue);
         } else {
-            stmt.setNull(8, Types.BIGINT);
+            stmt.setNull(7, Types.BIGINT);
         }
 
         Double doubleValue = attribute.getDoubleValue().orElse(null);
         if (doubleValue != null) {
-            stmt.setDouble(9, doubleValue);
+            stmt.setDouble(8, doubleValue);
         } else {
-            stmt.setNull(9, Types.DOUBLE);
+            stmt.setNull(8, Types.DOUBLE);
         }
 
-        stmt.setString(10, attribute.getStringValue().orElse(null));
+        stmt.setString(9, attribute.getStringValue().orElse(null));
 
         OffsetDateTime timestamp = attribute.getTimeStamp().orElse(null);
         if (timestamp != null) {
-            stmt.setObject(11, timestamp);
+            stmt.setObject(10, timestamp);
         } else {
-            stmt.setNull(11, Types.TIMESTAMP);
+            stmt.setNull(10, Types.TIMESTAMP);
         }
 
-        stmt.setString(12, attribute.getURI().orElse(null));
-        stmt.setString(13, attribute.getCodeSpace().orElse(null));
-        stmt.setString(14, attribute.getUom().orElse(null));
+        stmt.setString(11, attribute.getURI().orElse(null));
+        stmt.setString(12, attribute.getCodeSpace().orElse(null));
+        stmt.setString(13, attribute.getUom().orElse(null));
 
         String arrayValue = attribute.getArrayValue()
                 .map(array -> JSONArray.copyOf(array.getValues().stream()
@@ -91,35 +91,35 @@ public class AttributeImporter extends PropertyImporter {
                         .collect(Collectors.toList())).toString())
                 .orElse(null);
         if (arrayValue != null) {
-            stmt.setObject(15, arrayValue, Types.OTHER);
+            stmt.setObject(14, arrayValue, Types.OTHER);
         } else {
-            stmt.setNull(15, Types.OTHER);
+            stmt.setNull(14, Types.OTHER);
         }
 
-        stmt.setString(16, attribute.getGenericContent().orElse(null));
-        stmt.setString(17, attribute.getGenericContentMimeType().orElse(null));
+        stmt.setString(15, attribute.getGenericContent().orElse(null));
+        stmt.setString(16, attribute.getGenericContentMimeType().orElse(null));
 
-        PropertyDescriptor descriptor = super.doImport(attribute, propertyId, parentId, rootId, featureId);
+        PropertyDescriptor descriptor = super.doImport(attribute, propertyId, parentId, featureId);
 
         if (attribute.hasProperties()) {
             for (Property<?> property : attribute.getProperties().getAll()) {
                 if (property instanceof Attribute)  {
-                    doImport((Attribute) property, parentId, rootId, featureId);
+                    doImport((Attribute) property, parentId, featureId);
                 } else if (property instanceof FeatureProperty) {
                     tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
-                            .doImport((FeatureProperty) property, parentId, rootId, featureId);
+                            .doImport((FeatureProperty) property, parentId, featureId);
                 } else if (property instanceof GeometryProperty) {
                     tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
-                            .doImport((GeometryProperty) property, parentId, rootId, featureId);
+                            .doImport((GeometryProperty) property, parentId, featureId);
                 } else if (property instanceof ImplicitGeometryProperty) {
                     tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
-                            .doImport((ImplicitGeometryProperty) property, parentId, rootId, featureId);
+                            .doImport((ImplicitGeometryProperty) property, parentId, featureId);
                 } else if (property instanceof AppearanceProperty) {
                     tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
-                            .doImport((AppearanceProperty) property, parentId, rootId, featureId);
+                            .doImport((AppearanceProperty) property, parentId, featureId);
                 } else if (property instanceof AddressProperty) {
                     tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
-                            .doImport((AddressProperty) property, parentId, rootId, featureId);
+                            .doImport((AddressProperty) property, parentId, featureId);
                 }
             }
         }

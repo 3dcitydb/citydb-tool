@@ -44,34 +44,34 @@ public class AddressPropertyImporter extends PropertyImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, feature_id, parent_id, root_id, datatype_id, namespace_id, name, " +
+                "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
                 "val_address_id, val_reference_type) " +
-                "values (" + String.join(",", Collections.nCopies(9, "?")) + ")";
+                "values (" + String.join(",", Collections.nCopies(8, "?")) + ")";
     }
 
     public PropertyDescriptor doImport(AddressProperty property, long featureId) throws ImportException, SQLException {
         long propertyId = nextSequenceValue(Sequence.PROPERTY);
-        return doImport(property, propertyId, propertyId, propertyId, featureId);
+        return doImport(property, propertyId, propertyId, featureId);
     }
 
-    PropertyDescriptor doImport(AddressProperty property, long parentId, long rootId, long featureId) throws ImportException, SQLException {
-        return doImport(property, nextSequenceValue(Sequence.PROPERTY), parentId, rootId, featureId);
+    PropertyDescriptor doImport(AddressProperty property, long parentId, long featureId) throws ImportException, SQLException {
+        return doImport(property, nextSequenceValue(Sequence.PROPERTY), parentId, featureId);
     }
 
-    PropertyDescriptor doImport(AddressProperty property, long propertyId, long parentId, long rootId, long featureId) throws ImportException, SQLException {
+    PropertyDescriptor doImport(AddressProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
         Address address = property.getObject().orElse(null);
         if (address != null) {
-            stmt.setLong(8, tableHelper.getOrCreateImporter(AddressImporter.class)
+            stmt.setLong(7, tableHelper.getOrCreateImporter(AddressImporter.class)
                     .doImport(address)
                     .getId());
-            stmt.setNull(9, Types.INTEGER);
+            stmt.setNull(8, Types.INTEGER);
         } else if (property.getReference().isPresent()) {
             Reference reference = property.getReference().get();
             cacheReference(CacheType.ADDRESS, reference, propertyId);
-            stmt.setNull(8, Types.BIGINT);
-            stmt.setInt(9, reference.getType().getDatabaseValue());
+            stmt.setNull(7, Types.BIGINT);
+            stmt.setInt(8, reference.getType().getDatabaseValue());
         }
 
-        return super.doImport(property, propertyId, parentId, rootId, featureId);
+        return super.doImport(property, propertyId, parentId, featureId);
     }
 }

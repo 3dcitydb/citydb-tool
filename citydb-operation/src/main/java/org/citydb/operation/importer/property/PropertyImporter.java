@@ -37,7 +37,7 @@ public abstract class PropertyImporter extends DatabaseImporter {
         super(Table.PROPERTY, helper);
     }
 
-    PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long rootId, long featureId) throws ImportException, SQLException {
+    PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
         stmt.setLong(1, propertyId);
         stmt.setLong(2, featureId);
 
@@ -47,29 +47,26 @@ public abstract class PropertyImporter extends DatabaseImporter {
             stmt.setNull(3, Types.BIGINT);
         }
 
-        stmt.setLong(4, rootId);
-
         Integer dataTypeId = property.getDataType().map(dataTypeHelper::getDataTypeId).orElse(null);
         if (dataTypeId != null) {
-            stmt.setInt(5, dataTypeId);
+            stmt.setInt(4, dataTypeId);
         } else {
-            stmt.setNull(5, Types.INTEGER);
+            stmt.setNull(4, Types.INTEGER);
         }
 
         Integer namespaceId = namespaceHelper.getNamespaceId(property.getName().getNamespace());
         if (namespaceId != null) {
-            stmt.setInt(6, namespaceId);
+            stmt.setInt(5, namespaceId);
         } else {
-            stmt.setNull(6, Types.INTEGER);
+            stmt.setNull(5, Types.INTEGER);
         }
 
-        stmt.setString(7, property.getName().getLocalName());
+        stmt.setString(6, property.getName().getLocalName());
 
         addBatch();
 
         PropertyDescriptor descriptor = PropertyDescriptor.of(propertyId, featureId)
-                .setParentId(parentId != propertyId ? parentId : 0)
-                .setRootId(rootId);
+                .setParentId(parentId != propertyId ? parentId : 0);
 
         property.setDescriptor(descriptor);
         return descriptor;
