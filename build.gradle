@@ -6,7 +6,7 @@ plugins {
 
 apply from: 'properties.gradle'
 
-version '0.5-beta'
+version '0.6-beta'
 
 allprojects {
     group 'org.citydb'
