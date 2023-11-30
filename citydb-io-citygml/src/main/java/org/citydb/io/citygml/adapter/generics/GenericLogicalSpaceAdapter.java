@@ -3,7 +3,7 @@
  * https://www.3dcitydb.org/
  *
  * Copyright 2022-2023
- * Virtual City Systems, Germany
+ * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
