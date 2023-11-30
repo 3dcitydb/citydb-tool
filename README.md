@@ -11,7 +11,10 @@ See the `LICENSE` file for more details.
 
 ## Latest release
 
-The latest stable release of the citydb-tool is `0.5-beta`.
+The latest stable release of the citydb-tool is `0.6-beta`.
+
+Download the latest citygml-tools release as ZIP package
+[here](https://github.com/3dcitydb/citydb-tool/releases/latest).
 
 ## Contributing
 
@@ -23,9 +26,7 @@ The latest stable release of the citydb-tool is `0.5-beta`.
 
 Download and unzip the latest release or [build](https://github.com/3dcitydb/citydb-tool#building) the program from
 source. Afterwards, open a shell environment and run the `citydb` script from the program folder to launch the
-program.
-Another option is to use the
-[`citydb-tool` Docker image](https://github.com/3dcitydb/citydb-tool#docker).
+program. Another option is to use the citydb-tool [Docker image](https://github.com/3dcitydb/citydb-tool#docker).
 
 To show the help message and all available commands of the citydb-tool, simply type the following:
 
@@ -65,10 +66,8 @@ The citydb-tool can be run on any platform providing appropriate Java support.
 
 ## Docker
 
-Currently, we offer an `edge` Docker image of the tool, which is built
-from the latest commit to the `main` branch. The image supports the most
-common architectures (`amd64`, `arm64`, `arm/v7`) and is available from
-Dockerhub or Github packages.
+Currently, we offer an `edge` Docker image of the tool, which is built from the latest commit to the `main` branch.
+The image supports the most common architectures (`amd64`, `arm64`) and is available from Dockerhub or GitHub packages.
 
     docker pull 3dcitydb/citydb-tool:edge
     docker pull ghcr.io/3dcitydb/citydb-tool:edge
@@ -77,8 +76,8 @@ Dockerhub or Github packages.
 
 The Docker image exposes the commands of the `citydb-tool`, as described
 in the [usage section](https://github.com/3dcitydb/citydb-tool#usage).
-The environment variables listed below can be used to specify a
-3DCityDB v5 connection. To exchange data with the container, mount a host folder to `/data` inside the container.
+The environment variables listed below can be used to specify a 3DCityDB v5 connection. To exchange data with the
+container, mount a host folder to `/data` inside the container.
 
     docker run --rm --name citydb-tool [-i -t] \
         [-e CITYDB_HOST=the.host.de] \
@@ -92,8 +91,8 @@ The environment variables listed below can be used to specify a
 
 ## Building
 
-The citydb-tool uses [Gradle](https://gradle.org/) as build system. To build the program from source, clone the
-repository to your local machine and run the following command from the root of the repository.
+The citydb-tool uses [Gradle](https://gradle.org/) as build system. To build the program from source, clone the repository to your
+local machine and run the following command from the root of the repository.
 
     > gradlew installDist
 
