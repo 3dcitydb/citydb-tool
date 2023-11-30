@@ -17,7 +17,6 @@
 *     OUT wktext TEXT,  
 *     OUT versioning TEXT
 *     ) RETURNS RECORD
-*   versioning_db(schema_name TEXT DEFAULT 'citydb') RETURNS TEXT
 *   get_seq_values(seq_name TEXT, seq_count BIGINT) RETURNS SETOF BIGINT
 *   drop_tmp_tables(schema_name TEXT DEFAULT 'citydb') RETURNS SETOF VOID
 ******************************************************************/
@@ -62,8 +61,7 @@ CREATE OR REPLACE FUNCTION citydb_pkg.db_metadata(
   OUT srs_name TEXT,
   OUT coord_ref_sys_name TEXT, 
   OUT coord_ref_sys_kind TEXT,
-  OUT wktext TEXT,  
-  OUT versioning TEXT
+  OUT wktext TEXT
   ) RETURNS RECORD AS 
 $$
 BEGIN
@@ -73,32 +71,17 @@ BEGIN
        d.srs_name,
        split_part(s.srtext, ''"'', 2),
        split_part(s.srtext, ''['', 1),
-       s.srtext,
-       citydb_pkg.versioning_db($1) AS versioning
+       s.srtext
      FROM 
        %I.database_srs d,
        spatial_ref_sys s 
      WHERE
        d.srid = s.srid', schema_name)
     USING schema_name
-    INTO srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext, versioning;
+    INTO srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext;
 END;
 $$
 LANGUAGE plpgsql STABLE;
-
-
-/*****************************************************************
-* versioning_db
-*
-* @param schema_name name of schema
-*
-* @RETURN TEXT 'ON' for version-enabled, 'OFF' for version-disabled
-******************************************************************/
-CREATE OR REPLACE FUNCTION citydb_pkg.versioning_db(schema_name TEXT DEFAULT 'citydb') RETURNS TEXT AS
-$$
-SELECT 'OFF'::text;
-$$
-LANGUAGE sql IMMUTABLE;
 
 
 /*****************************************************************
