@@ -13,8 +13,9 @@ See the `LICENSE` file for more details.
 
 The latest stable release of the citydb-tool is `0.6-beta`.
 
-Download the latest citygml-tools release as ZIP package
-[here](https://github.com/3dcitydb/citydb-tool/releases/latest).
+Download the latest citydb-tool release as ZIP package
+[here](https://github.com/3dcitydb/citydb-tool/releases/latest). Previous releases are available from the
+[releases section](https://github.com/3dcitydb/citydb-tool/releases).
 
 ## Contributing
 
