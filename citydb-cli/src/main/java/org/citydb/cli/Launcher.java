@@ -175,8 +175,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     @Override
     public Integer call() throws ExecutionException {
         initializeLogging();
-        logger.info("Starting " + CliConstants.APP_NAME + " (" + CliConstants.APP_COMMAND + "), " +
-                "version " + CliConstants.APP_VERSION + ".");
+        logger.info("Starting " + CliConstants.APP_NAME + ", " + "version " + CliConstants.APP_VERSION + ".");
 
         if (pidFile != null) {
             createPidFile();
