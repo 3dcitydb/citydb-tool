@@ -21,6 +21,7 @@
 
 package org.citydb.operation.importer.geometry;
 
+import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.geometry.Geometry;
@@ -69,7 +70,13 @@ public class GeometryImporter extends DatabaseImporter {
         stmt.setNull(nullIndex, adapter.getGeometryAdapter().getGeometrySQLType(),
                 adapter.getGeometryAdapter().getGeometryTypeName());
 
-        stmt.setObject(4, adapter.getGeometryAdapter().buildGeometryProperties(geometry).toString(), Types.OTHER);
+        JSONObject geometryProperties = adapter.getGeometryAdapter().buildGeometryProperties(geometry);
+        if (geometryProperties != null) {
+            stmt.setObject(4, geometryProperties.toString(), Types.OTHER);
+        } else {
+            stmt.setNull(4, Types.OTHER);
+        }
+
         stmt.setLong(5, featureId);
 
         addBatch();
