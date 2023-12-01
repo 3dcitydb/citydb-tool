@@ -32,7 +32,7 @@ public class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> 
         super(polygons);
     }
 
-    private TriangulatedSurface(Polygon[] polygons) {
+    private TriangulatedSurface(Polygon... polygons) {
         super(polygons);
     }
 
@@ -40,7 +40,7 @@ public class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> 
         return new TriangulatedSurface(polygons);
     }
 
-    public static TriangulatedSurface of(Polygon[] polygons) {
+    public static TriangulatedSurface of(Polygon... polygons) {
         return new TriangulatedSurface(polygons);
     }
 

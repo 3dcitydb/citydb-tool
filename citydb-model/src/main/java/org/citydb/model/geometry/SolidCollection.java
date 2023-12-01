@@ -33,7 +33,7 @@ public abstract class SolidCollection<T extends SolidCollection<?>> extends Geom
         this.solids = asChild(solids);
     }
 
-    SolidCollection(Solid[] solids) {
+    SolidCollection(Solid... solids) {
         Objects.requireNonNull(solids, "The solid array must not be null.");
         this.solids = asChild(Arrays.asList(solids));
     }

@@ -32,7 +32,7 @@ public class CompositeSolid extends SolidCollection<CompositeSolid> {
         super(solids);
     }
 
-    private CompositeSolid(Solid[] solids) {
+    private CompositeSolid(Solid... solids) {
         super(solids);
     }
 
@@ -40,7 +40,7 @@ public class CompositeSolid extends SolidCollection<CompositeSolid> {
         return new CompositeSolid(solids);
     }
 
-    public static CompositeSolid of(Solid[] solids) {
+    public static CompositeSolid of(Solid... solids) {
         return new CompositeSolid(solids);
     }
 

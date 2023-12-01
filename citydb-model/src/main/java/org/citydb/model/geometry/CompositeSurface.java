@@ -32,7 +32,7 @@ public class CompositeSurface extends SurfaceCollection<CompositeSurface> {
         super(polygons);
     }
 
-    private CompositeSurface(Polygon[] polygons) {
+    private CompositeSurface(Polygon... polygons) {
         super(polygons);
     }
 
@@ -40,7 +40,7 @@ public class CompositeSurface extends SurfaceCollection<CompositeSurface> {
         return new CompositeSurface(polygons);
     }
 
-    public static CompositeSurface of(Polygon[] polygons) {
+    public static CompositeSurface of(Polygon... polygons) {
         return new CompositeSurface(polygons);
     }
 

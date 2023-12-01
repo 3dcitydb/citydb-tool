@@ -32,7 +32,7 @@ public class MultiSolid extends SolidCollection<MultiSolid> {
         super(solids);
     }
 
-    private MultiSolid(Solid[] solids) {
+    private MultiSolid(Solid... solids) {
         super(solids);
     }
 
@@ -40,7 +40,7 @@ public class MultiSolid extends SolidCollection<MultiSolid> {
         return new MultiSolid(solids);
     }
 
-    public static MultiSolid of(Solid[] solids) {
+    public static MultiSolid of(Solid... solids) {
         return new MultiSolid(solids);
     }
 

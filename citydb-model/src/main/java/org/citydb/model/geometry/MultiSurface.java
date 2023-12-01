@@ -32,7 +32,7 @@ public class MultiSurface extends SurfaceCollection<MultiSurface> {
         super(polygons);
     }
 
-    private MultiSurface(Polygon[] polygons) {
+    private MultiSurface(Polygon... polygons) {
         super(polygons);
     }
 
@@ -40,7 +40,7 @@ public class MultiSurface extends SurfaceCollection<MultiSurface> {
         return new MultiSurface(polygons);
     }
 
-    public static MultiSurface of(Polygon[] polygons) {
+    public static MultiSurface of(Polygon... polygons) {
         return new MultiSurface(polygons);
     }
 

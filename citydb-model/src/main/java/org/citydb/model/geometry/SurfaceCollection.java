@@ -33,7 +33,7 @@ public abstract class SurfaceCollection<T extends SurfaceCollection<?>> extends 
         this.polygons = asChild(polygons);
     }
 
-    SurfaceCollection(Polygon[] polygons) {
+    SurfaceCollection(Polygon... polygons) {
         Objects.requireNonNull(polygons, "The polygon array must not be null.");
         this.polygons = asChild(Arrays.asList(polygons));
     }
