@@ -182,11 +182,10 @@ public class DeleteCommand implements Command {
     private void abort(long id, Throwable e) {
         synchronized (lock) {
             if (shouldRun) {
+                shouldRun = false;
                 logger.warn("Database delete aborted due to an error.");
                 helper.logException("Failed to delete feature (ID: " + id + ").", e);
             }
-
-            shouldRun = false;
         }
     }
 }

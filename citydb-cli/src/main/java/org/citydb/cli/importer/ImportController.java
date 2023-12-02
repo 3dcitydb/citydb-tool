@@ -211,12 +211,11 @@ public abstract class ImportController implements Command {
     private void abort(Feature feature, Throwable e) {
         synchronized (lock) {
             if (shouldRun) {
+                shouldRun = false;
                 logger.warn("Database import aborted due to an error.");
                 helper.logException("Failed to import " + feature.getFeatureType().getLocalName() +
                         " '" + feature.getObjectId().orElse("unknown ID") + "'.", e);
             }
-
-            shouldRun = false;
         }
     }
 }

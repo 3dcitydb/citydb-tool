@@ -186,21 +186,14 @@ public abstract class ExportController implements Command {
     private void abort(Feature feature, long id, Throwable e) {
         synchronized (lock) {
             if (shouldRun) {
-                String message;
-                if (feature == null) {
-                    message = "Failed to export feature (ID: " + id + ").";
-                } else {
-                    String objectId = feature.getObjectId().orElse(null);
-                    message = "Failed to export " + feature.getFeatureType().getLocalName() +
-                            (objectId != null ? " '" + objectId + "'" : "") +
-                            " (ID: " + id + ").";
-                }
-
+                shouldRun = false;
                 logger.warn("Database export aborted due to an error.");
-                helper.logException(message, e);
+                helper.logException(feature == null ?
+                        "Failed to export feature (ID: " + id + ")." :
+                        "Failed to export " + feature.getFeatureType().getLocalName() +
+                                feature.getObjectId().map(objectId -> " '" + objectId + "'").orElse("") +
+                                " (ID: " + id + ").", e);
             }
-
-            shouldRun = false;
         }
     }
 }
