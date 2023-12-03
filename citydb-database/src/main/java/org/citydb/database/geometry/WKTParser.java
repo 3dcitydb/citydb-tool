@@ -70,8 +70,10 @@ public class WKTParser {
                 geometry = readMultiLineString(tokenizer, dimension);
                 break;
             case WKTConstants.MULTIPOLYGON:
-            case WKTConstants.POLYHEDRALSURFACE:
                 geometry = readMultiPolygon(tokenizer, dimension);
+                break;
+            case WKTConstants.POLYHEDRALSURFACE:
+                geometry = readSolid(tokenizer, dimension);
                 break;
             case WKTConstants.GEOMETRYCOLLECTION:
                 geometry = readGeometryCollection(tokenizer);
@@ -92,8 +94,31 @@ public class WKTParser {
         return LineString.of(getCoordinates(tokenizer, dimension));
     }
 
-    private LinearRing readLinearRingText(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
+    private LinearRing readLinearRing(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
         return LinearRing.of(getCoordinates(tokenizer, dimension));
+    }
+
+    private Polygon readPolygon(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
+        if (nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)) {
+            return Polygon.empty();
+        }
+
+        LinearRing shell = readLinearRing(tokenizer, dimension);
+        List<LinearRing> holes = new ArrayList<>();
+        while (nextCloserOrComma(tokenizer).equals(COMMA)) {
+            holes.add(readLinearRing(tokenizer, dimension));
+        }
+
+        return Polygon.of(shell, holes);
+    }
+
+    private List<Polygon> readPolygons(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
+        List<Polygon> polygons = new ArrayList<>();
+        do {
+            polygons.add(readPolygon(tokenizer, dimension));
+        } while (nextCloserOrComma(tokenizer).equals(COMMA));
+
+        return polygons;
     }
 
     private MultiPoint readMultiPoint(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
@@ -116,20 +141,6 @@ public class WKTParser {
         return MultiPoint.of(points);
     }
 
-    private Polygon readPolygon(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
-        if (nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)) {
-            return Polygon.empty();
-        }
-
-        LinearRing shell = readLinearRingText(tokenizer, dimension);
-        List<LinearRing> holes = new ArrayList<>();
-        while (nextCloserOrComma(tokenizer).equals(COMMA)) {
-            holes.add(readLinearRingText(tokenizer, dimension));
-        }
-
-        return Polygon.of(shell, holes);
-    }
-
     private MultiLineString readMultiLineString(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
         if (nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)) {
             return MultiLineString.empty();
@@ -144,34 +155,32 @@ public class WKTParser {
     }
 
     private MultiSurface readMultiPolygon(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
-        if (nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)) {
-            return MultiSurface.empty();
-        }
-
-        List<Polygon> polygons = new ArrayList<>();
-        do {
-            polygons.add(readPolygon(tokenizer, dimension));
-        } while (nextCloserOrComma(tokenizer).equals(COMMA));
-
-        return MultiSurface.of(polygons);
+        return nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY) ?
+                MultiSurface.empty() :
+                MultiSurface.of(readPolygons(tokenizer, dimension));
     }
 
+    private Solid readSolid(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
+        return nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY) ?
+                Solid.empty() :
+                Solid.of(CompositeSurface.of(readPolygons(tokenizer, dimension)));
+    }
 
-    private MultiSurface readGeometryCollection(StreamTokenizer tokenizer) throws GeometryException, IOException {
+    private MultiSolid readGeometryCollection(StreamTokenizer tokenizer) throws GeometryException, IOException {
         if (nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)) {
-            return MultiSurface.empty();
+            return MultiSolid.empty();
         }
 
-        List<Polygon> polygons = new ArrayList<>();
+        List<Solid> solids = new ArrayList<>();
         do {
             Geometry<?> geometry = read(tokenizer);
-            if (!(geometry instanceof MultiSurface)) {
-                throw new GeometryException("Expected PolyhedralSurface but found " + geometry.getGeometryType() + ".");
+            if (!(geometry instanceof Solid)) {
+                throw new GeometryException("Expected Solid but found " + geometry.getGeometryType() + ".");
             }
-            polygons.addAll(((MultiSurface) geometry).getPolygons());
+            solids.add((Solid) geometry);
         } while (nextCloserOrComma(tokenizer).equals(COMMA));
 
-        return MultiSurface.of(polygons);
+        return MultiSolid.of(solids);
     }
 
     private Integer readSRID(StreamTokenizer tokenizer) throws GeometryException, IOException {
@@ -312,5 +321,3 @@ public class WKTParser {
         return tokenizer;
     }
 }
-
-

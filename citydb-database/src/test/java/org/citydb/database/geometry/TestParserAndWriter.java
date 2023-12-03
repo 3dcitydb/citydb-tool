@@ -119,21 +119,21 @@ public class TestParserAndWriter {
     @Test
     @DisplayName("Test parse and write 3D PolyhedralSurface")
     void testParse3DPolyhedralSurface() throws Throwable {
-        MultiSurface multiSurface1 = (MultiSurface) wktParser.parse(TEST_POLYHEDRALSURFACE_3D);
-        MultiSurface multiSurface2 = (MultiSurface) wkbParser.parse(TEST_POLYHEDRALSURFACE_3D_B);
-        assertEquals(wktWriter.write(Solid.of(CompositeSurface.of(multiSurface1.getPolygons()))), TEST_POLYHEDRALSURFACE_3D);
-        assertEquals(wktWriter.write(Solid.of(CompositeSurface.of(multiSurface2.getPolygons()))), TEST_POLYHEDRALSURFACE_3D);
-        assertEquals(wkbWriter.write(Solid.of(CompositeSurface.of(multiSurface2.getPolygons()))), TEST_POLYHEDRALSURFACE_3D_B);
+        Solid solid1 = (Solid) wktParser.parse(TEST_POLYHEDRALSURFACE_3D);
+        Solid solid2 = (Solid) wkbParser.parse(TEST_POLYHEDRALSURFACE_3D_B);
+        assertEquals(wktWriter.write(Solid.of(solid1.getShell())), TEST_POLYHEDRALSURFACE_3D);
+        assertEquals(wktWriter.write(Solid.of(solid2.getShell())), TEST_POLYHEDRALSURFACE_3D);
+        assertEquals(wkbWriter.write(Solid.of(solid2.getShell())), TEST_POLYHEDRALSURFACE_3D_B);
     }
 
     @Test
     @DisplayName("Test parse and write 3D GeometryCollection(PolyhedralSurface)")
     void testParse3DGeometryCollection() throws Throwable {
-        MultiSurface multiSurface1 = (MultiSurface) wktParser.parse(TEST_GEOMETRYCOLLECTION_3D);
-        MultiSurface multiSurface2 = (MultiSurface) wkbParser.parse(TEST_GEOMETRYCOLLECTION_3D_B);
-        assertEquals(multiSurface1.getVertexDimension(), 3);
-        assertEquals(multiSurface1.getPolygons().size(), 4);
-        assertEquals(multiSurface2.getVertexDimension(), 3);
-        assertEquals(multiSurface2.getPolygons().size(), 4);
+        MultiSolid multiSolid1 = (MultiSolid) wktParser.parse(TEST_GEOMETRYCOLLECTION_3D);
+        MultiSolid multiSolid2 = (MultiSolid) wkbParser.parse(TEST_GEOMETRYCOLLECTION_3D_B);
+        assertEquals(multiSolid1.getVertexDimension(), 3);
+        assertEquals(multiSolid1.getSolids().size(), 2);
+        assertEquals(multiSolid2.getVertexDimension(), 3);
+        assertEquals(multiSolid2.getSolids().size(), 2);
     }
 }
