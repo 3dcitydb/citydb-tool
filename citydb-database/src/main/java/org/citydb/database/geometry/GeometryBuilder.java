@@ -169,9 +169,13 @@ public class GeometryBuilder {
                 case SOLID:
                     return Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class)));
                 case MULTI_SOLID:
-                    return MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                    return geometry instanceof SolidCollection<?> ?
+                            MultiSolid.of(((SolidCollection<?>) geometry).getSolids()) :
+                            MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
                 case COMPOSITE_SOLID:
-                    return CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                    return geometry instanceof SolidCollection<?> ?
+                            CompositeSolid.of(((SolidCollection<?>) geometry).getSolids()) :
+                            CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
                 default:
                     return geometry;
             }
