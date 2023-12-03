@@ -73,8 +73,10 @@ public class WKBParser {
                 geometry = readMultiLineString(buffer);
                 break;
             case WKBConstants.MULTIPOLYGON:
-            case WKBConstants.POLYHEDRALSURFACE:
                 geometry = readMultiPolygon(buffer);
+                break;
+            case WKBConstants.POLYHEDRALSURFACE:
+                geometry = readSolid(buffer);
                 break;
             case WKBConstants.GEOMETRYCOLLECTION:
                 geometry = readGeometryCollection(buffer);
@@ -113,6 +115,21 @@ public class WKBParser {
         return Polygon.of(shell, holes);
     }
 
+    private Polygon[] readPolygons(ByteBuffer buffer) throws GeometryException {
+        int size = buffer.getInt();
+        Polygon[] polygons = new Polygon[size];
+
+        for (int i = 0; i < size; i++) {
+            Geometry<?> geometry = read(buffer);
+            if (!(geometry instanceof Polygon)) {
+                throw new GeometryException("Expected Polygon but found " + geometry.getGeometryType() + ".");
+            }
+            polygons[i] = (Polygon) geometry;
+        }
+
+        return polygons;
+    }
+
     private MultiPoint readMultiPoint(ByteBuffer buffer) throws GeometryException {
         int size = buffer.getInt();
         Point[] points = new Point[size];
@@ -144,33 +161,26 @@ public class WKBParser {
     }
 
     private MultiSurface readMultiPolygon(ByteBuffer buffer) throws GeometryException {
-        int size = buffer.getInt();
-        Polygon[] polygons = new Polygon[size];
-
-        for (int i = 0; i < size; i++) {
-            Geometry<?> geometry = read(buffer);
-            if (!(geometry instanceof Polygon)) {
-                throw new GeometryException("Expected Polygon but found " + geometry.getGeometryType() + ".");
-            }
-            polygons[i] = (Polygon) geometry;
-        }
-
-        return MultiSurface.of(polygons);
+        return MultiSurface.of(readPolygons(buffer));
     }
 
-    private MultiSurface readGeometryCollection(ByteBuffer buffer) throws GeometryException {
+    private Solid readSolid(ByteBuffer buffer) throws GeometryException {
+        return Solid.of(CompositeSurface.of(readPolygons(buffer)));
+    }
+
+    private MultiSolid readGeometryCollection(ByteBuffer buffer) throws GeometryException {
         int size = buffer.getInt();
-        List<Polygon> polygons = new ArrayList<>();
+        Solid[] solids = new Solid[size];
 
         for (int i = 0; i < size; i++) {
             Geometry<?> geometry = read(buffer);
-            if (!(geometry instanceof MultiSurface)) {
-                throw new GeometryException("Expected PolyhedralSurface but found " + geometry.getGeometryType() + ".");
+            if (!(geometry instanceof Solid)) {
+                throw new GeometryException("Expected Solid but found " + geometry.getGeometryType() + ".");
             }
-            polygons.addAll(((MultiSurface) geometry).getPolygons());
+            solids[i] = (Solid) geometry;
         }
 
-        return MultiSurface.of(polygons);
+        return MultiSolid.of(solids);
     }
 
     private List<Coordinate> getCoordinates(ByteBuffer buffer, int size, int dimension) {
