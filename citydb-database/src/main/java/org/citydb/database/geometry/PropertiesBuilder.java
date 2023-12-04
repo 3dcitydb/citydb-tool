@@ -29,20 +29,22 @@ public class PropertiesBuilder {
 
     public JSONObject buildProperties(Geometry<?> geometry) {
         if (geometry != null) {
-            JSONObject properties = new JSONObject();
-
-            properties.put(Properties.JSON_KEY_OBJECT_ID, geometry.getOrCreateObjectId());
-            if (geometry.getVertexDimension() == 2) {
-                properties.put(Properties.JSON_KEY_IS_2D, true);
-            }
-
             Hierarchy hierarchy = new Hierarchy();
             switch (geometry.getGeometryType()) {
+                case POINT:
+                    buildHierarchy((Point) geometry, -1, hierarchy);
+                    break;
                 case MULTI_POINT:
                     buildHierarchy((MultiPoint) geometry, hierarchy);
                     break;
+                case LINE_STRING:
+                    buildHierarchy((LineString) geometry, -1, hierarchy);
+                    break;
                 case MULTI_LINE_STRING:
                     buildHierarchy((MultiLineString) geometry, hierarchy);
+                    break;
+                case POLYGON:
+                    buildHierarchy((Polygon) geometry, -1, hierarchy);
                     break;
                 case MULTI_SURFACE:
                 case TRIANGULATED_SURFACE:
@@ -58,13 +60,7 @@ public class PropertiesBuilder {
                     break;
             }
 
-            if (!hierarchy.isEmpty()) {
-                properties.put(Properties.JSON_KEY_HIERARCHY, hierarchy.getContent());
-            }
-
-            if (!properties.isEmpty()) {
-                return properties;
-            }
+            return hierarchy.getRoot();
         }
 
         return null;
@@ -108,38 +104,45 @@ public class PropertiesBuilder {
     }
 
     private static class Hierarchy {
-        private final JSONArray content = new JSONArray();
+        private final JSONObject root = new JSONObject();
+        private final JSONArray children = new JSONArray();
         private int geometryIndex;
 
-        private JSONArray getContent() {
-            return content;
+        private JSONObject getRoot() {
+            if (!children.isEmpty()) {
+                root.put(Properties.JSON_KEY_CHILDREN, children);
+            }
+
+            return root;
         }
 
         private int add(Geometry<?> geometry, int parent) {
-            JSONObject item = content.addObject()
+            JSONObject item = (parent == -1 ? root : children.addObject())
                     .fluentPut(Properties.JSON_KEY_TYPE, geometry.getGeometryType().getDatabaseValue())
                     .fluentPut(Properties.JSON_KEY_OBJECT_ID, geometry.getOrCreateObjectId());
 
-            if (parent >= 0) {
-                item.put(Properties.JSON_KEY_PARENT, parent);
-            }
+            if (parent == -1) {
+                if (geometry.getVertexDimension() == 2) {
+                    item.put(Properties.JSON_KEY_IS_2D, true);
+                }
+            } else {
+                if (parent > 0) {
+                    item.put(Properties.JSON_KEY_PARENT, parent - 1);
+                }
 
-            switch (geometry.getGeometryType()) {
-                case POINT:
-                case LINE_STRING:
-                case POLYGON:
-                    item.put(Properties.JSON_KEY_GEOMETRY_INDEX, geometryIndex++);
+                switch (geometry.getGeometryType()) {
+                    case POINT:
+                    case LINE_STRING:
+                    case POLYGON:
+                        item.put(Properties.JSON_KEY_GEOMETRY_INDEX, geometryIndex++);
+                }
             }
 
             if (geometry instanceof Polygon && ((Polygon) geometry).isReversed()) {
                 item.put(Properties.JSON_KEY_IS_REVERSED, true);
             }
 
-            return content.size() - 1;
-        }
-
-        private boolean isEmpty() {
-            return content.isEmpty();
+            return children.size();
         }
     }
 }

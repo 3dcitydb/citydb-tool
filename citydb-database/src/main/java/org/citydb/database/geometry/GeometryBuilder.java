@@ -32,43 +32,64 @@ public class GeometryBuilder {
 
     public Geometry<?> buildGeometry(Geometry<?> geometry, JSONObject properties) throws GeometryException {
         if (geometry != null && properties != null) {
-            Map<Integer, JSONObject> hierarchy = buildHierarchy(properties);
-            if (!hierarchy.isEmpty()) {
-                if (hierarchy.get(0).containsKey(Properties.JSON_KEY_PARENT)) {
-                    throw new GeometryException("The geometry hierarchy lacks a root item.");
-                }
-
-                Map<Integer, Geometry<?>> parents = new HashMap<>(hierarchy.size());
+            JSONArray children = properties.getJSONArray(Properties.JSON_KEY_CHILDREN);
+            if (children != null && !children.isEmpty()) {
                 List<? extends Geometry<?>> primitives = getPrimitives(geometry);
-                try {
-                    for (Map.Entry<Integer, JSONObject> entry : hierarchy.entrySet()) {
-                        Geometry<?> item = buildGeometry(entry.getValue(), parents, primitives);
-                        parents.put(entry.getKey(), item);
-                    }
-                } catch (Exception e) {
-                    throw new GeometryException("Failed to rebuild geometry hierarchy.", e);
-                }
+                geometry = buildGeometry(properties, null, primitives);
 
-                if (!parents.isEmpty()) {
-                    geometry = parents.get(0);
+                Map<Integer, Geometry<?>> geometries = new HashMap<>(children.size() + 1);
+                geometries.put(-1, geometry);
+
+                for (int i = 0; i < children.size(); i++) {
+                    buildGeometry(i, children, geometries, primitives);
+                }
+            } else {
+                GeometryType type = getType(properties);
+                if (geometry.getGeometryType() != type) {
+                    geometry = castGeometry(geometry, type);
                 }
             }
 
-            processMetadata(geometry, properties);
+            geometry.setObjectId(properties.getString(Properties.JSON_KEY_OBJECT_ID));
+            if (properties.getBooleanValue(Properties.JSON_KEY_IS_2D, false)) {
+                geometry.force2D();
+            }
         }
 
         return geometry;
     }
 
-    private Geometry<?> buildGeometry(JSONObject item, Map<Integer, Geometry<?>> parents, List<? extends Geometry<?>> primitives) throws GeometryException {
-        GeometryType type = GeometryType.fromDatabaseValue(item.getIntValue(Properties.JSON_KEY_TYPE, -1));
-        if (type == null) {
-            throw new GeometryException("Missing geometry type property.");
+    private Geometry<?> buildGeometry(int childIndex, JSONArray children, Map<Integer, Geometry<?>> geometries, List<? extends Geometry<?>> primitives) throws GeometryException {
+        Geometry<?> geometry = geometries.get(childIndex);
+        if (geometry == null) {
+            JSONObject child = children.getJSONObject(childIndex);
+            if (child == null) {
+                throw new GeometryException("Invalid JSON object in children array at index " + childIndex + ".");
+            }
+
+            Integer parentIndex = child.getInteger(Properties.JSON_KEY_PARENT);
+            if (parentIndex == null) {
+                parentIndex = -1;
+            } else if (parentIndex < 0 || parentIndex >= children.size()) {
+                throw new GeometryException("Parent index out of bounds.");
+            }
+
+            Geometry<?> parent = geometries.get(parentIndex);
+            if (parent == null) {
+                parent = buildGeometry(parentIndex, children, geometries, primitives);
+            }
+
+            geometry = buildGeometry(child, parent, primitives)
+                    .setObjectId(child.getString(Properties.JSON_KEY_OBJECT_ID));
+            geometries.put(childIndex, geometry);
         }
 
-        Geometry<?> parent = getParent(item, parents);
+        return geometry;
+    }
+
+    private Geometry<?> buildGeometry(JSONObject item, Geometry<?> parent, List<? extends Geometry<?>> primitives) throws GeometryException {
         Geometry<?> geometry = null;
-        switch (type) {
+        switch (getType(item)) {
             case POINT:
                 geometry = getPrimitive(item, primitives, Point.class);
                 if (parent instanceof MultiPoint) {
@@ -120,39 +141,47 @@ public class GeometryBuilder {
         }
 
         if (geometry != null) {
-            return geometry.setObjectId(item.getString(Properties.JSON_KEY_OBJECT_ID));
+            return geometry;
         } else {
-            throw new GeometryException("Failed to parse geometry hierarchy item.");
+            throw new GeometryException("Failed to parse geometry object.");
         }
     }
 
-    private <T extends Geometry<?>> T getPrimitive(JSONObject item, List<? extends Geometry<?>> primitives, Class<T> type) throws GeometryException {
-        Integer index = item.getInteger(Properties.JSON_KEY_GEOMETRY_INDEX);
-        if (index == null) {
-            throw new GeometryException("Missing geometry index.");
-        } else if (index < 0 || index >= primitives.size()) {
-            throw new GeometryException("Geometry index out of bounds.");
-        }
-
-        Geometry<?> primitive = primitives.get(index);
-        if (type.isInstance(primitive)) {
-            return type.cast(primitive);
-        } else {
-            throw new GeometryException("Invalid primitive type " + primitive.getGeometryType() + ".");
-        }
-    }
-
-    private Geometry<?> getParent(JSONObject item, Map<Integer, Geometry<?>> parents) throws GeometryException {
-        Integer index = item.getInteger(Properties.JSON_KEY_PARENT);
-        if (index != null) {
-            Geometry<?> parent = parents.get(index);
-            if (parent == null) {
-                throw new GeometryException("Parent index out of bounds.");
+    private Geometry<?> castGeometry(Geometry<?> geometry, GeometryType type) throws GeometryException {
+        try {
+            switch (type) {
+                case POINT:
+                    return getPrimitives(geometry, Point.class).get(0);
+                case MULTI_POINT:
+                    return MultiPoint.of(getPrimitives(geometry, Point.class));
+                case LINE_STRING:
+                    return getPrimitives(geometry, LineString.class).get(0);
+                case MULTI_LINE_STRING:
+                    return MultiLineString.of(getPrimitives(geometry, LineString.class));
+                case POLYGON:
+                    return getPrimitives(geometry, Polygon.class).get(0);
+                case MULTI_SURFACE:
+                    return MultiSurface.of(getPrimitives(geometry, Polygon.class));
+                case TRIANGULATED_SURFACE:
+                    return TriangulatedSurface.of(getPrimitives(geometry, Polygon.class));
+                case COMPOSITE_SURFACE:
+                    return CompositeSurface.of(getPrimitives(geometry, Polygon.class));
+                case SOLID:
+                    return Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class)));
+                case MULTI_SOLID:
+                    return geometry instanceof SolidCollection<?> ?
+                            MultiSolid.of(((SolidCollection<?>) geometry).getSolids()) :
+                            MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                case COMPOSITE_SOLID:
+                    return geometry instanceof SolidCollection<?> ?
+                            CompositeSolid.of(((SolidCollection<?>) geometry).getSolids()) :
+                            CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                default:
+                    return geometry;
             }
-
-            return parent;
-        } else {
-            return null;
+        } catch (Exception e) {
+            throw new GeometryException("Failed to convert database geometry into a " +
+                    type.getTypeName() + " geometry.");
         }
     }
 
@@ -185,30 +214,38 @@ public class GeometryBuilder {
         }
     }
 
-    private Map<Integer, JSONObject> buildHierarchy(JSONObject properties) {
-        JSONArray items = properties.getJSONArray(Properties.JSON_KEY_HIERARCHY);
-        if (items != null && !items.isEmpty()) {
-            Map<Integer, JSONObject> hierarchy = new TreeMap<>();
-            for (int i = 0; i < items.size(); i++) {
-                Object item = items.get(i);
-                if (item instanceof JSONObject) {
-                    hierarchy.put(i, (JSONObject) item);
-                }
-            }
-
-            return hierarchy;
+    @SuppressWarnings("unchecked")
+    private <T extends Geometry<?>> List<T> getPrimitives(Geometry<?> geometry, Class<T> type) {
+        List<? extends Geometry<?>> primitives = getPrimitives(geometry);
+        if (!primitives.isEmpty() && type.isInstance(primitives.get(0))) {
+            return (List<T>) primitives;
+        } else {
+            throw new ClassCastException();
         }
-
-        return Collections.emptyMap();
     }
 
-    private void processMetadata(Geometry<?> geometry, JSONObject properties) {
-        if (geometry.getObjectId().isEmpty()) {
-            geometry.setObjectId(properties.getString(Properties.JSON_KEY_OBJECT_ID));
+    private <T extends Geometry<?>> T getPrimitive(JSONObject item, List<? extends Geometry<?>> primitives, Class<T> type) throws GeometryException {
+        Integer index = item.getInteger(Properties.JSON_KEY_GEOMETRY_INDEX);
+        if (index == null) {
+            throw new GeometryException("Missing geometry index.");
+        } else if (index < 0 || index >= primitives.size()) {
+            throw new GeometryException("Geometry index out of bounds.");
         }
 
-        if (properties.getBooleanValue(Properties.JSON_KEY_IS_2D, false)) {
-            geometry.force2D();
+        Geometry<?> primitive = primitives.get(index);
+        if (type.isInstance(primitive)) {
+            return type.cast(primitive);
+        } else {
+            throw new GeometryException("Invalid primitive type " + primitive.getGeometryType() + ".");
+        }
+    }
+
+    private GeometryType getType(JSONObject item) throws GeometryException {
+        GeometryType type = GeometryType.fromDatabaseValue(item.getIntValue(Properties.JSON_KEY_TYPE, -1));
+        if (type != null) {
+            return type;
+        } else {
+            throw new GeometryException("Missing geometry type property.");
         }
     }
 }
