@@ -1,5 +1,3 @@
-import org.citydb.database.adapter.DatabaseAdapter;
-
 module org.citydb.database {
     requires transitive org.citydb.core;
     requires transitive org.citydb.logging;
@@ -8,7 +6,7 @@ module org.citydb.database {
     requires org.apache.tomcat.jdbc;
     requires java.management;
 
-    uses DatabaseAdapter;
+    uses org.citydb.database.adapter.DatabaseAdapter;
 
     exports org.citydb.database;
     exports org.citydb.database.adapter;
