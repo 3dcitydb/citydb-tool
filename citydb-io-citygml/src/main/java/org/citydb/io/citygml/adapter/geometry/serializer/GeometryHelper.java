@@ -59,30 +59,21 @@ public class GeometryHelper {
     public AbstractGeometry getGeometry(Geometry<?> source, boolean force3D) {
         if (source != null) {
             int dimension = getDimension(source, force3D);
-            switch (source.getGeometryType()) {
-                case POINT:
-                    return getPoint((org.citydb.model.geometry.Point) source, dimension);
-                case MULTI_POINT:
-                    return getMultiPoint((org.citydb.model.geometry.MultiPoint) source, dimension);
-                case LINE_STRING:
-                    return getLineString((org.citydb.model.geometry.LineString) source, dimension);
-                case MULTI_LINE_STRING:
-                    return getMultiCurve((MultiLineString) source, dimension);
-                case POLYGON:
-                    return getPolygon((org.citydb.model.geometry.Polygon) source, dimension);
-                case COMPOSITE_SURFACE:
-                    return getCompositeSurface((org.citydb.model.geometry.CompositeSurface) source, dimension);
-                case TRIANGULATED_SURFACE:
-                    return getTriangulatedSurface((org.citydb.model.geometry.TriangulatedSurface) source, dimension);
-                case MULTI_SURFACE:
-                    return getMultiSurface((org.citydb.model.geometry.MultiSurface) source, dimension);
-                case SOLID:
-                    return getSolid((org.citydb.model.geometry.Solid) source);
-                case COMPOSITE_SOLID:
-                    return getCompositeSolid((org.citydb.model.geometry.CompositeSolid) source);
-                case MULTI_SOLID:
-                    return getMultiSolid((org.citydb.model.geometry.MultiSolid) source);
-            }
+            return switch (source.getGeometryType()) {
+                case POINT -> getPoint((org.citydb.model.geometry.Point) source, dimension);
+                case MULTI_POINT -> getMultiPoint((org.citydb.model.geometry.MultiPoint) source, dimension);
+                case LINE_STRING -> getLineString((org.citydb.model.geometry.LineString) source, dimension);
+                case MULTI_LINE_STRING -> getMultiCurve((MultiLineString) source, dimension);
+                case POLYGON -> getPolygon((org.citydb.model.geometry.Polygon) source, dimension);
+                case COMPOSITE_SURFACE ->
+                        getCompositeSurface((org.citydb.model.geometry.CompositeSurface) source, dimension);
+                case TRIANGULATED_SURFACE ->
+                        getTriangulatedSurface((org.citydb.model.geometry.TriangulatedSurface) source, dimension);
+                case MULTI_SURFACE -> getMultiSurface((org.citydb.model.geometry.MultiSurface) source, dimension);
+                case SOLID -> getSolid((org.citydb.model.geometry.Solid) source);
+                case COMPOSITE_SOLID -> getCompositeSolid((org.citydb.model.geometry.CompositeSolid) source);
+                case MULTI_SOLID -> getMultiSolid((org.citydb.model.geometry.MultiSolid) source);
+            };
         }
 
         return null;

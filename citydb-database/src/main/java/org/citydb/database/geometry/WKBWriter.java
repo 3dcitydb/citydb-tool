@@ -52,29 +52,17 @@ public class WKBWriter {
             int dimension = force3D ? 3 : geometry.getVertexDimension();
             GeometryType geometryType = geometry.getGeometryType();
 
-            switch (geometryType) {
-                case POINT:
-                    return write((Point) geometry, dimension, srid);
-                case MULTI_POINT:
-                    return write((MultiPoint) geometry, dimension, srid);
-                case LINE_STRING:
-                    return write((LineString) geometry, dimension, srid);
-                case MULTI_LINE_STRING:
-                    return write((MultiLineString) geometry, dimension, srid);
-                case POLYGON:
-                    return write((Polygon) geometry, dimension, srid);
-                case MULTI_SURFACE:
-                case COMPOSITE_SURFACE:
-                case TRIANGULATED_SURFACE:
-                    return write((SurfaceCollection<?>) geometry, dimension, srid);
-                case SOLID:
-                    return write((Solid) geometry, dimension, srid);
-                case COMPOSITE_SOLID:
-                case MULTI_SOLID:
-                    return write((SolidCollection<?>) geometry, dimension, srid);
-                default:
-                    throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
-            }
+            return switch (geometryType) {
+                case POINT -> write((Point) geometry, dimension, srid);
+                case MULTI_POINT -> write((MultiPoint) geometry, dimension, srid);
+                case LINE_STRING -> write((LineString) geometry, dimension, srid);
+                case MULTI_LINE_STRING -> write((MultiLineString) geometry, dimension, srid);
+                case POLYGON -> write((Polygon) geometry, dimension, srid);
+                case MULTI_SURFACE, COMPOSITE_SURFACE, TRIANGULATED_SURFACE ->
+                        write((SurfaceCollection<?>) geometry, dimension, srid);
+                case SOLID -> write((Solid) geometry, dimension, srid);
+                case COMPOSITE_SOLID, MULTI_SOLID -> write((SolidCollection<?>) geometry, dimension, srid);
+            };
         } else {
             return null;
         }

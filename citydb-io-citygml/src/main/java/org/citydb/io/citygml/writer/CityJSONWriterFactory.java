@@ -74,23 +74,13 @@ public class CityJSONWriterFactory {
 
     private OutputEncoding getOutputEncoding(String encoding) {
         if (encoding != null) {
-            switch (encoding.toUpperCase(Locale.ROOT)) {
-                case "UTF8":
-                case "UTF-8":
-                    return OutputEncoding.UTF8;
-                case "UTF16":
-                case "UTF-16":
-                case "UTF-16BE":
-                    return OutputEncoding.UTF16_BE;
-                case "UTF-16LE":
-                    return OutputEncoding.UTF16_LE;
-                case "UTF32":
-                case "UTF-32":
-                case "UTF-32BE":
-                    return OutputEncoding.UTF32_BE;
-                case "UTF-32LE":
-                    return OutputEncoding.UTF32_LE;
-            }
+            return switch (encoding.toUpperCase(Locale.ROOT)) {
+                case "UTF16", "UTF-16", "UTF-16BE" -> OutputEncoding.UTF16_BE;
+                case "UTF-16LE" -> OutputEncoding.UTF16_LE;
+                case "UTF32", "UTF-32", "UTF-32BE" -> OutputEncoding.UTF32_BE;
+                case "UTF-32LE" -> OutputEncoding.UTF32_LE;
+                default -> OutputEncoding.UTF8;
+            };
         }
 
         return OutputEncoding.UTF8;

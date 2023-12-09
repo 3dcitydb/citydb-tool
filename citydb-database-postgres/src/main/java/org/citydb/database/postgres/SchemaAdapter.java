@@ -118,30 +118,14 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     @Override
     protected SpatialReferenceType getSpatialReferenceType(String type) {
-        switch (type.toUpperCase(Locale.ROOT)) {
-            case "PROJCRS":
-            case "PROJECTEDCRS":
-            case "PROJCS":
-                return SpatialReferenceType.PROJECTED_CRS;
-            case "GEOGCRS":
-            case "GEOGRAPHICCRS":
-            case "GEOGCS":
-                return SpatialReferenceType.GEOGRAPHIC_CRS;
-            case "GEODCRS":
-            case "GEODETICCRS":
-            case "GEOCCS":
-                return SpatialReferenceType.GEODETIC_CRS;
-            case "COMPOUNDCRS":
-            case "COMPDCS":
-            case "COMPD_CS":
-                return SpatialReferenceType.COMPOUND_CRS;
-            case "ENGCRS":
-            case "ENGINEERINGCRS":
-            case "LOCAL_CS":
-                return SpatialReferenceType.ENGINEERING_CRS;
-            default:
-                return SpatialReferenceType.UNKNOWN_CRS;
-        }
+        return switch (type.toUpperCase(Locale.ROOT)) {
+            case "PROJCRS", "PROJECTEDCRS", "PROJCS" -> SpatialReferenceType.PROJECTED_CRS;
+            case "GEOGCRS", "GEOGRAPHICCRS", "GEOGCS" -> SpatialReferenceType.GEOGRAPHIC_CRS;
+            case "GEODCRS", "GEODETICCRS", "GEOCCS" -> SpatialReferenceType.GEODETIC_CRS;
+            case "COMPOUNDCRS", "COMPDCS", "COMPD_CS" -> SpatialReferenceType.COMPOUND_CRS;
+            case "ENGCRS", "ENGINEERINGCRS", "LOCAL_CS" -> SpatialReferenceType.ENGINEERING_CRS;
+            default -> SpatialReferenceType.UNKNOWN_CRS;
+        };
     }
 
     private String readFeatureHierarchyQuery() throws IOException {

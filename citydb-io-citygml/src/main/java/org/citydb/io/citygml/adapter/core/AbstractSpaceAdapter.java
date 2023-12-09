@@ -306,16 +306,13 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
 
     private MultiSurface getOrCreateMultiSurface(GeometryProperty property) {
         Geometry<?> geometry = property.getObject();
-        switch (geometry.getGeometryType()) {
-            case MULTI_SURFACE:
-                return (MultiSurface) geometry;
-            case COMPOSITE_SURFACE:
-            case TRIANGULATED_SURFACE:
-                return MultiSurface.of(((SurfaceCollection<?>) geometry).getPolygons())
-                        .setObjectId(geometry.getObjectId().orElse(null));
-            default:
-                return null;
-        }
+        return switch (geometry.getGeometryType()) {
+            case MULTI_SURFACE -> (MultiSurface) geometry;
+            case COMPOSITE_SURFACE, TRIANGULATED_SURFACE ->
+                    MultiSurface.of(((SurfaceCollection<?>) geometry).getPolygons())
+                            .setObjectId(geometry.getObjectId().orElse(null));
+            default -> null;
+        };
     }
 
     private void mapLod4ToLod3(GeometryProperty property, AbstractSpace target, ModelSerializerHelper helper) throws ModelSerializeException {

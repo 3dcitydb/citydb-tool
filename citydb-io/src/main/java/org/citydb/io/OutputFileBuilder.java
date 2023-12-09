@@ -77,18 +77,14 @@ public class OutputFileBuilder {
         }
 
         String[] fileName = getFileName(file);
-        switch (fileName[1].toLowerCase(Locale.ROOT)) {
-            case "zip":
-                return new ZipOutputFile(createFileName(fileName[0], defaultFileExtension),
-                        file,
-                        tempDirectory != null ? tempDirectory : parent,
-                        compressionLevel);
-            case "gzip":
-            case "gz":
-                return new GZipOutputFile(file);
-            default:
-                return new RegularOutputFile(parent.resolve(createFileName(fileName[0], fileName[1])));
-        }
+        return switch (fileName[1].toLowerCase(Locale.ROOT)) {
+            case "zip" -> new ZipOutputFile(createFileName(fileName[0], defaultFileExtension),
+                    file,
+                    tempDirectory != null ? tempDirectory : parent,
+                    compressionLevel);
+            case "gzip", "gz" -> new GZipOutputFile(file);
+            default -> new RegularOutputFile(parent.resolve(createFileName(fileName[0], fileName[1])));
+        };
     }
 
     private String[] getFileName(Path file) {

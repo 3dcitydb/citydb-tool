@@ -25,7 +25,10 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.geometry.*;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class GeometryBuilder {
@@ -88,97 +91,67 @@ public class GeometryBuilder {
     }
 
     private Geometry<?> buildGeometry(JSONObject item, Geometry<?> parent, List<? extends Geometry<?>> primitives) throws GeometryException {
-        Geometry<?> geometry = null;
-        switch (getType(item)) {
-            case POINT:
-                geometry = getPrimitive(item, primitives, Point.class);
+        return switch (getType(item)) {
+            case POINT -> {
+                Point point = getPrimitive(item, primitives, Point.class);
                 if (parent instanceof MultiPoint multiPoint) {
-                    multiPoint.getPoints().add((Point) geometry);
+                    multiPoint.getPoints().add(point);
                 }
-                break;
-            case LINE_STRING:
-                geometry = getPrimitive(item, primitives, LineString.class);
+                yield point;
+            }
+            case LINE_STRING -> {
+                LineString lineString = getPrimitive(item, primitives, LineString.class);
                 if (parent instanceof MultiLineString multiLineString) {
-                    multiLineString.getLineStrings().add((LineString) geometry);
+                    multiLineString.getLineStrings().add(lineString);
                 }
-                break;
-            case POLYGON:
-                geometry = getPrimitive(item, primitives, Polygon.class);
-                ((Polygon) geometry).setReversed(item.getBooleanValue(Properties.JSON_KEY_IS_REVERSED, false));
+                yield lineString;
+            }
+            case POLYGON -> {
+                Polygon polygon = getPrimitive(item, primitives, Polygon.class);
+                polygon.setReversed(item.getBooleanValue(Properties.JSON_KEY_IS_REVERSED, false));
                 if (parent instanceof SurfaceCollection<?> surfaceCollection) {
-                    surfaceCollection.getPolygons().add((Polygon) geometry);
+                    surfaceCollection.getPolygons().add(polygon);
                 }
-                break;
-            case COMPOSITE_SURFACE:
-                geometry = parent instanceof Solid solid ?
-                        solid.getShell() :
-                        CompositeSurface.empty();
-                break;
-            case SOLID:
-                geometry = Solid.empty();
+                yield polygon;
+            }
+            case COMPOSITE_SURFACE -> parent instanceof Solid solid ?
+                    solid.getShell() :
+                    CompositeSurface.empty();
+            case SOLID -> {
+                Solid solid = Solid.empty();
                 if (parent instanceof SolidCollection<?> solidCollection) {
-                    solidCollection.getSolids().add((Solid) geometry);
+                    solidCollection.getSolids().add(solid);
                 }
-                break;
-            case MULTI_POINT:
-                geometry = MultiPoint.empty();
-                break;
-            case MULTI_LINE_STRING:
-                geometry = MultiLineString.empty();
-                break;
-            case MULTI_SURFACE:
-                geometry = MultiSurface.empty();
-                break;
-            case TRIANGULATED_SURFACE:
-                geometry = TriangulatedSurface.empty();
-                break;
-            case COMPOSITE_SOLID:
-                geometry = CompositeSolid.empty();
-                break;
-            case MULTI_SOLID:
-                geometry = MultiSolid.empty();
-                break;
-        }
-
-        if (geometry != null) {
-            return geometry;
-        } else {
-            throw new GeometryException("Failed to parse geometry object.");
-        }
+                yield solid;
+            }
+            case MULTI_POINT -> MultiPoint.empty();
+            case MULTI_LINE_STRING -> MultiLineString.empty();
+            case MULTI_SURFACE -> MultiSurface.empty();
+            case TRIANGULATED_SURFACE -> TriangulatedSurface.empty();
+            case COMPOSITE_SOLID -> CompositeSolid.empty();
+            case MULTI_SOLID -> MultiSolid.empty();
+        };
     }
 
     private Geometry<?> castGeometry(Geometry<?> geometry, GeometryType type) throws GeometryException {
         try {
-            switch (type) {
-                case POINT:
-                    return getPrimitives(geometry, Point.class).get(0);
-                case MULTI_POINT:
-                    return MultiPoint.of(getPrimitives(geometry, Point.class));
-                case LINE_STRING:
-                    return getPrimitives(geometry, LineString.class).get(0);
-                case MULTI_LINE_STRING:
-                    return MultiLineString.of(getPrimitives(geometry, LineString.class));
-                case POLYGON:
-                    return getPrimitives(geometry, Polygon.class).get(0);
-                case MULTI_SURFACE:
-                    return MultiSurface.of(getPrimitives(geometry, Polygon.class));
-                case TRIANGULATED_SURFACE:
-                    return TriangulatedSurface.of(getPrimitives(geometry, Polygon.class));
-                case COMPOSITE_SURFACE:
-                    return CompositeSurface.of(getPrimitives(geometry, Polygon.class));
-                case SOLID:
-                    return Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class)));
-                case MULTI_SOLID:
-                    return geometry instanceof SolidCollection<?> solidCollection ?
-                            MultiSolid.of(solidCollection.getSolids()) :
-                            MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
-                case COMPOSITE_SOLID:
-                    return geometry instanceof SolidCollection<?> solidCollection ?
-                            CompositeSolid.of(solidCollection.getSolids()) :
-                            CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
-                default:
-                    return geometry;
-            }
+            return switch (type) {
+                case POINT -> getPrimitives(geometry, Point.class).get(0);
+                case MULTI_POINT -> MultiPoint.of(getPrimitives(geometry, Point.class));
+                case LINE_STRING -> getPrimitives(geometry, LineString.class).get(0);
+                case MULTI_LINE_STRING -> MultiLineString.of(getPrimitives(geometry, LineString.class));
+                case POLYGON -> getPrimitives(geometry, Polygon.class).get(0);
+                case MULTI_SURFACE -> MultiSurface.of(getPrimitives(geometry, Polygon.class));
+                case TRIANGULATED_SURFACE -> TriangulatedSurface.of(getPrimitives(geometry, Polygon.class));
+                case COMPOSITE_SURFACE -> CompositeSurface.of(getPrimitives(geometry, Polygon.class));
+                case SOLID -> Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class)));
+                case MULTI_SOLID -> geometry instanceof SolidCollection<?> solidCollection ?
+                        MultiSolid.of(solidCollection.getSolids()) :
+                        MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                case COMPOSITE_SOLID -> geometry instanceof SolidCollection<?> solidCollection ?
+                        CompositeSolid.of(solidCollection.getSolids()) :
+                        CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+            };
         } catch (Exception e) {
             throw new GeometryException("Failed to convert database geometry into a " +
                     type.getTypeName() + " geometry.");
@@ -186,32 +159,20 @@ public class GeometryBuilder {
     }
 
     private List<? extends Geometry<?>> getPrimitives(Geometry<?> geometry) {
-        switch (geometry.getGeometryType()) {
-            case POINT:
-                return List.of((Point) geometry);
-            case MULTI_POINT:
-                return ((MultiPoint) geometry).getPoints();
-            case LINE_STRING:
-                return List.of((LineString) geometry);
-            case MULTI_LINE_STRING:
-                return ((MultiLineString) geometry).getLineStrings();
-            case POLYGON:
-                return List.of((Polygon) geometry);
-            case COMPOSITE_SURFACE:
-            case MULTI_SURFACE:
-            case TRIANGULATED_SURFACE:
-                return ((SurfaceCollection<?>) geometry).getPolygons();
-            case SOLID:
-                return ((Solid) geometry).getShell().getPolygons();
-            case COMPOSITE_SOLID:
-            case MULTI_SOLID:
-                return ((SolidCollection<?>) geometry).getSolids().stream()
-                        .map(solid -> solid.getShell().getPolygons())
-                        .flatMap(Collection::stream)
-                        .collect(Collectors.toList());
-            default:
-                return Collections.emptyList();
-        }
+        return switch (geometry.getGeometryType()) {
+            case POINT -> List.of((Point) geometry);
+            case MULTI_POINT -> ((MultiPoint) geometry).getPoints();
+            case LINE_STRING -> List.of((LineString) geometry);
+            case MULTI_LINE_STRING -> ((MultiLineString) geometry).getLineStrings();
+            case POLYGON -> List.of((Polygon) geometry);
+            case COMPOSITE_SURFACE, MULTI_SURFACE, TRIANGULATED_SURFACE ->
+                    ((SurfaceCollection<?>) geometry).getPolygons();
+            case SOLID -> ((Solid) geometry).getShell().getPolygons();
+            case COMPOSITE_SOLID, MULTI_SOLID -> ((SolidCollection<?>) geometry).getSolids().stream()
+                    .map(solid -> solid.getShell().getPolygons())
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toList());
+        };
     }
 
     @SuppressWarnings("unchecked")

@@ -55,35 +55,17 @@ public class WKBParser {
         boolean hasSRID = (typeInt & 0x20000000) != 0;
         Integer srid = hasSRID ? buffer.getInt() : null;
 
-        Geometry<?> geometry;
-        switch (geometryType) {
-            case WKBConstants.POINT:
-                geometry = readPoint(buffer, dimension);
-                break;
-            case WKBConstants.LINESTRING:
-                geometry = readLineString(buffer, dimension);
-                break;
-            case WKBConstants.POLYGON:
-                geometry = readPolygon(buffer, dimension);
-                break;
-            case WKBConstants.MULTIPOINT:
-                geometry = readMultiPoint(buffer);
-                break;
-            case WKBConstants.MULTILINESTRING:
-                geometry = readMultiLineString(buffer);
-                break;
-            case WKBConstants.MULTIPOLYGON:
-                geometry = readMultiPolygon(buffer);
-                break;
-            case WKBConstants.POLYHEDRALSURFACE:
-                geometry = readSolid(buffer);
-                break;
-            case WKBConstants.GEOMETRYCOLLECTION:
-                geometry = readGeometryCollection(buffer);
-                break;
-            default:
-                throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
-        }
+        Geometry<?> geometry = switch (geometryType) {
+            case WKBConstants.POINT -> readPoint(buffer, dimension);
+            case WKBConstants.LINESTRING -> readLineString(buffer, dimension);
+            case WKBConstants.POLYGON -> readPolygon(buffer, dimension);
+            case WKBConstants.MULTIPOINT -> readMultiPoint(buffer);
+            case WKBConstants.MULTILINESTRING -> readMultiLineString(buffer);
+            case WKBConstants.MULTIPOLYGON -> readMultiPolygon(buffer);
+            case WKBConstants.POLYHEDRALSURFACE -> readSolid(buffer);
+            case WKBConstants.GEOMETRYCOLLECTION -> readGeometryCollection(buffer);
+            default -> throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
+        };
 
         return geometry.setSRID(srid);
     }

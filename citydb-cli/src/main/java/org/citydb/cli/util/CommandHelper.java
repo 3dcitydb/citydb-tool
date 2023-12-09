@@ -120,17 +120,11 @@ public class CommandHelper {
 
     public void printIndexStatus(DatabaseAdapter adapter, Consumer<String> consumer) throws ExecutionException {
         try {
-            String status;
-            switch (adapter.getSchemaAdapter().getIndexHelper().existAll(IndexHelper.DEFAULT_INDEXES)) {
-                case ON:
-                    status = "on";
-                    break;
-                case PARTIALLY_ON:
-                    status = "partially on";
-                    break;
-                default:
-                    status = "off";
-            }
+            String status = switch (adapter.getSchemaAdapter().getIndexHelper().existAll(IndexHelper.DEFAULT_INDEXES)) {
+                case ON -> "on";
+                case PARTIALLY_ON -> "partially on";
+                default -> "off";
+            };
 
             consumer.accept("Database indexes are " + status + ".");
         } catch (SQLException e) {

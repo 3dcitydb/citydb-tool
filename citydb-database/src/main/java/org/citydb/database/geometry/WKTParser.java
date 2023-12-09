@@ -52,35 +52,17 @@ public class WKTParser {
         String geometryType = nextWord(tokenizer);
         int dimension = readDimension(tokenizer);
 
-        Geometry<?> geometry;
-        switch (geometryType) {
-            case WKTConstants.POINT:
-                geometry = readPoint(tokenizer, dimension);
-                break;
-            case WKTConstants.LINESTRING:
-                geometry = readLineString(tokenizer, dimension);
-                break;
-            case WKTConstants.POLYGON:
-                geometry = readPolygon(tokenizer, dimension);
-                break;
-            case WKTConstants.MULTIPOINT:
-                geometry = readMultiPoint(tokenizer, dimension);
-                break;
-            case WKTConstants.MULTILINESTRING:
-                geometry = readMultiLineString(tokenizer, dimension);
-                break;
-            case WKTConstants.MULTIPOLYGON:
-                geometry = readMultiPolygon(tokenizer, dimension);
-                break;
-            case WKTConstants.POLYHEDRALSURFACE:
-                geometry = readSolid(tokenizer, dimension);
-                break;
-            case WKTConstants.GEOMETRYCOLLECTION:
-                geometry = readGeometryCollection(tokenizer);
-                break;
-            default:
-                throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
-        }
+        Geometry<?> geometry = switch (geometryType) {
+            case WKTConstants.POINT -> readPoint(tokenizer, dimension);
+            case WKTConstants.LINESTRING -> readLineString(tokenizer, dimension);
+            case WKTConstants.POLYGON -> readPolygon(tokenizer, dimension);
+            case WKTConstants.MULTIPOINT -> readMultiPoint(tokenizer, dimension);
+            case WKTConstants.MULTILINESTRING -> readMultiLineString(tokenizer, dimension);
+            case WKTConstants.MULTIPOLYGON -> readMultiPolygon(tokenizer, dimension);
+            case WKTConstants.POLYHEDRALSURFACE -> readSolid(tokenizer, dimension);
+            case WKTConstants.GEOMETRYCOLLECTION -> readGeometryCollection(tokenizer);
+            default -> throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
+        };
 
         return geometry.setSRID(srid);
     }
@@ -197,16 +179,15 @@ public class WKTParser {
 
     private int readDimension(StreamTokenizer tokenizer) throws GeometryException, IOException {
         String coordinateFlag = lookAheadWord(tokenizer);
-        switch (coordinateFlag) {
-            case WKTConstants.Z:
+        return switch (coordinateFlag) {
+            case WKTConstants.Z -> {
                 tokenizer.nextToken();
-                return 3;
-            case WKTConstants.M:
-            case WKTConstants.ZM:
-                throw new GeometryException("Unsupported WKT coordinate flag '" + coordinateFlag + "'.");
-            default:
-                return 2;
-        }
+                yield 3;
+            }
+            case WKTConstants.M, WKTConstants.ZM ->
+                    throw new GeometryException("Unsupported WKT coordinate flag '" + coordinateFlag + "'.");
+            default -> 2;
+        };
     }
 
     private Coordinate getCoordinate(StreamTokenizer tokenizer, int dimension) throws GeometryException, IOException {
@@ -248,55 +229,41 @@ public class WKTParser {
 
     private String nextEmptyOrOpener(StreamTokenizer tokenizer) throws GeometryException, IOException {
         String word = nextWord(tokenizer);
-        switch (word) {
-            case WKTConstants.Z:
-            case WKTConstants.M:
-            case WKTConstants.ZM:
-                word = nextWord(tokenizer);
-                break;
-        }
+        word = switch (word) {
+            case WKTConstants.Z, WKTConstants.M, WKTConstants.ZM -> nextWord(tokenizer);
+            default -> word;
+        };
 
-        switch (word) {
-            case WKTConstants.EMPTY:
-            case L_PAREN:
-                return word;
-            default:
-                throw new GeometryException("Expected token " + WKTConstants.EMPTY + " or " + L_PAREN +
-                        " but found + " + word + ".");
-        }
+        return switch (word) {
+            case WKTConstants.EMPTY, L_PAREN -> word;
+            default -> throw new GeometryException("Expected token " + WKTConstants.EMPTY + " or " + L_PAREN +
+                    " but found + " + word + ".");
+        };
     }
 
     private String nextCloserOrComma(StreamTokenizer tokenizer) throws GeometryException, IOException {
         String word = nextWord(tokenizer);
-        switch (word) {
-            case COMMA:
-            case R_PAREN:
-                return word;
-            default:
-                throw new GeometryException("Expected token " + COMMA + " or " + R_PAREN +
-                        " but found + " + word + ".");
-        }
+        return switch (word) {
+            case COMMA, R_PAREN -> word;
+            default -> throw new GeometryException("Expected token " + COMMA + " or " + R_PAREN +
+                    " but found + " + word + ".");
+        };
     }
 
     private String nextWord(StreamTokenizer tokenizer) throws GeometryException, IOException {
         int type = tokenizer.nextToken();
-        switch (type) {
-            case StreamTokenizer.TT_WORD:
+        return switch (type) {
+            case StreamTokenizer.TT_WORD -> {
                 String word = tokenizer.sval.toUpperCase(Locale.ROOT);
-                return word.equals(WKTConstants.EMPTY) ? WKTConstants.EMPTY : word;
-            case '(':
-                return L_PAREN;
-            case ')':
-                return R_PAREN;
-            case ',':
-                return COMMA;
-            case ';':
-                return SEMICOLON;
-            case '=':
-                return EQUAL_SIGN;
-            default:
-                throw new GeometryException("Unsupported WKT token '" + Character.toString(type) + "'.");
-        }
+                yield word.equals(WKTConstants.EMPTY) ? WKTConstants.EMPTY : word;
+            }
+            case '(' -> L_PAREN;
+            case ')' -> R_PAREN;
+            case ',' -> COMMA;
+            case ';' -> SEMICOLON;
+            case '=' -> EQUAL_SIGN;
+            default -> throw new GeometryException("Unsupported WKT token '" + Character.toString(type) + "'.");
+        };
     }
 
     private String lookAheadWord(StreamTokenizer tokenizer) throws GeometryException, IOException {

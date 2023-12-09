@@ -48,26 +48,14 @@ public class PropertyBuilder {
 
     Property<?> build(PropertyStub propertyStub, Hierarchy hierarchy) throws ExportException, SQLException {
         if (propertyStub != null && propertyStub.getDataType() != null) {
-            Property<?> property;
-            switch (propertyStub.getDataType()) {
-                case FEATURE_PROPERTY:
-                    property = buildFeatureProperty(propertyStub, hierarchy);
-                    break;
-                case GEOMETRY_PROPERTY:
-                    property = buildGeometryProperty(propertyStub, hierarchy);
-                    break;
-                case IMPLICIT_GEOMETRY_PROPERTY:
-                    property = buildImplicitGeometryProperty(propertyStub, hierarchy);
-                    break;
-                case APPEARANCE_PROPERTY:
-                    property = buildAppearanceProperty(propertyStub, hierarchy);
-                    break;
-                case ADDRESS_PROPERTY:
-                    property = buildAddressProperty(propertyStub, hierarchy);
-                    break;
-                default:
-                    property = buildAttribute(propertyStub);
-            }
+            Property<?> property = switch (propertyStub.getDataType()) {
+                case FEATURE_PROPERTY -> buildFeatureProperty(propertyStub, hierarchy);
+                case GEOMETRY_PROPERTY -> buildGeometryProperty(propertyStub, hierarchy);
+                case IMPLICIT_GEOMETRY_PROPERTY -> buildImplicitGeometryProperty(propertyStub, hierarchy);
+                case APPEARANCE_PROPERTY -> buildAppearanceProperty(propertyStub, hierarchy);
+                case ADDRESS_PROPERTY -> buildAddressProperty(propertyStub, hierarchy);
+                default -> buildAttribute(propertyStub);
+            };
 
             if (property != null) {
                 return property.setDescriptor(propertyStub.getDescriptor());
