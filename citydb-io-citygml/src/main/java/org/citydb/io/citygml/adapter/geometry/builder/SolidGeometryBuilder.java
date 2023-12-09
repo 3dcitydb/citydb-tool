@@ -72,9 +72,9 @@ public class SolidGeometryBuilder extends GeometryBuilder {
         public void visit(org.xmlobjects.gml.model.geometry.primitives.Solid solid) {
             if (solid.getExterior() != null && solid.getExterior().getObject() != null) {
                 try {
-                    Geometry<?> shell = builder.build(solid.getExterior().getObject());
-                    if (shell instanceof CompositeSurface) {
-                        solids.add(Solid.of((CompositeSurface) shell)
+                    Geometry<?> geometry = builder.build(solid.getExterior().getObject());
+                    if (geometry instanceof CompositeSurface shell) {
+                        solids.add(Solid.of(shell)
                                 .setObjectId(solid.getId()));
                     }
                 } catch (ModelBuildException e) {

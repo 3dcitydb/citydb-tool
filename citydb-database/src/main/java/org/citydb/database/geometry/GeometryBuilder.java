@@ -92,32 +92,32 @@ public class GeometryBuilder {
         switch (getType(item)) {
             case POINT:
                 geometry = getPrimitive(item, primitives, Point.class);
-                if (parent instanceof MultiPoint) {
-                    ((MultiPoint) parent).getPoints().add((Point) geometry);
+                if (parent instanceof MultiPoint multiPoint) {
+                    multiPoint.getPoints().add((Point) geometry);
                 }
                 break;
             case LINE_STRING:
                 geometry = getPrimitive(item, primitives, LineString.class);
-                if (parent instanceof MultiLineString) {
-                    ((MultiLineString) parent).getLineStrings().add((LineString) geometry);
+                if (parent instanceof MultiLineString multiLineString) {
+                    multiLineString.getLineStrings().add((LineString) geometry);
                 }
                 break;
             case POLYGON:
                 geometry = getPrimitive(item, primitives, Polygon.class);
                 ((Polygon) geometry).setReversed(item.getBooleanValue(Properties.JSON_KEY_IS_REVERSED, false));
-                if (parent instanceof SurfaceCollection<?>) {
-                    ((SurfaceCollection<?>) parent).getPolygons().add((Polygon) geometry);
+                if (parent instanceof SurfaceCollection<?> surfaceCollection) {
+                    surfaceCollection.getPolygons().add((Polygon) geometry);
                 }
                 break;
             case COMPOSITE_SURFACE:
-                geometry = parent instanceof Solid ?
-                        ((Solid) parent).getShell() :
+                geometry = parent instanceof Solid solid ?
+                        solid.getShell() :
                         CompositeSurface.empty();
                 break;
             case SOLID:
                 geometry = Solid.empty();
-                if (parent instanceof SolidCollection<?>) {
-                    ((SolidCollection<?>) parent).getSolids().add((Solid) geometry);
+                if (parent instanceof SolidCollection<?> solidCollection) {
+                    solidCollection.getSolids().add((Solid) geometry);
                 }
                 break;
             case MULTI_POINT:
@@ -169,12 +169,12 @@ public class GeometryBuilder {
                 case SOLID:
                     return Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class)));
                 case MULTI_SOLID:
-                    return geometry instanceof SolidCollection<?> ?
-                            MultiSolid.of(((SolidCollection<?>) geometry).getSolids()) :
+                    return geometry instanceof SolidCollection<?> solidCollection ?
+                            MultiSolid.of(solidCollection.getSolids()) :
                             MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
                 case COMPOSITE_SOLID:
-                    return geometry instanceof SolidCollection<?> ?
-                            CompositeSolid.of(((SolidCollection<?>) geometry).getSolids()) :
+                    return geometry instanceof SolidCollection<?> solidCollection ?
+                            CompositeSolid.of(solidCollection.getSolids()) :
                             CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
                 default:
                     return geometry;

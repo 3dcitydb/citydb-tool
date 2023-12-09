@@ -139,10 +139,10 @@ public class Preprocessor {
                     service.execute(() -> {
                         try {
                             AbstractFeature feature = chunk.build();
-                            if (feature instanceof Appearance) {
-                                appearances.add((Appearance) feature);
-                            } else if (feature instanceof CityObjectGroup) {
-                                cityObjectGroups.add((CityObjectGroup) feature);
+                            if (feature instanceof Appearance appearance) {
+                                appearances.add(appearance);
+                            } else if (feature instanceof CityObjectGroup group) {
+                                cityObjectGroups.add(group);
                             } else {
                                 feature.accept(collector);
                                 if (resolveGeometryReferences) {

@@ -289,18 +289,18 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
     }
 
     public void addProperty(Property<?> property) {
-        if (property instanceof FeatureProperty) {
-            addFeature((FeatureProperty) property);
-        } else if (property instanceof GeometryProperty) {
-            addGeometry((GeometryProperty) property);
-        } else if (property instanceof ImplicitGeometryProperty) {
-            addImplicitGeometry((ImplicitGeometryProperty) property);
-        } else if (property instanceof AppearanceProperty) {
-            addAppearance((AppearanceProperty) property);
-        } else if (property instanceof AddressProperty) {
-            addAddress((AddressProperty) property);
-        }  else if (property instanceof Attribute) {
-            addAttribute((Attribute) property);
+        if (property instanceof FeatureProperty featureProperty) {
+            addFeature(featureProperty);
+        } else if (property instanceof GeometryProperty geometryProperty) {
+            addGeometry(geometryProperty);
+        } else if (property instanceof ImplicitGeometryProperty implicitGeometryProperty) {
+            addImplicitGeometry(implicitGeometryProperty);
+        } else if (property instanceof AppearanceProperty appearanceProperty) {
+            addAppearance(appearanceProperty);
+        } else if (property instanceof AddressProperty addressProperty) {
+            addAddress(addressProperty);
+        }  else if (property instanceof Attribute attribute) {
+            addAttribute(attribute);
         }
     }
 

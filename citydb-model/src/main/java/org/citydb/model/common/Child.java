@@ -59,9 +59,9 @@ public abstract class Child implements Serializable {
     }
 
     protected final <T extends Child> List<T> asChild(List<T> child) {
-        if (child instanceof ChildList) {
-            ((ChildList<T>) child).setParent(this);
-            return child;
+        if (child instanceof ChildList<T> childList) {
+            childList.setParent(this);
+            return childList;
         } else {
             return child != null ? new ChildList<>(child, this) : null;
         }

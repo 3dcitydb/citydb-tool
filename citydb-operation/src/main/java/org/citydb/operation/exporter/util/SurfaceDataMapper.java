@@ -52,15 +52,15 @@ public class SurfaceDataMapper {
     public SurfaceDataMapper buildTextureMapping(JSONObject mapping, long geometryDataId, SurfaceData<?> surfaceData) {
         if (mapping != null) {
             for (Map.Entry<String, Object> entry : mapping.entrySet()) {
-                if (entry.getValue() instanceof JSONArray) {
+                if (entry.getValue() instanceof JSONArray rings) {
                     List<List<TextureCoordinate>> textureCoordinates = new ArrayList<>();
-                    for (Object ring : (JSONArray) entry.getValue()) {
-                        if (ring instanceof JSONArray) {
+                    for (Object ring : rings) {
+                        if (ring instanceof JSONArray ringArray) {
                             List<TextureCoordinate> ringCoordinates = new ArrayList<>();
-                            for (Object coordinates : (JSONArray) ring) {
-                                if (coordinates instanceof JSONArray && ((JSONArray) coordinates).size() > 1) {
-                                    Double s = ((JSONArray) coordinates).getDouble(0);
-                                    Double t = ((JSONArray) coordinates).getDouble(1);
+                            for (Object coordinates : ringArray) {
+                                if (coordinates instanceof JSONArray coordinatesArray && coordinatesArray.size() > 1) {
+                                    Double s = coordinatesArray.getDouble(0);
+                                    Double t = coordinatesArray.getDouble(1);
                                     if (s != null && t != null) {
                                         ringCoordinates.add(TextureCoordinate.of(s, t));
                                     }
@@ -87,9 +87,9 @@ public class SurfaceDataMapper {
     public SurfaceDataMapper buildWorldToTextureMapping(JSONObject mapping, long geometryDataId, SurfaceData<?> surfaceData) {
         if (mapping != null) {
             for (Map.Entry<String, Object> entry : mapping.entrySet()) {
-                if (entry.getValue() instanceof JSONArray) {
-                    List<Double> worldToTexture = IntStream.range(0, ((JSONArray) entry.getValue()).size())
-                            .mapToObj(((JSONArray) entry.getValue())::getDouble)
+                if (entry.getValue() instanceof JSONArray array) {
+                    List<Double> worldToTexture = IntStream.range(0, array.size())
+                            .mapToObj(array::getDouble)
                             .collect(Collectors.toList());
                     worldToTextureMappings.computeIfAbsent(surfaceData, v -> new HashMap<>())
                             .put(getKey(geometryDataId, entry.getKey()), worldToTexture);

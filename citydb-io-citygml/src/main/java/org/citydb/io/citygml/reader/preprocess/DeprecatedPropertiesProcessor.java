@@ -698,12 +698,12 @@ public class DeprecatedPropertiesProcessor {
         }
 
         private boolean processLod1Geometry(GeometryProperty<?> property, AbstractSpace object) {
-            if (property.getObject() instanceof MultiSurface) {
-                processLod1MultiSurface(new MultiSurfaceProperty((MultiSurface) property.getObject()), object);
+            if (property.getObject() instanceof MultiSurface multiSurface) {
+                processLod1MultiSurface(new MultiSurfaceProperty(multiSurface), object);
                 return true;
-            } else if (property.getObject() instanceof AbstractSurface) {
+            } else if (property.getObject() instanceof AbstractSurface surface) {
                 MultiSurface multiSurface = new MultiSurface();
-                multiSurface.getSurfaceMember().add(new SurfaceProperty((AbstractSurface) property.getObject()));
+                multiSurface.getSurfaceMember().add(new SurfaceProperty(surface));
                 processLod1MultiSurface(new MultiSurfaceProperty(multiSurface), object);
                 return true;
             }
@@ -727,11 +727,11 @@ public class DeprecatedPropertiesProcessor {
         }
 
         private MultiSurface toMultiSurface(AbstractGeometry geometry) {
-            if (geometry instanceof MultiSurface) {
-                return (MultiSurface) geometry;
-            } else if (geometry instanceof AbstractSurface) {
+            if (geometry instanceof MultiSurface multiSurface) {
+                return multiSurface;
+            } else if (geometry instanceof AbstractSurface surface) {
                 MultiSurface multiSurface = new MultiSurface();
-                multiSurface.getSurfaceMember().add(new SurfaceProperty((AbstractSurface) geometry));
+                multiSurface.getSurfaceMember().add(new SurfaceProperty(surface));
                 return multiSurface;
             } else {
                 MultiSurface multiSurface = new MultiSurface();

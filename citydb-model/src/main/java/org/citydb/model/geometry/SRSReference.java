@@ -33,13 +33,12 @@ public interface SRSReference {
     SRSReference setSrsName(String srsName);
 
     default SRSReference getInheritedSRSReference() {
-        if (this instanceof Child) {
-            Child parent = (Child) this;
+        if (this instanceof Child parent) {
             while ((parent = parent.getParent().orElse(null)) != null) {
-                if (parent instanceof SRSReference) {
-                    return (SRSReference) parent;
-                } else if (parent instanceof Feature) {
-                    Envelope envelope = ((Feature) parent).getEnvelope().orElse(null);
+                if (parent instanceof SRSReference reference) {
+                    return reference;
+                } else if (parent instanceof Feature feature) {
+                    Envelope envelope = feature.getEnvelope().orElse(null);
                     if (envelope != this && envelope != null) {
                         return envelope;
                     }

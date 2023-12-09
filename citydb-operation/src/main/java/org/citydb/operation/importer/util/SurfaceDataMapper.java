@@ -51,8 +51,8 @@ public class SurfaceDataMapper {
             surfaces.computeIfAbsent(descriptor.getId(), v -> new ArrayList<>()).add(surface);
         }
 
-        if (surfaceData instanceof ParameterizedTexture) {
-            return getParameterizedTextureMapping((ParameterizedTexture) surfaceData, surfaces);
+        if (surfaceData instanceof ParameterizedTexture texture) {
+            return getParameterizedTextureMapping(texture, surfaces);
         } else if (surfaceData instanceof X3DMaterial) {
             return getMaterialMapping(surfaces);
         } else if (surfaceData instanceof GeoreferencedTexture) {
@@ -75,8 +75,7 @@ public class SurfaceDataMapper {
                         mapping.getOrCreateWorldToTextureMapping().put(objectId, JSONArray.copyOf(worldToTexture));
                     }
 
-                    if (surface instanceof Polygon) {
-                        Polygon polygon = (Polygon) surface;
+                    if (surface instanceof Polygon polygon) {
                         JSONArray rings = new JSONArray(polygon.getRings().size());
                         for (LinearRing ring : polygon.getRings()) {
                             List<TextureCoordinate> coordinates = texture.getTextureCoordinates(ring);

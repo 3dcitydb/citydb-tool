@@ -239,8 +239,8 @@ public class ModelWalker implements Visitor {
     }
 
     public void visit(InlineProperty<?> property) {
-        if (property instanceof Property) {
-            visit((Property<?>) property);
+        if (property instanceof Property<?> object) {
+            visit(object);
         }
 
         if (shouldWalk) {
@@ -249,8 +249,8 @@ public class ModelWalker implements Visitor {
     }
 
     public void visit(InlineOrByReferenceProperty<?> property) {
-        if (property instanceof Property) {
-            visit((Property<?>) property);
+        if (property instanceof Property<?> object) {
+            visit(object);
         }
         
         if (shouldWalk) {
@@ -283,8 +283,8 @@ public class ModelWalker implements Visitor {
     }
 
     private void visitObject(Object object) {
-        if (object instanceof Visitable) {
-            ((Visitable) object).accept(this);
+        if (object instanceof Visitable visitable) {
+            visitable.accept(this);
         }
     }
 
@@ -292,17 +292,17 @@ public class ModelWalker implements Visitor {
         visit((Property<?>) attribute);
 
         if (attribute.hasProperties()) {
-            for (Property<?> property : attribute.getProperties().getAll()) {
-                if (property instanceof FeatureProperty) {
-                    visit((FeatureProperty) property);
-                } else if (property instanceof GeometryProperty) {
-                    visit((GeometryProperty) property);
-                } else if (property instanceof AppearanceProperty) {
-                    visit((AppearanceProperty) property);
-                } else if (property instanceof ImplicitGeometryProperty) {
-                    visit((ImplicitGeometryProperty) property);
-                } else if (property instanceof Attribute) {
-                    visit((Attribute) property);
+            for (Property<?> child : attribute.getProperties().getAll()) {
+                if (child instanceof FeatureProperty property) {
+                    visit(property);
+                } else if (child instanceof GeometryProperty property) {
+                    visit(property);
+                } else if (child instanceof AppearanceProperty property) {
+                    visit(property);
+                } else if (child instanceof ImplicitGeometryProperty property) {
+                    visit(property);
+                } else if (child instanceof Attribute childAttribute) {
+                    visit(childAttribute);
                 }
             }
         }

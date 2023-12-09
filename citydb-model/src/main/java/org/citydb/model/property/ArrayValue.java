@@ -65,14 +65,14 @@ public class ArrayValue implements Serializable {
     public static ArrayValue ofList(List<?> values) {
         ArrayValue arrayValue = newInstance();
         for (Object value : values) {
-            if (value instanceof Boolean) {
-                arrayValue.add(Value.of((Boolean) value));
-            } else if (value instanceof Integer) {
-                arrayValue.add(Value.of((Integer) value));
-            } else if (value instanceof Long) {
-                arrayValue.add(Value.of((Long) value));
-            } else if (value instanceof Double) {
-                arrayValue.add(Value.of((Double) value));
+            if (value instanceof Boolean bool) {
+                arrayValue.add(Value.of(bool));
+            } else if (value instanceof Integer intValue) {
+                arrayValue.add(Value.of(intValue));
+            } else if (value instanceof Long longValue) {
+                arrayValue.add(Value.of(longValue));
+            } else if (value instanceof Double doubleValue) {
+                arrayValue.add(Value.of(doubleValue));
             } else if (value != null) {
                 arrayValue.add(Value.of(value.toString()));
             }

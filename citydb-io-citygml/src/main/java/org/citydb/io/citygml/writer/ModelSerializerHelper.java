@@ -455,16 +455,13 @@ public class ModelSerializerHelper {
 
     public <T extends AbstractAssociation<? extends AbstractGML>> T getObjectProperty(FeatureProperty source, Class<? extends ModelSerializer<FeatureProperty, T>> type) throws ModelSerializeException {
         T target = buildObject(source, type);
-        if (target instanceof AbstractInlineOrByReferenceProperty) {
-            AbstractInlineOrByReferenceProperty<?> property = (AbstractInlineOrByReferenceProperty<?>) target;
+        if (target instanceof AbstractInlineOrByReferenceProperty<?> property) {
             if (property.getObject() == null && property.getHref() == null) {
                 return null;
             }
-        } else if (target instanceof AbstractInlineProperty
-                && ((AbstractInlineProperty<?>) target).getObject() == null) {
+        } else if (target instanceof AbstractInlineProperty<?> property && property.getObject() == null) {
             return null;
-        } else if (target instanceof AbstractArrayProperty
-                && !((AbstractArrayProperty<?>) target).isSetObjects()) {
+        } else if (target instanceof AbstractArrayProperty<?> property && !property.isSetObjects()) {
             return null;
         }
 

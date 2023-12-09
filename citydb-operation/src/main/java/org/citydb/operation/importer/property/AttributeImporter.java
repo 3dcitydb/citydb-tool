@@ -102,24 +102,24 @@ public class AttributeImporter extends PropertyImporter {
         PropertyDescriptor descriptor = super.doImport(attribute, propertyId, parentId, featureId);
 
         if (attribute.hasProperties()) {
-            for (Property<?> property : attribute.getProperties().getAll()) {
-                if (property instanceof Attribute)  {
-                    doImport((Attribute) property, parentId, featureId);
-                } else if (property instanceof FeatureProperty) {
+            for (Property<?> child : attribute.getProperties().getAll()) {
+                if (child instanceof Attribute childAttribute)  {
+                    doImport(childAttribute, parentId, featureId);
+                } else if (child instanceof FeatureProperty property) {
                     tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
-                            .doImport((FeatureProperty) property, parentId, featureId);
-                } else if (property instanceof GeometryProperty) {
+                            .doImport(property, parentId, featureId);
+                } else if (child instanceof GeometryProperty property) {
                     tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
-                            .doImport((GeometryProperty) property, parentId, featureId);
-                } else if (property instanceof ImplicitGeometryProperty) {
+                            .doImport(property, parentId, featureId);
+                } else if (child instanceof ImplicitGeometryProperty property) {
                     tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
-                            .doImport((ImplicitGeometryProperty) property, parentId, featureId);
-                } else if (property instanceof AppearanceProperty) {
+                            .doImport(property, parentId, featureId);
+                } else if (child instanceof AppearanceProperty property) {
                     tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
-                            .doImport((AppearanceProperty) property, parentId, featureId);
-                } else if (property instanceof AddressProperty) {
+                            .doImport(property, parentId, featureId);
+                } else if (child instanceof AddressProperty property) {
                     tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
-                            .doImport((AddressProperty) property, parentId, featureId);
+                            .doImport(property, parentId, featureId);
                 }
             }
         }

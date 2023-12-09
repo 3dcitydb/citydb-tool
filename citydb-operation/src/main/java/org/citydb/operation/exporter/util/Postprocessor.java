@@ -129,8 +129,8 @@ public class Postprocessor {
             for (Map.Entry<String, List<List<TextureCoordinate>>> entry : surfaceDataMapper
                     .getTextureMappings(texture).entrySet()) {
                 Surface<?> surface = surfaces.get(entry.getKey());
-                if (surface instanceof Polygon) {
-                    List<LinearRing> rings = ((Polygon) surface).getRings();
+                if (surface instanceof Polygon polygon) {
+                    List<LinearRing> rings = polygon.getRings();
                     if (rings.size() == entry.getValue().size()) {
                         for (int i = 0; i < rings.size(); i++) {
                             List<TextureCoordinate> textureCoordinates = entry.getValue().get(i);

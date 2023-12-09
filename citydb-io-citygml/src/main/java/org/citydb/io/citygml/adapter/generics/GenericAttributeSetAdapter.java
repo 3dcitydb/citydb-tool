@@ -61,8 +61,8 @@ public class GenericAttributeSetAdapter extends AbstractGenericAttributeAdapter<
         super.serialize(source, target, helper);
 
         for (Property<?> property : source.getProperties().getByNamespace(Namespaces.GENERICS)) {
-            if (property instanceof Attribute) {
-                AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute((Attribute) property);
+            if (property instanceof Attribute attribute) {
+                AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
                 if (genericAttribute != null) {
                     target.getValue().add(new AbstractGenericAttributeProperty(genericAttribute));
                 }

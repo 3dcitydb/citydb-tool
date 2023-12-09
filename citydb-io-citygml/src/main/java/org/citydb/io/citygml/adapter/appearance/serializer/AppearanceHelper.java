@@ -89,15 +89,15 @@ public class AppearanceHelper {
             GeometryCollector collector = new GeometryCollector();
             Set<String> geometries = collector.collect(object);
             surfaceData.forEach((k, v) -> {
-                if (k instanceof org.citydb.model.appearance.ParameterizedTexture
-                        && v instanceof ParameterizedTexture) {
-                    process((org.citydb.model.appearance.ParameterizedTexture) k, (ParameterizedTexture) v, geometries);
-                } else if (k instanceof org.citydb.model.appearance.X3DMaterial
-                        && v instanceof X3DMaterial) {
-                    process((org.citydb.model.appearance.X3DMaterial) k, (X3DMaterial) v, geometries);
-                } else if (k instanceof org.citydb.model.appearance.GeoreferencedTexture
-                        && v instanceof GeoreferencedTexture) {
-                    process((org.citydb.model.appearance.GeoreferencedTexture) k, (GeoreferencedTexture) v, geometries);
+                if (k instanceof org.citydb.model.appearance.ParameterizedTexture source
+                        && v instanceof ParameterizedTexture target) {
+                    process(source, target, geometries);
+                } else if (k instanceof org.citydb.model.appearance.X3DMaterial source
+                        && v instanceof X3DMaterial target) {
+                    process(source, target, geometries);
+                } else if (k instanceof org.citydb.model.appearance.GeoreferencedTexture source
+                        && v instanceof GeoreferencedTexture target) {
+                    process(source, target, geometries);
                 }
             });
         }

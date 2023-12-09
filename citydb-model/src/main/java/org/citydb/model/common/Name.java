@@ -58,10 +58,9 @@ public class Name implements Serializable {
     public boolean equals(Object obj) {
         if (obj == this) {
             return true;
-        } else if (!(obj instanceof Name)) {
+        } else if (!(obj instanceof Name other)) {
             return false;
         } else {
-            Name other = (Name) obj;
             return localName.equals(other.localName) && namespace.equals(other.namespace);
         }
     }

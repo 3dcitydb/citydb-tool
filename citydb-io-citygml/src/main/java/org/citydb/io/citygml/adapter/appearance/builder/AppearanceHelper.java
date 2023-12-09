@@ -60,9 +60,9 @@ public class AppearanceHelper {
     }
 
     public org.citydb.model.appearance.Appearance getAppearance(AbstractAppearance source) throws ModelBuildException {
-        if (source instanceof org.citygml4j.core.model.appearance.Appearance) {
+        if (source instanceof Appearance appearance) {
             org.citydb.model.appearance.Appearance target = org.citydb.model.appearance.Appearance.newInstance();
-            builder.build((Appearance) source, target, helper);
+            builder.build(appearance, target, helper);
             return target;
         } else {
             return null;
@@ -146,10 +146,10 @@ public class AppearanceHelper {
                         GeometryReference reference = property.getObject().getTarget();
                         AbstractTextureParameterization parameterization = property.getObject()
                                 .getTextureParameterization().getObject();
-                        if (parameterization instanceof TexCoordList) {
-                            addMapping(reference, (TexCoordList) parameterization, target);
-                        } else if (parameterization instanceof TexCoordGen) {
-                            addMapping(reference, (TexCoordGen) parameterization, target);
+                        if (parameterization instanceof TexCoordList texCoordList) {
+                            addMapping(reference, texCoordList, target);
+                        } else if (parameterization instanceof TexCoordGen texCoordGen) {
+                            addMapping(reference, texCoordGen, target);
                         }
                     }
                 }

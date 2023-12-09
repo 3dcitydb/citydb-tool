@@ -90,8 +90,8 @@ public class CrossLodReferenceResolver {
                         .flatMap(Collection::stream)
                         .forEach(property -> {
                             Child parent = property.getParent();
-                            if (parent instanceof GMLObject) {
-                                ((GMLObject) parent).unsetProperty(property);
+                            if (parent instanceof GMLObject object) {
+                                object.unsetProperty(property);
                             }
                         });
             }

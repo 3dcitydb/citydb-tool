@@ -91,8 +91,8 @@ public class GeometryCopyBuilder {
             topLevelObject = parent;
         }
 
-        return topLevelObject instanceof AbstractCityObject ?
-                (AbstractCityObject) topLevelObject :
+        return topLevelObject instanceof AbstractCityObject cityObject ?
+                cityObject :
                 null;
     }
 
@@ -176,12 +176,12 @@ public class GeometryCopyBuilder {
             surfaceData.getLocalProperties().set(ID, source.getLocalProperties().getOrSet(ID, Integer.class, () -> id++));
             appearance.getSurfaceData().add(new AbstractSurfaceDataProperty(surfaceData));
 
-            if (surfaceData instanceof ParameterizedTexture) {
-                ((ParameterizedTexture) surfaceData).setTextureParameterizations(null);
-            } else if (surfaceData instanceof X3DMaterial) {
-                ((X3DMaterial) surfaceData).setTargets(null);
-            } else if (surfaceData instanceof GeoreferencedTexture) {
-                ((GeoreferencedTexture) surfaceData).setTargets(null);
+            if (surfaceData instanceof ParameterizedTexture texture) {
+                texture.setTextureParameterizations(null);
+            } else if (surfaceData instanceof X3DMaterial material) {
+                material.setTargets(null);
+            } else if (surfaceData instanceof GeoreferencedTexture texture) {
+                texture.setTargets(null);
             }
 
             return surfaceData;
@@ -189,8 +189,7 @@ public class GeometryCopyBuilder {
 
         private Appearance getOrCreateAppearance(Appearance source) {
             for (AbstractAppearanceProperty property : topLevelObject.getAppearances()) {
-                if (property.getObject() instanceof Appearance) {
-                    Appearance appearance = (Appearance) property.getObject();
+                if (property.getObject() instanceof Appearance appearance) {
                     if (appearance != source
                             && appearance.hasLocalProperties()
                             && source.hasLocalProperties()

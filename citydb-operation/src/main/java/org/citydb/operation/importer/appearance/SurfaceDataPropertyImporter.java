@@ -56,15 +56,15 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
         SurfaceData<?> surfaceData = property.getObject().orElse(null);
         if (surfaceData != null) {
             long surfaceDataId = 0;
-            if (surfaceData instanceof ParameterizedTexture) {
+            if (surfaceData instanceof ParameterizedTexture texture) {
                 surfaceDataId = tableHelper.getOrCreateImporter(ParameterizedTextureImporter.class)
-                        .doImport((ParameterizedTexture) surfaceData);
-            } else if (surfaceData instanceof X3DMaterial) {
+                        .doImport(texture);
+            } else if (surfaceData instanceof X3DMaterial material) {
                 surfaceDataId = tableHelper.getOrCreateImporter(X3DMaterialImporter.class)
-                        .doImport((X3DMaterial) surfaceData);
-            } else if (surfaceData instanceof GeoreferencedTexture) {
+                        .doImport(material);
+            } else if (surfaceData instanceof GeoreferencedTexture texture) {
                 surfaceDataId = tableHelper.getOrCreateImporter(GeoreferencedTextureImporter.class)
-                        .doImport((GeoreferencedTexture) surfaceData);
+                        .doImport(texture);
             }
 
             if (surfaceDataId > 0) {

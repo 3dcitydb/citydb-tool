@@ -30,9 +30,9 @@ public class FormatOptions {
     public static <T> T parse(Object options, Class<T> type) {
         if (type.isInstance(options)) {
             return type.cast(options);
-        } else if (options instanceof String) {
+        } else if (options instanceof String str) {
             try {
-                return JSON.parseObject((String) options, type);
+                return JSON.parseObject(str, type);
             } catch (Exception e) {
                 //
             }

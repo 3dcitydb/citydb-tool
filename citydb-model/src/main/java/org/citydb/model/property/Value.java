@@ -64,7 +64,7 @@ public class Value implements Serializable {
     }
 
     public boolean booleanValue() {
-        return value instanceof Boolean ? (Boolean) value : false;
+        return value instanceof Boolean booleanValue ? booleanValue : false;
     }
 
     public boolean asBoolean() {
@@ -72,10 +72,10 @@ public class Value implements Serializable {
     }
 
     public boolean asBoolean(boolean defaultValue) {
-        if (value instanceof Boolean) {
-            return (Boolean) value;
-        } else if (value instanceof Number) {
-            return ((Number) value).doubleValue() != 0;
+        if (value instanceof Boolean bool) {
+            return bool;
+        } else if (value instanceof Number number) {
+            return number.doubleValue() != 0;
         } else if (value instanceof String) {
             if ("true".equalsIgnoreCase(value.toString())
                     || "1".equals(value)) {
@@ -94,8 +94,8 @@ public class Value implements Serializable {
     }
 
     public boolean canCastToInt() {
-        if (value instanceof Number) {
-            double tmp = ((Number) value).doubleValue();
+        if (value instanceof Number number) {
+            double tmp = number.doubleValue();
             return tmp >= Integer.MIN_VALUE && tmp <= Integer.MAX_VALUE;
         }
 
@@ -103,7 +103,7 @@ public class Value implements Serializable {
     }
 
     public int intValue() {
-        return value instanceof Number ? ((Number) value).intValue() : 0;
+        return value instanceof Number number ? number.intValue() : 0;
     }
 
     public int asInt() {
@@ -111,13 +111,13 @@ public class Value implements Serializable {
     }
 
     public int asInt(int defaultValue) {
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        } else if (value instanceof Boolean) {
-            return (Boolean) value ? 1 : 0;
-        } else if (value instanceof String) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        } else if (value instanceof Boolean bool) {
+            return bool ? 1 : 0;
+        } else if (value instanceof String str) {
             try {
-                return Integer.parseInt((String) value);
+                return Integer.parseInt(str);
             } catch (Exception e) {
                 //
             }
@@ -131,8 +131,8 @@ public class Value implements Serializable {
     }
 
     public boolean canCastToLong() {
-        if (value instanceof Number) {
-            double doubleValue = ((Number) value).doubleValue();
+        if (value instanceof Number number) {
+            double doubleValue = number.doubleValue();
             return doubleValue >= Long.MIN_VALUE && doubleValue <= Long.MAX_VALUE;
         }
 
@@ -140,7 +140,7 @@ public class Value implements Serializable {
     }
 
     public long longValue() {
-        return value instanceof Number ? ((Number) value).longValue() : 0;
+        return value instanceof Number number ? number.longValue() : 0;
     }
 
     public long asLong() {
@@ -148,13 +148,13 @@ public class Value implements Serializable {
     }
 
     public long asLong(long defaultValue) {
-        if (value instanceof Number) {
-            return ((Number) value).longValue();
-        } else if (value instanceof Boolean) {
-            return (Boolean) value ? 1 : 0;
-        } else if (value instanceof String) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        } else if (value instanceof Boolean bool) {
+            return bool ? 1 : 0;
+        } else if (value instanceof String str) {
             try {
-                return Long.parseLong((String) value);
+                return Long.parseLong(str);
             } catch (Exception e) {
                 //
             }
@@ -172,7 +172,7 @@ public class Value implements Serializable {
     }
 
     public double doubleValue() {
-        return value instanceof Number ? ((Number) value).doubleValue() : 0;
+        return value instanceof Number number ? number.doubleValue() : 0;
     }
 
     public double asDouble() {
@@ -180,13 +180,13 @@ public class Value implements Serializable {
     }
 
     public double asDouble(double defaultValue) {
-        if (value instanceof Number) {
-            return ((Number) value).doubleValue();
-        } else if (value instanceof Boolean) {
-            return (Boolean) value ? 1 : 0;
-        } else if (value instanceof String) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        } else if (value instanceof Boolean bool) {
+            return bool ? 1 : 0;
+        } else if (value instanceof String str) {
             try {
-                return Double.parseDouble((String) value);
+                return Double.parseDouble(str);
             } catch (Exception e) {
                 //
             }
@@ -200,7 +200,7 @@ public class Value implements Serializable {
     }
 
     public String stringValue() {
-        return value instanceof String ? (String) value : null;
+        return value instanceof String str ? str : null;
     }
 
     public String asString() {
@@ -208,10 +208,10 @@ public class Value implements Serializable {
     }
 
     public String asString(String defaultValue) {
-        if (value instanceof String) {
-            return (String) value;
-        } else if (value instanceof Boolean) {
-            return (Boolean) value ? "true" : "false";
+        if (value instanceof String str) {
+            return str;
+        } else if (value instanceof Boolean bool) {
+            return bool ? "true" : "false";
         } else if (value instanceof Number) {
             return String.valueOf(value);
         }

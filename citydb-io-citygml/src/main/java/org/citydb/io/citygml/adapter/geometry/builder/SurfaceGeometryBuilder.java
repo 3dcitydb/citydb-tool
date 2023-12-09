@@ -140,8 +140,8 @@ public class SurfaceGeometryBuilder extends GeometryBuilder {
 
         private void addPolygon(Polygon polygon, GMLObject source) {
             if (polygon != null) {
-                if (source instanceof AbstractGML) {
-                    polygon.setObjectId(((AbstractGML) source).getId());
+                if (source instanceof AbstractGML object) {
+                    polygon.setObjectId(object.getId());
                 }
 
                 appearanceHelper.addTarget(polygon, source, context);

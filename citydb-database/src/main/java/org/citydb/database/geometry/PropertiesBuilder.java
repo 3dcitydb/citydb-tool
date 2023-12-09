@@ -138,7 +138,7 @@ public class PropertiesBuilder {
                 }
             }
 
-            if (geometry instanceof Polygon && ((Polygon) geometry).isReversed()) {
+            if (geometry instanceof Polygon polygon && polygon.isReversed()) {
                 item.put(Properties.JSON_KEY_IS_REVERSED, true);
             }
 

@@ -136,13 +136,13 @@ public class LodFilter {
     private void removeGeometries(List<AbstractProperty<?>> geometries, FeatureInfo featureInfo, boolean keepEmptyObjects) {
         for (AbstractProperty<?> geometry : geometries) {
             Child child = geometry.getParent();
-            if (child instanceof GMLObject) {
-                ((GMLObject) child).unsetProperty(geometry, true);
+            if (child instanceof GMLObject parent) {
+                parent.unsetProperty(geometry, true);
             }
 
             if (!keepEmptyObjects) {
-                featureInfo.add(child instanceof AbstractFeature ?
-                        (AbstractFeature) child :
+                featureInfo.add(child instanceof AbstractFeature feature ?
+                        feature :
                         geometry.getParent(AbstractFeature.class));
             }
         }
@@ -159,8 +159,7 @@ public class LodFilter {
         if (empty && !keepEmptyObjects) {
             GeometryInfo geometryInfo = feature.getGeometryInfo(true);
             if (!geometryInfo.hasLodGeometries() && !geometryInfo.hasLodImplicitGeometries()) {
-                if (feature.getParent() != null && feature.getParent().getParent() instanceof GMLObject) {
-                    GMLObject parent = (GMLObject) feature.getParent().getParent();
+                if (feature.getParent() != null && feature.getParent().getParent() instanceof GMLObject parent) {
                     parent.unsetProperty(feature.getParent(), true);
                 }
 
@@ -195,8 +194,8 @@ public class LodFilter {
                     if (property.getHref() != null
                             && removedIds.contains(FeatureHelper.getIdFromReference(property.getHref()))) {
                         Child child = property.getParent();
-                        if (child instanceof GMLObject) {
-                            ((GMLObject) child).unsetProperty(property, true);
+                        if (child instanceof GMLObject parent) {
+                            parent.unsetProperty(property, true);
                         }
                     }
 
