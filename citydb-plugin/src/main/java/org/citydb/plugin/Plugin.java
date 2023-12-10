@@ -21,7 +21,6 @@
 
 package org.citydb.plugin;
 
-import org.citydb.plugin.extension.Extension;
 import org.citydb.plugin.metadata.PluginMetadata;
 
 import java.util.List;

@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.plugin.extension;
+package org.citydb.plugin;
 
 public interface Extension {
 }

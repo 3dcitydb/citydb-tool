@@ -35,9 +35,9 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.core.CoreConstants;
 import org.citydb.logging.LoggerManager;
+import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
 import org.citydb.plugin.PluginManager;
-import org.citydb.plugin.extension.Extension;
 import picocli.CommandLine;
 
 import java.io.Console;

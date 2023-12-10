@@ -22,7 +22,7 @@
 package org.citydb.cli.extension;
 
 import org.citydb.cli.command.Command;
-import org.citydb.plugin.extension.Extension;
+import org.citydb.plugin.Extension;
 
 public interface MainCommand extends Extension, Command {
 }

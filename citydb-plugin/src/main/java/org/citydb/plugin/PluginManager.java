@@ -23,7 +23,6 @@ package org.citydb.plugin;
 
 import com.alibaba.fastjson2.JSON;
 import org.citydb.core.concurrent.LazyInitializer;
-import org.citydb.plugin.extension.Extension;
 import org.citydb.plugin.metadata.PluginMetadata;
 
 import java.net.MalformedURLException;
