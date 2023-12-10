@@ -5,7 +5,7 @@ module org.citydb.cli {
     requires org.citydb.logging;
     requires org.citydb.database;
     requires org.citydb.operation;
-    requires info.picocli;
+    requires transitive info.picocli;
 
     exports org.citydb.cli;
     exports org.citydb.cli.command;

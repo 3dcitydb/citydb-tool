@@ -1,5 +1,5 @@
 module org.citydb.operation {
-    requires org.citydb.database;
+    requires transitive org.citydb.database;
 
     exports org.citydb.operation.deleter;
     exports org.citydb.operation.deleter.common;
