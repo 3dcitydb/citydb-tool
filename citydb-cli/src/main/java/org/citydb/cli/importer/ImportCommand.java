@@ -22,8 +22,10 @@
 package org.citydb.cli.importer;
 
 import org.citydb.cli.command.Command;
+import org.citydb.cli.extension.ImportFormatCommand;
 import org.citydb.cli.importer.citygml.CityGMLImportCommand;
 import org.citydb.cli.importer.cityjson.CityJSONImportCommand;
+import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -32,9 +34,7 @@ import picocli.CommandLine;
         description = "Import data in a supported format.",
         synopsisSubcommandLabel = "SUBCOMMAND",
         subcommands = {
-                CommandLine.HelpCommand.class,
-                CityGMLImportCommand.class,
-                CityJSONImportCommand.class
+                CommandLine.HelpCommand.class
         })
 public class ImportCommand implements Command {
 
@@ -48,6 +48,15 @@ public class ImportCommand implements Command {
         if (!commandLine.getParseResult().hasSubcommand()) {
             throw new CommandLine.ParameterException(commandLine,
                     "Missing required subcommand for the input format.");
+        }
+    }
+
+    @Override
+    public void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {
+        commandLine.addSubcommand(new CityGMLImportCommand());
+        commandLine.addSubcommand(new CityJSONImportCommand());
+        for (ImportFormatCommand extension : pluginManager.getAllExtensions(ImportFormatCommand.class)) {
+            Command.addSubcommand(extension, commandLine, pluginManager);
         }
     }
 }

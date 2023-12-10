@@ -146,10 +146,23 @@ public class PluginManager {
         return new ArrayList<>(plugins.values());
     }
 
-    public <T extends Extension> List<T> getExtensions(Class<T> type) throws PluginException {
+    public Plugin getPlugin(Extension extension) {
+        ExtensionInfo extensionInfo = extensions.get(extension.getClass());
+        return extensionInfo != null ? extensionInfo.plugin : null;
+    }
+
+    public <T extends Extension> List<T> getExtensionsIfEnabled(Class<T> type) throws PluginException {
+        return getExtensions(type, true);
+    }
+
+    public <T extends Extension> List<T> getAllExtensions(Class<T> type) throws PluginException {
+        return getExtensions(type, false);
+    }
+
+    private <T extends Extension> List<T> getExtensions(Class<T> type, boolean onlyEnabled) throws PluginException {
         List<T> extensions = new ArrayList<>();
         for (Map.Entry<Class<? extends Extension>, ExtensionInfo> entry : this.extensions.entrySet()) {
-            if (entry.getValue().plugin.isEnabled() && type.isAssignableFrom(entry.getKey())) {
+            if ((!onlyEnabled || entry.getValue().plugin.isEnabled()) && type.isAssignableFrom(entry.getKey())) {
                 extensions.add(type.cast(entry.getValue().extension.get()));
             }
         }

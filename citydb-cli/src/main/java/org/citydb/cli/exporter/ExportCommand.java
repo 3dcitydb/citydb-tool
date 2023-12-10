@@ -24,6 +24,8 @@ package org.citydb.cli.exporter;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.citygml.CityGMLExportCommand;
 import org.citydb.cli.exporter.cityjson.CityJSONExportCommand;
+import org.citydb.cli.extension.ExportFormatCommand;
+import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -32,9 +34,7 @@ import picocli.CommandLine;
         description = "Export data in a supported format.",
         synopsisSubcommandLabel = "COMMAND",
         subcommands = {
-                CommandLine.HelpCommand.class,
-                CityGMLExportCommand.class,
-                CityJSONExportCommand.class
+                CommandLine.HelpCommand.class
         })
 public class ExportCommand implements Command {
 
@@ -48,6 +48,15 @@ public class ExportCommand implements Command {
         if (!commandLine.getParseResult().hasSubcommand()) {
             throw new CommandLine.ParameterException(commandLine,
                     "Missing required subcommand for the output format.");
+        }
+    }
+
+    @Override
+    public void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {
+        commandLine.addSubcommand(new CityGMLExportCommand());
+        commandLine.addSubcommand(new CityJSONExportCommand());
+        for (ExportFormatCommand extension : pluginManager.getAllExtensions(ExportFormatCommand.class)) {
+            Command.addSubcommand(extension, commandLine, pluginManager);
         }
     }
 }

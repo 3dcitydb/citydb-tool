@@ -30,6 +30,7 @@ public class CliConstants {
     public static final String APP_COPYRIGHT_YEAR;
     public static final String APP_VENDOR;
     public static final String APP_COMMAND = "citydb";
+    public static final String PLUGINS_DIR = "plugins";
     public static final String ENV_CITYDB_HOST = "CITYDB_HOST";
     public static final String ENV_CITYDB_PORT = "CITYDB_PORT";
     public static final String ENV_CITYDB_NAME = "CITYDB_NAME";
