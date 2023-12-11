@@ -60,6 +60,9 @@ distributions {
             into('samples') {
                 from "$rootDir/resources/samples"
             }
+            from("$projectDir/build/tmp/dir") {
+                mkdir "$projectDir/build/tmp/dir/plugins"
+            }
         }
     }
 }
