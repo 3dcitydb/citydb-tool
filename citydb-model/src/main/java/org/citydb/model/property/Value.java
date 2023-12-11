@@ -64,7 +64,7 @@ public class Value implements Serializable {
     }
 
     public boolean booleanValue() {
-        return value instanceof Boolean booleanValue ? booleanValue : false;
+        return value instanceof Boolean bool ? bool : false;
     }
 
     public boolean asBoolean() {
