@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml;
 
-import org.atteo.classindex.ClassFilter;
 import org.atteo.classindex.ClassIndex;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.citygml.annotation.DatabaseType;
@@ -105,12 +104,10 @@ public class CityGMLAdapterContext {
 
     @SuppressWarnings("rawtypes")
     private void loadBuilders(ClassLoader loader) throws IOAdapterException {
-        for (Class<? extends ModelBuilder> type : ClassFilter.only()
-                .withoutModifiers(Modifier.ABSTRACT)
-                .satisfying(c -> c.isAnnotationPresent(DatabaseType.class)
-                        || c.isAnnotationPresent(DatabaseTypes.class))
-                .from(ClassIndex.getSubclasses(ModelBuilder.class, loader))) {
-
+        for (Class<? extends ModelBuilder> type : ClassIndex.getSubclasses(ModelBuilder.class, loader).stream()
+                .filter(c -> !Modifier.isAbstract(c.getModifiers()))
+                .filter(c -> c.isAnnotationPresent(DatabaseType.class) || c.isAnnotationPresent(DatabaseTypes.class))
+                .toList()) {
             boolean isSetType = type.isAnnotationPresent(DatabaseType.class);
             boolean isSetTypes = type.isAnnotationPresent(DatabaseTypes.class);
 
@@ -132,12 +129,10 @@ public class CityGMLAdapterContext {
 
     @SuppressWarnings("rawtypes")
     private void loadSerializers(ClassLoader loader) throws IOAdapterException {
-        for (Class<? extends ModelSerializer> type : ClassFilter.only()
-                .withoutModifiers(Modifier.ABSTRACT)
-                .satisfying(c -> c.isAnnotationPresent(DatabaseType.class)
-                        || c.isAnnotationPresent(DatabaseTypes.class))
-                .from(ClassIndex.getSubclasses(ModelSerializer.class, loader))) {
-
+        for (Class<? extends ModelSerializer> type : ClassIndex.getSubclasses(ModelSerializer.class, loader).stream()
+                .filter(c -> !Modifier.isAbstract(c.getModifiers()))
+                .filter(c -> c.isAnnotationPresent(DatabaseType.class) || c.isAnnotationPresent(DatabaseTypes.class))
+                .toList()) {
             boolean isSetType = type.isAnnotationPresent(DatabaseType.class);
             boolean isSetTypes = type.isAnnotationPresent(DatabaseTypes.class);
 
