@@ -213,13 +213,14 @@ public class GlobalAppearanceConverter {
         private void convertAppearance(AbstractGML target, AbstractSurfaceData source, AbstractGeometry geometry) {
             Appearance appearance = source.getParent(Appearance.class);
             AbstractSurfaceData surfaceData = getOrCreateSurfaceData(target, appearance, source);
-            if (surfaceData instanceof ParameterizedTexture texture) {
+            if (surfaceData instanceof ParameterizedTexture targetTexture) {
+                ParameterizedTexture texture = (ParameterizedTexture) source;
                 for (TextureAssociationProperty property : texture.getTextureParameterizations()) {
                     GeometryReference reference = getGeometryReference(property);
                     if (reference != null
                             && reference.getHref() != null
                             && FeatureHelper.getIdFromReference(reference.getHref()).equals(geometry.getId())) {
-                        ((ParameterizedTexture) surfaceData).getTextureParameterizations().add(property);
+                        targetTexture.getTextureParameterizations().add(property);
                     }
                 }
             } else if (surfaceData instanceof X3DMaterial material) {
