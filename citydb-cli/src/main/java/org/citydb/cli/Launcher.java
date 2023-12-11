@@ -26,13 +26,18 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.deleter.DeleteCommand;
 import org.citydb.cli.exporter.ExportCommand;
+import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
 import org.citydb.cli.option.Option;
 import org.citydb.cli.util.CliConstants;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
+import org.citydb.core.CoreConstants;
 import org.citydb.logging.LoggerManager;
+import org.citydb.plugin.Extension;
+import org.citydb.plugin.Plugin;
+import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
 import java.io.Console;
@@ -42,8 +47,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -59,11 +63,7 @@ import java.util.stream.Collectors;
         showAtFileInUsageHelp = true,
         sortOptions = false,
         subcommands = {
-                CommandLine.HelpCommand.class,
-                ImportCommand.class,
-                ExportCommand.class,
-                DeleteCommand.class,
-                IndexCommand.class
+                CommandLine.HelpCommand.class
         })
 public class Launcher implements Command, CommandLine.IVersionProvider {
     @CommandLine.Option(names = {"-L", "--log-level"}, scope = CommandLine.ScopeType.INHERIT, paramLabel = "<level>",
@@ -78,7 +78,18 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             description = "Create a file containing the process ID.")
     private Path pidFile;
 
+    @CommandLine.Option(names = "--plugins", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<dir>",
+            description = "Load plugins from this directory.")
+    private Path pluginsDirectory;
+
+    @CommandLine.Option(names = "--use-plugins", scope = CommandLine.ScopeType.INHERIT, split = ",",
+            paramLabel = "<plugin[=true|false]", mapFallbackValue = "true",
+            description = "Enable or disable plugins with a matching fully qualified class name " +
+                    "(default: ${MAP-FALLBACK-VALUE}).")
+    private Map<String, Boolean> usePlugins;
+
     private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final PluginManager pluginManager = PluginManager.getInstance();
     private final CommandHelper helper = CommandHelper.of(logger);
     private String commandLine;
     private String subCommandName;
@@ -104,6 +115,15 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 .setAbbreviatedSubcommandsAllowed(true)
                 .setExecutionStrategy(new CommandLine.RunAll());
 
+        pluginManager.load(parsePluginsDirectory(args));
+        Command.addSubcommand(new ImportCommand(), cmd, pluginManager);
+        Command.addSubcommand(new ExportCommand(), cmd, pluginManager);
+        Command.addSubcommand(new DeleteCommand(), cmd, pluginManager);
+        Command.addSubcommand(new IndexCommand(), cmd, pluginManager);
+        for (MainCommand mainCommand : pluginManager.getAllExtensions(MainCommand.class)) {
+            Command.addSubcommand(mainCommand, cmd, pluginManager);
+        }
+
         try {
             CommandLine.ParseResult parseResult = cmd.parseArgs(args);
             List<CommandLine> commandLines = parseResult.asCommandLineList();
@@ -120,8 +140,23 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 throw new CommandLine.ParameterException(cmd, "Missing required subcommand.");
             }
 
+            if (usePlugins != null) {
+                for (Plugin plugin : pluginManager.getPlugins()) {
+                    plugin.setEnabled(usePlugins.getOrDefault(plugin.getClass().getName(), plugin.isEnabled()));
+                }
+            }
+
             for (CommandLine commandLine : commandLines) {
                 Object command = commandLine.getCommand();
+
+                if (command instanceof Extension extension) {
+                    Plugin plugin = pluginManager.getPlugin(extension);
+                    if (plugin != null && !plugin.isEnabled()) {
+                        throw new CommandLine.ParameterException(commandLine, "The subcommand '" +
+                                commandLine.getCommandName() + "' is added through the plugin " +
+                                plugin.getClass().getName() + " but this plugin is disabled.");
+                    }
+                }
 
                 Class<?> type = command.getClass();
                 do {
@@ -177,6 +212,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         initializeLogging();
         logger.info("Starting " + CliConstants.APP_NAME + ", " + "version " + CliConstants.APP_VERSION + ".");
 
+        loadPlugins();
+
         if (pidFile != null) {
             createPidFile();
         }
@@ -209,6 +246,26 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
+    private void loadPlugins() throws ExecutionException {
+        logger.info("Loading plugins...");
+        if (!pluginManager.hasExceptions()) {
+            for (Plugin plugin : pluginManager.getPlugins()) {
+                String name = "\"" + plugin.getMetadata().getName() + "\" (" + plugin.getClass().getName() + ")";
+                if (plugin.isEnabled()) {
+                    logger.info("Loaded plugin " + name + ".");
+                } else {
+                    logger.debug("Disabling plugin " + name + ".");
+                }
+            }
+        } else {
+            pluginManager.getExceptions().values().stream()
+                    .flatMap(Collection::stream)
+                    .forEach(e -> logger.error(e.getMessage(), e.getCause()));
+
+            throw new ExecutionException("Failed to load plugins.");
+        }
+    }
+
     private void createPidFile() throws ExecutionException {
         try {
             logger.debug("Creating PID file at " + pidFile.toAbsolutePath() + ".");
@@ -236,6 +293,25 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 service.shutdown();
             }
         }
+    }
+
+    private Path parsePluginsDirectory(String[] args) {
+        String pluginsDirectory = null;
+        for (int i = 0; pluginsDirectory == null && i < args.length; i++) {
+            int delimiter = args[i].indexOf('=');
+            String parameter = delimiter != -1 ? args[i].substring(0, delimiter) : args[i];
+            if ("--plugins".startsWith(parameter.toLowerCase(Locale.ROOT))) {
+                if (delimiter != -1 && delimiter < args[i].length()) {
+                    pluginsDirectory = args[i].substring(delimiter + 1);
+                } else if (i < args.length - 1) {
+                    pluginsDirectory = args[++i];
+                }
+            }
+        }
+
+        return pluginsDirectory != null ?
+                CoreConstants.WORKING_DIR.resolve(pluginsDirectory) :
+                CoreConstants.APP_HOME.resolve(CliConstants.PLUGINS_DIR);
     }
 
     private void logException(Throwable e) {

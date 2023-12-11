@@ -22,6 +22,7 @@
 package org.citydb.cli.command;
 
 import org.citydb.cli.ExecutionException;
+import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
 import java.util.concurrent.Callable;
@@ -30,4 +31,11 @@ public interface Command extends Callable<Integer> {
     @Override
     Integer call() throws ExecutionException;
     default void preprocess(CommandLine commandLine) throws Exception {}
+    default void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {}
+
+    static void addSubcommand(Command command, CommandLine commandLine, PluginManager pluginManager) throws Exception {
+        CommandLine subcommandLine = new CommandLine(command);
+        command.registerSubcommands(subcommandLine, pluginManager);
+        commandLine.addSubcommand(subcommandLine);
+    }
 }

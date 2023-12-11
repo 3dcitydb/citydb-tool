@@ -35,6 +35,7 @@ import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.logging.LoggerManager;
 import org.citydb.operation.util.FeatureStatistics;
+import org.citydb.plugin.PluginManager;
 
 import java.sql.SQLException;
 import java.util.Collection;
@@ -44,6 +45,7 @@ import java.util.function.Consumer;
 
 public class CommandHelper {
     private final Logger logger;
+    private final PluginManager pluginManager = PluginManager.getInstance();
 
     private CommandHelper(Logger logger) {
         this.logger = Objects.requireNonNull(logger, "The logger must not be null.");
@@ -70,7 +72,7 @@ public class CommandHelper {
     }
 
     public IOAdapterManager createIOAdapterManager() throws ExecutionException {
-        IOAdapterManager manager = IOAdapterManager.newInstance().load();
+        IOAdapterManager manager = IOAdapterManager.newInstance().load(pluginManager.getClassLoader());
         if (manager.hasExceptions()) {
             throw new ExecutionException("Failed to initialize IO adapter manager.",
                     manager.getExceptions().values().stream()
