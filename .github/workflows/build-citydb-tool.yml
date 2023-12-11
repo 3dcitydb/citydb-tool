@@ -2,27 +2,29 @@ name: Build citydb-tool
 
 on: [push, pull_request]
 
+on: [push, pull_request]
+
 jobs:
-  build:
-    runs-on: ${{matrix.os}}-latest
+  gradle:
     strategy:
       matrix:
-        os: ['ubuntu', 'windows']
-        java: [ '11' ]
-        distribution: [ 'temurin' ]
-      fail-fast: false
-
+        os: [ubuntu-latest, windows-latest]
+        java: [17]
+        distribution: [temurin]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: "Checkout"
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: "Set up Java"
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: ${{ matrix.distribution }}
           java-version: ${{ matrix.java }}
-      - name: "Grant execute permission for gradlew"
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          cache-disabled: true
+      - name: Grant execute permission to Gradle
         run: chmod +x ./gradlew
-      - name: "Build with Gradle"
+      - name: Execute Gradle build
         run: ./gradlew build
