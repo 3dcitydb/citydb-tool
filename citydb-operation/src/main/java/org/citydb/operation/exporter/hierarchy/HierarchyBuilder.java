@@ -21,6 +21,7 @@
 
 package org.citydb.operation.exporter.hierarchy;
 
+import org.citydb.model.common.ReferenceType;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.Property;
@@ -77,7 +78,7 @@ public class HierarchyBuilder {
                 }
 
                 int referenceType = rs.getInt("val_reference_type");
-                if (referenceType == 0) {
+                if (referenceType != ReferenceType.GLOBAL_REFERENCE.getDatabaseValue()) {
                     hierarchy.addInlineFeature(nestedFeatureId);
                 }
             }
