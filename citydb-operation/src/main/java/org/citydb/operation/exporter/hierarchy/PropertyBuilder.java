@@ -31,22 +31,21 @@ import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
-import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
-import org.citydb.operation.exporter.feature.FeatureExporter;
 import org.citydb.operation.exporter.property.PropertyStub;
 
-import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 public class PropertyBuilder {
     private final ExportHelper helper;
+    private final boolean resolveLocalReferences;
 
     PropertyBuilder(ExportHelper helper) {
         this.helper = helper;
+        resolveLocalReferences = helper.getOptions().isResolveLocalReferences();
     }
 
-    Property<?> build(PropertyStub propertyStub, Hierarchy hierarchy) throws ExportException, SQLException {
+    Property<?> build(PropertyStub propertyStub, Hierarchy hierarchy) {
         if (propertyStub != null && propertyStub.getDataType() != null) {
             Property<?> property = switch (propertyStub.getDataType()) {
                 case FEATURE_PROPERTY -> buildFeatureProperty(propertyStub, hierarchy);
@@ -65,31 +64,33 @@ public class PropertyBuilder {
         return null;
     }
 
-    <T extends Property<?>> T build(PropertyStub propertyStub, Hierarchy hierarchy, Class<T> type) throws ExportException, SQLException {
+    <T extends Property<?>> T build(PropertyStub propertyStub, Hierarchy hierarchy, Class<T> type) {
         Property<?> property = build(propertyStub, hierarchy);
         return type.isInstance(property) ? type.cast(property) : null;
     }
 
-    private FeatureProperty buildFeatureProperty(PropertyStub propertyStub, Hierarchy hierarchy) throws ExportException, SQLException {
+    private FeatureProperty buildFeatureProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         Feature feature = hierarchy.getFeature(propertyStub.getFeatureId());
         if (feature != null) {
+            String target = helper.getOrCreateId(feature);
             ReferenceType referenceType = propertyStub.getReferenceType();
             if (referenceType != null) {
-                if (hierarchy.isInlineFeature(propertyStub.getFeatureId())
-                        || isTopLevel(feature)) {
+                if (!resolveLocalReferences || isTopLevel(feature)) {
                     return FeatureProperty.of(propertyStub.getName(),
-                            Reference.of(helper.getOrCreateId(feature), referenceType));
+                            Reference.of(target, ReferenceType.GLOBAL_REFERENCE));
                 } else {
-                    feature = helper.getTableHelper().getOrCreateExporter(FeatureExporter.class)
-                            .doExport(propertyStub.getFeatureId(), hierarchy.getInlineFeatures());
-                    hierarchy.addFeature(propertyStub.getFeatureId(), feature);
+                    FeatureProperty property = FeatureProperty.of(propertyStub.getName(),
+                            Reference.of(target, referenceType));
+                    if (referenceType == ReferenceType.LOCAL_REFERENCE) {
+                        hierarchy.addLocalReference(target, property);
+                    }
+                    return property;
                 }
             }
 
             return helper.lookupAndPut(feature) ?
-                    FeatureProperty.of(propertyStub.getName(), Reference.of(
-                            helper.getOrCreateId(feature),
-                            ReferenceType.LOCAL_REFERENCE)) :
+                    FeatureProperty.of(propertyStub.getName(),
+                            Reference.of(target, ReferenceType.LOCAL_REFERENCE)) :
                     FeatureProperty.of(propertyStub.getName(), feature);
         }
 

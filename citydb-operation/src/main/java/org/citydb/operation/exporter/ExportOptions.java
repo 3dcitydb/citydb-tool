@@ -38,6 +38,7 @@ public class ExportOptions {
     private OutputFile outputFile;
     private int numberOfThreads;
     private int numberOfTextureBuckets;
+    private boolean resolveLocalReferences = true;
 
     private ExportOptions() {
     }
@@ -89,6 +90,15 @@ public class ExportOptions {
             this.numberOfTextureBuckets = numberOfTextureBuckets;
         }
 
+        return this;
+    }
+
+    public boolean isResolveLocalReferences() {
+        return resolveLocalReferences;
+    }
+
+    public ExportOptions setResolveLocalReferences(boolean resolveLocalReferences) {
+        this.resolveLocalReferences = resolveLocalReferences;
         return this;
     }
 }

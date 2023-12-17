@@ -26,21 +26,20 @@ import org.citydb.model.appearance.Appearance;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.Property;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class Hierarchy {
     private final Map<Long, Feature> features = new HashMap<>();
-    private final Set<Long> inlineFeatures = new HashSet<>();
     private final Map<Long, Geometry<?>> geometries = new HashMap<>();
     private final Map<Long, ImplicitGeometry> implicitGeometries = new HashMap<>();
     private final Map<Long, Appearance> appearances = new HashMap<>();
     private final Map<Long, Address> addresses = new HashMap<>();
     private final Map<Long, Property<?>> properties = new HashMap<>();
+    private final Map<String, FeatureProperty> localReferences = new HashMap<>();
 
     Hierarchy() {
     }
@@ -57,18 +56,6 @@ public class Hierarchy {
         if (feature != null) {
             features.put(id, feature);
         }
-    }
-
-    Set<Long> getInlineFeatures() {
-        return inlineFeatures;
-    }
-
-    void addInlineFeature(long id) {
-        inlineFeatures.add(id);
-    }
-
-    boolean isInlineFeature(long id) {
-        return inlineFeatures.contains(id);
     }
 
     public Map<Long, Geometry<?>> getGeometries() {
@@ -143,6 +130,16 @@ public class Hierarchy {
     public void addProperty(long id, Property<?> property) {
         if (property != null) {
             properties.put(id, property);
+        }
+    }
+
+    public FeatureProperty getLocalReference(String target) {
+        return localReferences.get(target);
+    }
+
+    public void addLocalReference(String target, FeatureProperty property) {
+        if (property != null) {
+            localReferences.putIfAbsent(target, property);
         }
     }
 }
