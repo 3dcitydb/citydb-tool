@@ -23,4 +23,5 @@ package org.citydb.model.common;
 
 public interface InlineProperty<T extends Referencable> {
     T getObject();
+    InlineProperty<T> setObject(T object);
 }

@@ -30,21 +30,17 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class FeatureProperty extends Property<FeatureProperty> implements InlineOrByReferenceProperty<Feature> {
-    private final Feature feature;
-    private final Reference reference;
+    private Feature feature;
+    private Reference reference;
 
     private FeatureProperty(Name name, Feature feature) {
         super(name, DataType.FEATURE_PROPERTY);
-        Objects.requireNonNull(feature, "The feature must not be null.");
-        this.feature = asChild(feature);
-        reference = null;
+        setObject(Objects.requireNonNull(feature, "The feature must not be null."));
     }
 
     private FeatureProperty(Name name, Reference reference) {
         super(name, DataType.FEATURE_PROPERTY);
-        Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = asChild(reference);
-        feature = null;
+        setReference(Objects.requireNonNull(reference, "The reference must not be null."));
     }
 
     public static FeatureProperty of(Name name, Feature feature) {
@@ -61,8 +57,28 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     }
 
     @Override
+    public FeatureProperty setObject(Feature feature) {
+        if (feature != null) {
+            this.feature = asChild(feature);
+            reference = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public Optional<Reference> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    @Override
+    public FeatureProperty setReference(Reference reference) {
+        if (reference != null) {
+            this.reference = asChild(reference);
+            feature = null;
+        }
+
+        return this;
     }
 
     @Override

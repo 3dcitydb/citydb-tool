@@ -33,24 +33,20 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty> implements InlineOrByReferenceProperty<ImplicitGeometry> {
-    private final ImplicitGeometry implicitGeometry;
-    private final Reference reference;
+    private ImplicitGeometry implicitGeometry;
+    private Reference reference;
     private List<Double> transformationMatrix;
     private Point referencePoint;
     private String lod;
 
     private ImplicitGeometryProperty(Name name, ImplicitGeometry implicitGeometry) {
         super(name, DataType.IMPLICIT_GEOMETRY_PROPERTY);
-        Objects.requireNonNull(implicitGeometry, "The implicit geometry must not be null.");
-        this.implicitGeometry = asChild(implicitGeometry);
-        reference = null;
+        setObject(Objects.requireNonNull(implicitGeometry, "The implicit geometry must not be null."));
     }
 
     private ImplicitGeometryProperty(Name name, Reference reference) {
         super(name, DataType.IMPLICIT_GEOMETRY_PROPERTY);
-        Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = asChild(reference);
-        implicitGeometry = null;
+        setReference(Objects.requireNonNull(reference, "The reference must not be null."));
     }
 
     public static ImplicitGeometryProperty of(Name name, ImplicitGeometry implicitGeometry) {
@@ -67,8 +63,28 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     }
 
     @Override
+    public ImplicitGeometryProperty setObject(ImplicitGeometry implicitGeometry) {
+        if (implicitGeometry != null) {
+            this.implicitGeometry = asChild(implicitGeometry);
+            reference = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public Optional<Reference> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    @Override
+    public ImplicitGeometryProperty setReference(Reference reference) {
+        if (reference != null) {
+            this.reference = asChild(reference);
+            implicitGeometry = null;
+        }
+
+        return this;
     }
 
     public Optional<List<Double>> getTransformationMatrix() {
