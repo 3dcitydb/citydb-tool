@@ -25,22 +25,16 @@ import java.util.Objects;
 
 public class Reference extends Child {
     private final String target;
-    private final ReferenceType type;
 
-    private Reference(String target, ReferenceType type) {
+    private Reference(String target) {
         this.target = Objects.requireNonNull(target, "The reference target must not be null.");
-        this.type = Objects.requireNonNull(type, "The reference type must not be null.");
     }
 
-    public static Reference of(String target, ReferenceType type) {
-        return new Reference(target, type);
+    public static Reference of(String target) {
+        return new Reference(target);
     }
 
     public String getTarget() {
         return target;
-    }
-
-    public ReferenceType getType() {
-        return type;
     }
 }

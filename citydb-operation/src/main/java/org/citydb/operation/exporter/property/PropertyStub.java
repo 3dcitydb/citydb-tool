@@ -22,7 +22,7 @@
 package org.citydb.operation.exporter.property;
 
 import org.citydb.model.common.Name;
-import org.citydb.model.common.ReferenceType;
+import org.citydb.model.common.RelationType;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.ArrayValue;
 import org.citydb.model.property.DataType;
@@ -48,7 +48,7 @@ public class PropertyStub {
     private Long appearanceId;
     private Long addressId;
     private Long featureId;
-    private ReferenceType referenceType;
+    private RelationType relationType;
     private String genericContent;
     private String genericContentMimeType;
     private PropertyDescriptor descriptor;
@@ -209,12 +209,12 @@ public class PropertyStub {
         return this;
     }
 
-    public ReferenceType getReferenceType() {
-        return referenceType;
+    public RelationType getRelationType() {
+        return relationType;
     }
 
-    public PropertyStub setReferenceType(ReferenceType referenceType) {
-        this.referenceType = referenceType;
+    public PropertyStub setRelationType(RelationType relationType) {
+        this.relationType = relationType;
         return this;
     }
 

@@ -28,7 +28,6 @@ import org.citydb.model.appearance.TextureType;
 import org.citydb.model.appearance.WrapMode;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.ReferenceType;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.BlobExporter;
@@ -66,8 +65,7 @@ public abstract class TextureExporter extends SurfaceDataExporter {
             if (textureImage != null) {
                 if (helper.lookupAndPut(textureImage)) {
                     texture.setTextureImageProperty(TextureImageProperty.of(Reference.of(
-                            textureImage.getOrCreateObjectId(),
-                            ReferenceType.LOCAL_REFERENCE)));
+                            textureImage.getOrCreateObjectId())));
                 } else {
                     blobExporter.addBatch(texImageId, textureImage);
                     texture.setTextureImageProperty(TextureImageProperty.of(textureImage

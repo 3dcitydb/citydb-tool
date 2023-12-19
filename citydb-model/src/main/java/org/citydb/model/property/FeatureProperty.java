@@ -24,6 +24,7 @@ package org.citydb.model.property;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Reference;
+import org.citydb.model.common.RelationType;
 import org.citydb.model.feature.Feature;
 
 import java.util.Objects;
@@ -32,18 +33,17 @@ import java.util.Optional;
 public class FeatureProperty extends Property<FeatureProperty> implements InlineOrByReferenceProperty<Feature> {
     private final Feature feature;
     private final Reference reference;
+    private RelationType relationType;
 
     private FeatureProperty(Name name, Feature feature) {
         super(name, DataType.FEATURE_PROPERTY);
-        Objects.requireNonNull(feature, "The feature must not be null.");
-        this.feature = asChild(feature);
+        this.feature = asChild(Objects.requireNonNull(feature, "The feature must not be null."));
         reference = null;
     }
 
     private FeatureProperty(Name name, Reference reference) {
         super(name, DataType.FEATURE_PROPERTY);
-        Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = asChild(reference);
+        this.reference = asChild(Objects.requireNonNull(reference, "The reference must not be null."));
         feature = null;
     }
 
@@ -63,6 +63,15 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     @Override
     public Optional<Reference> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    public RelationType getRelationType() {
+        return relationType != null ? relationType : RelationType.RELATES;
+    }
+
+    public FeatureProperty setRelationType(RelationType relationType) {
+        this.relationType = relationType;
+        return this;
     }
 
     @Override

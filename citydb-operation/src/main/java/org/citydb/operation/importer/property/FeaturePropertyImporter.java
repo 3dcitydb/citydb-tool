@@ -64,13 +64,13 @@ public class FeaturePropertyImporter extends PropertyImporter {
             stmt.setLong(7, tableHelper.getOrCreateImporter(FeatureImporter.class)
                     .doImport(feature)
                     .getId());
-            stmt.setNull(8, Types.INTEGER);
         } else if (property.getReference().isPresent()) {
             Reference reference = property.getReference().get();
             cacheReference(CacheType.FEATURE, reference, propertyId);
             stmt.setNull(7, Types.BIGINT);
-            stmt.setInt(8, reference.getType().getDatabaseValue());
         }
+
+        stmt.setInt(8, property.getRelationType().getDatabaseValue());
 
         return super.doImport(property, propertyId, parentId, featureId);
     }

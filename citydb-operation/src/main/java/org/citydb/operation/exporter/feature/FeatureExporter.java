@@ -32,8 +32,6 @@ import org.citydb.operation.exporter.hierarchy.HierarchyBuilder;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.Set;
 
 public class FeatureExporter extends DatabaseExporter {
 
@@ -43,14 +41,10 @@ public class FeatureExporter extends DatabaseExporter {
     }
 
     public Feature doExport(long id) throws ExportException, SQLException {
-        return doExport(id, Collections.emptySet());
-    }
-
-    public Feature doExport(long id, Set<Long> exportedFeatures) throws ExportException, SQLException {
         stmt.setLong(1, id);
         try (ResultSet rs = stmt.executeQuery()) {
-            return HierarchyBuilder.newInstance(helper)
-                    .initialize(rs, exportedFeatures)
+            return HierarchyBuilder.newInstance(id, helper)
+                    .initialize(rs)
                     .build()
                     .getFeature(id);
         }

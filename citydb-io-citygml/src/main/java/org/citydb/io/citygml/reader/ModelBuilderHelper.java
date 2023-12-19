@@ -41,7 +41,10 @@ import org.citydb.io.reader.ReadOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
-import org.citydb.model.common.*;
+import org.citydb.model.common.Child;
+import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Name;
+import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -572,14 +575,9 @@ public class ModelBuilderHelper {
     }
 
     private Reference getReference(ResolvableAssociation<?> association) {
-        if (association != null && association.getHref() != null) {
-            return Reference.of(getIdFromReference(association.getHref()),
-                    association.isSetReferencedObject() ?
-                            ReferenceType.LOCAL_REFERENCE :
-                            ReferenceType.GLOBAL_REFERENCE);
-        } else {
-            return null;
-        }
+        return association != null && association.getHref() != null ?
+                Reference.of(getIdFromReference(association.getHref())) :
+                null;
     }
 
     @SuppressWarnings("unchecked")
