@@ -48,7 +48,7 @@ public class BuildingAdapter extends AbstractBuildingAdapter<Building> {
 
         if (source.isSetBuildingParts()) {
             for (BuildingPartProperty property : source.getBuildingParts()) {
-                helper.addFeature(Name.of("buildingPart", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingPart", Namespaces.BUILDING), property, target);
             }
         }
     }

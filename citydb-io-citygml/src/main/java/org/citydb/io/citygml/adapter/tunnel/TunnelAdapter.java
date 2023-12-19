@@ -48,7 +48,7 @@ public class TunnelAdapter extends AbstractTunnelAdapter<Tunnel> {
 
         if (source.isSetTunnelParts()) {
             for (TunnelPartProperty property : source.getTunnelParts()) {
-                helper.addFeature(Name.of("tunnelPart", Namespaces.TUNNEL), property, target);
+                helper.addContainedFeature(Name.of("tunnelPart", Namespaces.TUNNEL), property, target);
             }
         }
     }

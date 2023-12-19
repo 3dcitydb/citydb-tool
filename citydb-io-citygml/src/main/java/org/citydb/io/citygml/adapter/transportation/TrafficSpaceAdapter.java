@@ -72,19 +72,19 @@ public class TrafficSpaceAdapter extends AbstractUnoccupiedSpaceAdapter<TrafficS
 
         if (source.isSetPredecessors()) {
             for (TrafficSpaceReference property : source.getPredecessors()) {
-                helper.addFeature(Name.of("predecessor", Namespaces.TRANSPORTATION), property, target);
+                helper.addRelatedFeature(Name.of("predecessor", Namespaces.TRANSPORTATION), property, target);
             }
         }
 
         if (source.isSetSuccessors()) {
             for (TrafficSpaceReference property : source.getSuccessors()) {
-                helper.addFeature(Name.of("successor", Namespaces.TRANSPORTATION), property, target);
+                helper.addRelatedFeature(Name.of("successor", Namespaces.TRANSPORTATION), property, target);
             }
         }
 
         if (source.isSetClearanceSpaces()) {
             for (ClearanceSpaceProperty property : source.getClearanceSpaces()) {
-                helper.addFeature(Name.of("clearanceSpace", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("clearanceSpace", Namespaces.TRANSPORTATION), property, target);
             }
         }
     }

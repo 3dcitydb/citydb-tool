@@ -64,25 +64,25 @@ public abstract class AbstractTransportationSpaceAdapter<T extends AbstractTrans
 
         if (source.isSetTrafficSpaces()) {
             for (TrafficSpaceProperty property : source.getTrafficSpaces()) {
-                helper.addFeature(Name.of("trafficSpace", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("trafficSpace", Namespaces.TRANSPORTATION), property, target);
             }
         }
 
         if (source.isSetAuxiliaryTrafficSpaces()) {
             for (AuxiliaryTrafficSpaceProperty property : source.getAuxiliaryTrafficSpaces()) {
-                helper.addFeature(Name.of("auxiliaryTrafficSpace", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("auxiliaryTrafficSpace", Namespaces.TRANSPORTATION), property, target);
             }
         }
 
         if (source.isSetHoles()) {
             for (HoleProperty property : source.getHoles()) {
-                helper.addFeature(Name.of("hole", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("hole", Namespaces.TRANSPORTATION), property, target);
             }
         }
 
         if (source.isSetMarkings()) {
             for (MarkingProperty property : source.getMarkings()) {
-                helper.addFeature(Name.of("marking", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("marking", Namespaces.TRANSPORTATION), property, target);
             }
         }
 

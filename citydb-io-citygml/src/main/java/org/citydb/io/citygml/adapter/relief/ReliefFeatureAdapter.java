@@ -54,7 +54,7 @@ public class ReliefFeatureAdapter extends AbstractSpaceBoundaryAdapter<ReliefFea
 
         if (source.isSetReliefComponents()) {
             for (AbstractReliefComponentProperty property : source.getReliefComponents()) {
-                helper.addFeature(Name.of("reliefComponent", Namespaces.RELIEF), property, target);
+                helper.addContainedFeature(Name.of("reliefComponent", Namespaces.RELIEF), property, target);
             }
         }
     }

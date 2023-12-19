@@ -41,8 +41,9 @@ public class CityObjectRelationAdapter implements ModelBuilder<CityObjectRelatio
 
     @Override
     public void build(CityObjectRelation source, Attribute target, ModelBuilderHelper helper) throws ModelBuildException {
-        helper.addFeature(Name.of("relatedTo", Namespaces.CORE), source.getRelatedTo(), target);
-        helper.addAttribute(Name.of("relationType", Namespaces.CORE), source.getRelationType(), target, CodeAdapter.class);
+        helper.addRelatedFeature(Name.of("relatedTo", Namespaces.CORE), source.getRelatedTo(), target);
+        helper.addAttribute(Name.of("relationType", Namespaces.CORE), source.getRelationType(), target,
+                CodeAdapter.class);
 
         if (source.isSetGenericAttributes()) {
             for (AbstractGenericAttributeProperty property : source.getGenericAttributes()) {

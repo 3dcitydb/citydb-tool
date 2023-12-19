@@ -71,8 +71,9 @@ public class PropertyBuilder {
         Feature feature = hierarchy.getFeature(propertyStub.getFeatureId());
         if (feature != null) {
             return propertyStub.getRelationType() == RelationType.RELATES || helper.lookupAndPut(feature) ?
-                    FeatureProperty.of(propertyStub.getName(), Reference.of(helper.getOrCreateId(feature))) :
-                    FeatureProperty.of(propertyStub.getName(), feature);
+                    FeatureProperty.of(propertyStub.getName(), Reference.of(helper.getOrCreateId(feature)),
+                            propertyStub.getRelationType()) :
+                    FeatureProperty.of(propertyStub.getName(), feature, propertyStub.getRelationType());
         }
 
         return null;

@@ -39,7 +39,7 @@ public class RoleAdapter implements ModelBuilder<Role, Attribute>, ModelSerializ
 
     @Override
     public void build(Role source, Attribute target, ModelBuilderHelper helper) throws ModelBuildException {
-        helper.addFeature(Name.of("groupMember", Namespaces.CITY_OBJECT_GROUP), source.getGroupMember(), target);
+        helper.addRelatedFeature(Name.of("groupMember", Namespaces.CITY_OBJECT_GROUP), source.getGroupMember(), target);
 
         if (source.getRole() != null) {
             target.addProperty(Attribute.of(Name.of("role", Namespaces.CITY_OBJECT_GROUP), DataType.STRING)

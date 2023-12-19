@@ -41,10 +41,7 @@ import org.citydb.io.reader.ReadOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
-import org.citydb.model.common.Child;
-import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
+import org.citydb.model.common.*;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -505,61 +502,109 @@ public class ModelBuilderHelper {
         addProperty(getAddressProperty(name, source), attribute::addProperty);
     }
 
-    public FeatureProperty getFeatureProperty(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source) throws ModelBuildException {
+    public FeatureProperty getFeatureProperty(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, RelationType relationType) throws ModelBuildException {
         if (source != null && !AbstractGeometry.class.isAssignableFrom(source.getTargetType())) {
             if (source.isSetInlineObject()) {
                 Feature feature = getFeature(source.getObject());
                 if (feature != null) {
-                    return FeatureProperty.of(name, feature);
+                    return FeatureProperty.of(name, feature, relationType);
                 }
             } else {
-                return getFeatureProperty(name, (ResolvableAssociation<? extends AbstractGML>) source);
+                return getFeatureProperty(name, (ResolvableAssociation<? extends AbstractGML>) source, relationType);
             }
         }
 
         return null;
     }
 
-    public FeatureProperty getFeatureProperty(Name name, AbstractInlineProperty<? extends AbstractGML> source) throws ModelBuildException {
+    public FeatureProperty getFeatureProperty(Name name, AbstractInlineProperty<? extends AbstractGML> source, RelationType relationType) throws ModelBuildException {
         if (source != null
                 && source.getObject() != null
                 && !(source.getObject() instanceof AbstractGeometry)) {
             Feature feature = getFeature(source.getObject());
             if (feature != null) {
-                return FeatureProperty.of(name, feature);
+                return FeatureProperty.of(name, feature, relationType);
             }
         }
 
         return null;
     }
 
-    public FeatureProperty getFeatureProperty(Name name, ResolvableAssociation<? extends AbstractGML> source) {
+    public FeatureProperty getFeatureProperty(Name name, ResolvableAssociation<? extends AbstractGML> source, RelationType relationType) {
         Reference reference = getFeatureReference(source);
-        return reference != null ? FeatureProperty.of(name, reference) : null;
+        return reference != null ? FeatureProperty.of(name, reference, relationType) : null;
     }
 
-    public void addFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Feature feature) throws ModelBuildException {
-        addProperty(getFeatureProperty(name, source), feature::addFeature);
+    public void addFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Feature feature, RelationType relationType) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, relationType), feature::addFeature);
     }
 
-    public void addFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Attribute attribute) throws ModelBuildException {
-        addProperty(getFeatureProperty(name, source), attribute::addProperty);
+    public void addRelatedFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Feature feature) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.RELATES), feature::addFeature);
     }
 
-    public void addFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Feature feature) throws ModelBuildException {
-        addProperty(getFeatureProperty(name, source), feature::addFeature);
+    public void addContainedFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Feature feature) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.CONTAINS), feature::addFeature);
     }
 
-    public void addFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Attribute attribute) throws ModelBuildException {
-        addProperty(getFeatureProperty(name, source), attribute::addProperty);
+    public void addFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Attribute attribute, RelationType relationType) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, relationType), attribute::addProperty);
     }
 
-    public void addFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Feature feature) {
-        addProperty(getFeatureProperty(name, source), feature::addFeature);
+    public void addRelatedFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Attribute attribute) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.RELATES), attribute::addProperty);
     }
 
-    public void addFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Attribute attribute) {
-        addProperty(getFeatureProperty(name, source), attribute::addProperty);
+    public void addContainedFeature(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, Attribute attribute) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.CONTAINS), attribute::addProperty);
+    }
+
+    public void addFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Feature feature, RelationType relationType) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, relationType), feature::addFeature);
+    }
+
+    public void addRelatedFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Feature feature) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.RELATES), feature::addFeature);
+    }
+
+    public void addContainedFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Feature feature) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.CONTAINS), feature::addFeature);
+    }
+
+    public void addFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Attribute attribute, RelationType relationType) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, relationType), attribute::addProperty);
+    }
+
+    public void addRelatedFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Attribute attribute) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.RELATES), attribute::addProperty);
+    }
+
+    public void addContainedFeature(Name name, AbstractInlineProperty<? extends AbstractGML> source, Attribute attribute) throws ModelBuildException {
+        addProperty(getFeatureProperty(name, source, RelationType.CONTAINS), attribute::addProperty);
+    }
+
+    public void addFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Feature feature, RelationType relationType) {
+        addProperty(getFeatureProperty(name, source, relationType), feature::addFeature);
+    }
+
+    public void addRelatedFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Feature feature) {
+        addProperty(getFeatureProperty(name, source, RelationType.RELATES), feature::addFeature);
+    }
+
+    public void addContainedFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Feature feature) {
+        addProperty(getFeatureProperty(name, source, RelationType.CONTAINS), feature::addFeature);
+    }
+
+    public void addFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Attribute attribute, RelationType relationType) {
+        addProperty(getFeatureProperty(name, source, relationType), attribute::addProperty);
+    }
+
+    public void addRelatedFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Attribute attribute) {
+        addProperty(getFeatureProperty(name, source, RelationType.RELATES), attribute::addProperty);
+    }
+
+    public void addContainedFeature(Name name, ResolvableAssociation<? extends AbstractGML> source, Attribute attribute) {
+        addProperty(getFeatureProperty(name, source, RelationType.CONTAINS), attribute::addProperty);
     }
 
     private <T extends Property<?>> void addProperty(T property, Consumer<T> consumer) {

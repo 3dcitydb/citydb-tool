@@ -80,7 +80,7 @@ public abstract class AbstractThematicSurfaceAdapter<T extends AbstractThematicS
         }
 
         if (source.getPointCloud() != null) {
-            helper.addFeature(Name.of("pointCloud", Namespaces.CORE), source.getPointCloud(), target);
+            helper.addContainedFeature(Name.of("pointCloud", Namespaces.CORE), source.getPointCloud(), target);
         }
 
         if (source.hasDeprecatedProperties()) {

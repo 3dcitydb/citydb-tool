@@ -35,24 +35,42 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     private final Reference reference;
     private RelationType relationType;
 
-    private FeatureProperty(Name name, Feature feature) {
+    private FeatureProperty(Name name, Feature feature, RelationType relationType) {
         super(name, DataType.FEATURE_PROPERTY);
         this.feature = asChild(Objects.requireNonNull(feature, "The feature must not be null."));
+        this.relationType = Objects.requireNonNull(relationType, "The relation type must not be null.");
         reference = null;
     }
 
-    private FeatureProperty(Name name, Reference reference) {
+    private FeatureProperty(Name name, Reference reference, RelationType relationType) {
         super(name, DataType.FEATURE_PROPERTY);
         this.reference = asChild(Objects.requireNonNull(reference, "The reference must not be null."));
+        this.relationType = Objects.requireNonNull(relationType, "The relation type must not be null.");
         feature = null;
     }
 
-    public static FeatureProperty of(Name name, Feature feature) {
-        return new FeatureProperty(name, feature);
+    public static FeatureProperty of(Name name, Feature feature, RelationType relationType) {
+        return new FeatureProperty(name, feature, relationType);
     }
 
-    public static FeatureProperty of(Name name, Reference reference) {
-        return new FeatureProperty(name, reference);
+    public static FeatureProperty contains(Name name, Feature feature) {
+        return new FeatureProperty(name, feature, RelationType.CONTAINS);
+    }
+
+    public static FeatureProperty relates(Name name, Feature feature) {
+        return new FeatureProperty(name, feature, RelationType.RELATES);
+    }
+
+    public static FeatureProperty of(Name name, Reference reference, RelationType relationType) {
+        return new FeatureProperty(name, reference, relationType);
+    }
+
+    public static FeatureProperty contains(Name name, Reference reference) {
+        return new FeatureProperty(name, reference, RelationType.CONTAINS);
+    }
+
+    public static FeatureProperty relates(Name name, Reference reference) {
+        return new FeatureProperty(name, reference, RelationType.RELATES);
     }
 
     @Override

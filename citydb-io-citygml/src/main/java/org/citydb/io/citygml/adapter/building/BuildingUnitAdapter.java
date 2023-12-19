@@ -49,7 +49,7 @@ public class BuildingUnitAdapter extends AbstractBuildingSubdivisionAdapter<Buil
 
         if (source.isSetStoreys()) {
             for (StoreyProperty property : source.getStoreys()) {
-                helper.addFeature(Name.of("storey", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("storey", Namespaces.BUILDING), property, target);
             }
         }
 

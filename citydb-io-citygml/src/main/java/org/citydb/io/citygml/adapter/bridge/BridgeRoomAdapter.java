@@ -57,13 +57,13 @@ public class BridgeRoomAdapter extends AbstractUnoccupiedSpaceAdapter<BridgeRoom
 
         if (source.isSetBridgeFurniture()) {
             for (BridgeFurnitureProperty property : source.getBridgeFurniture()) {
-                helper.addFeature(Name.of("bridgeFurniture", Namespaces.BRIDGE), property, target);
+                helper.addContainedFeature(Name.of("bridgeFurniture", Namespaces.BRIDGE), property, target);
             }
         }
 
         if (source.isSetBridgeInstallations()) {
             for (BridgeInstallationProperty property : source.getBridgeInstallations()) {
-                helper.addFeature(Name.of("bridgeInstallation", Namespaces.BRIDGE), property, target);
+                helper.addContainedFeature(Name.of("bridgeInstallation", Namespaces.BRIDGE), property, target);
             }
         }
 

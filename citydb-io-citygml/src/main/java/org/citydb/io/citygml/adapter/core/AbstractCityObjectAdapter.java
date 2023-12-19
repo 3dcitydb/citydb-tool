@@ -52,7 +52,7 @@ public abstract class AbstractCityObjectAdapter<T extends AbstractCityObject> ex
 
         if (source.isSetGeneralizesTo()) {
             for (AbstractCityObjectReference reference : source.getGeneralizesTo()) {
-                helper.addFeature(Name.of("generalizesTo", Namespaces.CORE), reference, target);
+                helper.addRelatedFeature(Name.of("generalizesTo", Namespaces.CORE), reference, target);
             }
         }
 
@@ -91,7 +91,7 @@ public abstract class AbstractCityObjectAdapter<T extends AbstractCityObject> ex
 
         if (source.isSetDynamizers()) {
             for (AbstractDynamizerProperty property : source.getDynamizers()) {
-                helper.addFeature(Name.of("dynamizer", Namespaces.CORE), property, target);
+                helper.addContainedFeature(Name.of("dynamizer", Namespaces.CORE), property, target);
             }
         }
     }

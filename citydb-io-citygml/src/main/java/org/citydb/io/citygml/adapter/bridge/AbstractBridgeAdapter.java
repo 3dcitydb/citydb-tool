@@ -59,26 +59,25 @@ public abstract class AbstractBridgeAdapter<T extends AbstractBridge> extends Ab
 
         if (source.isSetBridgeConstructiveElements()) {
             for (BridgeConstructiveElementProperty property : source.getBridgeConstructiveElements()) {
-                helper.addFeature(Name.of("bridgeConstructiveElement", Namespaces.BRIDGE), property,
-                        target);
+                helper.addContainedFeature(Name.of("bridgeConstructiveElement", Namespaces.BRIDGE), property, target);
             }
         }
 
         if (source.isSetBridgeInstallations()) {
             for (BridgeInstallationProperty property : source.getBridgeInstallations()) {
-                helper.addFeature(Name.of("bridgeInstallation", Namespaces.BRIDGE), property, target);
+                helper.addContainedFeature(Name.of("bridgeInstallation", Namespaces.BRIDGE), property, target);
             }
         }
 
         if (source.isSetBridgeRooms()) {
             for (BridgeRoomProperty property : source.getBridgeRooms()) {
-                helper.addFeature(Name.of("bridgeRoom", Namespaces.BRIDGE), property, target);
+                helper.addContainedFeature(Name.of("bridgeRoom", Namespaces.BRIDGE), property, target);
             }
         }
 
         if (source.isSetBridgeFurniture()) {
             for (BridgeFurnitureProperty property : source.getBridgeFurniture()) {
-                helper.addFeature(Name.of("bridgeFurniture", Namespaces.BRIDGE), property, target);
+                helper.addContainedFeature(Name.of("bridgeFurniture", Namespaces.BRIDGE), property, target);
             }
         }
 

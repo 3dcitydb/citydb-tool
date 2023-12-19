@@ -55,7 +55,7 @@ public class MassPointReliefAdapter extends AbstractReliefComponentAdapter<MassP
         }
 
         if (source.getPointCloud() != null) {
-            helper.addFeature(Name.of("pointCloud", Namespaces.RELIEF), source.getPointCloud(), target);
+            helper.addContainedFeature(Name.of("pointCloud", Namespaces.RELIEF), source.getPointCloud(), target);
         }
     }
 
