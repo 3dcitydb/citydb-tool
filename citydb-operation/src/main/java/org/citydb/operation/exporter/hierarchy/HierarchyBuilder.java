@@ -60,47 +60,44 @@ public class HierarchyBuilder {
     }
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
-        Set<Long> propertyIds = new HashSet<>();
         Set<Long> appearanceIds = new HashSet<>();
         Set<Long> implicitGeometryIds = new HashSet<>();
 
         while (rs.next()) {
-            if (propertyIds.add(rs.getLong("id"))) {
-                long nestedFeatureId = rs.getLong("val_feature_id");
-                if (!rs.wasNull() && hierarchy.getFeature(nestedFeatureId) == null) {
-                    hierarchy.addFeature(nestedFeatureId, tableHelper.getOrCreateExporter(FeatureExporter.class)
-                            .doExport(nestedFeatureId, rs));
-                }
+            long nestedFeatureId = rs.getLong("val_feature_id");
+            if (!rs.wasNull() && hierarchy.getFeature(nestedFeatureId) == null) {
+                hierarchy.addFeature(nestedFeatureId, tableHelper.getOrCreateExporter(FeatureExporter.class)
+                        .doExport(nestedFeatureId, rs));
+            }
 
-                long geometryId = rs.getLong("val_geometry_id");
-                if (!rs.wasNull() && hierarchy.getGeometry(geometryId) == null) {
-                    hierarchy.addGeometry(geometryId, tableHelper.getOrCreateExporter(GeometryExporter.class)
-                            .doExport(geometryId, false, rs));
-                }
+            long geometryId = rs.getLong("val_geometry_id");
+            if (!rs.wasNull() && hierarchy.getGeometry(geometryId) == null) {
+                hierarchy.addGeometry(geometryId, tableHelper.getOrCreateExporter(GeometryExporter.class)
+                        .doExport(geometryId, false, rs));
+            }
 
-                long appearanceId = rs.getLong("val_appearance_id");
-                if (!rs.wasNull()) {
-                    appearanceIds.add(appearanceId);
-                }
+            long appearanceId = rs.getLong("val_appearance_id");
+            if (!rs.wasNull()) {
+                appearanceIds.add(appearanceId);
+            }
 
-                long addressId = rs.getLong("val_address_id");
-                if (!rs.wasNull() && hierarchy.getAddress(addressId) == null) {
-                    hierarchy.addAddress(addressId, tableHelper.getOrCreateExporter(AddressExporter.class)
-                            .doExport(addressId, rs));
-                }
+            long addressId = rs.getLong("val_address_id");
+            if (!rs.wasNull() && hierarchy.getAddress(addressId) == null) {
+                hierarchy.addAddress(addressId, tableHelper.getOrCreateExporter(AddressExporter.class)
+                        .doExport(addressId, rs));
+            }
 
-                long implicitGeometryId = rs.getLong("val_implicitgeom_id");
-                if (!rs.wasNull()) {
-                    implicitGeometryIds.add(implicitGeometryId);
-                }
+            long implicitGeometryId = rs.getLong("val_implicitgeom_id");
+            if (!rs.wasNull()) {
+                implicitGeometryIds.add(implicitGeometryId);
+            }
 
-                long featureId = rs.getLong("feature_id");
-                if (!rs.wasNull()) {
-                    PropertyStub propertyStub = tableHelper.getOrCreateExporter(PropertyExporter.class)
-                            .doExport(featureId, rs);
-                    if (propertyStub != null) {
-                        propertyStubs.add(propertyStub);
-                    }
+            long featureId = rs.getLong("feature_id");
+            if (!rs.wasNull()) {
+                PropertyStub propertyStub = tableHelper.getOrCreateExporter(PropertyExporter.class)
+                        .doExport(featureId, rs);
+                if (propertyStub != null) {
+                    propertyStubs.add(propertyStub);
                 }
             }
         }
