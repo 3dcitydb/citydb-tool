@@ -7,6 +7,7 @@ module org.citydb.cli {
     requires org.citydb.operation;
     requires transitive org.citydb.plugin;
     requires transitive info.picocli;
+    requires org.citydb.config;
 
     exports org.citydb.cli;
     exports org.citydb.cli.command;
