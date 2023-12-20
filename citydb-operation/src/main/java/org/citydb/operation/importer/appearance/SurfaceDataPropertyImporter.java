@@ -25,7 +25,6 @@ import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.RelationType;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
@@ -44,9 +43,8 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, appearance_id, surface_data_id, val_reference_type) values (" +
-                String.join(",", Collections.nCopies(3, "?")) + ", " +
-                RelationType.CONTAINS.getDatabaseValue() + ")";
+                "(id, appearance_id, surface_data_id) values (" +
+                String.join(",", Collections.nCopies(3, "?")) + ")";
     }
 
     public long doImport(SurfaceDataProperty property, long appearanceId) throws ImportException, SQLException {
