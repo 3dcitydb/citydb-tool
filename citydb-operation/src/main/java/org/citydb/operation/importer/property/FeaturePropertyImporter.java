@@ -45,7 +45,7 @@ public class FeaturePropertyImporter extends PropertyImporter {
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
                 "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
-                "val_feature_id, val_reference_type) " +
+                "val_feature_id, val_relation_type) " +
                 "values (" + String.join(",", Collections.nCopies(8, "?")) + ")";
     }
 

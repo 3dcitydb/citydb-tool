@@ -59,7 +59,7 @@ public class PropertyExporter extends DatabaseExporter {
                     .setAppearanceId(getLong("val_appearance_id", rs))
                     .setAddressId(getLong("val_address_id", rs))
                     .setFeatureId(getLong("val_feature_id", rs))
-                    .setRelationType(RelationType.fromDatabaseValue(rs.getInt("val_reference_type")))
+                    .setRelationType(RelationType.fromDatabaseValue(rs.getInt("val_relation_type")))
                     .setGenericContent(rs.getString("val_content"))
                     .setGenericContentMimeType(rs.getString("val_content_mime_type"))
                     .setDescriptor(PropertyDescriptor.of(rs.getLong("id"), featureId)
