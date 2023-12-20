@@ -23,11 +23,13 @@ package org.citydb.config;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.annotation.JSONField;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class Config {
+    @JSONField(name = "config")
     private Map<String, JSONObject> configs = new HashMap<>();
 
     public Map<String, JSONObject> getConfigs() {
