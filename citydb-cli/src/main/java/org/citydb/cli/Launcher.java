@@ -33,6 +33,7 @@ import org.citydb.cli.option.Option;
 import org.citydb.cli.util.CliConstants;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
+import org.citydb.config.ConfigManager;
 import org.citydb.core.CoreConstants;
 import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.Extension;
@@ -88,8 +89,13 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     "(default: ${MAP-FALLBACK-VALUE}).")
     private Map<String, Boolean> usePlugins;
 
+    @CommandLine.Option(names = "--config-file", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<file>",
+            description = "Load configuration from this file.")
+    private Path configFile;
+
     private final Logger logger = LoggerManager.getInstance().getLogger();
     private final PluginManager pluginManager = PluginManager.getInstance();
+    private final ConfigManager configManager = ConfigManager.getInstance();
     private final CommandHelper helper = CommandHelper.of(logger);
     private String commandLine;
     private String subCommandName;
@@ -138,6 +144,10 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
             if (!parseResult.hasSubcommand()) {
                 throw new CommandLine.ParameterException(cmd, "Missing required subcommand.");
+            }
+
+            if (configFile != null) {
+                configManager.load(configFile);
             }
 
             if (usePlugins != null) {
