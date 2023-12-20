@@ -33,6 +33,7 @@ import org.citydb.cli.option.Option;
 import org.citydb.cli.util.CliConstants;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
+import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
 import org.citydb.core.CoreConstants;
 import org.citydb.logging.LoggerManager;
@@ -99,6 +100,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     private final CommandHelper helper = CommandHelper.of(logger);
     private String commandLine;
     private String subCommandName;
+    private Config config;
 
     public static void main(String[] args) {
         Launcher launcher = new Launcher();
@@ -147,7 +149,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             }
 
             if (configFile != null) {
-                configManager.load(configFile);
+                config = configManager.load(configFile);
             }
 
             if (usePlugins != null) {
@@ -359,6 +361,10 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         LogLevel(Level level) {
             this.level = level;
         }
+    }
+
+    public Config getConfig() {
+        return config;
     }
 
     @Override

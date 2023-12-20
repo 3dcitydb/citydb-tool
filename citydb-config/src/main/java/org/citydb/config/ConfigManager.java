@@ -23,7 +23,7 @@ package org.citydb.config;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONException;
-import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -35,8 +35,6 @@ import java.util.Objects;
 public class ConfigManager {
     private static final ConfigManager instance = new ConfigManager();
 
-    private Config config;
-
     private ConfigManager() {
     }
 
@@ -44,15 +42,11 @@ public class ConfigManager {
         return instance;
     }
 
-    public Config getConfig() {
-        return config;
-    }
-
-    public void load(Path path) throws ConfigException {
+    public Config load(Path path) throws ConfigException {
         Objects.requireNonNull(path, "The path must not be null.");
 
         try (InputStream inStream = new BufferedInputStream(Files.newInputStream(path))) {
-            config = JSON.parseObject(new String(inStream.readAllBytes()), Config.class);
+            return JSON.parseObject(new String(inStream.readAllBytes()), Config.class);
         } catch (IOException e) {
             throw new ConfigException("Failed to read the config file " + path + ".", e);
         } catch (JSONException e) {
@@ -60,40 +54,12 @@ public class ConfigManager {
         }
     }
 
-    public <T> T getConfig(Class<T> type) throws ConfigException {
-        JSONObject options = null;
-
-        if (type.getName().equals("org.citydb.operation.importer.ImportOptions")) {
-            options = config.getImportConfig().getOperationOptions();
-        } else if (type.getName().equals("org.citydb.io.reader.ReadOptions")) {
-            options = config.getImportConfig().getReadOptions();
-        } else if (type.getName().equals("org.citydb.io.citygml.reader.CityGMLFormatOptions")) {
-            options = config.getImportConfig().getFormatOptions().get("CityGML");
-        } else if (type.getName().equals("org.citydb.io.citygml.reader.CityJSONFormatOptions")) {
-            options = config.getImportConfig().getFormatOptions().get("CityJSON");
-        } else if (type.getName().equals("org.citydb.operation.exporter.ExportOptions")) {
-            options = config.getExportConfig().getOperationOptions();
-        } else if (type.getName().equals("org.citydb.io.writer.WriteOptions")) {
-            options = config.getExportConfig().getWriteOptions();
-        } else if (type.getName().equals("org.citydb.io.citygml.writer.CityGMLFormatOptions")) {
-            options = config.getExportConfig().getFormatOptions().get("CityGML");
-        } else if (type.getName().equals("org.citydb.io.citygml.writer.CityJSONFormatOptions")) {
-            options = config.getExportConfig().getFormatOptions().get("CityJSON");
+    public void writeTo(Config config, Path target) throws ConfigException {
+        Objects.requireNonNull(target, "The target path must not be null.");
+        try {
+            Files.write(target, JSON.toJSONString(config, JSONWriter.Feature.PrettyFormat).getBytes());
+        } catch (IOException e) {
+            throw new ConfigException("Failed to write config file to " + target, e);
         }
-
-        if (options != null) {
-            return JSON.parseObject(options.toString(), type);
-        } else {
-            throw new ConfigException("Unsupported configuration type '" + type.getName() + "'.");
-        }
-    }
-
-    public <T> T getPluginConfig(String pluginName, Class<T> type) {
-        JSONObject pluginConfig = config.getPluginsConfig().get(pluginName);
-        if (pluginConfig != null) {
-            return JSON.parseObject(pluginConfig.toString(), type);
-        }
-
-        return null;
     }
 }
