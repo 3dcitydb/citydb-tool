@@ -22,7 +22,7 @@
 package org.citydb.operation.exporter.property;
 
 import org.citydb.model.common.Name;
-import org.citydb.model.common.ReferenceType;
+import org.citydb.model.common.RelationType;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.PropertyDescriptor;
 import org.citydb.operation.exporter.ExportException;
@@ -59,7 +59,7 @@ public class PropertyExporter extends DatabaseExporter {
                     .setAppearanceId(getLong("val_appearance_id", rs))
                     .setAddressId(getLong("val_address_id", rs))
                     .setFeatureId(getLong("val_feature_id", rs))
-                    .setReferenceType(ReferenceType.fromDatabaseValue(rs.getInt("val_reference_type")))
+                    .setRelationType(RelationType.fromDatabaseValue(rs.getInt("val_relation_type")))
                     .setGenericContent(rs.getString("val_content"))
                     .setGenericContentMimeType(rs.getString("val_content_mime_type"))
                     .setDescriptor(PropertyDescriptor.of(rs.getLong("id"), featureId)

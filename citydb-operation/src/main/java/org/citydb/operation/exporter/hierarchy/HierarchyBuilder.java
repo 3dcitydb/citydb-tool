@@ -21,7 +21,6 @@
 
 package org.citydb.operation.exporter.hierarchy;
 
-import org.citydb.model.common.ReferenceType;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.Property;
@@ -42,45 +41,33 @@ import java.sql.SQLException;
 import java.util.*;
 
 public class HierarchyBuilder {
+    private final long rootId;
+    private final ExportHelper helper;
     private final TableHelper tableHelper;
     private final PropertyBuilder propertyBuilder;
     private final Hierarchy hierarchy = new Hierarchy();
     private final List<PropertyStub> propertyStubs = new ArrayList<>();
 
-    private HierarchyBuilder(ExportHelper helper) {
+    private HierarchyBuilder(long rootId, ExportHelper helper) {
+        this.rootId = rootId;
+        this.helper = helper;
         tableHelper = helper.getTableHelper();
         propertyBuilder = new PropertyBuilder(helper);
     }
 
-    public static HierarchyBuilder newInstance(ExportHelper helper) {
-        return new HierarchyBuilder(helper);
+    public static HierarchyBuilder newInstance(long rootId, ExportHelper helper) {
+        return new HierarchyBuilder(rootId, helper);
     }
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
-        return initialize(rs, Collections.emptySet());
-    }
-
-    public HierarchyBuilder initialize(ResultSet rs, Set<Long> exportedFeatures) throws ExportException, SQLException {
         Set<Long> appearanceIds = new HashSet<>();
         Set<Long> implicitGeometryIds = new HashSet<>();
 
-        if (exportedFeatures != null) {
-            hierarchy.getInlineFeatures().addAll(exportedFeatures);
-        }
-
         while (rs.next()) {
             long nestedFeatureId = rs.getLong("val_feature_id");
-            if (!rs.wasNull()) {
-                Feature feature = hierarchy.getFeature(nestedFeatureId);
-                if (feature == null) {
-                    hierarchy.addFeature(nestedFeatureId, tableHelper.getOrCreateExporter(FeatureExporter.class)
-                            .doExport(nestedFeatureId, rs));
-                }
-
-                int referenceType = rs.getInt("val_reference_type");
-                if (referenceType != ReferenceType.GLOBAL_REFERENCE.getDatabaseValue()) {
-                    hierarchy.addInlineFeature(nestedFeatureId);
-                }
+            if (!rs.wasNull() && hierarchy.getFeature(nestedFeatureId) == null) {
+                hierarchy.addFeature(nestedFeatureId, tableHelper.getOrCreateExporter(FeatureExporter.class)
+                        .doExport(nestedFeatureId, rs));
             }
 
             long geometryId = rs.getLong("val_geometry_id");
@@ -126,7 +113,9 @@ public class HierarchyBuilder {
         return this;
     }
 
-    public Hierarchy build() throws ExportException, SQLException {
+    public Hierarchy build() {
+        helper.lookupAndPut(hierarchy.getFeature(rootId));
+
         Iterator<PropertyStub> iterator = propertyStubs.iterator();
         while (iterator.hasNext()) {
             PropertyStub propertyStub = iterator.next();

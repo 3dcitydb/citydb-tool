@@ -82,7 +82,7 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
 
         if (source.isSetBoundaries()) {
             for (AbstractSpaceBoundaryProperty property : source.getBoundaries()) {
-                helper.addFeature(Name.of("boundary", Namespaces.CORE), property, target);
+                helper.addContainedFeature(Name.of("boundary", Namespaces.CORE), property, target);
             }
         }
 

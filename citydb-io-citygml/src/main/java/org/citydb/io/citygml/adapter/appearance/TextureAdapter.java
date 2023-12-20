@@ -29,7 +29,6 @@ import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.ReferenceType;
 import org.citygml4j.core.model.appearance.AbstractTexture;
 import org.citygml4j.core.model.appearance.ColorPlusOpacity;
 
@@ -87,8 +86,7 @@ public abstract class TextureAdapter<T extends Texture<?>, R extends AbstractTex
                 ExternalFile textureImage = helper.getExternalFile(source.getImageURI());
                 if (helper.lookupAndPut(textureImage)) {
                     target.setTextureImageProperty(TextureImageProperty.of(Reference.of(
-                            textureImage.getOrCreateObjectId(),
-                            ReferenceType.GLOBAL_REFERENCE)));
+                            textureImage.getOrCreateObjectId())));
                 } else {
                     if (source.getMimeType() != null && source.getMimeType().getValue() != null) {
                         textureImage.setMimeType(source.getMimeType().getValue());

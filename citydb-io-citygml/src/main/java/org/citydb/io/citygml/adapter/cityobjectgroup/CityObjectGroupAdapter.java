@@ -66,7 +66,7 @@ public class CityObjectGroupAdapter extends AbstractLogicalSpaceAdapter<CityObje
         }
 
         if (source.getGroupParent() != null) {
-            helper.addFeature(Name.of("parent", Namespaces.CITY_OBJECT_GROUP), source.getGroupParent(), target);
+            helper.addRelatedFeature(Name.of("parent", Namespaces.CITY_OBJECT_GROUP), source.getGroupParent(), target);
         }
 
         if (source.hasDeprecatedProperties()) {

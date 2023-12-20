@@ -48,7 +48,7 @@ public class BridgeAdapter extends AbstractBridgeAdapter<Bridge> {
 
         if (source.isSetBridgeParts()) {
             for (BridgePartProperty property : source.getBridgeParts()) {
-                helper.addFeature(Name.of("bridgePart", Namespaces.BRIDGE), property, target);
+                helper.addContainedFeature(Name.of("bridgePart", Namespaces.BRIDGE), property, target);
             }
         }
     }

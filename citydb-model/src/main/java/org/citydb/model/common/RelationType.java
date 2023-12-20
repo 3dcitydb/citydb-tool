@@ -25,18 +25,18 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public enum ReferenceType {
-    LOCAL_REFERENCE(1),
-    GLOBAL_REFERENCE(2);
+public enum RelationType {
+    RELATES(0),
+    CONTAINS(1);
 
-    private final static Map<Integer, ReferenceType> types = new HashMap<>();
+    private final static Map<Integer, RelationType> types = new HashMap<>();
     private final int value;
 
     static {
         Arrays.stream(values()).forEach(type -> types.put(type.value, type));
     }
 
-    ReferenceType(int value) {
+    RelationType(int value) {
         this.value = value;
     }
 
@@ -44,7 +44,7 @@ public enum ReferenceType {
         return value;
     }
 
-    public static ReferenceType fromDatabaseValue(int value) {
-        return types.get(value);
+    public static RelationType fromDatabaseValue(int value) {
+        return types.getOrDefault(value, RELATES);
     }
 }

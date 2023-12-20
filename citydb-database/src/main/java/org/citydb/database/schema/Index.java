@@ -40,7 +40,7 @@ public class Index {
     public static final Index PROPERTY_VAL_DOUBLE = Index.normal("property_val_double_inx", Table.PROPERTY, "val_double");
     public static final Index PROPERTY_VAL_INT = Index.normal("property_val_int_inx", Table.PROPERTY, "val_int");
     public static final Index PROPERTY_VAL_LOD = Index.normal("property_val_lod_inx", Table.PROPERTY, "val_lod");
-    public static final Index PROPERTY_VAL_REFERENCE = Index.normal("property_val_reference_inx", Table.PROPERTY, "val_reference_type");
+    public static final Index PROPERTY_VAL_RELATION_TYPE = Index.normal("property_val_relation_type_inx", Table.PROPERTY, "val_relation_type");
     public static final Index PROPERTY_VAL_STRING = Index.normal("property_val_string_inx", Table.PROPERTY, "val_string");
     public static final Index PROPERTY_VAL_UOM = Index.normal("property_val_uom_inx", Table.PROPERTY, "val_uom");
     public static final Index PROPERTY_VAL_URI = Index.normal("property_val_uri_inx", Table.PROPERTY, "val_uri");

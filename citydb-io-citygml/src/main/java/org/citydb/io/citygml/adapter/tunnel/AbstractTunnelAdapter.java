@@ -51,26 +51,25 @@ public abstract class AbstractTunnelAdapter<T extends AbstractTunnel> extends Ab
 
         if (source.isSetTunnelConstructiveElements()) {
             for (TunnelConstructiveElementProperty property : source.getTunnelConstructiveElements()) {
-                helper.addFeature(Name.of("tunnelConstructiveElement", Namespaces.TUNNEL), property,
-                        target);
+                helper.addContainedFeature(Name.of("tunnelConstructiveElement", Namespaces.TUNNEL), property, target);
             }
         }
 
         if (source.isSetTunnelInstallations()) {
             for (TunnelInstallationProperty property : source.getTunnelInstallations()) {
-                helper.addFeature(Name.of("tunnelInstallation", Namespaces.TUNNEL), property, target);
+                helper.addContainedFeature(Name.of("tunnelInstallation", Namespaces.TUNNEL), property, target);
             }
         }
 
         if (source.isSetHollowSpaces()) {
             for (HollowSpaceProperty property : source.getHollowSpaces()) {
-                helper.addFeature(Name.of("hollowSpace", Namespaces.TUNNEL), property, target);
+                helper.addContainedFeature(Name.of("hollowSpace", Namespaces.TUNNEL), property, target);
             }
         }
 
         if (source.isSetTunnelFurniture()) {
             for (TunnelFurnitureProperty property : source.getTunnelFurniture()) {
-                helper.addFeature(Name.of("tunnelFurniture", Namespaces.TUNNEL), property, target);
+                helper.addContainedFeature(Name.of("tunnelFurniture", Namespaces.TUNNEL), property, target);
             }
         }
 

@@ -45,7 +45,7 @@ public class FeaturePropertyImporter extends PropertyImporter {
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
                 "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
-                "val_feature_id, val_reference_type) " +
+                "val_feature_id, val_relation_type) " +
                 "values (" + String.join(",", Collections.nCopies(8, "?")) + ")";
     }
 
@@ -64,13 +64,13 @@ public class FeaturePropertyImporter extends PropertyImporter {
             stmt.setLong(7, tableHelper.getOrCreateImporter(FeatureImporter.class)
                     .doImport(feature)
                     .getId());
-            stmt.setNull(8, Types.INTEGER);
         } else if (property.getReference().isPresent()) {
             Reference reference = property.getReference().get();
             cacheReference(CacheType.FEATURE, reference, propertyId);
             stmt.setNull(7, Types.BIGINT);
-            stmt.setInt(8, reference.getType().getDatabaseValue());
         }
+
+        stmt.setInt(8, property.getRelationType().getDatabaseValue());
 
         return super.doImport(property, propertyId, parentId, featureId);
     }

@@ -43,8 +43,8 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, appearance_id, surface_data_id, val_reference_type) values (" +
-                String.join(",", Collections.nCopies(4, "?")) + ")";
+                "(id, appearance_id, surface_data_id) values (" +
+                String.join(",", Collections.nCopies(3, "?")) + ")";
     }
 
     public long doImport(SurfaceDataProperty property, long appearanceId) throws ImportException, SQLException {
@@ -72,13 +72,10 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
             } else {
                 stmt.setNull(3, Types.BIGINT);
             }
-
-            stmt.setNull(4, Types.INTEGER);
         } else if (property.getReference().isPresent()) {
             Reference reference = property.getReference().get();
             cacheReference(CacheType.SURFACE_DATA, reference, propertyId);
             stmt.setNull(3, Types.BIGINT);
-            stmt.setInt(4, reference.getType().getDatabaseValue());
         }
 
         addBatch();

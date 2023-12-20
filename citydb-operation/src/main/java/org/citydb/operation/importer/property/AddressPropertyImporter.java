@@ -24,6 +24,7 @@ package org.citydb.operation.importer.property;
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.address.Address;
 import org.citydb.model.common.Reference;
+import org.citydb.model.common.RelationType;
 import org.citydb.model.property.AddressProperty;
 import org.citydb.model.property.PropertyDescriptor;
 import org.citydb.operation.importer.ImportException;
@@ -45,8 +46,9 @@ public class AddressPropertyImporter extends PropertyImporter {
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
                 "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
-                "val_address_id, val_reference_type) " +
-                "values (" + String.join(",", Collections.nCopies(8, "?")) + ")";
+                "val_address_id, val_relation_type) " +
+                "values (" + String.join(",", Collections.nCopies(7, "?")) + ", " +
+                RelationType.CONTAINS.getDatabaseValue() + ")";
     }
 
     public PropertyDescriptor doImport(AddressProperty property, long featureId) throws ImportException, SQLException {
@@ -64,12 +66,10 @@ public class AddressPropertyImporter extends PropertyImporter {
             stmt.setLong(7, tableHelper.getOrCreateImporter(AddressImporter.class)
                     .doImport(address)
                     .getId());
-            stmt.setNull(8, Types.INTEGER);
         } else if (property.getReference().isPresent()) {
             Reference reference = property.getReference().get();
             cacheReference(CacheType.ADDRESS, reference, propertyId);
             stmt.setNull(7, Types.BIGINT);
-            stmt.setInt(8, reference.getType().getDatabaseValue());
         }
 
         return super.doImport(property, propertyId, parentId, featureId);

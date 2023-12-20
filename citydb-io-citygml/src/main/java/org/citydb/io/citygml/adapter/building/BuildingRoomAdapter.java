@@ -68,13 +68,13 @@ public class BuildingRoomAdapter extends AbstractUnoccupiedSpaceAdapter<Building
 
         if (source.isSetBuildingFurniture()) {
             for (BuildingFurnitureProperty property : source.getBuildingFurniture()) {
-                helper.addFeature(Name.of("buildingFurniture", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingFurniture", Namespaces.BUILDING), property, target);
             }
         }
 
         if (source.isSetBuildingInstallations()) {
             for (BuildingInstallationProperty property : source.getBuildingInstallations()) {
-                helper.addFeature(Name.of("buildingInstallation", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingInstallation", Namespaces.BUILDING), property, target);
             }
         }
 

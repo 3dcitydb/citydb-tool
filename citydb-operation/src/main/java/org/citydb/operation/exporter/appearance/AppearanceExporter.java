@@ -25,7 +25,6 @@ import org.citydb.database.schema.ObjectClass;
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.ReferenceType;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;
@@ -135,9 +134,7 @@ public class AppearanceExporter extends DatabaseExporter {
             if (surfaceData != null) {
                 if (surfaceDataByAppearance.computeIfAbsent(id, v -> new HashSet<>()).add(surfaceDataId)) {
                     appearance.getSurfaceData().add(helper.lookupAndPut(surfaceData) ?
-                            SurfaceDataProperty.of(Reference.of(
-                                    surfaceData.getOrCreateObjectId(),
-                                    ReferenceType.LOCAL_REFERENCE)) :
+                            SurfaceDataProperty.of(Reference.of(surfaceData.getOrCreateObjectId())) :
                             SurfaceDataProperty.of(surfaceData));
                 }
 

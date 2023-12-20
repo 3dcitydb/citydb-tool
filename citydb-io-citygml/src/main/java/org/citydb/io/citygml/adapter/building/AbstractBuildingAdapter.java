@@ -81,32 +81,32 @@ public abstract class AbstractBuildingAdapter<T extends AbstractBuilding> extend
 
         if (source.isSetBuildingConstructiveElements()) {
             for (BuildingConstructiveElementProperty property : source.getBuildingConstructiveElements()) {
-                helper.addFeature(Name.of("buildingConstructiveElement", Namespaces.BUILDING), property,
+                helper.addContainedFeature(Name.of("buildingConstructiveElement", Namespaces.BUILDING), property,
                         target);
             }
         }
 
         if (source.isSetBuildingInstallations()) {
             for (BuildingInstallationProperty property : source.getBuildingInstallations()) {
-                helper.addFeature(Name.of("buildingInstallation", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingInstallation", Namespaces.BUILDING), property, target);
             }
         }
 
         if (source.isSetBuildingRooms()) {
             for (BuildingRoomProperty property : source.getBuildingRooms()) {
-                helper.addFeature(Name.of("buildingRoom", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingRoom", Namespaces.BUILDING), property, target);
             }
         }
 
         if (source.isSetBuildingFurniture()) {
             for (BuildingFurnitureProperty property : source.getBuildingFurniture()) {
-                helper.addFeature(Name.of("buildingFurniture", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingFurniture", Namespaces.BUILDING), property, target);
             }
         }
 
         if (source.isSetBuildingSubdivisions()) {
             for (AbstractBuildingSubdivisionProperty property : source.getBuildingSubdivisions()) {
-                helper.addFeature(Name.of("buildingSubdivision", Namespaces.BUILDING), property, target);
+                helper.addContainedFeature(Name.of("buildingSubdivision", Namespaces.BUILDING), property, target);
             }
         }
 

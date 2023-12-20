@@ -57,13 +57,13 @@ public class HollowSpaceAdapter extends AbstractUnoccupiedSpaceAdapter<HollowSpa
 
         if (source.isSetTunnelFurniture()) {
             for (TunnelFurnitureProperty property : source.getTunnelFurniture()) {
-                helper.addFeature(Name.of("tunnelFurniture", Namespaces.TUNNEL), property, target);
+                helper.addContainedFeature(Name.of("tunnelFurniture", Namespaces.TUNNEL), property, target);
             }
         }
 
         if (source.isSetTunnelInstallations()) {
             for (TunnelInstallationProperty property : source.getTunnelInstallations()) {
-                helper.addFeature(Name.of("tunnelInstallation", Namespaces.TUNNEL), property, target);
+                helper.addContainedFeature(Name.of("tunnelInstallation", Namespaces.TUNNEL), property, target);
             }
         }
 

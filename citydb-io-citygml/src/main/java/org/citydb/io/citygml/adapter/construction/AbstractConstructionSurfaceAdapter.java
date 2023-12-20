@@ -41,7 +41,7 @@ public abstract class AbstractConstructionSurfaceAdapter<T extends AbstractConst
 
         if (source.isSetFillingSurfaces()) {
             for (AbstractFillingSurfaceProperty property : source.getFillingSurfaces()) {
-                helper.addFeature(Name.of("fillingSurface", Namespaces.CONSTRUCTION), property, target);
+                helper.addContainedFeature(Name.of("fillingSurface", Namespaces.CONSTRUCTION), property, target);
             }
         }
     }

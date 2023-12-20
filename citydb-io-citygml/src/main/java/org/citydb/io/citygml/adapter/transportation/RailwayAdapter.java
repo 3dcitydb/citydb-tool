@@ -50,13 +50,13 @@ public class RailwayAdapter extends AbstractTransportationSpaceAdapter<Railway> 
 
         if (source.isSetSections()) {
             for (SectionProperty property : source.getSections()) {
-                helper.addFeature(Name.of("section", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("section", Namespaces.TRANSPORTATION), property, target);
             }
         }
 
         if (source.isSetIntersections()) {
             for (IntersectionProperty property : source.getIntersections()) {
-                helper.addFeature(Name.of("intersection", Namespaces.TRANSPORTATION), property, target);
+                helper.addContainedFeature(Name.of("intersection", Namespaces.TRANSPORTATION), property, target);
             }
         }
     }

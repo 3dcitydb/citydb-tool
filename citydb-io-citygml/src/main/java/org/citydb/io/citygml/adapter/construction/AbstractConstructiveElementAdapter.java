@@ -48,7 +48,7 @@ public abstract class AbstractConstructiveElementAdapter<T extends AbstractConst
 
         if (source.isSetFillings()) {
             for (AbstractFillingElementProperty property : source.getFillings()) {
-                helper.addFeature(Name.of("filling", Namespaces.CONSTRUCTION), property, target);
+                helper.addContainedFeature(Name.of("filling", Namespaces.CONSTRUCTION), property, target);
             }
         }
     }

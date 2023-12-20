@@ -25,18 +25,15 @@ import org.citydb.database.schema.ObjectClass;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.ReferenceType;
+import org.citydb.model.common.RelationType;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
-import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
-import org.citydb.operation.exporter.feature.FeatureExporter;
 import org.citydb.operation.exporter.property.PropertyStub;
 
-import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 public class PropertyBuilder {
@@ -46,7 +43,7 @@ public class PropertyBuilder {
         this.helper = helper;
     }
 
-    Property<?> build(PropertyStub propertyStub, Hierarchy hierarchy) throws ExportException, SQLException {
+    Property<?> build(PropertyStub propertyStub, Hierarchy hierarchy) {
         if (propertyStub != null && propertyStub.getDataType() != null) {
             Property<?> property = switch (propertyStub.getDataType()) {
                 case FEATURE_PROPERTY -> buildFeatureProperty(propertyStub, hierarchy);
@@ -65,32 +62,18 @@ public class PropertyBuilder {
         return null;
     }
 
-    <T extends Property<?>> T build(PropertyStub propertyStub, Hierarchy hierarchy, Class<T> type) throws ExportException, SQLException {
+    <T extends Property<?>> T build(PropertyStub propertyStub, Hierarchy hierarchy, Class<T> type) {
         Property<?> property = build(propertyStub, hierarchy);
         return type.isInstance(property) ? type.cast(property) : null;
     }
 
-    private FeatureProperty buildFeatureProperty(PropertyStub propertyStub, Hierarchy hierarchy) throws ExportException, SQLException {
+    private FeatureProperty buildFeatureProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         Feature feature = hierarchy.getFeature(propertyStub.getFeatureId());
         if (feature != null) {
-            ReferenceType referenceType = propertyStub.getReferenceType();
-            if (referenceType != null) {
-                if (hierarchy.isInlineFeature(propertyStub.getFeatureId())
-                        || isTopLevel(feature)) {
-                    return FeatureProperty.of(propertyStub.getName(),
-                            Reference.of(helper.getOrCreateId(feature), referenceType));
-                } else {
-                    feature = helper.getTableHelper().getOrCreateExporter(FeatureExporter.class)
-                            .doExport(propertyStub.getFeatureId(), hierarchy.getInlineFeatures());
-                    hierarchy.addFeature(propertyStub.getFeatureId(), feature);
-                }
-            }
-
-            return helper.lookupAndPut(feature) ?
-                    FeatureProperty.of(propertyStub.getName(), Reference.of(
-                            helper.getOrCreateId(feature),
-                            ReferenceType.LOCAL_REFERENCE)) :
-                    FeatureProperty.of(propertyStub.getName(), feature);
+            return propertyStub.getRelationType() == RelationType.RELATES || helper.lookupAndPut(feature) ?
+                    FeatureProperty.of(propertyStub.getName(), Reference.of(helper.getOrCreateId(feature)),
+                            propertyStub.getRelationType()) :
+                    FeatureProperty.of(propertyStub.getName(), feature, propertyStub.getRelationType());
         }
 
         return null;
@@ -109,8 +92,7 @@ public class PropertyBuilder {
         if (implicitGeometry != null) {
             ImplicitGeometryProperty property = helper.lookupAndPut(implicitGeometry) ?
                     ImplicitGeometryProperty.of(propertyStub.getName(), Reference.of(
-                            helper.getOrCreateId(implicitGeometry),
-                            ReferenceType.LOCAL_REFERENCE)) :
+                            helper.getOrCreateId(implicitGeometry))) :
                     ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
 
             if (propertyStub.getArrayValue() != null) {
@@ -138,9 +120,7 @@ public class PropertyBuilder {
         Address address = hierarchy.getAddress(propertyStub.getAddressId());
         if (address != null) {
             return helper.lookupAndPut(address) ?
-                    AddressProperty.of(propertyStub.getName(), Reference.of(
-                            helper.getOrCreateId(address),
-                            ReferenceType.LOCAL_REFERENCE)) :
+                    AddressProperty.of(propertyStub.getName(), Reference.of(helper.getOrCreateId(address))) :
                     AddressProperty.of(propertyStub.getName(), address);
         }
 
