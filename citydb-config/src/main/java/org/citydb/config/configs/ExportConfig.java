@@ -22,17 +22,13 @@
 package org.citydb.config.configs;
 
 import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.annotation.JSONField;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class ExportConfig {
-    @JSONField(name = "writeOptions")
     private JSONObject writeOptions;
-    @JSONField(name = "formatOptions")
     private Map<String, JSONObject> formatOptions;
-    @JSONField(name = "operationOptions")
     private JSONObject operationOptions;
 
     public JSONObject getWriteOptions() {
