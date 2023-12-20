@@ -50,11 +50,10 @@ public class ModelReader {
         try (ObjectInputStream stream = new ObjectInputStream(new BufferedInputStream(
                 Files.newInputStream(inputFile)))) {
             Object object = stream.readObject();
-            if (!(object instanceof FeatureCollection)) {
+            if (!(object instanceof FeatureCollection collection)) {
                 throw new IOException("The input file " + inputFile + " is not a feature collection.");
             }
 
-            FeatureCollection collection = (FeatureCollection) object;
             Postprocessor postprocessor = new Postprocessor(inputFile);
             collection.getFeatures().forEach(feature -> feature.accept(postprocessor));
             return collection;
