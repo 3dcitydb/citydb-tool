@@ -30,10 +30,13 @@ import java.util.Map;
 public class Config {
     private Map<String, JSONObject> configs = new HashMap<>();
 
-    public void setConfigs(Map<String, JSONObject> configs) {
-        if (configs != null) {
-            this.configs = configs;
-        }
+    public Map<String, JSONObject> getConfigs() {
+        return configs;
+    }
+
+    public Config setConfig(String name, JSONObject config) {
+        configs.put(name, config);
+        return this;
     }
 
     public <T> T getConfig(String name, Class<T> type) throws ConfigException {
@@ -43,5 +46,22 @@ public class Config {
         } else {
             throw new ConfigException("Unsupported configuration type '" + type.getName() + "'.");
         }
+    }
+
+    public <T> Config setConfig(String name, Object config) {
+        Object object = JSON.toJSON(config);
+        if (object instanceof JSONObject) {
+            configs.put(name, (JSONObject) JSON.toJSON(config));
+        }
+
+        return this;
+    }
+
+    public Config setConfigs(Map<String, JSONObject> configs) {
+        if (configs != null) {
+            this.configs = configs;
+        }
+
+        return this;
     }
 }
