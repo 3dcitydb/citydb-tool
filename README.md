@@ -61,7 +61,7 @@ the command you want to learn more about:
 
 ## System requirements
 
-* Java 11 or higher
+* Java 17 or higher
 
 The citydb-tool can be run on any platform providing appropriate Java support.
 
