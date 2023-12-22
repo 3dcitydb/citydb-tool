@@ -21,10 +21,13 @@
 
 package org.citydb.cli.index;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.IndexHelper;
+import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
@@ -34,13 +37,14 @@ import java.util.List;
         name = "status",
         description = "Show indexes with their status in the database.")
 public class IndexStatusCommand extends IndexController {
+    private final Logger logger = LoggerManager.getInstance().getLogger(IndexStatusCommand.class);
 
     @Override
     public Integer call() throws ExecutionException {
         DatabaseManager databaseManager = helper.connect(databaseOptions);
         IndexHelper indexHelper = databaseManager.getAdapter().getSchemaAdapter().getIndexHelper();
 
-        helper.printIndexStatus(databaseManager.getAdapter(), logger::info);
+        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         logger.info("Indexes list:");
 
         List<Index> indexes = IndexHelper.DEFAULT_INDEXES;

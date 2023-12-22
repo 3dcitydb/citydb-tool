@@ -99,6 +99,18 @@ public class LoggerManager {
         return LogManager.getLogger();
     }
 
+    public Logger getLogger(Class<?> type) {
+        return LogManager.getLogger(type);
+    }
+
+    public Logger getLogger(Object value) {
+        return LogManager.getLogger(value);
+    }
+
+    public Logger getLogger(String name) {
+        return LogManager.getLogger(name);
+    }
+
     public LogConsole logConsole() {
         return logConsole;
     }

@@ -94,10 +94,10 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             description = "Load configuration from this file.")
     private Path configFile;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
     private final PluginManager pluginManager = PluginManager.getInstance();
     private final ConfigManager configManager = ConfigManager.getInstance();
-    private final CommandHelper helper = CommandHelper.of(logger);
+    private final CommandHelper helper = CommandHelper.newInstance();
     private String commandLine;
     private String subCommandName;
     private Config config;

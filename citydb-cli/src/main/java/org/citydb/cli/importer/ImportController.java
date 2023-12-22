@@ -21,6 +21,7 @@
 
 package org.citydb.cli.importer;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
@@ -74,8 +75,8 @@ public abstract class ImportController implements Command {
             heading = "Database connection options:%n")
     protected final DatabaseOptions databaseOptions = new DatabaseOptions();
 
-    protected final Logger logger = LoggerManager.getInstance().getLogger();
-    protected final CommandHelper helper = CommandHelper.of(logger);
+    protected final Logger logger = LoggerManager.getInstance().getLogger(ImportController.class);
+    protected final CommandHelper helper = CommandHelper.newInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -110,7 +111,7 @@ public abstract class ImportController implements Command {
             helper.dropIndexes(databaseManager.getAdapter());
         }
 
-        helper.printIndexStatus(databaseManager.getAdapter(), logger::info);
+        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
 
         if (preview) {
             logger.info("Import is running in preview mode. Features will not be imported.");
@@ -174,7 +175,7 @@ public abstract class ImportController implements Command {
             databaseManager.disconnect();
             if (!statistics.isEmpty()) {
                 logger.info(!preview ? "Import summary:" : "Preview of features to be imported:");
-                statistics.printFeatureSummary(logger::info);
+                statistics.logFeatureSummary(Level.INFO);
             } else {
                 logger.info("No features imported.");
             }
