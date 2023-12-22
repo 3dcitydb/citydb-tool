@@ -21,24 +21,22 @@
 
 package org.citydb.operation.deleter;
 
+import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.annotation.JSONField;
+import org.citydb.config.SerializableConfig;
 import org.citydb.operation.deleter.options.DeleteMode;
 
 import java.time.OffsetDateTime;
 
+@SerializableConfig(jsonField = "deleteOptions")
 public class DeleteOptions {
     private int numberOfThreads;
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private DeleteMode mode;
     private String updatingPerson;
     private String reasonForUpdate;
     private String lineage;
     private OffsetDateTime terminationDate;
-
-    private DeleteOptions() {
-    }
-
-    public static DeleteOptions defaults() {
-        return new DeleteOptions();
-    }
 
     public int getNumberOfThreads() {
         return numberOfThreads;

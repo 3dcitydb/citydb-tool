@@ -24,11 +24,9 @@ package org.citydb.cli.importer;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
-import org.citydb.cli.option.DatabaseOptions;
-import org.citydb.cli.option.IndexOption;
-import org.citydb.cli.option.InputFileOptions;
-import org.citydb.cli.option.ThreadsOption;
+import org.citydb.cli.option.*;
 import org.citydb.cli.util.CommandHelper;
+import org.citydb.config.Config;
 import org.citydb.core.file.InputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.io.IOAdapter;
@@ -36,6 +34,7 @@ import org.citydb.io.IOAdapterManager;
 import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
+import org.citydb.io.reader.option.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.importer.ImportOptions;
@@ -54,7 +53,7 @@ public abstract class ImportController implements Command {
 
     @CommandLine.Option(names = "--fail-fast",
             description = "Fail fast on errors.")
-    protected boolean failFast;
+    protected Boolean failFast;
 
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
@@ -68,11 +67,14 @@ public abstract class ImportController implements Command {
 
     @CommandLine.Option(names = "--compute-extent",
             description = "Compute and overwrite extents of features.")
-    protected boolean computeEnvelopes;
+    protected Boolean computeEnvelopes;
 
     @CommandLine.ArgGroup(exclusive = false, multiplicity = "1", order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
     protected final DatabaseOptions databaseOptions = new DatabaseOptions();
+
+    @ConfigOption
+    private Config config;
 
     protected final Logger logger = LoggerManager.getInstance().getLogger();
     protected final CommandHelper helper = CommandHelper.of(logger);
@@ -80,7 +82,7 @@ public abstract class ImportController implements Command {
     private volatile boolean shouldRun = true;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
-    protected abstract Object getFormatOptions() throws ExecutionException;
+    protected abstract InputFormatOptions getFormatOptions(ReadOptions readOptions) throws ExecutionException;
 
     @Override
     public Integer call() throws ExecutionException {
@@ -123,7 +125,8 @@ public abstract class ImportController implements Command {
                             StatisticsConsumer.Mode.COUNT_ALL :
                             StatisticsConsumer.Mode.COUNT_COMMITTED));
 
-            ReadOptions readOptions = getReadOptions().setFormatOptions(getFormatOptions());
+            ReadOptions readOptions = getReadOptions();
+            readOptions.getFormatOptions().set(getFormatOptions(readOptions));
             ImportOptions importOptions = getImportOptions();
             AtomicLong counter = new AtomicLong();
 
@@ -196,16 +199,33 @@ public abstract class ImportController implements Command {
     }
 
     protected ReadOptions getReadOptions() {
-        return ReadOptions.defaults()
-                .setFailFast(failFast)
-                .setNumberOfThreads(threadsOption.getNumberOfThreads())
-                .setEncoding(inputFileOptions.getEncoding())
-                .setComputeEnvelopes(computeEnvelopes);
+        ReadOptions readOptions = config.getOrCreate(ReadOptions.class, ReadOptions::new);
+        if (failFast != null) {
+            readOptions.setFailFast(failFast);
+        }
+
+        if (threadsOption.getNumberOfThreads() != null) {
+            readOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        }
+
+        if (inputFileOptions.getEncoding() != null) {
+            readOptions.setEncoding(inputFileOptions.getEncoding());
+        }
+
+        if (computeEnvelopes != null) {
+            readOptions.setComputeEnvelopes(computeEnvelopes);
+        }
+
+        return readOptions;
     }
 
     protected ImportOptions getImportOptions() {
-        return ImportOptions.defaults()
-                .setNumberOfThreads(threadsOption.getNumberOfThreads());
+        ImportOptions importOptions = config.getOrCreate(ImportOptions.class, ImportOptions::new);
+        if (threadsOption.getNumberOfThreads() != null) {
+            importOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        }
+
+        return importOptions;
     }
 
     private void abort(Feature feature, Throwable e) {

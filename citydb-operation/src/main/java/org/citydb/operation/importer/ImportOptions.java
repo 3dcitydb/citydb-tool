@@ -21,16 +21,12 @@
 
 package org.citydb.operation.importer;
 
+import org.citydb.config.SerializableConfig;
+
+@SerializableConfig(jsonField = "importOptions")
 public class ImportOptions {
     private int numberOfThreads;
     private int batchSize = 20;
-
-    private ImportOptions() {
-    }
-
-    public static ImportOptions defaults() {
-        return new ImportOptions();
-    }
 
     public int getNumberOfThreads() {
         return numberOfThreads;

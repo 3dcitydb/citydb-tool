@@ -24,12 +24,14 @@ package org.citydb.cli.exporter;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
+import org.citydb.cli.option.ConfigOption;
 import org.citydb.cli.option.DatabaseOptions;
 import org.citydb.cli.option.OutputFileOptions;
 import org.citydb.cli.option.ThreadsOption;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
+import org.citydb.config.Config;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -38,7 +40,8 @@ import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.io.writer.options.SpatialReference;
+import org.citydb.io.writer.option.OutputFormatOptions;
+import org.citydb.io.writer.option.SpatialReference;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.ExportOptions;
@@ -54,7 +57,7 @@ public abstract class ExportController implements Command {
 
     @CommandLine.Option(names = "--fail-fast",
             description = "Fail fast on errors.")
-    protected boolean failFast;
+    protected Boolean failFast;
 
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
@@ -67,13 +70,16 @@ public abstract class ExportController implements Command {
             heading = "Database connection options:%n")
     protected DatabaseOptions databaseOptions;
 
+    @ConfigOption
+    private Config config;
+
     protected final Logger logger = LoggerManager.getInstance().getLogger();
     protected final CommandHelper helper = CommandHelper.of(logger);
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
-    protected abstract Object getFormatOptions() throws ExecutionException;
+    protected abstract OutputFormatOptions getFormatOptions(WriteOptions writeOptions) throws ExecutionException;
     protected void initialize(DatabaseManager databaseManager) throws ExecutionException {}
 
     @Override
@@ -102,8 +108,9 @@ public abstract class ExportController implements Command {
              FeatureWriter writer = ioAdapter.createWriter()) {
             Exporter exporter = Exporter.newInstance();
             ExportOptions exportOptions = getExportOptions().setOutputFile(outputFile);
-            WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter())
-                    .setFormatOptions(getFormatOptions());
+            WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
+            writeOptions.getFormatOptions().set(getFormatOptions(writeOptions));
+
             AtomicLong counter = new AtomicLong();
 
             logger.info("Exporting to " + ioManager.getFileFormat(ioAdapter) + " file " + outputFile.getFile() + ".");
@@ -169,18 +176,35 @@ public abstract class ExportController implements Command {
     }
 
     protected ExportOptions getExportOptions() {
-        return ExportOptions.defaults()
-                .setNumberOfThreads(threadsOption.getNumberOfThreads());
+        ExportOptions exportOptions = config.getOrCreate(ExportOptions.class, ExportOptions::new);
+        if (threadsOption.getNumberOfThreads() != null) {
+            exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        }
+
+        return exportOptions;
     }
 
     protected WriteOptions getWriteOptions(DatabaseAdapter databaseAdapter) {
-        return WriteOptions.defaults()
-                .setFailFast(failFast)
-                .setNumberOfThreads(threadsOption.getNumberOfThreads())
-                .setEncoding(outputFileOptions.getEncoding())
-                .setSpatialReference(new SpatialReference()
-                        .setSRID(databaseAdapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                        .setURI(databaseAdapter.getDatabaseMetadata().getSpatialReference().getURI()));
+        WriteOptions writeOptions = config.getOrCreate(WriteOptions.class, WriteOptions::new);
+        if (failFast != null) {
+            writeOptions.setFailFast(failFast);
+        }
+
+        if (threadsOption.getNumberOfThreads() != null) {
+            writeOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        }
+
+        if (outputFileOptions.getEncoding() != null) {
+            writeOptions.setEncoding(outputFileOptions.getEncoding());
+        }
+
+        if (writeOptions.getSpatialReference() == null) {
+            writeOptions.setSpatialReference(new SpatialReference()
+                    .setSRID(databaseAdapter.getDatabaseMetadata().getSpatialReference().getSRID())
+                    .setURI(databaseAdapter.getDatabaseMetadata().getSpatialReference().getURI()));
+        }
+
+        return writeOptions;
     }
 
     private void abort(Feature feature, long id, Throwable e) {

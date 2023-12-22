@@ -19,30 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.io.util;
+package org.citydb.io.writer.option;
 
-import com.alibaba.fastjson2.JSON;
-
-import java.util.function.Supplier;
-
-public class FormatOptions {
-
-    public static <T> T parse(Object options, Class<T> type) {
-        if (type.isInstance(options)) {
-            return type.cast(options);
-        } else if (options instanceof String str) {
-            try {
-                return JSON.parseObject(str, type);
-            } catch (Exception e) {
-                //
-            }
-        }
-
-        return null;
-    }
-
-    public static <T> T parseElseGet(Object options, Class<T> type, Supplier<T> supplier) {
-        T result = parse(options, type);
-        return result != null ? result : supplier.get();
-    }
+public interface OutputFormatOptions {
 }

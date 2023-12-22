@@ -3,6 +3,7 @@ plugins {
 }
 rootProject.name = 'citydb-tool'
 include 'citydb-cli'
+include 'citydb-config'
 include 'citydb-core'
 include 'citydb-database'
 include 'citydb-database-postgres'
@@ -12,4 +13,3 @@ include 'citydb-logging'
 include 'citydb-model'
 include 'citydb-operation'
 include 'citydb-plugin'
-include 'citydb-config'

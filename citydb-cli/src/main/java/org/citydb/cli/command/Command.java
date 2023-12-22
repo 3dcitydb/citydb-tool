@@ -33,6 +33,10 @@ public interface Command extends Callable<Integer> {
     default void preprocess(CommandLine commandLine) throws Exception {}
     default void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {}
 
+    static boolean hasMatchedOption(String name, CommandLine.Model.CommandSpec commandSpec) {
+        return commandSpec.commandLine().getParseResult().hasMatchedOption(name);
+    }
+
     static void addSubcommand(Command command, CommandLine commandLine, PluginManager pluginManager) throws Exception {
         CommandLine subcommandLine = new CommandLine(command);
         command.registerSubcommands(subcommandLine, pluginManager);

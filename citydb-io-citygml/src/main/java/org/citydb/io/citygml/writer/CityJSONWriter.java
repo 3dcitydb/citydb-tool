@@ -28,7 +28,6 @@ import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.citygml.CityGMLAdapterContext;
 import org.citydb.io.citygml.writer.util.GlobalFeatureWriter;
-import org.citydb.io.util.FormatOptions;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
@@ -70,8 +69,8 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public void initialize(OutputFile file, WriteOptions options) throws WriteException {
-        CityJSONFormatOptions formatOptions = FormatOptions.parseElseGet(options.getFormatOptions(),
-                CityJSONFormatOptions.class, CityJSONFormatOptions::new);
+        CityJSONFormatOptions formatOptions = options.getFormatOptions()
+                .getOrCreate(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
 
         writer = CityJSONWriterFactory.newInstance(cityJSONContext, options, formatOptions)
                 .createWriter(file);

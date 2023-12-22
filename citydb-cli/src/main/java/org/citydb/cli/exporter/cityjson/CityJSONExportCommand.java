@@ -22,12 +22,16 @@
 package org.citydb.cli.exporter.cityjson;
 
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.database.DatabaseManager;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.writer.CityJSONFormatOptions;
+import org.citydb.io.writer.WriteOptions;
+import org.citydb.io.writer.option.OutputFormatOptions;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.Exporter;
 import org.citygml4j.cityjson.adapter.appearance.serializer.AppearanceSerializer;
 import org.citygml4j.cityjson.adapter.geometry.serializer.GeometrySerializer;
@@ -37,6 +41,8 @@ import picocli.CommandLine;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 @CommandLine.Command(
         name = "cityjson",
@@ -53,11 +59,11 @@ public class CityJSONExportCommand extends ExportController {
 
     @CommandLine.Option(names = "--pretty-print",
             description = "Format and indent output file.")
-    private boolean prettyPrint;
+    private Boolean prettyPrint;
 
     @CommandLine.Option(names = "--html-safe",
             description = "Write JSON that is safe to embed into HTML.")
-    private boolean htmlSafe;
+    private Boolean htmlSafe;
 
     @CommandLine.Option(names = "--vertex-precision", paramLabel = "<digits>",
             description = "Number of decimal places to keep for geometry vertices (default: ${DEFAULT-VALUE}).")
@@ -78,7 +84,7 @@ public class CityJSONExportCommand extends ExportController {
 
     @CommandLine.Option(names = "--replace-templates",
             description = "Replace template geometries with real coordinates.")
-    private boolean replaceTemplateGeometries;
+    private Boolean replaceTemplateGeometries;
 
     @CommandLine.Option(names = "--no-material-defaults", negatable = true, defaultValue = "true",
             description = "Use CityGML default values for material properties (default: ${DEFAULT-VALUE}).")
@@ -88,7 +94,10 @@ public class CityJSONExportCommand extends ExportController {
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
     private UpgradeOptions upgradeOptions;
 
-    private final CityJSONFormatOptions formatOptions = new CityJSONFormatOptions();
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
+    private final Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
     private volatile boolean shouldRun = true;
     private Throwable exception;
 
@@ -98,21 +107,66 @@ public class CityJSONExportCommand extends ExportController {
     }
 
     @Override
-    protected Object getFormatOptions() {
-        formatOptions
-                .setVersion(version)
-                .setJsonLines(jsonLines)
-                .setPrettyPrint(prettyPrint)
-                .setHtmlSafe(htmlSafe)
-                .setVertexPrecision(vertexPrecision)
-                .setTemplatePrecision(templatePrecision)
-                .setTextureVertexPrecision(textureVertexPrecision)
-                .setTransformCoordinates(transformCoordinates)
-                .setReplaceTemplateGeometries(replaceTemplateGeometries)
-                .setUseMaterialDefaults(useMaterialDefaults);
+    protected OutputFormatOptions getFormatOptions(WriteOptions writeOptions) {
+        CityJSONFormatOptions formatOptions = writeOptions.getFormatOptions().get(CityJSONFormatOptions.class);
+        if (formatOptions != null) {
+            if (Command.hasMatchedOption("--cityjson-version", commandSpec)) {
+                formatOptions.setVersion(version);
+            }
 
-        if (upgradeOptions != null) {
-            formatOptions.setUseLod4AsLod3(upgradeOptions.isUseLod4AsLod3());
+            if (Command.hasMatchedOption("--no-json-lines", commandSpec)) {
+                formatOptions.setJsonLines(jsonLines);
+            }
+
+            if (Command.hasMatchedOption("--vertex-precision", commandSpec)) {
+                formatOptions.setVertexPrecision(vertexPrecision);
+            }
+
+            if (Command.hasMatchedOption("--template-precision", commandSpec)) {
+                formatOptions.setTemplatePrecision(templatePrecision);
+            }
+
+            if (Command.hasMatchedOption("--texture-vertex-precision", commandSpec)) {
+                formatOptions.setTextureVertexPrecision(textureVertexPrecision);
+            }
+
+            if (Command.hasMatchedOption("--no-transform-coordinates", commandSpec)) {
+                formatOptions.setTransformCoordinates(transformCoordinates);
+            }
+
+            if (Command.hasMatchedOption("--no-material-defaults", commandSpec)) {
+                formatOptions.setUseMaterialDefaults(useMaterialDefaults);
+            }
+        } else {
+            formatOptions = writeOptions.getFormatOptions().setAndGet(new CityJSONFormatOptions())
+                    .setVersion(version)
+                    .setJsonLines(jsonLines)
+                    .setVertexPrecision(vertexPrecision)
+                    .setTemplatePrecision(templatePrecision)
+                    .setTextureVertexPrecision(textureVertexPrecision)
+                    .setTransformCoordinates(transformCoordinates)
+                    .setUseMaterialDefaults(useMaterialDefaults);
+        }
+
+        if (prettyPrint != null) {
+            formatOptions.setPrettyPrint(prettyPrint);
+        }
+
+        if (htmlSafe != null) {
+            formatOptions.setHtmlSafe(htmlSafe);
+        }
+
+        if (replaceTemplateGeometries != null) {
+            formatOptions.setReplaceTemplateGeometries(replaceTemplateGeometries);
+        }
+
+        if (upgradeOptions != null && upgradeOptions.getUseLod4AsLod3() != null) {
+            formatOptions.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
+        }
+
+        if (!globalTemplates.isEmpty()) {
+            globalTemplates.forEach(formatOptions::addGlobalTemplate);
+            globalTemplates.clear();
         }
 
         return formatOptions;
@@ -135,7 +189,7 @@ public class CityJSONExportCommand extends ExportController {
 
                     exporter.exportImplicitGeometry(id).whenComplete((implicitGeometry, e) -> {
                         if (implicitGeometry != null) {
-                            formatOptions.addGlobalTemplate(implicitGeometry, lod);
+                            globalTemplates.put(implicitGeometry, lod);
                         } else {
                             shouldRun = false;
                             exception = e;
@@ -160,7 +214,7 @@ public class CityJSONExportCommand extends ExportController {
             jsonLines = false;
         }
 
-        if (jsonLines && prettyPrint) {
+        if (jsonLines && prettyPrint != null) {
             throw new CommandLine.ParameterException(commandLine,
                     "Error: --json-lines and --pretty-print are mutually exclusive (specify only one)");
         }

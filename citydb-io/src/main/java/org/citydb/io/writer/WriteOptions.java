@@ -21,21 +21,18 @@
 
 package org.citydb.io.writer;
 
-import org.citydb.io.writer.options.SpatialReference;
+import org.citydb.config.ConfigObject;
+import org.citydb.config.SerializableConfig;
+import org.citydb.io.writer.option.OutputFormatOptions;
+import org.citydb.io.writer.option.SpatialReference;
 
+@SerializableConfig(jsonField = "writeOptions")
 public class WriteOptions {
     private boolean failFast;
     private int numberOfThreads;
     private String encoding;
     private SpatialReference spatialReference;
-    private Object formatOptions;
-
-    private WriteOptions() {
-    }
-
-    public static WriteOptions defaults() {
-        return new WriteOptions();
-    }
+    private ConfigObject<OutputFormatOptions> formatOptions;
 
     public boolean isFailFast() {
         return failFast;
@@ -76,11 +73,15 @@ public class WriteOptions {
         return this;
     }
 
-    public Object getFormatOptions() {
+    public ConfigObject<OutputFormatOptions> getFormatOptions() {
+        if (formatOptions == null) {
+            formatOptions = new ConfigObject<>();
+        }
+
         return formatOptions;
     }
 
-    public WriteOptions setFormatOptions(Object formatOptions) {
+    public WriteOptions setFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
         this.formatOptions = formatOptions;
         return this;
     }

@@ -26,10 +26,10 @@ import picocli.CommandLine;
 public class ThreadsOption implements Option {
     @CommandLine.Option(names = "--threads",
             description = "Number of threads to use for parallel processing.")
-    protected Integer threads;
+    private Integer threads;
 
-    public int getNumberOfThreads() {
-        return threads != null ? threads : 0;
+    public Integer getNumberOfThreads() {
+        return threads;
     }
 
     @Override

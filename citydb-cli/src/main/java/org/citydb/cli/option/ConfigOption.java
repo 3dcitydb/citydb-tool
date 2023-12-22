@@ -19,21 +19,12 @@
  * limitations under the License.
  */
 
-package org.citydb.io.citygml.reader;
+package org.citydb.cli.option;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.option.InputFormatOptions;
+import java.lang.annotation.*;
 
-@SerializableConfig(jsonField = "CityJSON")
-public class CityJSONFormatOptions implements InputFormatOptions {
-    private boolean mapUnsupportedTypesToGenerics = true;
-
-    public boolean isMapUnsupportedTypesToGenerics() {
-        return mapUnsupportedTypesToGenerics;
-    }
-
-    public CityJSONFormatOptions setMapUnsupportedTypesToGenerics(boolean mapUnsupportedTypesToGenerics) {
-        this.mapUnsupportedTypesToGenerics = mapUnsupportedTypesToGenerics;
-        return this;
-    }
+@Documented
+@Target(value = ElementType.FIELD)
+@Retention(value = RetentionPolicy.RUNTIME)
+public @interface ConfigOption {
 }

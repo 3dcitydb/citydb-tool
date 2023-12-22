@@ -19,25 +19,31 @@
  * limitations under the License.
  */
 
-package org.citydb.io.writer.options;
+package org.citydb.io.writer.option;
+
+import com.alibaba.fastjson2.annotation.JSONField;
 
 public class SpatialReference {
     private int srid;
     private String uri;
 
+    @JSONField(name = "srid")
     public int getSRID() {
         return srid;
     }
 
+    @JSONField(name = "srid")
     public SpatialReference setSRID(int srid) {
         this.srid = srid;
         return this;
     }
 
+    @JSONField(name = "uri")
     public String getURI() {
         return uri;
     }
 
+    @JSONField(name = "uri")
     public SpatialReference setURI(String uri) {
         this.uri = uri;
         return this;

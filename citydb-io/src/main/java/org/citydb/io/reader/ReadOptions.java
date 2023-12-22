@@ -21,19 +21,17 @@
 
 package org.citydb.io.reader;
 
+import org.citydb.config.ConfigObject;
+import org.citydb.config.SerializableConfig;
+import org.citydb.io.reader.option.InputFormatOptions;
+
+@SerializableConfig(jsonField = "readOptions")
 public class ReadOptions {
     private boolean failFast;
     private int numberOfThreads;
     private String encoding;
     private boolean computeEnvelopes;
-    private Object formatOptions;
-
-    private ReadOptions() {
-    }
-
-    public static ReadOptions defaults() {
-        return new ReadOptions();
-    }
+    private ConfigObject<InputFormatOptions> formatOptions;
 
     public boolean isFailFast() {
         return failFast;
@@ -74,11 +72,15 @@ public class ReadOptions {
         return this;
     }
 
-    public Object getFormatOptions() {
+    public ConfigObject<InputFormatOptions> getFormatOptions() {
+        if (formatOptions == null) {
+            formatOptions = new ConfigObject<>();
+        }
+
         return formatOptions;
     }
 
-    public ReadOptions setFormatOptions(Object formatOptions) {
+    public ReadOptions setFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
         this.formatOptions = formatOptions;
         return this;
     }
