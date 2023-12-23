@@ -23,7 +23,7 @@ package org.citydb.operation.importer;
 
 import org.citydb.config.SerializableConfig;
 
-@SerializableConfig(jsonField = "importOptions")
+@SerializableConfig(name = "importOptions")
 public class ImportOptions {
     private int numberOfThreads;
     private int batchSize = 20;

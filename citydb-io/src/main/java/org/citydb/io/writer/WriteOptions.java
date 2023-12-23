@@ -26,7 +26,7 @@ import org.citydb.config.SerializableConfig;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.io.writer.option.SpatialReference;
 
-@SerializableConfig(jsonField = "writeOptions")
+@SerializableConfig(name = "writeOptions")
 public class WriteOptions {
     private boolean failFast;
     private int numberOfThreads;

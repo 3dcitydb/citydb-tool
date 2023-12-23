@@ -24,7 +24,7 @@ package org.citydb.io.citygml.reader;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.reader.option.InputFormatOptions;
 
-@SerializableConfig(jsonField = "CityGML")
+@SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements InputFormatOptions {
     private boolean resolveGeometryReferences = true;
     private boolean resolveCrossLodReferences = true;

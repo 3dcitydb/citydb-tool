@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-@SerializableConfig(jsonField = "CityJSON")
+@SerializableConfig(name = "CityJSON")
 public class CityJSONFormatOptions implements OutputFormatOptions {
     public static final String TEMPLATE_LOD_PROPERTY = "lod";
 

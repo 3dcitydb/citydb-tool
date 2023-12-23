@@ -24,7 +24,7 @@ package org.citydb.io.citygml.reader;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.reader.option.InputFormatOptions;
 
-@SerializableConfig(jsonField = "CityJSON")
+@SerializableConfig(name = "CityJSON")
 public class CityJSONFormatOptions implements InputFormatOptions {
     private boolean mapUnsupportedTypesToGenerics = true;
 

@@ -106,7 +106,7 @@ public class ConfigObject<T> extends LinkedHashMap<String, T> {
 
     private String getName(Class<?> type) {
         return type.isAnnotationPresent(SerializableConfig.class) ?
-                type.getAnnotation(SerializableConfig.class).jsonField() :
+                type.getAnnotation(SerializableConfig.class).name() :
                 type.getName();
     }
 }

@@ -28,7 +28,7 @@ import org.citydb.operation.deleter.options.DeleteMode;
 
 import java.time.OffsetDateTime;
 
-@SerializableConfig(jsonField = "deleteOptions")
+@SerializableConfig(name = "deleteOptions")
 public class DeleteOptions {
     private int numberOfThreads;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)

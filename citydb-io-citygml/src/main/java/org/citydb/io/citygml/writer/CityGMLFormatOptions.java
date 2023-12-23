@@ -28,7 +28,7 @@ import org.citydb.io.citygml.writer.options.AddressMode;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 
-@SerializableConfig(jsonField = "CityGML")
+@SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements OutputFormatOptions {
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private CityGMLVersion version;

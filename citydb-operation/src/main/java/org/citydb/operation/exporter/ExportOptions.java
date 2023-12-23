@@ -31,7 +31,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@SerializableConfig(jsonField = "exportOptions")
+@SerializableConfig(name = "exportOptions")
 public class ExportOptions {
     private final LazyInitializer<OutputFile, IOException> tempOutputFile = LazyInitializer.of(
             () -> new RegularOutputFile(Files.createTempDirectory("citydb-").resolve("output.tmp")));

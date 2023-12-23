@@ -25,7 +25,7 @@ import org.citydb.config.ConfigObject;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.reader.option.InputFormatOptions;
 
-@SerializableConfig(jsonField = "readOptions")
+@SerializableConfig(name = "readOptions")
 public class ReadOptions {
     private boolean failFast;
     private int numberOfThreads;
