@@ -21,7 +21,7 @@
 
 package org.citydb.cli.option;
 
-import org.citydb.cli.util.CliConstants;
+import org.citydb.cli.CliConstants;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
 

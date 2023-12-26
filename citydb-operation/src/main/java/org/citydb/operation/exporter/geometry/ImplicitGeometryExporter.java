@@ -30,12 +30,12 @@ import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.AppearanceProperty;
+import org.citydb.operation.exporter.ExportConstants;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.appearance.AppearanceExporter;
 import org.citydb.operation.exporter.common.BlobExporter;
 import org.citydb.operation.exporter.common.DatabaseExporter;
-import org.citydb.operation.exporter.util.ExportConstants;
 import org.citydb.operation.exporter.util.ExternalFileHelper;
 
 import java.sql.ResultSet;

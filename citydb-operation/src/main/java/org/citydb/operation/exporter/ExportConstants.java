@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.operation.exporter.util;
+package org.citydb.operation.exporter;
 
 public class ExportConstants {
     public static final String TEXTURE_DIR = "appearance";
