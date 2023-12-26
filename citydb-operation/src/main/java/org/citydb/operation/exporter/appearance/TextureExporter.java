@@ -28,10 +28,10 @@ import org.citydb.model.appearance.TextureType;
 import org.citydb.model.appearance.WrapMode;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Reference;
+import org.citydb.operation.exporter.ExportConstants;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.BlobExporter;
-import org.citydb.operation.exporter.util.ExportConstants;
 import org.citydb.operation.exporter.util.ExternalFileHelper;
 
 import java.sql.ResultSet;

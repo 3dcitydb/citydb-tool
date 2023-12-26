@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.util;
+package org.citydb.cli;
 
 import java.io.InputStream;
 import java.util.Properties;
