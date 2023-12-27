@@ -50,7 +50,7 @@ subprojects {
     }
 
     extraJavaModuleInfo {
-        module('tomcat-jdbc-10.1.13.jar', 'org.apache.tomcat.jdbc', '10.1.13') {
+        module('tomcat-jdbc-10.1.17.jar', 'org.apache.tomcat.jdbc', '10.1.17') {
             requires('java.sql')
             requires('java.management')
             requires('org.apache.tomcat.juli')

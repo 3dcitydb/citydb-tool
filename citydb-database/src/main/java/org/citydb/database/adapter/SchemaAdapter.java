@@ -85,7 +85,7 @@ public abstract class SchemaAdapter {
         Iterator<Long> iterator = values.iterator();
         while (iterator.hasNext()) {
             if (i == 0) {
-                if (builder.length() > 0) {
+                if (!builder.isEmpty()) {
                     builder.append(" or ");
                 }
 
