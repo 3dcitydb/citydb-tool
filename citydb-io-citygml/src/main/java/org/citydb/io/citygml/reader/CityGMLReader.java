@@ -22,6 +22,7 @@
 package org.citydb.io.citygml.reader;
 
 import org.apache.logging.log4j.Logger;
+import org.citydb.config.ConfigObject;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
@@ -71,7 +72,9 @@ public class CityGMLReader implements FeatureReader {
         this.options = Objects.requireNonNull(options, "The reader options must not be null.");
         factory.setReadOptions(options);
 
-        formatOptions = options.getFormatOptions().getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+        formatOptions = options.getFormatOptions()
+                .orElseGet(ConfigObject::new)
+                .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         try {
             store = PersistentMapStore.newInstance();

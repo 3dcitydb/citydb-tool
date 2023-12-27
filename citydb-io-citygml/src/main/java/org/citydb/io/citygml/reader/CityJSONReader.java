@@ -76,7 +76,9 @@ public class CityJSONReader implements FeatureReader {
 
         factory = CityJSONReaderFactory.newInstance(cityJSONContext)
                 .setReadOptions(options)
-                .setFormatOptions(options.getFormatOptions().get(CityJSONFormatOptions.class));
+                .setFormatOptions(options.getFormatOptions()
+                        .map(formatOptions -> formatOptions.get(CityJSONFormatOptions.class))
+                        .orElse(null));
 
         isInitialized = true;
         shouldRun = true;

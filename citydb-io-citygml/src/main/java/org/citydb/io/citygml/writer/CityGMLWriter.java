@@ -22,6 +22,7 @@
 package org.citydb.io.citygml.writer;
 
 import org.apache.logging.log4j.Logger;
+import org.citydb.config.ConfigObject;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
@@ -62,6 +63,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
     @Override
     public void initialize(OutputFile file, WriteOptions options) throws WriteException {
         CityGMLFormatOptions formatOptions = options.getFormatOptions()
+                .orElseGet(ConfigObject::new)
                 .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         writer = CityGMLWriterFactory.newInstance(context.getCityGMLContext(), options, formatOptions)
