@@ -127,8 +127,7 @@ public abstract class ImportController implements Command {
                             StatisticsConsumer.Mode.COUNT_COMMITTED));
 
             ReadOptions readOptions = getReadOptions();
-            readOptions.computeFormatOptionsIfAbsent(ConfigObject::new)
-                    .set(getFormatOptions(readOptions.getFormatOptions().orElseThrow()));
+            readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
             ImportOptions importOptions = getImportOptions();
 
             AtomicLong counter = new AtomicLong();

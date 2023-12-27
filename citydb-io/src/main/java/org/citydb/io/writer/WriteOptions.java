@@ -27,7 +27,6 @@ import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.io.writer.option.SpatialReference;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 @SerializableConfig(name = "writeOptions")
 public class WriteOptions {
@@ -73,13 +72,9 @@ public class WriteOptions {
         return this;
     }
 
-    public Optional<ConfigObject<OutputFormatOptions>> getFormatOptions() {
-        return Optional.ofNullable(formatOptions);
-    }
-
-    public ConfigObject<OutputFormatOptions> computeFormatOptionsIfAbsent(Supplier<ConfigObject<OutputFormatOptions>> supplier) {
+    public ConfigObject<OutputFormatOptions> getFormatOptions() {
         if (formatOptions == null) {
-            formatOptions = supplier.get();
+            formatOptions = new ConfigObject<>();
         }
 
         return formatOptions;

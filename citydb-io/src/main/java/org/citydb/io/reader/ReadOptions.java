@@ -26,7 +26,6 @@ import org.citydb.config.SerializableConfig;
 import org.citydb.io.reader.option.InputFormatOptions;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 @SerializableConfig(name = "readOptions")
 public class ReadOptions {
@@ -72,13 +71,9 @@ public class ReadOptions {
         return this;
     }
 
-    public Optional<ConfigObject<InputFormatOptions>> getFormatOptions() {
-        return Optional.ofNullable(formatOptions);
-    }
-
-    public ConfigObject<InputFormatOptions> computeFormatOptionsIfAbsent(Supplier<ConfigObject<InputFormatOptions>> supplier) {
+    public ConfigObject<InputFormatOptions> getFormatOptions() {
         if (formatOptions == null) {
-            formatOptions = supplier.get();
+            formatOptions = new ConfigObject<>();
         }
 
         return formatOptions;

@@ -110,8 +110,7 @@ public abstract class ExportController implements Command {
             Exporter exporter = Exporter.newInstance();
             ExportOptions exportOptions = getExportOptions().setOutputFile(outputFile);
             WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
-            writeOptions.computeFormatOptionsIfAbsent(ConfigObject::new)
-                    .set(getFormatOptions(writeOptions.getFormatOptions().orElseThrow()));
+            writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
             AtomicLong counter = new AtomicLong();
 
