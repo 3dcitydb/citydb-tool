@@ -47,10 +47,7 @@ public class ReadOptions {
     }
 
     public ReadOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 

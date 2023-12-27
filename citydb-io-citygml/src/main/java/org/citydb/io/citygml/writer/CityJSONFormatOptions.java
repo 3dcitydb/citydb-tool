@@ -40,13 +40,13 @@ public class CityJSONFormatOptions implements OutputFormatOptions {
     public static final String TEMPLATE_LOD_PROPERTY = "lod";
 
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
-    private CityJSONVersion version;
+    private CityJSONVersion version = CityJSONVersion.v2_0;
     private boolean prettyPrint;
     private boolean jsonLines = true;
     private boolean htmlSafe;
-    private Integer vertexPrecision;
-    private Integer templatePrecision;
-    private Integer textureVertexPrecision;
+    private int vertexPrecision = GeometrySerializer.DEFAULT_VERTEX_PRECISION;
+    private int templatePrecision = GeometrySerializer.DEFAULT_TEMPLATE_PRECISION;
+    private int textureVertexPrecision = AppearanceSerializer.DEFAULT_TEXTURE_VERTEX_PRECISION;
     private boolean transformCoordinates = true;
     private boolean replaceTemplateGeometries;
     private boolean useMaterialDefaults = true;
@@ -99,7 +99,7 @@ public class CityJSONFormatOptions implements OutputFormatOptions {
     }
 
     public int getVertexPrecision() {
-        return vertexPrecision != null ? vertexPrecision : GeometrySerializer.DEFAULT_VERTEX_PRECISION;
+        return vertexPrecision;
     }
 
     public CityJSONFormatOptions setVertexPrecision(int vertexPrecision) {
@@ -108,7 +108,7 @@ public class CityJSONFormatOptions implements OutputFormatOptions {
     }
 
     public int getTemplatePrecision() {
-        return templatePrecision != null ? templatePrecision : GeometrySerializer.DEFAULT_TEMPLATE_PRECISION;
+        return templatePrecision;
     }
 
     public CityJSONFormatOptions setTemplatePrecision(int templatePrecision) {
@@ -117,7 +117,7 @@ public class CityJSONFormatOptions implements OutputFormatOptions {
     }
 
     public int getTextureVertexPrecision() {
-        return textureVertexPrecision != null ? textureVertexPrecision : AppearanceSerializer.DEFAULT_TEXTURE_VERTEX_PRECISION;
+        return textureVertexPrecision;
     }
 
     public CityJSONFormatOptions setTextureVertexPrecision(int textureVertexPrecision) {

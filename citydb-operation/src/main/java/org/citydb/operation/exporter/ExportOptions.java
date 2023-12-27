@@ -69,10 +69,7 @@ public class ExportOptions {
     }
 
     public ExportOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 
@@ -81,10 +78,7 @@ public class ExportOptions {
     }
 
     public ExportOptions setNumberOfTextureBuckets(int numberOfTextureBuckets) {
-        if (numberOfTextureBuckets > 0) {
-            this.numberOfTextureBuckets = numberOfTextureBuckets;
-        }
-
+        this.numberOfTextureBuckets = numberOfTextureBuckets;
         return this;
     }
 }

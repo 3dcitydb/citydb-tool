@@ -48,10 +48,7 @@ public class WriteOptions {
     }
 
     public WriteOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 

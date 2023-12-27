@@ -25,18 +25,17 @@ import org.citydb.config.SerializableConfig;
 
 @SerializableConfig(name = "importOptions")
 public class ImportOptions {
+    public static final int DEFAULT_BATCH_SIZE = 20;
+
     private int numberOfThreads;
-    private int batchSize = 20;
+    private int batchSize = DEFAULT_BATCH_SIZE;
 
     public int getNumberOfThreads() {
         return numberOfThreads;
     }
 
     public ImportOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 
@@ -45,10 +44,7 @@ public class ImportOptions {
     }
 
     public ImportOptions setBatchSize(int batchSize) {
-        if (batchSize > 0) {
-            this.batchSize = batchSize;
-        }
-
+        this.batchSize = batchSize;
         return this;
     }
 }

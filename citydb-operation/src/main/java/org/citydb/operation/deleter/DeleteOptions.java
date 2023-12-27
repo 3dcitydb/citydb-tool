@@ -32,7 +32,7 @@ import java.time.OffsetDateTime;
 public class DeleteOptions {
     private int numberOfThreads;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
-    private DeleteMode mode;
+    private DeleteMode mode = DeleteMode.DELETE;
     private String updatingPerson;
     private String reasonForUpdate;
     private String lineage;
@@ -43,10 +43,7 @@ public class DeleteOptions {
     }
 
     public DeleteOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 

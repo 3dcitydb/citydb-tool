@@ -81,7 +81,9 @@ public class ImportHelper {
         tableHelper = new TableHelper(this);
         sequenceHelper = new SequenceHelper(this);
         statistics = new FeatureStatistics(objectClassHelper, namespaceHelper);
-        batchSize = Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize());
+        batchSize = options.getBatchSize() > 0 ?
+                Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
+                ImportOptions.DEFAULT_BATCH_SIZE;
     }
 
     public DatabaseAdapter getAdapter() {
