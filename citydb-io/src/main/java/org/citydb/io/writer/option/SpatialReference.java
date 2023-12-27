@@ -21,6 +21,8 @@
 
 package org.citydb.io.writer.option;
 
+import com.alibaba.fastjson2.annotation.JSONField;
+
 public class SpatialReference {
     private int srid;
     private String uri;
@@ -29,6 +31,7 @@ public class SpatialReference {
         return srid;
     }
 
+    @JSONField(name = "srid")
     public SpatialReference setSRID(int srid) {
         this.srid = srid;
         return this;
@@ -38,6 +41,7 @@ public class SpatialReference {
         return uri;
     }
 
+    @JSONField(name = "uri")
     public SpatialReference setURI(String uri) {
         this.uri = uri;
         return this;

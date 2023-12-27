@@ -27,6 +27,7 @@ import org.citydb.config.SerializableConfig;
 import org.citydb.operation.deleter.options.DeleteMode;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 @SerializableConfig(name = "deleteOptions")
 public class DeleteOptions {
@@ -56,8 +57,8 @@ public class DeleteOptions {
         return this;
     }
 
-    public String getUpdatingPerson() {
-        return updatingPerson;
+    public Optional<String> getUpdatingPerson() {
+        return Optional.ofNullable(updatingPerson);
     }
 
     public DeleteOptions setUpdatingPerson(String updatingPerson) {
@@ -65,8 +66,8 @@ public class DeleteOptions {
         return this;
     }
 
-    public String getReasonForUpdate() {
-        return reasonForUpdate;
+    public Optional<String> getReasonForUpdate() {
+        return Optional.ofNullable(reasonForUpdate);
     }
 
     public DeleteOptions setReasonForUpdate(String reasonForUpdate) {
@@ -74,8 +75,8 @@ public class DeleteOptions {
         return this;
     }
 
-    public String getLineage() {
-        return lineage;
+    public Optional<String> getLineage() {
+        return Optional.ofNullable(lineage);
     }
 
     public DeleteOptions setLineage(String lineage) {
@@ -83,8 +84,8 @@ public class DeleteOptions {
         return this;
     }
 
-    public OffsetDateTime getTerminationDate() {
-        return terminationDate;
+    public Optional<OffsetDateTime> getTerminationDate() {
+        return Optional.ofNullable(terminationDate);
     }
 
     public DeleteOptions setTerminationDate(OffsetDateTime terminationDate) {

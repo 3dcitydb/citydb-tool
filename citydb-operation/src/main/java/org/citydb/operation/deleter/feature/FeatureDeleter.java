@@ -45,17 +45,11 @@ public class FeatureDeleter extends DatabaseDeleter {
                     .append(helper.getTableHelper().getPrefixedTableName(Table.FEATURE))
                     .append(" set termination_date = ?, last_modification_date = ?, updating_person = ?");
 
-            if (helper.getOptions().getReasonForUpdate() != null) {
-                stmt.append(", reason_for_update = '")
-                        .append(helper.getOptions().getReasonForUpdate())
-                        .append("'");
-            }
+            helper.getOptions().getReasonForUpdate().ifPresent(reasonForUpdate ->
+                    stmt.append(", reason_for_update = '").append(reasonForUpdate).append("'"));
 
-            if (helper.getOptions().getLineage() != null) {
-                stmt.append(", lineage = '")
-                        .append(helper.getOptions().getLineage())
-                        .append("'");
-            }
+            helper.getOptions().getLineage().ifPresent(lineage ->
+                stmt.append(", lineage = '").append(lineage).append("'"));
 
             stmt.append(" where id = ? and termination_date is null");
             return connection.prepareStatement(stmt.toString());
@@ -71,17 +65,12 @@ public class FeatureDeleter extends DatabaseDeleter {
     @Override
     protected void executeBatch(Long[] ids) throws SQLException {
         if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
-            String updatingPerson = helper.getOptions().getUpdatingPerson() != null ?
-                    helper.getOptions().getUpdatingPerson() :
-                    helper.getAdapter().getConnectionDetails().getUser();
+            String updatingPerson = helper.getOptions().getUpdatingPerson()
+                    .orElse(helper.getAdapter().getConnectionDetails().getUser());
 
             for (long id : ids) {
                 OffsetDateTime now = OffsetDateTime.now();
-                OffsetDateTime terminationDate = helper.getOptions().getTerminationDate() != null ?
-                        helper.getOptions().getTerminationDate() :
-                        now;
-
-                stmt.setObject(1, terminationDate);
+                stmt.setObject(1, helper.getOptions().getTerminationDate().orElse(now));
                 stmt.setObject(2, now);
                 stmt.setString(3, updatingPerson);
                 stmt.setLong(4, id);

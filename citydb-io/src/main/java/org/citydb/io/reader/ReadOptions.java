@@ -25,6 +25,8 @@ import org.citydb.config.ConfigObject;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.reader.option.InputFormatOptions;
 
+import java.util.Optional;
+
 @SerializableConfig(name = "readOptions")
 public class ReadOptions {
     private boolean failFast;
@@ -51,8 +53,8 @@ public class ReadOptions {
         return this;
     }
 
-    public String getEncoding() {
-        return encoding;
+    public Optional<String> getEncoding() {
+        return Optional.ofNullable(encoding);
     }
 
     public ReadOptions setEncoding(String encoding) {

@@ -199,7 +199,7 @@ public abstract class ExportController implements Command {
             writeOptions.setEncoding(outputFileOptions.getEncoding());
         }
 
-        if (writeOptions.getSpatialReference() == null) {
+        if (writeOptions.getSpatialReference().isEmpty()) {
             writeOptions.setSpatialReference(new SpatialReference()
                     .setSRID(databaseAdapter.getDatabaseMetadata().getSpatialReference().getSRID())
                     .setURI(databaseAdapter.getDatabaseMetadata().getSpatialReference().getURI()));

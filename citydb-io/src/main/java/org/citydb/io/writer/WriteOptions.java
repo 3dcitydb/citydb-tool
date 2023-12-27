@@ -26,6 +26,8 @@ import org.citydb.config.SerializableConfig;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.io.writer.option.SpatialReference;
 
+import java.util.Optional;
+
 @SerializableConfig(name = "writeOptions")
 public class WriteOptions {
     private boolean failFast;
@@ -52,8 +54,8 @@ public class WriteOptions {
         return this;
     }
 
-    public String getEncoding() {
-        return encoding;
+    public Optional<String> getEncoding() {
+        return Optional.ofNullable(encoding);
     }
 
     public WriteOptions setEncoding(String encoding) {
@@ -61,8 +63,8 @@ public class WriteOptions {
         return this;
     }
 
-    public SpatialReference getSpatialReference() {
-        return spatialReference;
+    public Optional<SpatialReference> getSpatialReference() {
+        return Optional.ofNullable(spatialReference);
     }
 
     public WriteOptions setSpatialReference(SpatialReference spatialReference) {

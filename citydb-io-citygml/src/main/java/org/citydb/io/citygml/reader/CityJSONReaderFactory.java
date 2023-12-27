@@ -77,9 +77,10 @@ public class CityJSONReaderFactory {
                     .mapUnsupportedTypesToGenerics(formatOptions.isMapUnsupportedTypesToGenerics())
                     .withIdCreator(new IdCreator(seed));
 
-            CityJSONReader reader = options.getEncoding() != null ?
-                    inputFactory.createCityJSONReader(
-                            new BufferedReader(new InputStreamReader(file.openStream(), options.getEncoding()))) :
+            String encoding = options.getEncoding().orElse(null);
+            CityJSONReader reader = encoding != null ?
+                    inputFactory.createCityJSONReader(new BufferedReader(
+                            new InputStreamReader(file.openStream(), encoding))) :
                     inputFactory.createCityJSONReader(file.openStream());
             if (filter != null) {
                 reader = inputFactory.createFilteredCityJSONReader(reader, filter);

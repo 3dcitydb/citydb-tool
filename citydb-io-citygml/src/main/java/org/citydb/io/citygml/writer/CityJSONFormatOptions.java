@@ -50,7 +50,7 @@ public class CityJSONFormatOptions implements OutputFormatOptions {
     private boolean transformCoordinates = true;
     private boolean replaceTemplateGeometries;
     private boolean useMaterialDefaults = true;
-    private String fallbackTheme;
+    private String fallbackTheme = AppearanceSerializer.FALLBACK_THEME;
     private boolean useLod4AsLod3;
     private boolean writeGenericAttributeTypes;
 
