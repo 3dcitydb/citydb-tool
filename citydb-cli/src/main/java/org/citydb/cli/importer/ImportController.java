@@ -70,9 +70,9 @@ public abstract class ImportController implements Command {
             description = "Compute and overwrite extents of features.")
     protected Boolean computeEnvelopes;
 
-    @CommandLine.ArgGroup(exclusive = false, multiplicity = "1", order = Integer.MAX_VALUE,
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
-    protected final DatabaseOptions databaseOptions = new DatabaseOptions();
+    protected ConnectionOptions connectionOptions;
 
     @ConfigOption
     private Config config;
@@ -104,7 +104,7 @@ public abstract class ImportController implements Command {
             logger.info("Found " + inputFiles.size() + " file(s) at " + inputFileOptions.joinFiles() + ".");
         }
 
-        DatabaseManager databaseManager = helper.connect(databaseOptions);
+        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         FeatureStatistics statistics = helper.createFeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
 

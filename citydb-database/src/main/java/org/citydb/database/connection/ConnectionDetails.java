@@ -21,19 +21,25 @@
 
 package org.citydb.database.connection;
 
+import java.util.Optional;
+
 public class ConnectionDetails {
-    private final PoolOptions poolOptions = new PoolOptions();
     private String description;
     private String databaseName;
     private String user;
     private String password;
     private String host;
-    private int port;
+    private Integer port;
     private String database;
     private String schema;
+    private PoolOptions poolOptions;
 
     public String getDescription() {
         return description;
+    }
+
+    public String getDescription(String defaultValue) {
+        return description != null ? description : defaultValue;
     }
 
     public ConnectionDetails setDescription(String description) {
@@ -45,6 +51,10 @@ public class ConnectionDetails {
         return databaseName;
     }
 
+    public String getDatabaseName(String defaultValue) {
+        return databaseName != null ? databaseName : defaultValue;
+    }
+
     public ConnectionDetails setDatabaseName(String databaseName) {
         this.databaseName = databaseName;
         return this;
@@ -52,6 +62,10 @@ public class ConnectionDetails {
 
     public String getUser() {
         return user;
+    }
+
+    public String getUser(String defaultValue) {
+        return user != null ? user : defaultValue;
     }
 
     public ConnectionDetails setUser(String user) {
@@ -63,6 +77,10 @@ public class ConnectionDetails {
         return password;
     }
 
+    public String getPassword(String defaultValue) {
+        return password != null ? password : defaultValue;
+    }
+
     public ConnectionDetails setPassword(String password) {
         this.password = password;
         return this;
@@ -72,22 +90,46 @@ public class ConnectionDetails {
         return host;
     }
 
+    public String getHost(String defaultValue) {
+        return host != null ? host : defaultValue;
+    }
+
     public ConnectionDetails setHost(String host) {
         this.host = host;
         return this;
     }
 
-    public int getPort() {
+    public Integer getPort() {
         return port;
     }
 
-    public ConnectionDetails setPort(int port) {
+    public Integer getPort(Integer defaultValue) {
+        return port != null ? port : defaultValue;
+    }
+
+    public Integer getPort(String defaultValue) {
+        if (port != null) {
+            return port;
+        } else {
+            try {
+                return Integer.parseInt(defaultValue);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+    }
+
+    public ConnectionDetails setPort(Integer port) {
         this.port = port;
         return this;
     }
 
     public String getDatabase() {
         return database;
+    }
+
+    public String getDatabase(String defaultValue) {
+        return database != null ? database : defaultValue;
     }
 
     public ConnectionDetails setDatabase(String database) {
@@ -99,13 +141,22 @@ public class ConnectionDetails {
         return schema;
     }
 
+    public String getSchema(String defaultValue) {
+        return schema != null ? schema : defaultValue;
+    }
+
     public ConnectionDetails setSchema(String schema) {
         this.schema = schema;
         return this;
     }
 
-    public PoolOptions getPoolOptions() {
-        return poolOptions;
+    public Optional<PoolOptions> getPoolOptions() {
+        return Optional.ofNullable(poolOptions);
+    }
+
+    public ConnectionDetails setPoolOptions(PoolOptions poolOptions) {
+        this.poolOptions = poolOptions;
+        return this;
     }
 
     public String toConnectString() {

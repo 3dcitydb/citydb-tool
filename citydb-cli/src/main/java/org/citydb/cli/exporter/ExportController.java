@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.DatabaseOptions;
+import org.citydb.cli.option.ConnectionOptions;
 import org.citydb.cli.option.OutputFileOptions;
 import org.citydb.cli.option.ThreadsOption;
 import org.citydb.cli.util.CommandHelper;
@@ -67,9 +67,9 @@ public abstract class ExportController implements Command {
             description = "SQL select statement to use as filter query.")
     private String query;
 
-    @CommandLine.ArgGroup(exclusive = false, multiplicity = "1", order = Integer.MAX_VALUE,
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
-    protected DatabaseOptions databaseOptions;
+    protected ConnectionOptions connectionOptions;
 
     @ConfigOption
     private Config config;
@@ -98,7 +98,7 @@ public abstract class ExportController implements Command {
                         .findFirst()
                         .orElse(null));
 
-        DatabaseManager databaseManager = helper.connect(databaseOptions);
+        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
         FeatureStatistics statistics = helper.createFeatureStatistics(databaseManager.getAdapter());
 

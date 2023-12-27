@@ -36,6 +36,7 @@ import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
 import org.citydb.core.CoreConstants;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
@@ -189,8 +190,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
                 CommandLine.Model.OptionSpec password = commandLine.getParseResult().matchedOption("--db-password");
                 if (password != null && password.getValue().equals("")) {
-                    password.setValue(readPassword(commandLine.getParseResult()
-                            .matchedOptionValue("--db-username", System.getenv(CliConstants.ENV_CITYDB_USERNAME))));
+                    password.setValue(readPassword(commandLine.getParseResult().matchedOptionValue("--db-username",
+                            System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))));
                 }
             }
 

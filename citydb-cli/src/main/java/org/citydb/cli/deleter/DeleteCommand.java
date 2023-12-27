@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.DatabaseOptions;
+import org.citydb.cli.option.ConnectionOptions;
 import org.citydb.cli.option.IndexOption;
 import org.citydb.cli.option.MetadataOptions;
 import org.citydb.cli.util.CommandHelper;
@@ -68,9 +68,9 @@ public class DeleteCommand implements Command {
             heading = "Metadata options for terminate operations:%n")
     private MetadataOptions metadataOptions;
 
-    @CommandLine.ArgGroup(exclusive = false, multiplicity = "1",
+    @CommandLine.ArgGroup(exclusive = false,
             heading = "Database connection options:%n")
-    private DatabaseOptions databaseOptions;
+    private ConnectionOptions connectionOptions;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
@@ -85,7 +85,7 @@ public class DeleteCommand implements Command {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(databaseOptions);
+        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
         Deleter deleter = Deleter.newInstance();
 

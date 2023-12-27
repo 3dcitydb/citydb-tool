@@ -19,19 +19,13 @@
  * limitations under the License.
  */
 
-package org.citydb.database.connection;
+package org.citydb.database;
 
-public class PoolOptions {
-    public static final int DEFAULT_LOGIN_TIMEOUT = 60;
-
-    private int loginTimeout = DEFAULT_LOGIN_TIMEOUT;
-
-    public int getLoginTimeout() {
-        return loginTimeout;
-    }
-
-    public PoolOptions setLoginTimeout(int loginTimeout) {
-        this.loginTimeout = loginTimeout;
-        return this;
-    }
+public class DatabaseConstants {
+    public static final String ENV_CITYDB_HOST = "CITYDB_HOST";
+    public static final String ENV_CITYDB_PORT = "CITYDB_PORT";
+    public static final String ENV_CITYDB_NAME = "CITYDB_NAME";
+    public static final String ENV_CITYDB_SCHEMA = "CITYDB_SCHEMA";
+    public static final String ENV_CITYDB_USERNAME = "CITYDB_USERNAME";
+    public static final String ENV_CITYDB_PASSWORD = "CITYDB_PASSWORD";
 }

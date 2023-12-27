@@ -40,6 +40,7 @@ public abstract class DatabaseAdapter {
     protected abstract SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter);
     protected abstract GeometryAdapter createGeometryAdapter(DatabaseAdapter adapter);
     public abstract Class<?> getDriverClass();
+    public abstract int getDefaultPort();
     public abstract String getConnectionString(String host, int port, String database);
 
     public final void initialize(Pool pool, ConnectionDetails connectionDetails) throws SQLException {
