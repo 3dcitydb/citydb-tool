@@ -23,11 +23,11 @@ package org.citydb.cli.importer.cityjson;
 
 import org.citydb.cli.command.Command;
 import org.citydb.cli.importer.ImportController;
+import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.reader.CityJSONFormatOptions;
-import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.option.InputFormatOptions;
 import picocli.CommandLine;
 
@@ -49,17 +49,17 @@ public class CityJSONImportCommand extends ImportController {
     }
 
     @Override
-    protected InputFormatOptions getFormatOptions(ReadOptions readOptions) {
-        CityJSONFormatOptions formatOptions = readOptions.getFormatOptions().get(CityJSONFormatOptions.class);
-        if (formatOptions != null) {
+    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
+        CityJSONFormatOptions options = formatOptions.get(CityJSONFormatOptions.class);
+        if (options != null) {
             if (Command.hasMatchedOption("--no-map-unknown-objects", commandSpec)) {
-                formatOptions.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
+                options.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
             }
         } else {
-            formatOptions = new CityJSONFormatOptions()
+            options = new CityJSONFormatOptions()
                     .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
         }
 
-        return formatOptions;
+        return options;
     }
 }

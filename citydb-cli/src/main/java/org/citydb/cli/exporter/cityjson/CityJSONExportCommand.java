@@ -24,12 +24,12 @@ package org.citydb.cli.exporter.cityjson;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
+import org.citydb.config.ConfigObject;
 import org.citydb.database.DatabaseManager;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.writer.CityJSONFormatOptions;
-import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.Exporter;
@@ -107,38 +107,38 @@ public class CityJSONExportCommand extends ExportController {
     }
 
     @Override
-    protected OutputFormatOptions getFormatOptions(WriteOptions writeOptions) {
-        CityJSONFormatOptions formatOptions = writeOptions.getFormatOptions().get(CityJSONFormatOptions.class);
-        if (formatOptions != null) {
+    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
+        CityJSONFormatOptions options = formatOptions.get(CityJSONFormatOptions.class);
+        if (options != null) {
             if (Command.hasMatchedOption("--cityjson-version", commandSpec)) {
-                formatOptions.setVersion(version);
+                options.setVersion(version);
             }
 
             if (Command.hasMatchedOption("--no-json-lines", commandSpec)) {
-                formatOptions.setJsonLines(jsonLines);
+                options.setJsonLines(jsonLines);
             }
 
             if (Command.hasMatchedOption("--vertex-precision", commandSpec)) {
-                formatOptions.setVertexPrecision(vertexPrecision);
+                options.setVertexPrecision(vertexPrecision);
             }
 
             if (Command.hasMatchedOption("--template-precision", commandSpec)) {
-                formatOptions.setTemplatePrecision(templatePrecision);
+                options.setTemplatePrecision(templatePrecision);
             }
 
             if (Command.hasMatchedOption("--texture-vertex-precision", commandSpec)) {
-                formatOptions.setTextureVertexPrecision(textureVertexPrecision);
+                options.setTextureVertexPrecision(textureVertexPrecision);
             }
 
             if (Command.hasMatchedOption("--no-transform-coordinates", commandSpec)) {
-                formatOptions.setTransformCoordinates(transformCoordinates);
+                options.setTransformCoordinates(transformCoordinates);
             }
 
             if (Command.hasMatchedOption("--no-material-defaults", commandSpec)) {
-                formatOptions.setUseMaterialDefaults(useMaterialDefaults);
+                options.setUseMaterialDefaults(useMaterialDefaults);
             }
         } else {
-            formatOptions = new CityJSONFormatOptions()
+            options = new CityJSONFormatOptions()
                     .setVersion(version)
                     .setJsonLines(jsonLines)
                     .setVertexPrecision(vertexPrecision)
@@ -149,27 +149,27 @@ public class CityJSONExportCommand extends ExportController {
         }
 
         if (prettyPrint != null) {
-            formatOptions.setPrettyPrint(prettyPrint);
+            options.setPrettyPrint(prettyPrint);
         }
 
         if (htmlSafe != null) {
-            formatOptions.setHtmlSafe(htmlSafe);
+            options.setHtmlSafe(htmlSafe);
         }
 
         if (replaceTemplateGeometries != null) {
-            formatOptions.setReplaceTemplateGeometries(replaceTemplateGeometries);
+            options.setReplaceTemplateGeometries(replaceTemplateGeometries);
         }
 
         if (upgradeOptions != null && upgradeOptions.getUseLod4AsLod3() != null) {
-            formatOptions.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
+            options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
         }
 
         if (!globalTemplates.isEmpty()) {
-            globalTemplates.forEach(formatOptions::addGlobalTemplate);
+            globalTemplates.forEach(options::addGlobalTemplate);
             globalTemplates.clear();
         }
 
-        return formatOptions;
+        return options;
     }
 
     @Override

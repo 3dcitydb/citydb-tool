@@ -32,6 +32,7 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigObject;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -79,7 +80,7 @@ public abstract class ExportController implements Command {
     private volatile boolean shouldRun = true;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
-    protected abstract OutputFormatOptions getFormatOptions(WriteOptions writeOptions) throws ExecutionException;
+    protected abstract OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException;
     protected void initialize(DatabaseManager databaseManager) throws ExecutionException {}
 
     @Override
@@ -109,7 +110,7 @@ public abstract class ExportController implements Command {
             Exporter exporter = Exporter.newInstance();
             ExportOptions exportOptions = getExportOptions().setOutputFile(outputFile);
             WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
-            writeOptions.getFormatOptions().set(getFormatOptions(writeOptions));
+            writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
             AtomicLong counter = new AtomicLong();
 

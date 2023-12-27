@@ -23,11 +23,11 @@ package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.importer.ImportController;
 import org.citydb.cli.option.UpgradeOptions;
+import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.reader.CityGMLFormatOptions;
-import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.option.InputFormatOptions;
 import picocli.CommandLine;
 
@@ -49,28 +49,27 @@ public class CityGMLImportCommand extends ImportController {
     }
 
     @Override
-    protected InputFormatOptions getFormatOptions(ReadOptions readOptions) {
-        CityGMLFormatOptions formatOptions = readOptions.getFormatOptions()
-                .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
+        CityGMLFormatOptions options = formatOptions.getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         if (importXALSource != null) {
-            formatOptions.setImportXALSource(importXALSource);
+            options.setImportXALSource(importXALSource);
         }
 
         if (upgradeOptions != null) {
             if (upgradeOptions.getUseLod4AsLod3() != null) {
-                formatOptions.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
+                options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
             }
 
             if (upgradeOptions.getMapLod0RoofEdge() != null) {
-                formatOptions.setMapLod0RoofEdge(upgradeOptions.getMapLod0RoofEdge());
+                options.setMapLod0RoofEdge(upgradeOptions.getMapLod0RoofEdge());
             }
 
             if (upgradeOptions.getMapLod1MultiSurface() != null) {
-                formatOptions.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
+                options.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
             }
         }
 
-        return formatOptions;
+        return options;
     }
 }

@@ -24,11 +24,11 @@ package org.citydb.cli.exporter.citygml;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.cli.option.UpgradeOptions;
+import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.writer.CityGMLFormatOptions;
-import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 import picocli.CommandLine;
@@ -58,36 +58,36 @@ public class CityGMLExportCommand extends ExportController {
     }
 
     @Override
-    protected OutputFormatOptions getFormatOptions(WriteOptions writeOptions) {
-        CityGMLFormatOptions formatOptions = writeOptions.getFormatOptions().get(CityGMLFormatOptions.class);
-        if (formatOptions != null) {
+    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
+        CityGMLFormatOptions options = formatOptions.get(CityGMLFormatOptions.class);
+        if (options != null) {
             if (Command.hasMatchedOption("--citygml-version", commandSpec)) {
-                formatOptions.setVersion(version);
+                options.setVersion(version);
             }
 
             if (Command.hasMatchedOption("--no-pretty-print", commandSpec)) {
-                formatOptions.setPrettyPrint(prettyPrint);
+                options.setPrettyPrint(prettyPrint);
             }
         } else {
-            formatOptions = new CityGMLFormatOptions()
+            options = new CityGMLFormatOptions()
                     .setVersion(version)
                     .setPrettyPrint(prettyPrint);
         }
 
         if (upgradeOptions != null) {
             if (upgradeOptions.getUseLod4AsLod3() != null) {
-                formatOptions.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
+                options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
             }
 
             if (upgradeOptions.getMapLod0RoofEdge() != null) {
-                formatOptions.setMapLod0RoofEdge(upgradeOptions.getMapLod0RoofEdge());
+                options.setMapLod0RoofEdge(upgradeOptions.getMapLod0RoofEdge());
             }
 
             if (upgradeOptions.getMapLod1MultiSurface() != null) {
-                formatOptions.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
+                options.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
             }
         }
 
-        return formatOptions;
+        return options;
     }
 }

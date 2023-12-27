@@ -27,6 +27,7 @@ import org.citydb.cli.command.Command;
 import org.citydb.cli.option.*;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigObject;
 import org.citydb.core.file.InputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.io.IOAdapter;
@@ -82,7 +83,7 @@ public abstract class ImportController implements Command {
     private volatile boolean shouldRun = true;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
-    protected abstract InputFormatOptions getFormatOptions(ReadOptions readOptions) throws ExecutionException;
+    protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
 
     @Override
     public Integer call() throws ExecutionException {
@@ -126,7 +127,7 @@ public abstract class ImportController implements Command {
                             StatisticsConsumer.Mode.COUNT_COMMITTED));
 
             ReadOptions readOptions = getReadOptions();
-            readOptions.getFormatOptions().set(getFormatOptions(readOptions));
+            readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
             ImportOptions importOptions = getImportOptions();
             AtomicLong counter = new AtomicLong();
 
