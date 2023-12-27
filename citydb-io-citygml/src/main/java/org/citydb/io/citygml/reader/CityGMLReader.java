@@ -71,7 +71,7 @@ public class CityGMLReader implements FeatureReader {
         this.options = Objects.requireNonNull(options, "The reader options must not be null.");
         factory.setReadOptions(options);
 
-        formatOptions = options.getFormatOptions().getOrCreate(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+        formatOptions = options.getFormatOptions().getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         try {
             store = PersistentMapStore.newInstance();

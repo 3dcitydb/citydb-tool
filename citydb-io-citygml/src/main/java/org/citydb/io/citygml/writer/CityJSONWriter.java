@@ -70,7 +70,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
     @Override
     public void initialize(OutputFile file, WriteOptions options) throws WriteException {
         CityJSONFormatOptions formatOptions = options.getFormatOptions()
-                .getOrCreate(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
+                .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
 
         writer = CityJSONWriterFactory.newInstance(cityJSONContext, options, formatOptions)
                 .createWriter(file);

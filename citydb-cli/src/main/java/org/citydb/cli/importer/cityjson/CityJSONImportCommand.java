@@ -56,7 +56,7 @@ public class CityJSONImportCommand extends ImportController {
                 formatOptions.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
             }
         } else {
-            formatOptions = readOptions.getFormatOptions().setAndGet(new CityJSONFormatOptions())
+            formatOptions = new CityJSONFormatOptions()
                     .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
         }
 

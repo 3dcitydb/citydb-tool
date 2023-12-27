@@ -51,7 +51,7 @@ public class CityGMLImportCommand extends ImportController {
     @Override
     protected InputFormatOptions getFormatOptions(ReadOptions readOptions) {
         CityGMLFormatOptions formatOptions = readOptions.getFormatOptions()
-                .getOrCreate(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+                .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         if (importXALSource != null) {
             formatOptions.setImportXALSource(importXALSource);

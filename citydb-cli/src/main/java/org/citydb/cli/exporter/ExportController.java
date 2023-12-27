@@ -176,7 +176,7 @@ public abstract class ExportController implements Command {
     }
 
     protected ExportOptions getExportOptions() {
-        ExportOptions exportOptions = config.getOrCreate(ExportOptions.class, ExportOptions::new);
+        ExportOptions exportOptions = config.getOrElse(ExportOptions.class, ExportOptions::new);
         if (threadsOption.getNumberOfThreads() != null) {
             exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }
@@ -185,7 +185,7 @@ public abstract class ExportController implements Command {
     }
 
     protected WriteOptions getWriteOptions(DatabaseAdapter databaseAdapter) {
-        WriteOptions writeOptions = config.getOrCreate(WriteOptions.class, WriteOptions::new);
+        WriteOptions writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
         if (failFast != null) {
             writeOptions.setFailFast(failFast);
         }

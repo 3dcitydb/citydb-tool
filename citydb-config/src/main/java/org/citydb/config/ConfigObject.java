@@ -49,15 +49,29 @@ public class ConfigObject<T> extends LinkedHashMap<String, T> {
         return null;
     }
 
-    public <E extends T> E getOrCreate(Class<E> type, Supplier<E> supplier) {
-        return getOrCreate(getName(type), type, supplier);
+    public <E extends T> E getOrElse(Class<E> type, Supplier<E> supplier) {
+        return getOrElse(getName(type), type, supplier);
     }
 
-    public <E extends T> E getOrCreate(String name, Class<E> type, Supplier<E> supplier) {
+    public <E extends T> E getOrElse(String name, Class<E> type, Supplier<E> supplier) {
+        return getOrCreate(name, type, supplier, false);
+    }
+
+    public <E extends T> E computeIfAbsent(Class<E> type, Supplier<E> supplier) {
+        return computeIfAbsent(getName(type), type, supplier);
+    }
+
+    public <E extends T> E computeIfAbsent(String name, Class<E> type, Supplier<E> supplier) {
+        return getOrCreate(name, type, supplier, true);
+    }
+
+    private <E extends T> E getOrCreate(String name, Class<E> type, Supplier<E> supplier, boolean putValue) {
         E config = get(name, type);
         if (config == null) {
             config = supplier.get();
-            put(name, config);
+            if (putValue) {
+                put(name, config);
+            }
         }
 
         return config;
@@ -70,15 +84,6 @@ public class ConfigObject<T> extends LinkedHashMap<String, T> {
     public ConfigObject<T> set(String name, T config) {
         put(name, config);
         return this;
-    }
-
-    public <E extends T> E setAndGet(E config) {
-        return setAndGet(getName(config), config);
-    }
-
-    public <E extends T> E setAndGet(String name, E config) {
-        put(name, config);
-        return config;
     }
 
     public <E extends T> boolean isPresent(Class<E> type) {

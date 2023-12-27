@@ -138,7 +138,7 @@ public class CityJSONExportCommand extends ExportController {
                 formatOptions.setUseMaterialDefaults(useMaterialDefaults);
             }
         } else {
-            formatOptions = writeOptions.getFormatOptions().setAndGet(new CityJSONFormatOptions())
+            formatOptions = new CityJSONFormatOptions()
                     .setVersion(version)
                     .setJsonLines(jsonLines)
                     .setVertexPrecision(vertexPrecision)

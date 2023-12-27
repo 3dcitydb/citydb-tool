@@ -181,7 +181,7 @@ public class DeleteCommand implements Command {
                 deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
             }
         } else {
-            deleteOptions = config.setAndGet(new DeleteOptions())
+            deleteOptions = new DeleteOptions()
                     .setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
         }
 

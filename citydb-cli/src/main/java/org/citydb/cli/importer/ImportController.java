@@ -199,7 +199,7 @@ public abstract class ImportController implements Command {
     }
 
     protected ReadOptions getReadOptions() {
-        ReadOptions readOptions = config.getOrCreate(ReadOptions.class, ReadOptions::new);
+        ReadOptions readOptions = config.getOrElse(ReadOptions.class, ReadOptions::new);
         if (failFast != null) {
             readOptions.setFailFast(failFast);
         }
@@ -220,7 +220,7 @@ public abstract class ImportController implements Command {
     }
 
     protected ImportOptions getImportOptions() {
-        ImportOptions importOptions = config.getOrCreate(ImportOptions.class, ImportOptions::new);
+        ImportOptions importOptions = config.getOrElse(ImportOptions.class, ImportOptions::new);
         if (threadsOption.getNumberOfThreads() != null) {
             importOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }

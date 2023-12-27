@@ -69,7 +69,7 @@ public class CityGMLExportCommand extends ExportController {
                 formatOptions.setPrettyPrint(prettyPrint);
             }
         } else {
-            formatOptions = writeOptions.getFormatOptions().setAndGet(new CityGMLFormatOptions())
+            formatOptions = new CityGMLFormatOptions()
                     .setVersion(version)
                     .setPrettyPrint(prettyPrint);
         }

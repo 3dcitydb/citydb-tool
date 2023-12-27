@@ -62,7 +62,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
     @Override
     public void initialize(OutputFile file, WriteOptions options) throws WriteException {
         CityGMLFormatOptions formatOptions = options.getFormatOptions()
-                .getOrCreate(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+                .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         writer = CityGMLWriterFactory.newInstance(context.getCityGMLContext(), options, formatOptions)
                 .createWriter(file);
