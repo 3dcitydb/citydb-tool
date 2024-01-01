@@ -26,7 +26,7 @@ import org.citydb.model.common.Namespaces;
 
 public class ObjectClass {
     public static final ObjectClass UNDEFINED = new ObjectClass(
-            0, Name.of("Undefined", Namespaces.CORE), 0, true, false);
+            1, Name.of("Undefined", Namespaces.CORE), 0, true, false);
 
     private final int id;
     private final Name name;
