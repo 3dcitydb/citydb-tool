@@ -38,7 +38,7 @@ public class LandUseAdapter extends AbstractThematicSurfaceAdapter<LandUse> {
 
     @Override
     public Feature createModel(LandUse source) throws ModelBuildException {
-        return Feature.of(FeatureType.CITY_FURNITURE);
+        return Feature.of(FeatureType.LAND_USE);
     }
 
     @Override
