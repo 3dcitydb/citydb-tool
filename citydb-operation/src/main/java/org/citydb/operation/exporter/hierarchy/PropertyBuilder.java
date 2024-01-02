@@ -21,13 +21,11 @@
 
 package org.citydb.operation.exporter.hierarchy;
 
-import org.citydb.database.schema.ObjectClass;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Reference;
 import org.citydb.model.common.RelationType;
 import org.citydb.model.feature.Feature;
-import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
@@ -139,13 +137,5 @@ public class PropertyBuilder {
                 .setUom(propertyStub.getUom())
                 .setGenericContent(propertyStub.getGenericContent())
                 .setGenericContentMimeType(propertyStub.getGenericContentMimeType());
-    }
-
-    private boolean isTopLevel(Feature feature) {
-        return feature.getDescriptor()
-                .map(FeatureDescriptor::getObjectClassId)
-                .map(helper.getObjectClassHelper()::getObjectClass)
-                .orElse(ObjectClass.UNDEFINED)
-                .isTopLevel();
     }
 }
