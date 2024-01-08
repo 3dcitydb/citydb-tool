@@ -146,7 +146,7 @@ public class DeprecatedPropertiesProcessor {
     }
 
     private class DeprecatedPropertiesWalker extends ObjectWalker {
-        private final Logger logger = LoggerManager.getInstance().getLogger();
+        private final Logger logger = LoggerManager.getInstance().getLogger(DeprecatedPropertiesWalker.class);
 
         @Override
         public void visit(AbstractBridge bridge) {

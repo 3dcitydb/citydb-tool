@@ -74,7 +74,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class ModelBuilderHelper {
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(ModelBuilderHelper.class);
     private final InputFile file;
     private final PersistentMapStore store;
     private final CityGMLAdapterContext context;

@@ -47,7 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
 public class CityGMLReader implements FeatureReader {
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(CityGMLReader.class);
     private final CityGMLAdapterContext context;
     private final CityGMLReaderFactory factory;
 

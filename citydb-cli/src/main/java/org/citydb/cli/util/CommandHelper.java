@@ -40,19 +40,17 @@ import org.citydb.plugin.PluginManager;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 public class CommandHelper {
-    private final Logger logger;
+    private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
     private final PluginManager pluginManager = PluginManager.getInstance();
 
-    private CommandHelper(Logger logger) {
-        this.logger = Objects.requireNonNull(logger, "The logger must not be null.");
+    private CommandHelper() {
     }
 
-    public static CommandHelper of(Logger logger) {
-        return new CommandHelper(logger);
+    public static CommandHelper newInstance() {
+        return new CommandHelper();
     }
 
     public DatabaseManager connect(DatabaseOptions options) throws ExecutionException {
@@ -64,7 +62,7 @@ public class CommandHelper {
             logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
-            databaseManager.printDatabaseMetadata(logger::info);
+            databaseManager.logDatabaseMetadata(Level.INFO);
             return databaseManager;
         } catch (DatabaseException | SQLException e) {
             throw new ExecutionException("Failed to connect to the database.", e);
@@ -118,6 +116,10 @@ public class CommandHelper {
         } catch (SQLException e) {
             throw new ExecutionException("Failed to drop database indexes.", e);
         }
+    }
+
+    public void logIndexStatus(Level level, DatabaseAdapter adapter) throws ExecutionException {
+        printIndexStatus(adapter, s -> logger.log(level, s));
     }
 
     public void printIndexStatus(DatabaseAdapter adapter, Consumer<String> consumer) throws ExecutionException {

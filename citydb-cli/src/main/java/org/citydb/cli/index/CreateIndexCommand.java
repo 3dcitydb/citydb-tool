@@ -21,10 +21,12 @@
 
 package org.citydb.cli.index;
 
+import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.IndexHelper;
+import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
@@ -34,6 +36,7 @@ import java.util.List;
         name = "create",
         description = "Create indexes on the database tables.")
 public class CreateIndexCommand extends IndexController {
+    private final Logger logger = LoggerManager.getInstance().getLogger(CreateIndexCommand.class);
 
     @Override
     public Integer call() throws ExecutionException {
