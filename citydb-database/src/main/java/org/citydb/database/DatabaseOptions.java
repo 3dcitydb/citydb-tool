@@ -25,52 +25,59 @@ import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.database.connection.ConnectionDetails;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @SerializableConfig(name = "databaseOptions")
 public class DatabaseOptions {
-    private List<ConnectionDetails> connections;
+    private Map<String, ConnectionDetails> connections;
     @JSONField(name = "defaultConnection")
-    private int connectionIndex;
+    private String defaultConnectionId;
 
-    public List<ConnectionDetails> getConnections() {
+    public Map<String, ConnectionDetails> getConnections() {
         if (connections == null) {
-            connections = new ArrayList<>();
+            connections = new HashMap<>();
         }
 
         return connections;
     }
 
-    public DatabaseOptions setConnections(List<ConnectionDetails> connections) {
+    public DatabaseOptions setConnections(Map<String, ConnectionDetails> connections) {
         this.connections = connections;
         return this;
     }
 
-    public int getConnectionIndex() {
-        return connectionIndex;
+    public String getDefaultConnectionId() {
+        return defaultConnectionId;
     }
 
-    public DatabaseOptions setConnectionIndex(int connectionIndex) {
-        this.connectionIndex = connectionIndex;
+    public DatabaseOptions setDefaultConnectionId(String defaultConnectionId) {
+        this.defaultConnectionId = defaultConnectionId;
         return this;
     }
 
     public Optional<ConnectionDetails> getDefaultConnection() {
-        return connections != null
-                && connectionIndex >= 0
-                && connectionIndex < connections.size() ?
-                Optional.of(connections.get(connectionIndex)) :
-                Optional.empty();
+        if (connections != null) {
+            if (defaultConnectionId != null) {
+                return Optional.ofNullable(connections.get(defaultConnectionId));
+            } else if (connections.size() == 1) {
+                return Optional.of(connections.values().iterator().next());
+            }
+        }
+
+        return Optional.empty();
     }
 
     public DatabaseOptions setDefaultConnection(ConnectionDetails connectionDetails) {
         if (connectionDetails != null) {
-            connectionIndex = getConnections().indexOf(connectionDetails);
-            if (connectionIndex == -1) {
-                connections.add(0, connectionDetails);
-                connectionIndex = 0;
+            defaultConnectionId = getConnections().entrySet().stream()
+                    .filter(e -> e.getValue() == connectionDetails)
+                    .findAny().map(Map.Entry::getKey).orElse(null);
+            if (defaultConnectionId == null) {
+                defaultConnectionId = UUID.randomUUID().toString().substring(0, 7);
+                connections.put(defaultConnectionId, connectionDetails);
             }
         }
 
