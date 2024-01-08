@@ -14,11 +14,8 @@
           "type": "number"
         },
         "minItems": 2,
-        "maxItems": 2,
-        "additionalItems": false
-      },
-      "additionalItems": false
-    },
-    "additionalItems": false
+        "maxItems": 2
+      }
+    }
   }
 }

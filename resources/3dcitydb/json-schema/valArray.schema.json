@@ -5,20 +5,11 @@
   "description": "Schema for the JSON column val_array of the property table.",
   "type": "array",
   "items": {
-    "anyOf": [
-      {
-        "type": "integer"
-      },
-      {
-        "type": "number"
-      },
-      {
-        "type": "string"
-      },
-      {
-        "type": "boolean"
-      }
+    "type": [
+      "integer",
+      "number",
+      "string",
+      "boolean"
     ]
-  },
-  "additionalItems": false
+  }
 }

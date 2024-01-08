@@ -21,6 +21,8 @@
 
 package org.citydb.database;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import org.apache.tomcat.jdbc.pool.DataSource;
 import org.apache.tomcat.jdbc.pool.PoolProperties;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -28,12 +30,14 @@ import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.connection.PoolOptions;
+import org.citydb.logging.LoggerManager;
 
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 public class DatabaseManager {
+    private final Logger logger = LoggerManager.getInstance().getLogger(DatabaseManager.class);
     private DatabaseAdapter adapter;
     private DataSource dataSource;
 
@@ -115,6 +119,10 @@ public class DatabaseManager {
 
     DataSource getDataSource() {
         return dataSource;
+    }
+
+    public void logDatabaseMetadata(Level level) {
+        printDatabaseMetadata(s -> logger.log(level, s));
     }
 
     public void printDatabaseMetadata(Consumer<String> consumer) {

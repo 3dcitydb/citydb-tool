@@ -21,6 +21,7 @@
 
 package org.citydb.cli.exporter;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
@@ -74,8 +75,8 @@ public abstract class ExportController implements Command {
     @ConfigOption
     private Config config;
 
-    protected final Logger logger = LoggerManager.getInstance().getLogger();
-    protected final CommandHelper helper = CommandHelper.of(logger);
+    protected final Logger logger = LoggerManager.getInstance().getLogger(ExportController.class);
+    protected final CommandHelper helper = CommandHelper.newInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -102,7 +103,7 @@ public abstract class ExportController implements Command {
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
         FeatureStatistics statistics = helper.createFeatureStatistics(databaseManager.getAdapter());
 
-        helper.printIndexStatus(databaseManager.getAdapter(), logger::info);
+        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         initialize(databaseManager);
 
         try (OutputFile outputFile = builder.newOutputFile(outputFileOptions.getFile());
@@ -154,7 +155,7 @@ public abstract class ExportController implements Command {
             databaseManager.disconnect();
             if (!statistics.isEmpty()) {
                 logger.info("Export summary:");
-                statistics.printFeatureSummary(logger::info);
+                statistics.logFeatureSummary(Level.INFO);
             } else {
                 logger.info("No features exported.");
             }

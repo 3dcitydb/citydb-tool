@@ -21,13 +21,11 @@
 
 package org.citydb.cli.index;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.option.ConfigOption;
 import org.citydb.cli.option.ConnectionOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
-import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 public abstract class IndexController implements Command {
@@ -38,6 +36,5 @@ public abstract class IndexController implements Command {
     @ConfigOption
     protected Config config;
 
-    protected final Logger logger = LoggerManager.getInstance().getLogger();
-    protected final CommandHelper helper = CommandHelper.of(logger);
+    protected final CommandHelper helper = CommandHelper.newInstance();
 }

@@ -21,8 +21,11 @@
 
 package org.citydb.operation.util;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.Logger;
 import org.citydb.database.schema.NamespaceHelper;
 import org.citydb.database.schema.ObjectClassHelper;
+import org.citydb.logging.LoggerManager;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
@@ -34,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class FeatureStatistics {
+    private final Logger logger = LoggerManager.getInstance().getLogger(FeatureStatistics.class);
     private final ObjectClassHelper objectClassHelper;
     private final NamespaceHelper namespaceHelper;
     private final Counter counter = new Counter();
@@ -64,6 +68,14 @@ public class FeatureStatistics {
 
     public boolean isEmpty() {
         return features.isEmpty();
+    }
+
+    public void logFeatureSummary(Level level) {
+        printFeatureSummary(s -> logger.log(level, s));
+    }
+
+    public void logFeatureSummary(Level level, Runnable whenEmptyAction) {
+        printFeatureSummary(s -> logger.log(level, s), whenEmptyAction);
     }
 
     public void printFeatureSummary(Consumer<String> consumer) {

@@ -10,7 +10,6 @@
       "type": "number"
     },
     "minItems": 12,
-    "maxItems": 12,
-    "additionalItems": false
+    "maxItems": 12
   }
 }

@@ -48,7 +48,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(CityJSONWriter.class);
     private final CityGMLAdapterContext adapterContext;
     private final CityJSONContext cityJSONContext;
 

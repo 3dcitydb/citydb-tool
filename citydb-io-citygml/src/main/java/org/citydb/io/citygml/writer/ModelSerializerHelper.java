@@ -75,7 +75,7 @@ import java.io.StringReader;
 import java.util.*;
 
 public class ModelSerializerHelper {
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(ModelSerializerHelper.class);
     private final GlobalFeatureWriter writer;
     private final PersistentMapStore store;
     private final CityGMLAdapterContext context;

@@ -95,9 +95,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     "(default: ${MAP-FALLBACK-VALUE}).")
     private Map<String, Boolean> usePlugins;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
     private final PluginManager pluginManager = PluginManager.getInstance();
-    private final CommandHelper helper = CommandHelper.of(logger);
+    private final CommandHelper helper = CommandHelper.newInstance();
     private final Config config = new Config();
     private String commandLine;
     private String subCommandName;

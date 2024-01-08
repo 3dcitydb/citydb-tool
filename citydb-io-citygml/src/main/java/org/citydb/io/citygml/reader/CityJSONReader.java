@@ -44,7 +44,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
 public class CityJSONReader implements FeatureReader {
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(CityJSONReader.class);
     private final CityGMLAdapterContext adapterContext;
     private final CityJSONContext cityJSONContext;
 

@@ -54,7 +54,7 @@ public class ObjectClassHelper {
                      "where o.namespace_id = n.id")) {
             while (rs.next()) {
                 int id = rs.getInt("id");
-                ObjectClass objectClass = id != 0 ?
+                ObjectClass objectClass = id != 1 ?
                         new ObjectClass(
                                 id,
                                 Name.of(rs.getString("classname"), rs.getString("namespace")),

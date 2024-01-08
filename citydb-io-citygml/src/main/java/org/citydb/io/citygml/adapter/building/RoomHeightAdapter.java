@@ -52,7 +52,7 @@ public class RoomHeightAdapter implements ModelBuilder<RoomHeight, Attribute>, M
         helper.addAttribute(Name.of("highReference", Namespaces.BUILDING), source.getHighReference(), target,
                 CodeAdapter.class);
 
-        target.setDataType(DataType.HEIGHT);
+        target.setDataType(DataType.ROOM_HEIGHT);
     }
 
     @Override

@@ -42,7 +42,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
-    private final Logger logger = LoggerManager.getInstance().getLogger();
+    private final Logger logger = LoggerManager.getInstance().getLogger(CityGMLWriter.class);
     private final CityGMLAdapterContext context;
 
     private CityGMLChunkWriter writer;
