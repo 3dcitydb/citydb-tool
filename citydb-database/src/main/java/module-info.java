@@ -1,4 +1,5 @@
 module org.citydb.database {
+    requires org.citydb.config;
     requires transitive org.citydb.core;
     requires transitive org.citydb.logging;
     requires transitive org.citydb.model;

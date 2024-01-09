@@ -22,17 +22,16 @@
 package org.citydb.database.connection;
 
 public class PoolOptions {
-    private int loginTimeout = 60;
+    public static final int DEFAULT_LOGIN_TIMEOUT = 60;
+
+    private int loginTimeout = DEFAULT_LOGIN_TIMEOUT;
 
     public int getLoginTimeout() {
         return loginTimeout;
     }
 
     public PoolOptions setLoginTimeout(int loginTimeout) {
-        if (loginTimeout >= 0) {
-            this.loginTimeout = loginTimeout;
-        }
-
+        this.loginTimeout = loginTimeout;
         return this;
     }
 }

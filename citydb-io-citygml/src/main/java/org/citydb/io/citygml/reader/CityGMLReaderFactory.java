@@ -89,7 +89,8 @@ public class CityGMLReaderFactory {
 
     public CityGMLReader createReader(InputFile file, CityGMLInputFactory inputFactory, CityGMLInputFilter filter) throws ReadException {
         try {
-            CityGMLReader reader = inputFactory.createCityGMLReader(file.openStream(), options.getEncoding());
+            CityGMLReader reader = inputFactory.createCityGMLReader(file.openStream(),
+                    options.getEncoding().orElse(null));
             if (filter != null) {
                 reader = inputFactory.createFilteredCityGMLReader(reader, filter);
             }

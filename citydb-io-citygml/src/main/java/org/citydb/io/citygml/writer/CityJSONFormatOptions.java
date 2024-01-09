@@ -23,6 +23,8 @@ package org.citydb.io.citygml.writer;
 
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
+import org.citydb.config.SerializableConfig;
+import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citygml4j.cityjson.adapter.appearance.serializer.AppearanceSerializer;
 import org.citygml4j.cityjson.adapter.geometry.serializer.GeometrySerializer;
@@ -33,21 +35,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class CityJSONFormatOptions {
+@SerializableConfig(name = "CityJSON")
+public class CityJSONFormatOptions implements OutputFormatOptions {
     public static final String TEMPLATE_LOD_PROPERTY = "lod";
 
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
-    private CityJSONVersion version;
+    private CityJSONVersion version = CityJSONVersion.v2_0;
     private boolean prettyPrint;
     private boolean jsonLines = true;
     private boolean htmlSafe;
-    private Integer vertexPrecision;
-    private Integer templatePrecision;
-    private Integer textureVertexPrecision;
+    private int vertexPrecision = GeometrySerializer.DEFAULT_VERTEX_PRECISION;
+    private int templatePrecision = GeometrySerializer.DEFAULT_TEMPLATE_PRECISION;
+    private int textureVertexPrecision = AppearanceSerializer.DEFAULT_TEXTURE_VERTEX_PRECISION;
     private boolean transformCoordinates = true;
     private boolean replaceTemplateGeometries;
     private boolean useMaterialDefaults = true;
-    private String fallbackTheme;
+    private String fallbackTheme = AppearanceSerializer.FALLBACK_THEME;
     private boolean useLod4AsLod3;
     private boolean writeGenericAttributeTypes;
 
@@ -96,7 +99,7 @@ public class CityJSONFormatOptions {
     }
 
     public int getVertexPrecision() {
-        return vertexPrecision != null ? vertexPrecision : GeometrySerializer.DEFAULT_VERTEX_PRECISION;
+        return vertexPrecision;
     }
 
     public CityJSONFormatOptions setVertexPrecision(int vertexPrecision) {
@@ -105,7 +108,7 @@ public class CityJSONFormatOptions {
     }
 
     public int getTemplatePrecision() {
-        return templatePrecision != null ? templatePrecision : GeometrySerializer.DEFAULT_TEMPLATE_PRECISION;
+        return templatePrecision;
     }
 
     public CityJSONFormatOptions setTemplatePrecision(int templatePrecision) {
@@ -114,7 +117,7 @@ public class CityJSONFormatOptions {
     }
 
     public int getTextureVertexPrecision() {
-        return textureVertexPrecision != null ? textureVertexPrecision : AppearanceSerializer.DEFAULT_TEXTURE_VERTEX_PRECISION;
+        return textureVertexPrecision;
     }
 
     public CityJSONFormatOptions setTextureVertexPrecision(int textureVertexPrecision) {

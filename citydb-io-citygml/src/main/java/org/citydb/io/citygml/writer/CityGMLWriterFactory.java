@@ -47,10 +47,7 @@ public class CityGMLWriterFactory {
 
     public CityGMLChunkWriter createWriter(OutputFile file) throws WriteException {
         try {
-            String encoding = options.getEncoding() != null ?
-                    options.getEncoding() :
-                    StandardCharsets.UTF_8.name();
-
+            String encoding = options.getEncoding().orElse(StandardCharsets.UTF_8.name());
             CityGMLChunkWriter writer = new CityGMLChunkWriter(file.openStream(), encoding, formatOptions.getVersion(), context)
                     .setDefaultPrefixes()
                     .setDefaultSchemaLocations()

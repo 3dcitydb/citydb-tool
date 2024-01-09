@@ -31,7 +31,6 @@ import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.ReadOptions;
-import org.citydb.io.util.FormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.cityjson.CityJSONContext;
@@ -77,8 +76,7 @@ public class CityJSONReader implements FeatureReader {
 
         factory = CityJSONReaderFactory.newInstance(cityJSONContext)
                 .setReadOptions(options)
-                .setFormatOptions(FormatOptions.parseElseGet(options.getFormatOptions(),
-                        CityJSONFormatOptions.class, CityJSONFormatOptions::new));
+                .setFormatOptions(options.getFormatOptions().get(CityJSONFormatOptions.class));
 
         isInitialized = true;
         shouldRun = true;

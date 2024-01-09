@@ -32,7 +32,6 @@ import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.ReadOptions;
-import org.citydb.io.util.FormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
@@ -72,8 +71,7 @@ public class CityGMLReader implements FeatureReader {
         this.options = Objects.requireNonNull(options, "The reader options must not be null.");
         factory.setReadOptions(options);
 
-        formatOptions = FormatOptions.parseElseGet(options.getFormatOptions(),
-                CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+        formatOptions = options.getFormatOptions().getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         try {
             store = PersistentMapStore.newInstance();
@@ -82,7 +80,6 @@ public class CityGMLReader implements FeatureReader {
             throw new ReadException("Failed to initialize local cache.", e);
         }
 
-        // set preprocessing options
         preprocessor = new Preprocessor()
                 .resolveGeometryReferences(formatOptions.isResolveGeometryReferences())
                 .resolveCrossLodReferences(formatOptions.isResolveCrossLodReferences())

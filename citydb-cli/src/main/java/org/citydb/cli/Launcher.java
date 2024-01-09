@@ -29,12 +29,14 @@ import org.citydb.cli.exporter.ExportCommand;
 import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
+import org.citydb.cli.option.ConfigOption;
 import org.citydb.cli.option.Option;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
 import org.citydb.core.CoreConstants;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
@@ -67,6 +69,10 @@ import java.util.stream.Collectors;
                 CommandLine.HelpCommand.class
         })
 public class Launcher implements Command, CommandLine.IVersionProvider {
+    @CommandLine.Option(names = "--config-file", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<file>",
+            description = "Load configuration from this file.")
+    private Path configFile;
+
     @CommandLine.Option(names = {"-L", "--log-level"}, scope = CommandLine.ScopeType.INHERIT, paramLabel = "<level>",
             defaultValue = "info", description = "Log level: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
     private LogLevel logLevel;
@@ -89,17 +95,12 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     "(default: ${MAP-FALLBACK-VALUE}).")
     private Map<String, Boolean> usePlugins;
 
-    @CommandLine.Option(names = "--config-file", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<file>",
-            description = "Load configuration from this file.")
-    private Path configFile;
-
     private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
     private final PluginManager pluginManager = PluginManager.getInstance();
-    private final ConfigManager configManager = ConfigManager.getInstance();
     private final CommandHelper helper = CommandHelper.newInstance();
+    private final Config config = new Config();
     private String commandLine;
     private String subCommandName;
-    private Config config;
 
     public static void main(String[] args) {
         Launcher launcher = new Launcher();
@@ -147,10 +148,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 throw new CommandLine.ParameterException(cmd, "Missing required subcommand.");
             }
 
-            if (configFile != null) {
-                config = configManager.load(configFile);
-            }
-
             if (usePlugins != null) {
                 for (Plugin plugin : pluginManager.getPlugins()) {
                     plugin.setEnabled(usePlugins.getOrDefault(plugin.getClass().getName(), plugin.isEnabled()));
@@ -172,12 +169,17 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 Class<?> type = command.getClass();
                 do {
                     for (Field field : type.getDeclaredFields()) {
+                        field.setAccessible(true);
                         if (Option.class.isAssignableFrom(field.getType())) {
-                            field.setAccessible(true);
                             Option option = (Option) field.get(command);
                             if (option != null) {
                                 option.preprocess(commandLine);
                             }
+                        }
+
+                        if (field.isAnnotationPresent(ConfigOption.class)
+                                && Config.class.isAssignableFrom(field.getType())) {
+                            field.set(command, config);
                         }
                     }
                 } while ((type = type.getSuperclass()) != Object.class);
@@ -188,8 +190,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
                 CommandLine.Model.OptionSpec password = commandLine.getParseResult().matchedOption("--db-password");
                 if (password != null && password.getValue().equals("")) {
-                    password.setValue(readPassword(commandLine.getParseResult()
-                            .matchedOptionValue("--db-username", System.getenv(CliConstants.ENV_CITYDB_USERNAME))));
+                    password.setValue(readPassword(commandLine.getParseResult().matchedOptionValue("--db-username",
+                            System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))));
                 }
             }
 
@@ -223,11 +225,15 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         initializeLogging();
         logger.info("Starting " + CliConstants.APP_NAME + ", " + "version " + CliConstants.APP_VERSION + ".");
 
-        loadPlugins();
-
         if (pidFile != null) {
             createPidFile();
         }
+
+        if (configFile != null) {
+            loadConfig();
+        }
+
+        loadPlugins();
 
         logger.info("Executing '" + subCommandName + "' command.");
         return CommandLine.ExitCode.OK;
@@ -257,6 +263,24 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
+    private void createPidFile() throws ExecutionException {
+        try {
+            logger.debug("Creating PID file at " + pidFile.toAbsolutePath() + ".");
+            PidFile.create(pidFile, true);
+        } catch (IOException e) {
+            throw new ExecutionException("Failed to create PID file.", e);
+        }
+    }
+
+    private void loadConfig() throws ExecutionException {
+        logger.info("Loading configuration from file " + configFile + "...");
+        try {
+            config.putAll(ConfigManager.newInstance().read(configFile, Config.class, Config::new));
+        } catch (Exception e) {
+            throw new ExecutionException("Failed to load config file.", e);
+        }
+    }
+
     private void loadPlugins() throws ExecutionException {
         logger.info("Loading plugins...");
         if (!pluginManager.hasExceptions()) {
@@ -274,15 +298,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     .forEach(e -> logger.error(e.getMessage(), e.getCause()));
 
             throw new ExecutionException("Failed to load plugins.");
-        }
-    }
-
-    private void createPidFile() throws ExecutionException {
-        try {
-            logger.debug("Creating PID file at " + pidFile.toAbsolutePath() + ".");
-            PidFile.create(pidFile, true);
-        } catch (IOException e) {
-            throw new ExecutionException("Failed to create PID file.", e);
         }
     }
 
@@ -360,10 +375,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         LogLevel(Level level) {
             this.level = level;
         }
-    }
-
-    public Config getConfig() {
-        return config;
     }
 
     @Override

@@ -19,22 +19,13 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.index;
+package org.citydb.database;
 
-import org.citydb.cli.command.Command;
-import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.ConnectionOptions;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
-import picocli.CommandLine;
-
-public abstract class IndexController implements Command {
-    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
-            heading = "Database connection options:%n")
-    protected ConnectionOptions connectionOptions;
-
-    @ConfigOption
-    protected Config config;
-
-    protected final CommandHelper helper = CommandHelper.newInstance();
+public class DatabaseConstants {
+    public static final String ENV_CITYDB_HOST = "CITYDB_HOST";
+    public static final String ENV_CITYDB_PORT = "CITYDB_PORT";
+    public static final String ENV_CITYDB_NAME = "CITYDB_NAME";
+    public static final String ENV_CITYDB_SCHEMA = "CITYDB_SCHEMA";
+    public static final String ENV_CITYDB_USERNAME = "CITYDB_USERNAME";
+    public static final String ENV_CITYDB_PASSWORD = "CITYDB_PASSWORD";
 }

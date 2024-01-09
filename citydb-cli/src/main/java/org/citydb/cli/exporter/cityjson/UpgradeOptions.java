@@ -27,9 +27,9 @@ import picocli.CommandLine;
 public class UpgradeOptions implements Option {
     @CommandLine.Option(names = "--use-lod4-as-lod3",
             description = "Use LoD4 as LoD3, replacing an existing LoD3.")
-    private boolean useLod4AsLod3;
+    private Boolean useLod4AsLod3;
 
-    public boolean isUseLod4AsLod3() {
+    public Boolean getUseLod4AsLod3() {
         return useLod4AsLod3;
     }
 }

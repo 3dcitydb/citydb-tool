@@ -21,11 +21,14 @@
 
 package org.citydb.cli.importer.cityjson;
 
+import org.citydb.cli.command.Command;
 import org.citydb.cli.importer.ImportController;
+import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.reader.CityJSONFormatOptions;
+import org.citydb.io.reader.option.InputFormatOptions;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -37,14 +40,26 @@ public class CityJSONImportCommand extends ImportController {
                     "(default: ${DEFAULT-VALUE}).")
     private boolean mapUnknownObjects;
 
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(CityJSONAdapter.class);
     }
 
     @Override
-    protected Object getFormatOptions() {
-        return new CityJSONFormatOptions()
-                .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
+    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
+        CityJSONFormatOptions options = formatOptions.get(CityJSONFormatOptions.class);
+        if (options != null) {
+            if (Command.hasMatchedOption("--no-map-unknown-objects", commandSpec)) {
+                options.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
+            }
+        } else {
+            options = new CityJSONFormatOptions()
+                    .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
+        }
+
+        return options;
     }
 }

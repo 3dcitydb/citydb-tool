@@ -25,12 +25,14 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
-import org.citydb.cli.option.DatabaseOptions;
+import org.citydb.cli.option.ConfigOption;
+import org.citydb.cli.option.ConnectionOptions;
 import org.citydb.cli.option.IndexOption;
 import org.citydb.cli.option.MetadataOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
+import org.citydb.config.Config;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.logging.LoggerManager;
@@ -67,9 +69,15 @@ public class DeleteCommand implements Command {
             heading = "Metadata options for terminate operations:%n")
     private MetadataOptions metadataOptions;
 
-    @CommandLine.ArgGroup(exclusive = false, multiplicity = "1",
+    @CommandLine.ArgGroup(exclusive = false,
             heading = "Database connection options:%n")
-    private DatabaseOptions databaseOptions;
+    private ConnectionOptions connectionOptions;
+
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
+    @ConfigOption
+    private Config config;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(DeleteCommand.class);
     private final CommandHelper helper = CommandHelper.newInstance();
@@ -78,7 +86,7 @@ public class DeleteCommand implements Command {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(databaseOptions);
+        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
         Deleter deleter = Deleter.newInstance();
 
@@ -100,7 +108,7 @@ public class DeleteCommand implements Command {
         try  {
             logger.info("Querying features matching the request...");
             try (QueryResult result = executor.executeQuery(getQuery(databaseManager.getAdapter()))) {
-                deleter.startSession(databaseManager.getAdapter(), getExportOptions());
+                deleter.startSession(databaseManager.getAdapter(), getDeleteOptions());
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
                     int objectClassId = result.getObjectClassId();
@@ -167,17 +175,32 @@ public class DeleteCommand implements Command {
         return select;
     }
 
-    private DeleteOptions getExportOptions() {
-        DeleteOptions options = DeleteOptions.defaults()
-                .setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
-
-        if (metadataOptions != null) {
-            options.setLineage(metadataOptions.getLineage())
-                    .setUpdatingPerson(metadataOptions.getUpdatingPerson())
-                    .setReasonForUpdate(metadataOptions.getReasonForUpdate());
+    private DeleteOptions getDeleteOptions() {
+        DeleteOptions deleteOptions = config.get(DeleteOptions.class);
+        if (deleteOptions != null) {
+            if (Command.hasMatchedOption("--delete-mode", commandSpec)) {
+                deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
+            }
+        } else {
+            deleteOptions = new DeleteOptions()
+                    .setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
         }
 
-        return options;
+        if (metadataOptions != null) {
+            if (metadataOptions.getLineage() != null) {
+                deleteOptions.setLineage(metadataOptions.getLineage());
+            }
+
+            if (metadataOptions.getUpdatingPerson() != null) {
+                deleteOptions.setUpdatingPerson(metadataOptions.getUpdatingPerson());
+            }
+
+            if (metadataOptions.getReasonForUpdate() != null) {
+                deleteOptions.setReasonForUpdate(metadataOptions.getReasonForUpdate());
+            }
+        }
+
+        return deleteOptions;
     }
 
     private void abort(long id, Throwable e) {

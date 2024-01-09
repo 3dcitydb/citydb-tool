@@ -19,22 +19,31 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.index;
+package org.citydb.io.writer.option;
 
-import org.citydb.cli.command.Command;
-import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.ConnectionOptions;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
-import picocli.CommandLine;
+import com.alibaba.fastjson2.annotation.JSONField;
 
-public abstract class IndexController implements Command {
-    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
-            heading = "Database connection options:%n")
-    protected ConnectionOptions connectionOptions;
+public class SpatialReference {
+    private int srid;
+    private String uri;
 
-    @ConfigOption
-    protected Config config;
+    public int getSRID() {
+        return srid;
+    }
 
-    protected final CommandHelper helper = CommandHelper.newInstance();
+    @JSONField(name = "srid")
+    public SpatialReference setSRID(int srid) {
+        this.srid = srid;
+        return this;
+    }
+
+    public String getURI() {
+        return uri;
+    }
+
+    @JSONField(name = "uri")
+    public SpatialReference setURI(String uri) {
+        this.uri = uri;
+        return this;
+    }
 }

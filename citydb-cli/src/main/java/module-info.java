@@ -1,4 +1,5 @@
 module org.citydb.cli {
+    requires org.citydb.config;
     requires org.citygml4j.core;
     requires org.citydb.io;
     requires org.citydb.io.citygml;
@@ -7,7 +8,6 @@ module org.citydb.cli {
     requires org.citydb.operation;
     requires transitive org.citydb.plugin;
     requires transitive info.picocli;
-    requires org.citydb.config;
 
     exports org.citydb.cli;
     exports org.citydb.cli.command;

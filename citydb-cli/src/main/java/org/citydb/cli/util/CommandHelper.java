@@ -24,9 +24,11 @@ package org.citydb.cli.util;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.option.DatabaseOptions;
+import org.citydb.cli.option.ConnectionOptions;
+import org.citydb.config.Config;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.DatabaseOptions;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.schema.Index;
@@ -53,8 +55,28 @@ public class CommandHelper {
         return new CommandHelper();
     }
 
-    public DatabaseManager connect(DatabaseOptions options) throws ExecutionException {
-        return connect(options.toConnectionDetails());
+    public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
+        ConnectionDetails connectionDetails = options != null ?
+                options.toConnectionDetails() :
+                new ConnectionDetails();
+
+        DatabaseOptions databaseOptions = config.get(DatabaseOptions.class);
+        if (databaseOptions != null) {
+            databaseOptions.getDefaultConnection().ifPresent(defaults -> connectionDetails
+                    .setHost(connectionDetails.getHost(defaults.getHost()))
+                    .setPort(connectionDetails.getPort(defaults.getPort()))
+                    .setDatabase(connectionDetails.getDatabase(defaults.getDatabase()))
+                    .setSchema(connectionDetails.getSchema(defaults.getSchema()))
+                    .setUser(connectionDetails.getUser(defaults.getUser()))
+                    .setPassword(connectionDetails.getPassword(defaults.getPassword()))
+                    .setPoolOptions(defaults.getPoolOptions().orElse(null)));
+        }
+
+        return connect(connectionDetails);
+    }
+
+    public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
+        return connect(options != null ? options.toConnectionDetails() : new ConnectionDetails());
     }
 
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {

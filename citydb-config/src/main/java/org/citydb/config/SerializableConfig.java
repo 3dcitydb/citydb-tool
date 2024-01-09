@@ -19,22 +19,13 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.index;
+package org.citydb.config;
 
-import org.citydb.cli.command.Command;
-import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.ConnectionOptions;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
-import picocli.CommandLine;
+import java.lang.annotation.*;
 
-public abstract class IndexController implements Command {
-    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
-            heading = "Database connection options:%n")
-    protected ConnectionOptions connectionOptions;
-
-    @ConfigOption
-    protected Config config;
-
-    protected final CommandHelper helper = CommandHelper.newInstance();
+@Documented
+@Target(value = ElementType.TYPE)
+@Retention(value = RetentionPolicy.RUNTIME)
+public @interface SerializableConfig {
+    String name();
 }

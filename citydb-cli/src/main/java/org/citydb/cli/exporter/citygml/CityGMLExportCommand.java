@@ -21,12 +21,15 @@
 
 package org.citydb.cli.exporter.citygml;
 
+import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
-import org.citydb.cli.importer.citygml.UpgradeOptions;
+import org.citydb.cli.option.UpgradeOptions;
+import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.writer.CityGMLFormatOptions;
+import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 import picocli.CommandLine;
 
@@ -46,23 +49,45 @@ public class CityGMLExportCommand extends ExportController {
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
     private UpgradeOptions upgradeOptions;
 
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(CityGMLAdapter.class);
     }
 
     @Override
-    protected Object getFormatOptions() {
-        CityGMLFormatOptions formatOptions = new CityGMLFormatOptions()
-                .setVersion(version)
-                .setPrettyPrint(prettyPrint);
+    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
+        CityGMLFormatOptions options = formatOptions.get(CityGMLFormatOptions.class);
+        if (options != null) {
+            if (Command.hasMatchedOption("--citygml-version", commandSpec)) {
+                options.setVersion(version);
+            }
 
-        if (upgradeOptions != null) {
-            formatOptions.setUseLod4AsLod3(upgradeOptions.isUseLod4AsLod3())
-                    .setMapLod0RoofEdge(upgradeOptions.isMapLod0RoofEdge())
-                    .setMapLod1MultiSurfaces(upgradeOptions.isMapLod1MultiSurface());
+            if (Command.hasMatchedOption("--no-pretty-print", commandSpec)) {
+                options.setPrettyPrint(prettyPrint);
+            }
+        } else {
+            options = new CityGMLFormatOptions()
+                    .setVersion(version)
+                    .setPrettyPrint(prettyPrint);
         }
 
-        return formatOptions;
+        if (upgradeOptions != null) {
+            if (upgradeOptions.getUseLod4AsLod3() != null) {
+                options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
+            }
+
+            if (upgradeOptions.getMapLod0RoofEdge() != null) {
+                options.setMapLod0RoofEdge(upgradeOptions.getMapLod0RoofEdge());
+            }
+
+            if (upgradeOptions.getMapLod1MultiSurface() != null) {
+                options.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
+            }
+        }
+
+        return options;
     }
 }

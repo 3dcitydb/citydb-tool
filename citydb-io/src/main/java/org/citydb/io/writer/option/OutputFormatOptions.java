@@ -19,27 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.io.writer.options;
+package org.citydb.io.writer.option;
 
-public class SpatialReference {
-    private int srid;
-    private String uri;
-
-    public int getSRID() {
-        return srid;
-    }
-
-    public SpatialReference setSRID(int srid) {
-        this.srid = srid;
-        return this;
-    }
-
-    public String getURI() {
-        return uri;
-    }
-
-    public SpatialReference setURI(String uri) {
-        this.uri = uri;
-        return this;
-    }
+public interface OutputFormatOptions {
 }

@@ -60,7 +60,7 @@ public class CityJSONWriterFactory {
                     .withFallbackTheme(formatOptions.getFallbackTheme())
                     .writeGenericAttributeTypes(formatOptions.isWriteGenericAttributeTypes());
 
-            OutputEncoding encoding = getOutputEncoding(options.getEncoding());
+            OutputEncoding encoding = getOutputEncoding(options.getEncoding().orElse(null));
             AbstractCityJSONWriter<?> writer = formatOptions.isJsonLines() ?
                     factory.createCityJSONFeatureWriter(file.openStream(), encoding) :
                     factory.createCityJSONWriter(file.openStream(), encoding)

@@ -28,7 +28,6 @@ import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.citygml.CityGMLAdapterContext;
 import org.citydb.io.citygml.writer.util.GlobalFeatureWriter;
-import org.citydb.io.util.FormatOptions;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
@@ -62,8 +61,8 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public void initialize(OutputFile file, WriteOptions options) throws WriteException {
-        CityGMLFormatOptions formatOptions = FormatOptions.parseElseGet(options.getFormatOptions(),
-                CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+        CityGMLFormatOptions formatOptions = options.getFormatOptions()
+                .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
         writer = CityGMLWriterFactory.newInstance(context.getCityGMLContext(), options, formatOptions)
                 .createWriter(file);

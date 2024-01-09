@@ -22,6 +22,7 @@
 package org.citydb.operation.exporter;
 
 import com.alibaba.fastjson2.annotation.JSONField;
+import org.citydb.config.SerializableConfig;
 import org.citydb.core.concurrent.LazyInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
@@ -30,7 +31,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+@SerializableConfig(name = "exportOptions")
 public class ExportOptions {
+    @JSONField(serialize = false, deserialize = false)
     private final LazyInitializer<OutputFile, IOException> tempOutputFile = LazyInitializer.of(
             () -> new RegularOutputFile(Files.createTempDirectory("citydb-").resolve("output.tmp")));
 
@@ -38,13 +41,6 @@ public class ExportOptions {
     private OutputFile outputFile;
     private int numberOfThreads;
     private int numberOfTextureBuckets;
-
-    private ExportOptions() {
-    }
-
-    public static ExportOptions defaults() {
-        return new ExportOptions();
-    }
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -73,10 +69,7 @@ public class ExportOptions {
     }
 
     public ExportOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 
@@ -85,10 +78,7 @@ public class ExportOptions {
     }
 
     public ExportOptions setNumberOfTextureBuckets(int numberOfTextureBuckets) {
-        if (numberOfTextureBuckets > 0) {
-            this.numberOfTextureBuckets = numberOfTextureBuckets;
-        }
-
+        this.numberOfTextureBuckets = numberOfTextureBuckets;
         return this;
     }
 }

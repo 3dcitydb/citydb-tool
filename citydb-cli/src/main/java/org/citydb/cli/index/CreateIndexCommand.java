@@ -40,7 +40,7 @@ public class CreateIndexCommand extends IndexController {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(databaseOptions);
+        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         IndexHelper indexHelper = databaseManager.getAdapter().getSchemaAdapter().getIndexHelper();
 
         logger.info("Creating database indexes.");

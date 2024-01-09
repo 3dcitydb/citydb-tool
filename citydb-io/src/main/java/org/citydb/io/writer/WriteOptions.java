@@ -21,21 +21,20 @@
 
 package org.citydb.io.writer;
 
-import org.citydb.io.writer.options.SpatialReference;
+import org.citydb.config.ConfigObject;
+import org.citydb.config.SerializableConfig;
+import org.citydb.io.writer.option.OutputFormatOptions;
+import org.citydb.io.writer.option.SpatialReference;
 
+import java.util.Optional;
+
+@SerializableConfig(name = "writeOptions")
 public class WriteOptions {
     private boolean failFast;
     private int numberOfThreads;
     private String encoding;
     private SpatialReference spatialReference;
-    private Object formatOptions;
-
-    private WriteOptions() {
-    }
-
-    public static WriteOptions defaults() {
-        return new WriteOptions();
-    }
+    private ConfigObject<OutputFormatOptions> formatOptions;
 
     public boolean isFailFast() {
         return failFast;
@@ -51,15 +50,12 @@ public class WriteOptions {
     }
 
     public WriteOptions setNumberOfThreads(int numberOfThreads) {
-        if (numberOfThreads > 0) {
-            this.numberOfThreads = numberOfThreads;
-        }
-
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 
-    public String getEncoding() {
-        return encoding;
+    public Optional<String> getEncoding() {
+        return Optional.ofNullable(encoding);
     }
 
     public WriteOptions setEncoding(String encoding) {
@@ -67,8 +63,8 @@ public class WriteOptions {
         return this;
     }
 
-    public SpatialReference getSpatialReference() {
-        return spatialReference;
+    public Optional<SpatialReference> getSpatialReference() {
+        return Optional.ofNullable(spatialReference);
     }
 
     public WriteOptions setSpatialReference(SpatialReference spatialReference) {
@@ -76,11 +72,15 @@ public class WriteOptions {
         return this;
     }
 
-    public Object getFormatOptions() {
+    public ConfigObject<OutputFormatOptions> getFormatOptions() {
+        if (formatOptions == null) {
+            formatOptions = new ConfigObject<>();
+        }
+
         return formatOptions;
     }
 
-    public WriteOptions setFormatOptions(Object formatOptions) {
+    public WriteOptions setFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
         this.formatOptions = formatOptions;
         return this;
     }

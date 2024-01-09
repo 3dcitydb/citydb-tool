@@ -19,33 +19,32 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.importer.citygml;
+package org.citydb.cli.option;
 
-import org.citydb.cli.option.Option;
 import picocli.CommandLine;
 
 public class UpgradeOptions implements Option {
     @CommandLine.Option(names = "--use-lod4-as-lod3",
             description = "Use LoD4 as LoD3, replacing an existing LoD3.")
-    private boolean useLod4AsLod3;
+    private Boolean useLod4AsLod3;
 
     @CommandLine.Option(names = "--map-lod0-roof-edge",
             description = "Map LoD0 roof edges onto roof surfaces.")
-    private boolean mapLod0RoofEdge;
+    private Boolean mapLod0RoofEdge;
 
     @CommandLine.Option(names = "--map-lod1-surface",
             description = "Map LoD1 multi-surfaces onto generic thematic surfaces.")
-    private boolean mapLod1MultiSurface;
+    private Boolean mapLod1MultiSurface;
 
-    public boolean isUseLod4AsLod3() {
+    public Boolean getUseLod4AsLod3() {
         return useLod4AsLod3;
     }
 
-    public boolean isMapLod0RoofEdge() {
+    public Boolean getMapLod0RoofEdge() {
         return mapLod0RoofEdge;
     }
 
-    public boolean isMapLod1MultiSurface() {
+    public Boolean getMapLod1MultiSurface() {
         return mapLod1MultiSurface;
     }
 }

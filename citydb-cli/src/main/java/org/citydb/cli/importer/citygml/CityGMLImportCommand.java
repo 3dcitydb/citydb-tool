@@ -22,10 +22,13 @@
 package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.importer.ImportController;
+import org.citydb.cli.option.UpgradeOptions;
+import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.reader.CityGMLFormatOptions;
+import org.citydb.io.reader.option.InputFormatOptions;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -34,7 +37,7 @@ import picocli.CommandLine;
 public class CityGMLImportCommand extends ImportController {
     @CommandLine.Option(names = "--import-xal-source",
             description = "Import XML snippets of xAL address elements.")
-    protected boolean importXALSource;
+    protected Boolean importXALSource;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
@@ -46,16 +49,27 @@ public class CityGMLImportCommand extends ImportController {
     }
 
     @Override
-    protected Object getFormatOptions() {
-        CityGMLFormatOptions formatOptions = new CityGMLFormatOptions()
-                .setImportXALSource(importXALSource);
+    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
+        CityGMLFormatOptions options = formatOptions.getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
 
-        if (upgradeOptions != null) {
-            formatOptions.setUseLod4AsLod3(upgradeOptions.isUseLod4AsLod3())
-                    .setMapLod0RoofEdge(upgradeOptions.isMapLod0RoofEdge())
-                    .setMapLod1MultiSurfaces(upgradeOptions.isMapLod1MultiSurface());
+        if (importXALSource != null) {
+            options.setImportXALSource(importXALSource);
         }
 
-        return formatOptions;
+        if (upgradeOptions != null) {
+            if (upgradeOptions.getUseLod4AsLod3() != null) {
+                options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
+            }
+
+            if (upgradeOptions.getMapLod0RoofEdge() != null) {
+                options.setMapLod0RoofEdge(upgradeOptions.getMapLod0RoofEdge());
+            }
+
+            if (upgradeOptions.getMapLod1MultiSurface() != null) {
+                options.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
+            }
+        }
+
+        return options;
     }
 }
