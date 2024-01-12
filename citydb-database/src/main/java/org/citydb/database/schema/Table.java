@@ -36,7 +36,6 @@ public enum Table {
     NAMESPACE("namespace", Set.of(ADE)),
     DATATYPE("datatype", Set.of(ADE, NAMESPACE)),
     OBJECTCLASS("objectclass", Set.of(ADE, NAMESPACE)),
-    AGGREGATION_INFO("aggregation_info", Set.of(OBJECTCLASS, NAMESPACE)),
     FEATURE("feature", Set.of(OBJECTCLASS)),
     GEOMETRY_DATA("geometry_data", Set.of(FEATURE)),
     IMPLICIT_GEOMETRY("implicit_geometry", Set.of(GEOMETRY_DATA)),
