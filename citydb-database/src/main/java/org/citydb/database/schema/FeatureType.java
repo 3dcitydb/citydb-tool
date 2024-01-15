@@ -71,7 +71,7 @@ public class FeatureType {
 
         Table table = Table.of(tableName);
         if (table == null) {
-            throw new SchemaException("The feature type table " + tableName + " is not supported.");
+            throw new SchemaException("The table " + tableName + " of feature type (ID: " + id + ") is not supported.");
         }
 
         try {

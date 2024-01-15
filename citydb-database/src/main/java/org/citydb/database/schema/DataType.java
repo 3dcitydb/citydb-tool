@@ -77,7 +77,7 @@ public class DataType {
 
         Table table = Table.of(tableName);
         if (table == null) {
-            throw new SchemaException("The data type table " + tableName + " is not supported.");
+            throw new SchemaException("The table " + tableName + " of data type (ID: " + id + ") is not supported.");
         }
 
         try {
