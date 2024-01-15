@@ -52,7 +52,7 @@ public abstract class SurfaceDataImporter extends DatabaseImporter {
             stmt.setNull(5, Types.INTEGER);
         }
 
-        stmt.setInt(6, objectClassHelper.getObjectClass(surfaceData.getName()).getId());
+        stmt.setInt(6, schemaMapping.getFeatureType(surfaceData.getName()).getId());
 
         addBatch();
         cacheTarget(CacheType.SURFACE_DATA, objectId, surfaceDataId);

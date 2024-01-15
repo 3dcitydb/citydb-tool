@@ -23,8 +23,8 @@ package org.citydb.operation.util;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.citydb.database.schema.NamespaceHelper;
-import org.citydb.database.schema.ObjectClassHelper;
+import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.schema.SchemaMapping;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Name;
@@ -33,19 +33,22 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.walker.ModelWalker;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class FeatureStatistics {
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureStatistics.class);
-    private final ObjectClassHelper objectClassHelper;
-    private final NamespaceHelper namespaceHelper;
+    private final SchemaMapping schemaMapping;
     private final Counter counter = new Counter();
     private final Map<Integer, Long> features = new ConcurrentHashMap<>();
 
-    public FeatureStatistics(ObjectClassHelper objectClassHelper, NamespaceHelper namespaceHelper) {
-        this.objectClassHelper = objectClassHelper;
-        this.namespaceHelper = namespaceHelper;
+    public FeatureStatistics(SchemaMapping schemaMapping) {
+        this.schemaMapping = Objects.requireNonNull(schemaMapping, "The schema mapping must not be null.");
+    }
+
+    public FeatureStatistics(DatabaseAdapter adapter) {
+        this(adapter.getSchemaAdapter().getSchemaMapping());
     }
 
     public void add(Feature feature) {
@@ -94,8 +97,8 @@ public class FeatureStatistics {
     }
 
     private String mapToString(Map.Entry<Integer, Long> entry) {
-        Name featureType = objectClassHelper.getObjectClass(entry.getKey()).getName();
-        String alias = namespaceHelper != null ? namespaceHelper.getAlias(featureType.getNamespace()) : null;
+        Name featureType = schemaMapping.getFeatureType(entry.getKey()).getName();
+        String alias = schemaMapping.getNamespaceByURI(featureType.getNamespace()).getAlias().orElse(null);
         String qName = alias != null ? alias + ":" + featureType.getLocalName() : featureType.getLocalName();
         return qName + ": " + entry.getValue();
     }
@@ -108,12 +111,12 @@ public class FeatureStatistics {
         @Override
         public void visit(Appearance appearance) {
             Name featureType = Name.of(appearance.getClass().getSimpleName(), Namespaces.APPEARANCE);
-            add(objectClassHelper.getObjectClass(featureType).getId());
+            add(schemaMapping.getFeatureType(featureType).getId());
         }
 
         @Override
         public void visit(Feature feature) {
-            add(objectClassHelper.getObjectClass(feature.getFeatureType()).getId());
+            add(schemaMapping.getFeatureType(feature.getFeatureType()).getId());
             super.visit(feature);
         }
     }

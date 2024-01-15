@@ -101,7 +101,7 @@ public abstract class ExportController implements Command {
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
-        FeatureStatistics statistics = helper.createFeatureStatistics(databaseManager.getAdapter());
+        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         initialize(databaseManager);

@@ -21,7 +21,7 @@
 
 package org.citydb.operation.exporter.appearance;
 
-import org.citydb.database.schema.ObjectClass;
+import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.Reference;
@@ -36,15 +36,15 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 public class AppearanceExporter extends DatabaseExporter {
-    private final ObjectClass material;
-    private final ObjectClass parameterizedTexture;
-    private final ObjectClass georeferencedTexture;
+    private final FeatureType material;
+    private final FeatureType parameterizedTexture;
+    private final FeatureType georeferencedTexture;
 
     public AppearanceExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        material = objectClassHelper.getObjectClass(X3DMaterial.newInstance().getName());
-        parameterizedTexture = objectClassHelper.getObjectClass(ParameterizedTexture.newInstance().getName());
-        georeferencedTexture = objectClassHelper.getObjectClass(GeoreferencedTexture.newInstance().getName());
+        material = schemaMapping.getFeatureType(X3DMaterial.newInstance().getName());
+        parameterizedTexture = schemaMapping.getFeatureType(ParameterizedTexture.newInstance().getName());
+        georeferencedTexture = schemaMapping.getFeatureType(GeoreferencedTexture.newInstance().getName());
         stmt = helper.getConnection().prepareStatement(getBaseQuery() +
                 "where a.id = ?");
     }
@@ -119,12 +119,12 @@ public class AppearanceExporter extends DatabaseExporter {
             long surfaceDataId = rs.getLong("sd_id");
             SurfaceData<?> surfaceData = surfaceDataObjects.get(surfaceDataId);
             if (surfaceData == null) {
-                ObjectClass objectClass = objectClassHelper.getObjectClass(rs.getInt("objectclass_id"));
-                if (objectClass == material) {
+                FeatureType featureType = schemaMapping.getFeatureType(rs.getInt("objectclass_id"));
+                if (featureType == material) {
                     surfaceData = tableHelper.getOrCreateExporter(X3DMaterialExporter.class).doExport(rs);
-                } else if (objectClass == parameterizedTexture) {
+                } else if (featureType == parameterizedTexture) {
                     surfaceData = tableHelper.getOrCreateExporter(ParameterizedTextureExporter.class).doExport(rs);
-                } else if (objectClass == georeferencedTexture) {
+                } else if (featureType == georeferencedTexture) {
                     surfaceData = tableHelper.getOrCreateExporter(GeoreferencedTextureExporter.class).doExport(rs);
                 }
 

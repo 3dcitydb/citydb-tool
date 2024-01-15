@@ -21,9 +21,7 @@
 
 package org.citydb.database.schema;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public enum Table {
@@ -45,12 +43,21 @@ public enum Table {
     APPEAR_TO_SURFACE_DATA("appear_to_surface_data", Set.of(APPEARANCE, SURFACE_DATA)),
     SURFACE_DATA_MAPPING("surface_data_mapping", Set.of(GEOMETRY_DATA, SURFACE_DATA));
 
+    private final static Map<String, Table> types = new HashMap<>();
     private final String name;
     private final Set<Table> dependencies;
+
+    static {
+        Arrays.stream(values()).forEach(type -> types.put(type.name, type));
+    }
 
     Table(String name, Set<Table> dependencies) {
         this.name = name;
         this.dependencies = dependencies;
+    }
+
+    public static Table of(String name) {
+        return name != null ? types.get(name.toLowerCase(Locale.ROOT)) : null;
     }
 
     public String getName() {

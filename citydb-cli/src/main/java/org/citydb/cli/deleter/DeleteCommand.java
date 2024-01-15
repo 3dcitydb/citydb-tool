@@ -90,7 +90,7 @@ public class DeleteCommand implements Command {
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
         Deleter deleter = Deleter.newInstance();
 
-        FeatureStatistics statistics = helper.createFeatureStatistics(databaseManager.getAdapter());
+        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
         AtomicLong counter = new AtomicLong();
 

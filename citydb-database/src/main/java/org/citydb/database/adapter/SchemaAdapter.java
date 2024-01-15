@@ -21,26 +21,19 @@
 
 package org.citydb.database.adapter;
 
-import org.citydb.core.concurrent.LazyInitializer;
 import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.*;
 
-import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.Set;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
-    private final LazyInitializer<DataTypeHelper, SQLException> dataTypeHelper;
-    private final LazyInitializer<NamespaceHelper, SQLException> namespaceHelper;
-    private final LazyInitializer<ObjectClassHelper, SQLException> objectClassHelper;
     private final IndexHelper indexHelper;
+    private SchemaMapping schemaMapping;
 
     protected SchemaAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
-        dataTypeHelper = LazyInitializer.of(() -> DataTypeHelper.newInstance(adapter));
-        namespaceHelper = LazyInitializer.of(() -> NamespaceHelper.newInstance(adapter));
-        objectClassHelper = LazyInitializer.of(() -> ObjectClassHelper.newInstance(adapter));
         indexHelper = IndexHelper.newInstance(adapter);
     }
 
@@ -57,16 +50,12 @@ public abstract class SchemaAdapter {
     protected abstract String getSpatialReference();
     protected abstract SpatialReferenceType getSpatialReferenceType(String type);
 
-    public DataTypeHelper getDataTypeHelper() throws SQLException {
-        return dataTypeHelper.get();
+    void buildSchemaMapping() throws SchemaException {
+        schemaMapping = SchemaMappingBuilder.newInstance().build(adapter);
     }
 
-    public NamespaceHelper getNamespaceHelper() throws SQLException {
-        return namespaceHelper.get();
-    }
-
-    public ObjectClassHelper getObjectClassHelper() throws SQLException {
-        return objectClassHelper.get();
+    public SchemaMapping getSchemaMapping() {
+        return schemaMapping;
     }
 
     public IndexHelper getIndexHelper() {
