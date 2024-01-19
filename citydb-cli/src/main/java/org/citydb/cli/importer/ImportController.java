@@ -106,7 +106,7 @@ public abstract class ImportController implements Command {
         }
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
-        FeatureStatistics statistics = helper.createFeatureStatistics(databaseManager.getAdapter());
+        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
 
         if (indexMode != IndexOption.Mode.keep) {

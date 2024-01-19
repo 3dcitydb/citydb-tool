@@ -53,7 +53,7 @@ public class FeatureImporter extends DatabaseImporter {
 
     public FeatureDescriptor doImport(Feature feature) throws ImportException, SQLException {
         long featureId = nextSequenceValue(Sequence.FEATURE);
-        int objectClassId = objectClassHelper.getObjectClass(feature.getFeatureType()).getId();
+        int objectClassId = schemaMapping.getFeatureType(feature.getFeatureType()).getId();
         String objectId = feature.getObjectId().orElse(null);
         OffsetDateTime now = OffsetDateTime.now();
 

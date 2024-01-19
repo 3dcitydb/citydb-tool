@@ -22,9 +22,7 @@
 package org.citydb.operation.exporter;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.schema.DataTypeHelper;
-import org.citydb.database.schema.NamespaceHelper;
-import org.citydb.database.schema.ObjectClassHelper;
+import org.citydb.database.schema.SchemaMapping;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
@@ -48,9 +46,7 @@ public class ExportHelper {
     private final ExportOptions options;
     private final Connection connection;
     private final Postprocessor postprocessor;
-    private final DataTypeHelper dataTypeHelper;
-    private final NamespaceHelper namespaceHelper;
-    private final ObjectClassHelper objectClassHelper;
+    private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
     private final int srid;
     private final String srsName;
@@ -66,9 +62,7 @@ public class ExportHelper {
 
         connection = adapter.getPool().getConnection();
         postprocessor = new Postprocessor();
-        dataTypeHelper = adapter.getSchemaAdapter().getDataTypeHelper();
-        namespaceHelper = adapter.getSchemaAdapter().getNamespaceHelper();
-        objectClassHelper = adapter.getSchemaAdapter().getObjectClassHelper();
+        schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
         srid = adapter.getDatabaseMetadata().getSpatialReference().getSRID();
         srsName = adapter.getDatabaseMetadata().getSpatialReference().getURI();
@@ -82,16 +76,8 @@ public class ExportHelper {
         return options;
     }
 
-    public DataTypeHelper getDataTypeHelper() {
-        return dataTypeHelper;
-    }
-
-    public NamespaceHelper getNamespaceHelper() {
-        return namespaceHelper;
-    }
-
-    public ObjectClassHelper getObjectClassHelper() {
-        return objectClassHelper;
+    public SchemaMapping getSchemaMapping() {
+        return schemaMapping;
     }
 
     public Connection getConnection() {

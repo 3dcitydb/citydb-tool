@@ -24,7 +24,9 @@ package org.citydb.operation.importer.common;
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
-import org.citydb.database.schema.*;
+import org.citydb.database.schema.SchemaMapping;
+import org.citydb.database.schema.Sequence;
+import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.Envelope;
@@ -42,9 +44,7 @@ public abstract class DatabaseImporter {
     protected final Table table;
     private final ImportHelper helper;
     protected final DatabaseAdapter adapter;
-    protected final DataTypeHelper dataTypeHelper;
-    protected final NamespaceHelper namespaceHelper;
-    protected final ObjectClassHelper objectClassHelper;
+    protected final SchemaMapping schemaMapping;
     protected final TableHelper tableHelper;
     protected final PreparedStatement stmt;
 
@@ -54,9 +54,7 @@ public abstract class DatabaseImporter {
         this.table = table;
         this.helper = helper;
         this.adapter = helper.getAdapter();
-        this.dataTypeHelper = helper.getDataTypeHelper();
-        this.namespaceHelper = helper.getNamespaceHelper();
-        this.objectClassHelper = helper.getObjectClassHelper();
+        this.schemaMapping = helper.getSchemaMapping();
         this.tableHelper = helper.getTableHelper();
         stmt = helper.getConnection().prepareStatement(getInsertStatement());
     }

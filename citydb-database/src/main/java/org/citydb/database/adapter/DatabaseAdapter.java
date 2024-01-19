@@ -21,11 +21,13 @@
 
 package org.citydb.database.adapter;
 
+import org.citydb.database.DatabaseException;
 import org.citydb.database.Pool;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.metadata.DatabaseVersion;
 import org.citydb.database.metadata.SpatialReference;
+import org.citydb.database.schema.SchemaException;
 
 import java.sql.*;
 import java.util.Objects;
@@ -43,7 +45,7 @@ public abstract class DatabaseAdapter {
     public abstract int getDefaultPort();
     public abstract String getConnectionString(String host, int port, String database);
 
-    public final void initialize(Pool pool, ConnectionDetails connectionDetails) throws SQLException {
+    public final void initialize(Pool pool, ConnectionDetails connectionDetails) throws DatabaseException, SQLException {
         this.pool = Objects.requireNonNull(pool, "The database pool must not be null.");
         this.connectionDetails = Objects.requireNonNull(connectionDetails, "The connection details must not be null.");
         schemaAdapter = Objects.requireNonNull(createSchemaAdapter(this), "The schema adapter must not be null.");
@@ -61,6 +63,12 @@ public abstract class DatabaseAdapter {
                     vendorMetadata.getDatabaseProductVersion(),
                     vendorMetadata.getDatabaseMajorVersion(),
                     vendorMetadata.getDatabaseMinorVersion());
+        }
+
+        try {
+            schemaAdapter.buildSchemaMapping();
+        } catch (SchemaException e) {
+            throw new DatabaseException("Failed to build schema mapping.", e);
         }
     }
 

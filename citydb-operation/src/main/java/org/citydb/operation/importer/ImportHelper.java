@@ -23,9 +23,7 @@ package org.citydb.operation.importer;
 
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.schema.DataTypeHelper;
-import org.citydb.database.schema.NamespaceHelper;
-import org.citydb.database.schema.ObjectClassHelper;
+import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Visitable;
@@ -52,9 +50,7 @@ public class ImportHelper {
     private final ImportLogger logger;
     private final StatisticsConsumer statisticsConsumer;
     private final Connection connection;
-    private final DataTypeHelper dataTypeHelper;
-    private final NamespaceHelper namespaceHelper;
-    private final ObjectClassHelper objectClassHelper;
+    private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
     private final SequenceHelper sequenceHelper;
     private final FeatureStatistics statistics;
@@ -75,12 +71,10 @@ public class ImportHelper {
         this.autoCommit = autoCommit;
 
         connection = adapter.getPool().getConnection(false);
-        dataTypeHelper = adapter.getSchemaAdapter().getDataTypeHelper();
-        namespaceHelper = adapter.getSchemaAdapter().getNamespaceHelper();
-        objectClassHelper = adapter.getSchemaAdapter().getObjectClassHelper();
+        schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
         sequenceHelper = new SequenceHelper(this);
-        statistics = new FeatureStatistics(objectClassHelper, namespaceHelper);
+        statistics = new FeatureStatistics(schemaMapping);
         batchSize = options.getBatchSize() > 0 ?
                 Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
                 ImportOptions.DEFAULT_BATCH_SIZE;
@@ -90,16 +84,8 @@ public class ImportHelper {
         return adapter;
     }
 
-    public DataTypeHelper getDataTypeHelper() {
-        return dataTypeHelper;
-    }
-
-    public NamespaceHelper getNamespaceHelper() {
-        return namespaceHelper;
-    }
-
-    public ObjectClassHelper getObjectClassHelper() {
-        return objectClassHelper;
+    public SchemaMapping getSchemaMapping() {
+        return schemaMapping;
     }
 
     public Connection getConnection() {

@@ -36,7 +36,6 @@ import org.citydb.database.schema.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.logging.LoggerManager;
-import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.plugin.PluginManager;
 
 import java.sql.SQLException;
@@ -101,15 +100,6 @@ public class CommandHelper {
         }
 
         return manager;
-    }
-
-    public FeatureStatistics createFeatureStatistics(DatabaseAdapter adapter) throws ExecutionException {
-        try {
-            return new FeatureStatistics(adapter.getSchemaAdapter().getObjectClassHelper(),
-                    adapter.getSchemaAdapter().getNamespaceHelper());
-        } catch (SQLException e) {
-            throw new ExecutionException("Failed to create feature statistics helper.", e);
-        }
     }
 
     public void createIndexes(DatabaseAdapter adapter) throws ExecutionException {

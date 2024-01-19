@@ -21,7 +21,7 @@
 
 package org.citydb.operation.exporter.feature;
 
-import org.citydb.database.schema.ObjectClass;
+import org.citydb.database.schema.FeatureType;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.operation.exporter.ExportException;
@@ -51,8 +51,8 @@ public class FeatureExporter extends DatabaseExporter {
     }
 
     public Feature doExport(long id, ResultSet rs) throws ExportException, SQLException {
-        ObjectClass objectClass = objectClassHelper.getObjectClass(rs.getInt("objectclass_id"));
-        return Feature.of(objectClass.getName())
+        FeatureType featureType = schemaMapping.getFeatureType(rs.getInt("objectclass_id"));
+        return Feature.of(featureType.getName())
                 .setObjectId(rs.getString("objectid"))
                 .setIdentifier(rs.getString("identifier"))
                 .setIdentifierCodeSpace(rs.getString("identifier_codespace"))
@@ -65,6 +65,6 @@ public class FeatureExporter extends DatabaseExporter {
                 .setTerminationDate(rs.getObject("termination_date", OffsetDateTime.class))
                 .setValidFrom(rs.getObject("valid_from", OffsetDateTime.class))
                 .setValidTo(rs.getObject("valid_to", OffsetDateTime.class))
-                .setDescriptor(FeatureDescriptor.of(id, objectClass.getId()));
+                .setDescriptor(FeatureDescriptor.of(id, featureType.getId()));
     }
 }

@@ -27,9 +27,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONReader;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
-import org.citydb.database.schema.DataTypeHelper;
-import org.citydb.database.schema.NamespaceHelper;
-import org.citydb.database.schema.ObjectClassHelper;
+import org.citydb.database.schema.SchemaMapping;
 import org.citydb.model.appearance.Color;
 import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Envelope;
@@ -47,9 +45,7 @@ import java.sql.SQLException;
 public abstract class DatabaseExporter {
     protected final ExportHelper helper;
     protected final DatabaseAdapter adapter;
-    protected final DataTypeHelper dataTypeHelper;
-    protected final NamespaceHelper namespaceHelper;
-    protected final ObjectClassHelper objectClassHelper;
+    protected final SchemaMapping schemaMapping;
     protected final TableHelper tableHelper;
 
     protected PreparedStatement stmt;
@@ -57,9 +53,7 @@ public abstract class DatabaseExporter {
     public DatabaseExporter(ExportHelper helper) {
         this.helper = helper;
         this.adapter = helper.getAdapter();
-        this.dataTypeHelper = helper.getDataTypeHelper();
-        this.namespaceHelper = helper.getNamespaceHelper();
-        this.objectClassHelper = helper.getObjectClassHelper();
+        this.schemaMapping = helper.getSchemaMapping();
         this.tableHelper = helper.getTableHelper();
     }
 
@@ -91,7 +85,7 @@ public abstract class DatabaseExporter {
         if (!rs.wasNull()) {
             int namespaceId = rs.getInt(namespaceIdColumn);
             return !rs.wasNull() ?
-                    Name.of(localName, namespaceHelper.getNamespace(namespaceId)) :
+                    Name.of(localName, schemaMapping.getNamespace(namespaceId).getURI()) :
                     Name.of(localName);
         }
 
@@ -101,7 +95,7 @@ public abstract class DatabaseExporter {
     protected DataType getDataType(String column, ResultSet rs) throws SQLException {
         int dataTypeId = rs.getInt(column);
         return !rs.wasNull() ?
-                DataType.of(dataTypeHelper.getDataType(dataTypeId)) :
+                DataType.of(schemaMapping.getDataType(dataTypeId).getName()) :
                 null;
     }
 
