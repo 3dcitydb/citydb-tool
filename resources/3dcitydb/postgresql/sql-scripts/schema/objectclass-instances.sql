@@ -83,7 +83,7 @@ INSERT INTO objectclass (ID, SUPERCLASS_ID, CLASSNAME, IS_ABSTRACT, IS_TOPLEVEL,
 VALUES (104, 102, 'StandardFileTimeseries', 0, 0, 2, '{"identifier":"dyn:StandardFileTimeseries","table":"feature","properties":[{"name":"fileLocation","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"core:URI"},{"name":"fileType","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"core:Code"},{"name":"mimeType","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"core:Code"}]}');
 
 INSERT INTO objectclass (ID, SUPERCLASS_ID, CLASSNAME, IS_ABSTRACT, IS_TOPLEVEL, NAMESPACE_ID, SCHEMA)
-VALUES (105, 102, 'GenericTimeseries', 0, 0, 2, '{"identifier":"dyn:GenericTimeseries","table":"feature","properties":[{"name":"valueType","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"core:String"},{"name":"timeValuePair","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"dyn:TimePairValue"}]}');
+VALUES (105, 102, 'GenericTimeseries', 0, 0, 2, '{"identifier":"dyn:GenericTimeseries","table":"feature","properties":[{"name":"valueType","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"core:String"},{"name":"timeValuePair","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"dyn:TimeValuePair"}]}');
 
 INSERT INTO objectclass (ID, SUPERCLASS_ID, CLASSNAME, IS_ABSTRACT, IS_TOPLEVEL, NAMESPACE_ID, SCHEMA)
 VALUES (106, 101, 'CompositeTimeseries', 0, 0, 2, '{"identifier":"dyn:CompositeTimeseries","table":"feature","properties":[{"name":"component","namespace":"http://3dcitydb.org/3dcitydb/dynamizer/5.0","type":"dyn:TimeseriesComponent"}]}');
