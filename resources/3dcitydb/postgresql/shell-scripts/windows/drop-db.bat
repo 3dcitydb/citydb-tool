@@ -3,7 +3,7 @@
 :: on PostgreSQL/PostGIS
 
 :: read database connection details  
-call CONNECTION_DETAILS.bat
+call connection-details.bat
 
 :: add PGBIN to PATH
 set PATH=%PGBIN%;%PATH%;%SYSTEMROOT%\System32
@@ -36,11 +36,11 @@ echo.
 echo ################################################################################
 
 :: cd to path of the SQL scripts
-cd ..\..\SQLScripts
+cd ..\..\sql-scripts
 
-REM Run DROP_DB.sql to drop the 3D City Database instance ---------------------
+REM Run drop-db.sql to drop the 3D City Database instance ---------------------
 echo.
 echo Connecting to "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
-psql -d "%CITYDB%" -f "DROP_DB.sql"
+psql -d "%CITYDB%" -f "drop-db.sql"
 
 pause

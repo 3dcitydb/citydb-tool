@@ -1,9 +1,9 @@
 @echo off
-:: Shell script to create an new 3DCityDB schema
+:: Shell script to drop a schema from a 3DCityDB instance
 :: on PostgreSQL/PostGIS
 
 :: read database connection details  
-call CONNECTION_DETAILS.bat
+call connection-details.bat
 
 :: add PGBIN to PATH
 set PATH=%PGBIN%;%PATH%;%SYSTEMROOT%\System32
@@ -20,10 +20,10 @@ echo                      ^|__/
 echo.
 echo 3D City Database - The Open Source CityGML Database
 echo.
-echo #####################################################################################
+echo ############################################################################
 echo.
-echo This script will guide you through the process of setting up an additional 3DCityDB
-echo schema for an existing database. Please follow the instructions of the script.
+echo This script will drop a 3DCityDB schema including all data. Note that this
+echo operation cannot be undone. Please follow the instructions of the script.
 echo Enter the required parameters when prompted and press ENTER to confirm.
 echo Just press ENTER to use the default values.
 echo.
@@ -35,33 +35,40 @@ echo Having problems or need support?
 echo    Please file an issue here:
 echo    https://github.com/3dcitydb/3dcitydb/issues
 echo.
-echo #####################################################################################
+echo ############################################################################
 
 :: cd to path of the SQL scripts
-cd ..\..\SQLScripts\UTIL\SCHEMAS
+cd ..\..\sql-scripts
 
 :: List the existing 3DCityDB schemas -----------------------------------------
 echo.
-echo Reading 3DCityDB schemas from "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
-psql -d "%CITYDB%" -f "LIST_SCHEMAS.sql"
+echo Reading 3DCityDB schemas "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
+psql -d "%CITYDB%" -f "util\list-schemas.sql"
 
 if errorlevel 1 (
-  echo Failed to read 3DCityDB schemas from database.
+  echo Failed to read schemas from database.
   pause
   exit /b %errorlevel%
 )
 
 :: Prompt for schema name -----------------------------------------------------
-set SCHEMA_NAME=citydb2
-echo Please enter the name of the 3DCityDB schema you want to create.
-set /p var="(default SCHEMA_NAME=%SCHEMA_NAME%): "
-if /i not "%var%"=="" set SCHEMA_NAME=%var%
+:schema_name
+set var=
+echo Please enter the name of the 3DCityDB schema you want to remove.
+set /p var="(enter SCHEMA_NAME): "
 
-echo Done.
+if /i not "%var%"=="" (
+  set SCHEMA_NAME=%var%
+) else (
+  echo.
+  echo Illegal input! Please provide a schema name.
+  echo.
+  goto schema_name
+)
 
-:: Run CREATE_SCHEMA.sql to create a new 3DCityDB schema ----------------------
+:: Run drop-schema.sql to remove the selected 3DCityDB schema -----------------
 echo.
 echo Connecting to "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
-psql -d "%CITYDB%" -f "CREATE_SCHEMA.sql" -v schema_name="%SCHEMA_NAME%"
+psql -d "%CITYDB%" -f "drop-schema.sql" -v schema_name="%SCHEMA_NAME%"
 
 pause

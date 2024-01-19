@@ -3,7 +3,7 @@
 # on PostgreSQL/PostGIS
 
 # read database connection details 
-source CONNECTION_DETAILS.sh
+source connection-details.sh
 
 # add PGBIN to PATH
 export PATH="$PGBIN:$PATH"
@@ -36,12 +36,12 @@ echo
 echo '################################################################################'
 
 # cd to path of the SQL scripts
-cd ../../SQLScripts
+cd ../../sql-scripts
 
-# Run DROP_DB.sql to drop the 3D City Database instance -----------------------
+# Run drop-db.sql to drop the 3D City Database instance -----------------------
 echo
 echo "Connecting to \"$PGUSER@$PGHOST:$PGPORT/$CITYDB\" ..."
-psql -d "$CITYDB" -f "DROP_DB.sql"
+psql -d "$CITYDB" -f "drop-db.sql"
 
 echo
 read -rsn1 -p 'Press ENTER to quit.'

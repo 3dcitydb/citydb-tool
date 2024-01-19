@@ -3,7 +3,7 @@
 :: on PostgreSQL/PostGIS
 
 :: read database connection details  
-call CONNECTION_DETAILS.bat
+call connection-details.bat
 
 :: add PGBIN to PATH
 set PATH=%PGBIN%;%PATH%;%SYSTEMROOT%\System32
@@ -38,7 +38,7 @@ echo.
 echo ######################################################################################
 
 :: cd to path of the SQL scripts
-cd ..\..\SQLScripts
+cd ..\..\sql-scripts
 
 :: Prompt for SRID ------------------------------------------------------------
 :srid
@@ -100,9 +100,9 @@ set /p var="(default SRS_NAME=%SRS_NAME%): "
 
 if /i not "%var%"=="" set SRS_NAME=%var%
 
-:: Run CREATE_DB.sql to create the 3D City Database instance ------------------
+:: Run create-db.sql to create the 3D City Database instance ------------------
 echo.
 echo Connecting to "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
-psql -d "%CITYDB%" -f "CREATE_DB.sql" -v srid="%SRID%" -v srs_name="%SRS_NAME%"
+psql -d "%CITYDB%" -f "create-db.sql" -v srid="%SRID%" -v srs_name="%SRS_NAME%"
 
 pause

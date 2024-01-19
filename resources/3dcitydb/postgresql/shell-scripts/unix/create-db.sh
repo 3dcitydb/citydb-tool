@@ -3,7 +3,7 @@
 # on PostgreSQL/PostGIS
 
 # read database connection details 
-source CONNECTION_DETAILS.sh
+source connection-details.sh
 
 # add PGBIN to PATH
 export PATH="$PGBIN:$PATH"
@@ -38,7 +38,7 @@ echo
 echo '######################################################################################'
 
 # cd to path of the SQL scripts
-cd ../../SQLScripts
+cd ../../sql-scripts
 
 # Prompt for SRID -------------------------------------------------------------
 re='^[0-9]+$'
@@ -83,10 +83,10 @@ echo 'Please enter the corresponding SRS name to be used in exports.'
 read -p "(default SRS_NAME=$SRS_NAME): " var
 SRS_NAME=${var:-$SRS_NAME}
 
-# Run CREATE_DB.sql to create the 3D City Database instance -------------------
+# Run create-db.sql to create the 3D City Database instance -------------------
 echo
 echo "Connecting to \"$PGUSER@$PGHOST:$PGPORT/$CITYDB\" ..."
-psql -d "$CITYDB" -f "CREATE_DB.sql" -v srid="$SRID" -v srs_name="$SRS_NAME"
+psql -d "$CITYDB" -f "create-db.sql" -v srid="$SRID" -v srs_name="$SRS_NAME"
 
 echo
 read -rsn1 -p 'Press ENTER to quit.'

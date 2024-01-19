@@ -45,19 +45,19 @@ SET search_path TO :"SCHEMA_NAME", :current_path;
 SELECT postgis_version();
 SELECT version as citydb_version from citydb_pkg.citydb_version();
 
---// create TABLES, SEQUENCES, CONSTRAINTS, INDEXES
+--// create tables, sequences, constraints, indexes
 \echo
 \echo 'Setting up database schema ...'
-\ir ../../SCHEMA/SCHEMA.sql
+\ir schema/schema.sql
 
---// fill metadata tables
-\ir ../../SCHEMA/METADATA/NAMESPACE_INSTANCES.sql
-\ir ../../SCHEMA/METADATA/OBJECTCLASS_INSTANCES.sql
-\ir ../../SCHEMA/METADATA/DATATYPE_INSTANCES.sql
+--// populate metadata tables
+\ir schema/namespace-instances.sql
+\ir schema/objectclass-instances.sql
+\ir schema/datatype-instances.sql
 
---// fill codelist tables
-\ir ../../SCHEMA/CODELIST/CODELIST_INSTANCES.sql
-\ir ../../SCHEMA/CODELIST/CODELIST_ENTRY_INSTANCES.sql
+--// populate codelist tables
+\ir schema/codelist-instances.sql
+\ir schema/codelist-entry-instances.sql
 
 \echo
 \echo 'Created 3DCityDB schema "':SCHEMA_NAME'".'

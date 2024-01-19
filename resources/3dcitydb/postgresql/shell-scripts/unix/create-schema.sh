@@ -3,7 +3,7 @@
 # on PostgreSQL/PostGIS
 
 # read database connection details
-source CONNECTION_DETAILS.sh
+source connection-details.sh
 
 # add PGBIN to PATH
 export PATH="$PGBIN:$PATH"
@@ -38,12 +38,12 @@ echo
 echo '#####################################################################################'
 
 # cd to path of the SQL scripts
-cd ../../SQLScripts/UTIL/SCHEMAS
+cd ../../sql-scripts
 
 # List the existing 3DCityDB schemas ------------------------------------------
 echo
 echo "Reading 3DCityDB schemas from \"$PGUSER@$PGHOST:$PGPORT/$CITYDB\" ..."
-psql -d "$CITYDB" -f "LIST_SCHEMAS.sql"
+psql -d "$CITYDB" -f "util/list-schemas.sql"
 
 if [[ $? -ne 0 ]] ; then
   echo 'Failed to read 3DCityDB schemas from database.'
@@ -58,10 +58,10 @@ echo 'Please enter the name of the 3DCityDB schema you want to create.'
 read -p "(default SCHEMA_NAME=$SCHEMA_NAME): " var
 SCHEMA_NAME=${var:-$SCHEMA_NAME}
 
-# Run CREATE_SCHEMA.sql to create a new 3DCityDB schema -----------------------
+# Run create-schema.sql to create a new 3DCityDB schema -----------------------
 echo
 echo "Connecting to \"$PGUSER@$PGHOST:$PGPORT/$CITYDB\" ..."
-psql -d "$CITYDB" -f "CREATE_SCHEMA.sql" -v schema_name="$SCHEMA_NAME"
+psql -d "$CITYDB" -f "create-schema.sql" -v schema_name="$SCHEMA_NAME"
 
 echo
 read -rsn1 -p 'Press ENTER to quit.'

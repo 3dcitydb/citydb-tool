@@ -44,36 +44,36 @@ SELECT current_setting('search_path') AS current_path;
 \gset
 SET search_path TO citydb, :current_path;
 
---// create TABLES, SEQUENCES, CONSTRAINTS, INDEXES
+--// create tables, sequences, constraints, indexes
 \echo
 \echo 'Setting up database schema of 3DCityDB instance ...'
-\ir SCHEMA/SCHEMA.sql
+\ir schema/schema.sql
 
---// fill metadata tables
-\ir SCHEMA/METADATA/NAMESPACE_INSTANCES.sql
-\ir SCHEMA/METADATA/DATATYPE_INSTANCES.sql
-\ir SCHEMA/METADATA/OBJECTCLASS_INSTANCES.sql
+--// populate metadata tables
+\ir schema/namespace-instances.sql
+\ir schema/objectclass-instances.sql
+\ir schema/datatype-instances.sql
 
---// fill codelist tables
-\ir SCHEMA/CODELIST/CODELIST_INSTANCES.sql
-\ir SCHEMA/CODELIST/CODELIST_ENTRY_INSTANCES.sql
+--// populate codelist tables
+\ir schema/codelist-instances.sql
+\ir schema/codelist-entry-instances.sql
 
---// create CITYDB_PKG (additional schema with PL/pgSQL-Functions)
+--// create citydb_pkg schema
 \echo
 \echo 'Creating additional schema ''citydb_pkg'' ...'
 CREATE SCHEMA citydb_pkg;
 
-\ir CITYDB_PKG/UTIL/UTIL.sql
-\ir CITYDB_PKG/CONSTRAINT/CONSTRAINT.sql
-\ir CITYDB_PKG/SRS/SRS.sql
-\ir CITYDB_PKG/ENVELOPE/ENVELOPE.sql
-\ir CITYDB_PKG/DELETE/DELETE.sql
+\ir citydb-pkg/util.sql
+\ir citydb-pkg/constraint.sql
+\ir citydb-pkg/srs.sql
+\ir citydb-pkg/envelope.sql
+\ir citydb-pkg/delete.sql
 
 --// update search_path on database level
 ALTER DATABASE :"DBNAME" SET search_path TO citydb, citydb_pkg, :current_path;
 
 \echo
-\echo '3DCityDB creation complete!'
+\echo '3DCityDB creation complete.'
 
 --// checks if the chosen SRID is provided by the spatial_ref_sys table
 \echo

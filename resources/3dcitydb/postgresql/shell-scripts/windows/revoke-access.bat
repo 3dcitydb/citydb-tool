@@ -1,9 +1,9 @@
 @echo off
-:: Shell script to grant access privileges to a 3DCityDB schema
+:: Shell script to revoke access privileges from a 3DCityDB schema
 :: on PostgreSQL/PostGIS
 
 :: read database connection details  
-call CONNECTION_DETAILS.bat
+call connection-details.bat
 
 :: add PGBIN to PATH
 set PATH=%PGBIN%;%PATH%;%SYSTEMROOT%\System32
@@ -20,10 +20,10 @@ echo                      ^|__/
 echo.
 echo 3D City Database - The Open Source CityGML Database
 echo.
-echo ####################################################################################
+echo #######################################################################################
 echo.
-echo This script will guide you through the process of granting access privileges on a
-echo 3DCityDB schema to an existing user. Please follow the instructions of the script.
+echo This script will revoke access privileges on a 3DCityDB schema from a user. Note that
+echo this operation cannot be undone. Please follow the instructions of the script.
 echo Enter the required parameters when prompted and press ENTER to confirm.
 echo Just press ENTER to use the default values.
 echo.
@@ -37,30 +37,30 @@ echo Having problems or need support?
 echo    Please file an issue here:
 echo    https://github.com/3dcitydb/3dcitydb/issues
 echo.
-echo ####################################################################################
+echo #######################################################################################
 
 :: cd to path of the SQL scripts
-cd ..\..\SQLScripts\UTIL\GRANT_ACCESS
+cd ..\..\sql-scripts
 
 :: Prompt for GRANTEE ---------------------------------------------------------
-:grantee
+:username
 set var=
 echo.
 echo Please enter the username of the grantee.
-set /p var="(GRANTEE must already exist in database): "
+set /p var="(GRANTEE must not be empty): "
 
 if /i not "%var%"=="" (
   set GRANTEE=%var%
 ) else (
   echo.
   echo Illegal input! GRANTEE must not be empty.
-  goto grantee
+  goto username
 )
 
-:: List the existing 3DCityDB schemas -----------------------------------------
+:: List the 3DCityDB schemas granted to GRANTEE -------------------------------
 echo.
-echo Reading 3DCityDB schemas from "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
-psql -d "%CITYDB%" -f "..\SCHEMAS\LIST_SCHEMAS.sql"
+echo Reading 3DCityDB schemas granted to "%GRANTEE%" from "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
+psql -d "%CITYDB%" -f "util\list-schemas-with-access-grant.sql" -v username="%GRANTEE%"
 
 if errorlevel 1 (
   echo Failed to read 3DCityDB schemas from database.
@@ -71,35 +71,13 @@ if errorlevel 1 (
 :: Prompt for SCHEMA_NAME -----------------------------------------------------
 set var=
 set SCHEMA_NAME=citydb
-echo Please enter the name of the 3DCityDB schema "%GRANTEE%" shall have access to.
+echo Please enter the name of the 3DCityDB schema that shall be revoked from "%GRANTEE%".
 set /p var="(default SCHEMA_NAME=%SCHEMA_NAME%): "
 if /i not "%var%"=="" set SCHEMA_NAME=%var%
 
-:: Prompt for ACCESS_MODE -----------------------------------------------------
-:access_mode
-set var=
-echo.
-echo What level of access should be granted to "%GRANTEE%" (read-only=RO/read-write=RW)?
-set /p var="(default ACCESS_MODE=RO): "
-
-if /i not "%var%"=="" (
-  set ACCESS_MODE=%var%
-) else (
-  set ACCESS_MODE=RO
-)
-
-set res=f
-if /i "%ACCESS_MODE%"=="ro" (set res=t)
-if /i "%ACCESS_MODE%"=="rw" (set res=t)
-if "%res%"=="f" (
-  echo.
-  echo Illegal input! Enter RO or RW.
-  goto access_mode
-)
-
-:: Run GRANT_ACCESS.sql to grant access privileges on a specific schema -------
+:: Run revoke-access.sql to revoke access privileges on a specific schema -----
 echo.
 echo Connecting to "%PGUSER%@%PGHOST%:%PGPORT%/%CITYDB%" ...
-psql -d "%CITYDB%" -f "GRANT_ACCESS.sql" -v username="%GRANTEE%" -v schema_name="%SCHEMA_NAME%" -v access_mode="%ACCESS_MODE%"
+psql -d "%CITYDB%" -f "revoke-access.sql" -v username="%GRANTEE%" -v schema_name="%SCHEMA_NAME%"
 
 pause
