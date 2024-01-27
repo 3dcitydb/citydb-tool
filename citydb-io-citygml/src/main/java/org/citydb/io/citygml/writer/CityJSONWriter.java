@@ -37,10 +37,10 @@ import org.citydb.model.geometry.ImplicitGeometry;
 import org.citygml4j.cityjson.CityJSONContext;
 import org.citygml4j.cityjson.writer.AbstractCityJSONWriter;
 import org.citygml4j.cityjson.writer.CityJSONWriteException;
+import org.citygml4j.core.model.appearance.Appearance;
+import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
-import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
-import org.xmlobjects.gml.util.reference.ReferenceResolver;
 
 import java.io.IOException;
 import java.util.*;
@@ -135,8 +135,8 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
     private void processGlobalTemplates(List<ImplicitGeometry> globalTemplates) throws WriteException {
         if (!globalTemplates.isEmpty()) {
-            ReferenceResolver resolver = DefaultReferenceResolver.newInstance().storeRefereesWithReferencedObject(true);
             Map<AbstractGeometry, Number> geometries = Collections.synchronizedMap(new IdentityHashMap<>());
+            List<Appearance> appearances = Collections.synchronizedList(new ArrayList<>());
 
             for (Iterator<ImplicitGeometry> iterator = globalTemplates.iterator(); shouldRun && iterator.hasNext(); ) {
                 ImplicitGeometry template = iterator.next();
@@ -147,13 +147,21 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
                     try {
                         org.citygml4j.core.model.core.ImplicitGeometry implicitGeometry = helpers.get()
                                 .getImplicitGeometry(template);
-                        if (implicitGeometry != null
-                                && implicitGeometry.getRelativeGeometry() != null
-                                && implicitGeometry.getRelativeGeometry().isSetInlineObject()) {
-                            resolver.resolveReferences(implicitGeometry);
-                            geometries.put(implicitGeometry.getRelativeGeometry().getObject(),
-                                    template.getUserProperties().getOrDefault(
-                                            CityJSONFormatOptions.TEMPLATE_LOD_PROPERTY, Number.class, () -> 0));
+                        if (implicitGeometry != null) {
+                            if (implicitGeometry.getRelativeGeometry() != null
+                                    && implicitGeometry.getRelativeGeometry().isSetInlineObject()) {
+                                geometries.put(implicitGeometry.getRelativeGeometry().getObject(),
+                                        template.getUserProperties().getOrDefault(
+                                                CityJSONFormatOptions.TEMPLATE_LOD_PROPERTY, Number.class, () -> 0));
+                            }
+
+                            if (implicitGeometry.isSetAppearances()) {
+                                implicitGeometry.getAppearances().stream()
+                                        .map(AbstractAppearanceProperty::getObject)
+                                        .filter(Appearance.class::isInstance)
+                                        .map(Appearance.class::cast)
+                                        .forEach(appearances::add);
+                            }
                         }
                     } catch (Throwable e) {
                         shouldRun = false;
@@ -167,6 +175,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
             countLatch.await();
             if (exception == null) {
                 geometries.forEach(writer::withGlobalTemplateGeometry);
+                appearances.forEach(writer::withGlobalAppearance);
             } else {
                 throw new WriteException("Failed to process global template geometries.", exception);
             }
