@@ -16,6 +16,7 @@ subprojects {
     apply plugin: 'java-library'
     apply plugin: 'maven-publish'
     apply plugin: 'org.gradlex.extra-java-module-info'
+    apply plugin: 'idea'
 
     version parent.version
 
@@ -49,6 +50,10 @@ subprojects {
         testImplementation('org.junit.jupiter:junit-jupiter')
     }
 
+    test {
+        useJUnitPlatform()
+    }
+
     extraJavaModuleInfo {
         module('tomcat-jdbc-10.1.17.jar', 'org.apache.tomcat.jdbc', '10.1.17') {
             requires('java.sql')
@@ -58,8 +63,10 @@ subprojects {
         }
     }
 
-    test {
-        useJUnitPlatform()
+    idea {
+        module {
+            outputDir file('out/production/classes')
+        }
     }
 
     task processLicense(type: Copy) {
