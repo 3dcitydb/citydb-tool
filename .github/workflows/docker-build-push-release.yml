@@ -54,6 +54,8 @@ jobs:
       name: Extract metadata (tags, labels) for docker image
       id: meta
       uses: docker/metadata-action@v5
+      env:
+        DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
       with:
         images: |
           ${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
@@ -84,6 +86,7 @@ jobs:
         platforms: ${{ env.PLATFORMS }}
         build-args: |
           CITYDB_TOOL_VERSION=${{ steps.release_version.outputs.version }}
+        annotations: ${{ steps.meta.outputs.annotations }}
     -
       name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
