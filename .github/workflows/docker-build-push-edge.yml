@@ -85,6 +85,7 @@ jobs:
         platforms: ${{ env.PLATFORMS }}
         build-args: |
           CITYDB_TOOL_VERSION=${{ steps.short-sha.outputs.sha }}
+        annotations: ${{ steps.meta.outputs.annotations }}
     -
       name: Image digest
       run: echo ${{ steps.docker_build.outputs.digest }}
