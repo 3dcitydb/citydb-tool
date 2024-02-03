@@ -55,6 +55,8 @@ jobs:
       name: Extract metadata (tags, labels) for docker image
       id: meta
       uses: docker/metadata-action@v5
+      env:
+        DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
       with:
         images: |
           ${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
