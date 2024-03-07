@@ -19,25 +19,21 @@
  * limitations under the License.
  */
 
-package org.citydb.query;
+package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.annotation.JSONField;
-import org.citydb.config.SerializableConfig;
+import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.query.filter.Filter;
-import org.citydb.query.filter.encoding.FilterConfigParser;
-import org.citydb.query.filter.encoding.FilterConfigWriter;
 
-@SerializableConfig(name = "query")
-public class Query {
-    @JSONField(serializeUsing = FilterConfigWriter.class, deserializeUsing = FilterConfigParser.class)
-    private Filter filter;
+import java.lang.reflect.Type;
 
-    public Filter getFilter() {
-        return filter;
-    }
-
-    public Query setFilter(Filter filter) {
-        this.filter = filter;
-        return this;
+public class FilterConfigWriter implements ObjectWriter<Filter> {
+    @Override
+    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
+        if (o instanceof Filter filter) {
+            FilterJSONWriter.newInstance().write(filter.getExpression(), jsonWriter);
+        } else {
+            jsonWriter.writeNull();
+        }
     }
 }

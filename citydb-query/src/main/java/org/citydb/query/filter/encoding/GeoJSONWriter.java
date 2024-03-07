@@ -58,7 +58,7 @@ public class GeoJSONWriter {
         endCoordinates(jsonWriter);
         endGeometry(jsonWriter);
     }
-    
+
     private void writeLineString(LineString lineString) {
         startGeometry(JSONToken.LINESTRING);
         startCoordinates(jsonWriter);

@@ -58,6 +58,13 @@ public class FilterJSONParser {
                 null;
     }
 
+    public <T extends Expression> T parse(Object json, Class<T> type) throws FilterParseException {
+        Expression expression = parse(json);
+        return type.isInstance(expression) ?
+                type.cast(expression) :
+                null;
+    }
+
     private Expression readExpression(Object json) throws FilterParseException {
         if (json instanceof JSONObject object) {
             return readObject(object);
@@ -343,7 +350,7 @@ public class FilterJSONParser {
     }
 
     private Property readProperty(String propertyString) throws FilterParseException {
-        Property property = textParser.build(propertyString, Property.class);
+        Property property = textParser.parse(propertyString, Property.class);
         if (property != null) {
             return property;
         } else {

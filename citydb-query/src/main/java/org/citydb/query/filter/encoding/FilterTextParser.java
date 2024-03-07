@@ -32,18 +32,18 @@ public class FilterTextParser {
         return new FilterTextParser();
     }
 
-    public Expression build(String text) throws FilterParseException {
-        return new FilterTextBuilder().build(parse(text));
+    public Expression parse(String text) throws FilterParseException {
+        return new FilterTextBuilder().build(parseRaw(text));
     }
 
-    public <T extends Expression> T build(String text, Class<T> type) throws FilterParseException {
-        Expression expression = new FilterTextBuilder().build(parse(text));
+    public <T extends Expression> T parse(String text, Class<T> type) throws FilterParseException {
+        Expression expression = parse(text);
         return type.isInstance(expression) ?
                 type.cast(expression) :
                 null;
     }
 
-    public Node parse(String text) throws FilterParseException {
+    public Node parseRaw(String text) throws FilterParseException {
         text = text != null ? text.replaceAll("''", "\\\\'") : "";
         Tokenizer tokenizer = Tokenizer.of(text);
 
