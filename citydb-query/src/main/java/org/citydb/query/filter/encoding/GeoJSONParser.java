@@ -57,12 +57,7 @@ public class GeoJSONParser {
     }
 
     private Point readPoint(JSONArray array) throws FilterParseException {
-        List<Coordinate> coordinates = readCoordinates(array);
-        if (!coordinates.isEmpty()) {
-            return Point.of(coordinates.get(0));
-        } else {
-            throw new FilterParseException("Found empty coordinates array for point geometry.");
-        }
+        return Point.of(readCoordinate(array));
     }
 
     private LineString readLineString(JSONArray array) throws FilterParseException {
@@ -142,19 +137,26 @@ public class GeoJSONParser {
     private List<Coordinate> readCoordinates(JSONArray array) throws FilterParseException {
         List<Coordinate> coordinates = new ArrayList<>(array.size());
         for (Object element : array) {
-            if (element instanceof JSONArray coordinate
-                    && coordinate.size() > 1) {
-                double x = readNumber(coordinate.get(0));
-                double y = readNumber(coordinate.get(1));
-                coordinates.add(coordinate.size() > 2 ?
-                        Coordinate.of(x, y, readNumber(coordinate.get(2))) :
-                        Coordinate.of(x, y));
+            if (element instanceof JSONArray coordinate) {
+                coordinates.add(readCoordinate(coordinate));
             } else {
                 throw new FilterParseException("Found invalid coordinates array '" + element + "'.");
             }
         }
 
         return coordinates;
+    }
+
+    private Coordinate readCoordinate(JSONArray array) throws FilterParseException {
+        if (array.size() > 1) {
+            double x = readNumber(array.get(0));
+            double y = readNumber(array.get(1));
+            return array.size() > 2 ?
+                    Coordinate.of(x, y, readNumber(array.get(2))) :
+                    Coordinate.of(x, y);
+        } else {
+            throw new FilterParseException("Found invalid coordinate '" + array + "'.");
+        }
     }
 
     private double readNumber(Object value) throws FilterParseException {

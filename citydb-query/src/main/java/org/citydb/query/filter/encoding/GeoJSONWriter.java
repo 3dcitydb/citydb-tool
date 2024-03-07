@@ -47,71 +47,81 @@ public class GeoJSONWriter {
 
     private void writePoint(Point point) {
         startGeometry(JSONToken.POINT);
-        startCoordinates(jsonWriter);
-        jsonWriter.writeDouble(point.getCoordinate().getX());
-        jsonWriter.writeComma();
-        jsonWriter.writeDouble(point.getCoordinate().getY());
-        if (point.getCoordinate().getDimension() == 3) {
-            jsonWriter.writeComma();
-            jsonWriter.writeDouble(point.getCoordinate().getZ());
-        }
-        endCoordinates(jsonWriter);
-        endGeometry(jsonWriter);
+        jsonWriter.writeName(JSONToken.COORDINATES.value());
+        jsonWriter.writeColon();
+        writeCoordinate(point.getCoordinate());
+        endGeometry();
     }
 
     private void writeLineString(LineString lineString) {
         startGeometry(JSONToken.LINESTRING);
-        startCoordinates(jsonWriter);
+        startCoordinates();
         writeCoordinates(lineString);
-        endCoordinates(jsonWriter);
-        endGeometry(jsonWriter);
+        endCoordinates();
+        endGeometry();
     }
 
     private void writePolygon(Polygon polygon) {
         startGeometry(JSONToken.POLYGON);
-        startCoordinates(jsonWriter);
+        startCoordinates();
         writeCoordinates(polygon);
-        endCoordinates(jsonWriter);
-        endGeometry(jsonWriter);
+        endCoordinates();
+        endGeometry();
     }
 
     private void writeMultiPoint(MultiPoint multiPoint) {
         startGeometry(JSONToken.MULTIPOINT);
-        startCoordinates(jsonWriter);
-        for (int i = 0; i < multiPoint.getPoints().size(); i++) {
-            writeCoordinate(multiPoint.getPoints().get(i).getCoordinate());
-            if (i < multiPoint.getPoints().size() - 1) {
-                jsonWriter.writeComma();
+        startCoordinates();
+
+        if (!multiPoint.getPoints().isEmpty()) {
+            for (int i = 0; i < multiPoint.getPoints().size(); i++) {
+                writeCoordinate(multiPoint.getPoints().get(i).getCoordinate());
+                if (i < multiPoint.getPoints().size() - 1) {
+                    jsonWriter.writeComma();
+                }
             }
         }
-        endCoordinates(jsonWriter);
-        endGeometry(jsonWriter);
+
+        endCoordinates();
+        endGeometry();
     }
 
     private void writeMultiLineString(MultiLineString multiLineString) {
         startGeometry(JSONToken.MULTILINESTRING);
-        startCoordinates(jsonWriter);
-        for (int i = 0; i < multiLineString.getLineStrings().size(); i++) {
-            writeCoordinates(multiLineString.getLineStrings().get(i));
-            if (i < multiLineString.getLineStrings().size() - 1) {
-                jsonWriter.writeComma();
+        startCoordinates();
+
+        if (!multiLineString.getLineStrings().isEmpty()) {
+            jsonWriter.startArray();
+            for (int i = 0; i < multiLineString.getLineStrings().size(); i++) {
+                writeCoordinates(multiLineString.getLineStrings().get(i));
+                if (i < multiLineString.getLineStrings().size() - 1) {
+                    jsonWriter.writeComma();
+                }
             }
+            jsonWriter.endArray();
         }
-        endCoordinates(jsonWriter);
-        endGeometry(jsonWriter);
+
+        endCoordinates();
+        endGeometry();
     }
 
     private void writeMultiSurface(SurfaceCollection<?> surfaceCollection) {
         startGeometry(JSONToken.MULTIPOLYGON);
-        startCoordinates(jsonWriter);
-        for (int i = 0; i < surfaceCollection.getPolygons().size(); i++) {
-            writeCoordinates(surfaceCollection.getPolygons().get(i));
-            if (i < surfaceCollection.getPolygons().size() - 1) {
-                jsonWriter.writeComma();
+        startCoordinates();
+
+        if (!surfaceCollection.getPolygons().isEmpty()) {
+            jsonWriter.startArray();
+            for (int i = 0; i < surfaceCollection.getPolygons().size(); i++) {
+                writeCoordinates(surfaceCollection.getPolygons().get(i));
+                if (i < surfaceCollection.getPolygons().size() - 1) {
+                    jsonWriter.writeComma();
+                }
             }
+            jsonWriter.endArray();
         }
-        endCoordinates(jsonWriter);
-        endGeometry(jsonWriter);
+
+        endCoordinates();
+        endGeometry();
     }
 
     private void writeCoordinate(Coordinate coordinate) {
@@ -170,17 +180,17 @@ public class GeoJSONWriter {
         jsonWriter.writeString(type.value());
     }
 
-    private void endGeometry(JSONWriter jsonWriter) {
+    private void endGeometry() {
         jsonWriter.endObject();
     }
 
-    private void startCoordinates(JSONWriter jsonWriter) {
+    private void startCoordinates() {
         jsonWriter.writeName(JSONToken.COORDINATES.value());
         jsonWriter.writeColon();
         jsonWriter.startArray();
     }
 
-    private void endCoordinates(JSONWriter jsonWriter) {
+    private void endCoordinates() {
         jsonWriter.endArray();
     }
 }
