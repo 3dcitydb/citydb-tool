@@ -32,41 +32,41 @@ import org.citydb.query.filter.operation.NumericExpression;
 import java.util.Objects;
 import java.util.Optional;
 
-public class Property implements BooleanExpression, GeometryExpression, NumericExpression, CharacterExpression {
+public class PropertyRef implements BooleanExpression, GeometryExpression, NumericExpression, CharacterExpression {
     private final String localName;
     private final String namespace;
     private final String prefix;
     private Predicate filter;
-    private Property parent;
-    private Property child;
+    private PropertyRef parent;
+    private PropertyRef child;
     private Sign sign;
 
-    private Property(String localName, String namespace, String prefix) {
+    private PropertyRef(String localName, String namespace, String prefix) {
         this.localName = Objects.requireNonNull(localName, "The local name must not be null.");
         this.namespace = namespace != null ? namespace : Namespaces.EMPTY_NAMESPACE;
         this.prefix = prefix != null ? prefix : "";
     }
 
-    public static Property of(String name) {
+    public static PropertyRef of(String name) {
         int index = name.indexOf(":");
         return index > -1 ?
-                new Property(name.substring(index + 1), null, name.substring(0, index)) :
-                new Property(name, null, null);
+                new PropertyRef(name.substring(index + 1), null, name.substring(0, index)) :
+                new PropertyRef(name, null, null);
     }
 
-    public static Property of(String localName, String namespace) {
-        return new Property(localName, namespace, null);
+    public static PropertyRef of(String localName, String namespace) {
+        return new PropertyRef(localName, namespace, null);
     }
 
-    public static Property of(Name name) {
-        return new Property(name.getLocalName(), name.getNamespace(), null);
+    public static PropertyRef of(Name name) {
+        return new PropertyRef(name.getLocalName(), name.getNamespace(), null);
     }
 
-    public static Property of(FeatureTypeProvider provider) {
+    public static PropertyRef of(FeatureTypeProvider provider) {
         return of(provider.getName());
     }
 
-    public static Property of(FeatureType featureType) {
+    public static PropertyRef of(FeatureType featureType) {
         return of(featureType.getName());
     }
 
@@ -86,43 +86,43 @@ public class Property implements BooleanExpression, GeometryExpression, NumericE
         return Optional.ofNullable(filter);
     }
 
-    public Property filter(Predicate filter) {
+    public PropertyRef filter(Predicate filter) {
         this.filter = filter;
         return this;
     }
 
-    public Optional<Property> getParent() {
+    public Optional<PropertyRef> getParent() {
         return Optional.ofNullable(parent);
     }
 
-    public Optional<Property> getChild() {
+    public Optional<PropertyRef> getChild() {
         return Optional.ofNullable(child);
     }
 
-    public Property child(String name) {
+    public PropertyRef child(String name) {
         return child(of(name));
     }
 
-    public Property child(String localName, String namespace) {
+    public PropertyRef child(String localName, String namespace) {
         return child(of(localName, namespace));
     }
 
-    public Property child(Name name) {
+    public PropertyRef child(Name name) {
         return child(of(name));
     }
 
-    public Property child(FeatureTypeProvider provider) {
+    public PropertyRef child(FeatureTypeProvider provider) {
         return child(of(provider));
     }
 
-    public Property child(FeatureType featureType) {
+    public PropertyRef child(FeatureType featureType) {
         return child(of(featureType));
     }
 
-    public Property child(Property property) {
-        if (property != null) {
-            property.parent = this;
-            return child = property;
+    public PropertyRef child(PropertyRef propertyRef) {
+        if (propertyRef != null) {
+            propertyRef.parent = this;
+            return child = propertyRef;
         } else {
             return this;
         }

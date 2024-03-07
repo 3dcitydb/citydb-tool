@@ -111,23 +111,23 @@ public class FilterTextParser {
         }
     }
 
-    private Node readPropertyPredicate(Node identifier, Tokenizer tokenizer) throws FilterParseException {
+    private Node readStepPredicate(Node identifier, Tokenizer tokenizer) throws FilterParseException {
         if (tokenizer.lookAhead().getType() == TextToken.L_BRACKET) {
             tokenizer.nextToken();
             Node predicate = readBooleanExpression(tokenizer);
 
             if (tokenizer.nextToken().getType() == TextToken.R_BRACKET) {
-                Node property = Node.of(NodeType.PROPERTY, identifier.getToken()).addChild(predicate);
+                Node propertyRef = Node.of(NodeType.PROPERTY_REF, identifier.getToken()).addChild(predicate);
                 if (tokenizer.lookAhead().getType() == TextToken.IDENTIFIER) {
                     Node terminal = readTerminal(tokenizer);
                     if (terminal.getToken().getValue().startsWith(".")) {
                         terminal.getToken().setValue(terminal.getToken().getValue().substring(1));
                     }
 
-                    property.addChild(terminal);
+                    propertyRef.addChild(terminal);
                 }
 
-                return property;
+                return propertyRef;
             } else {
                 throw new FilterParseException("Expected '" + TextToken.R_BRACKET + "' but found '" +
                         tokenizer.currentToken() + "' while parsing a property predicate.");
@@ -451,7 +451,7 @@ public class FilterTextParser {
         if (literal != Node.EMPTY) {
             return switch (tokenizer.lookAhead().getType()) {
                 case L_PAREN -> readFunction(literal, tokenizer);
-                case L_BRACKET -> readPropertyPredicate(literal, tokenizer);
+                case L_BRACKET -> readStepPredicate(literal, tokenizer);
                 default -> literal;
             };
         } else {

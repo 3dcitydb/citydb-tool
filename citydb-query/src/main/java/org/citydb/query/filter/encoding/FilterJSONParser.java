@@ -21,6 +21,7 @@
 
 package org.citydb.query.filter.encoding;
 
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.JSONObject;
@@ -53,6 +54,10 @@ public class FilterJSONParser {
     }
 
     public Expression parse(Object json) throws FilterParseException {
+        if (json instanceof String text && JSON.isValid(text)) {
+            json = JSON.parse(text);
+        }
+
         return json != null ?
                 readExpression(json) :
                 null;
@@ -116,7 +121,7 @@ public class FilterJSONParser {
             } else if (JSONToken.GEOMETRIES.contains(type)) {
                 return readGeometryLiteral(object);
             } else if (property != null) {
-                return readProperty(property);
+                return readPropertyRef(property);
             } else {
                 return null;
             }
@@ -349,12 +354,12 @@ public class FilterJSONParser {
         return Literal.ofScalar(object);
     }
 
-    private Property readProperty(String propertyString) throws FilterParseException {
-        Property property = textParser.parse(propertyString, Property.class);
-        if (property != null) {
-            return property;
+    private PropertyRef readPropertyRef(String property) throws FilterParseException {
+        PropertyRef propertyRef = textParser.parse(property, PropertyRef.class);
+        if (propertyRef != null) {
+            return propertyRef;
         } else {
-            throw new FilterParseException("Failed to parse '" + propertyString + "' as property.");
+            throw new FilterParseException("Failed to parse '" + property + "' as property.");
         }
     }
 }

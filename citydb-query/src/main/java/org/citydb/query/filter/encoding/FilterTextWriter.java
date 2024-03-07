@@ -135,27 +135,27 @@ public class FilterTextWriter {
         }
 
         @Override
-        public void visit(Property property) {
-            buildSign(property);
+        public void visit(PropertyRef propertyRef) {
+            buildSign(propertyRef);
 
             String name;
-            if (property.getPrefix().isEmpty()) {
-                name = property.getLocalName();
+            if (propertyRef.getPrefix().isEmpty()) {
+                name = propertyRef.getLocalName();
                 if (TextToken.of(name) != TextToken.UNDEFINED) {
                     name = '"' + name + '"';
                 }
             } else {
-                name = property.getPrefix() + ":" + property.getLocalName();
+                name = propertyRef.getPrefix() + ":" + propertyRef.getLocalName();
             }
 
             builder.append(name);
-            property.getFilter().ifPresent(filter -> {
+            propertyRef.getFilter().ifPresent(filter -> {
                 builder.append("[");
-                buildPropertyPredicate(filter);
+                buildStepPredicate(filter);
                 builder.append("]");
             });
 
-            property.getChild().ifPresent(child -> {
+            propertyRef.getChild().ifPresent(child -> {
                 builder.append(".");
                 child.accept(this);
             });
@@ -265,7 +265,7 @@ public class FilterTextWriter {
             }
         }
 
-        private void buildPropertyPredicate(Predicate predicate) {
+        private void buildStepPredicate(Predicate predicate) {
             if (predicate instanceof BinaryComparisonPredicate comparisonPredicate
                     && comparisonPredicate.getOperator() == ComparisonOperator.EQUAL_TO
                     && comparisonPredicate.getLeftOperand() instanceof Function function

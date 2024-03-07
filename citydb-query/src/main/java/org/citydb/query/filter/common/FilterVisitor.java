@@ -40,7 +40,7 @@ public interface FilterVisitor {
 
     void visit(TimestampLiteral literal);
 
-    void visit(Property property);
+    void visit(PropertyRef propertyRef);
 
     void visit(Function function);
 

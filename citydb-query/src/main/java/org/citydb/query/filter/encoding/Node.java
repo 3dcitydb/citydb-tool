@@ -47,7 +47,7 @@ public class Node {
         if (token.getType() == TextToken.SINGLE_QUOTE) {
             return new Node(NodeType.STRING_LITERAL, token);
         } else if (token.getType() == TextToken.DOUBLE_QUOTE) {
-            return new Node(NodeType.PROPERTY, token);
+            return new Node(NodeType.PROPERTY_REF, token);
         } else if (token.getType() == TextToken.DATE
                 || token.getType() == TextToken.TIMESTAMP) {
             return new Node(NodeType.TIME_INSTANT_LITERAL, token);

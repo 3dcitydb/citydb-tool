@@ -30,7 +30,7 @@ public enum NodeType {
     TIME_INTERVAL,
     GEOMETRY_LITERAL,
     IDENTIFIER,
-    PROPERTY,
+    PROPERTY_REF,
     ARITHMETIC_EXPRESSION,
     BOOLEAN_PREDICATE,
     COMPARISON_PREDICATE,
@@ -43,5 +43,5 @@ public enum NodeType {
     EMPTY;
 
     public static final EnumSet<NodeType> LITERALS = EnumSet.of(BOOLEAN_LITERAL, STRING_LITERAL, TIME_INSTANT_LITERAL,
-            PROPERTY, IDENTIFIER);
+            PROPERTY_REF, IDENTIFIER);
 }

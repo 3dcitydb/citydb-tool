@@ -47,6 +47,7 @@ public enum JSONToken {
     MULTIPOINT("MultiPoint"),
     MULTILINESTRING("MultiLineString"),
     MULTIPOLYGON("MultiPolygon"),
+    GEOMETRYCOLLECTION("GeometryCollection"),
     TYPE("type"),
     PROPERTY("property"),
     COORDINATES("coordinates"),
@@ -102,7 +103,7 @@ public enum JSONToken {
             T_DURING, T_EQUALS, T_FINISHEDBY, T_FINISHES, T_INTERSECTS, T_MEETS, T_METBY, T_OVERLAPPEDBY, T_OVERLAPS,
             T_STARTEDBY, T_STARTS);
     static final EnumSet<JSONToken> GEOMETRIES = EnumSet.of(BBOX, POINT, LINESTRING, POLYGON, MULTIPOINT,
-            MULTILINESTRING, MULTIPOLYGON);
+            MULTILINESTRING, MULTIPOLYGON, GEOMETRYCOLLECTION);
 
     private final static Map<String, JSONToken> keywords = new HashMap<>();
     private final String token;

@@ -117,14 +117,14 @@ public class FilterJSONWriter {
         }
 
         @Override
-        public void visit(Property property) {
-            if (property.getSign() == Sign.MINUS) {
-                negate(property);
+        public void visit(PropertyRef propertyRef) {
+            if (propertyRef.getSign() == Sign.MINUS) {
+                negate(propertyRef);
             } else {
                 jsonWriter.startObject();
                 jsonWriter.writeName(JSONToken.PROPERTY.value());
                 jsonWriter.writeColon();
-                jsonWriter.writeString(textWriter.write(property));
+                jsonWriter.writeString(textWriter.write(propertyRef));
                 jsonWriter.endObject();
             }
         }
@@ -192,7 +192,9 @@ public class FilterJSONWriter {
                 startOp(in.getOperator().getJSONToken().value());
                 in.getOperand().accept(this);
                 jsonWriter.writeComma();
+                jsonWriter.startArray();
                 writeList(in.getValues(), jsonWriter::writeComma);
+                jsonWriter.endArray();
                 endOp();
             }
         }

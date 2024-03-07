@@ -66,7 +66,7 @@ public class FilterTextBuilder {
             case TIME_INTERVAL -> buildTimeInterval(node);
             case GEOMETRY_LITERAL -> buildGeometryLiteral(node);
             case IDENTIFIER -> buildIdentifier(node);
-            case PROPERTY -> buildProperty(node);
+            case PROPERTY_REF -> buildPropertyRef(node);
             case SYNTAX -> throw new FilterParseException("Unsupported node type '" + node.getType() + "'.");
             default -> null;
         };
@@ -341,17 +341,17 @@ public class FilterTextBuilder {
         try {
             return buildNumericLiteral(node);
         } catch (FilterParseException e) {
-            return buildProperty(node);
+            return buildPropertyRef(node);
         }
     }
 
-    private Property buildProperty(Node node) throws FilterParseException {
+    private PropertyRef buildPropertyRef(Node node) throws FilterParseException {
         String[] properties = node.getToken().getValue().split("\\.");
         if (properties.length > 0) {
-            Property property = buildProperty(properties[0]);
-            Property child = property;
+            PropertyRef propertyRef = buildPropertyRef(properties[0]);
+            PropertyRef child = propertyRef;
             for (int i = 1; i < properties.length; i++) {
-                child = child.child(buildProperty(properties[i]));
+                child = child.child(buildPropertyRef(properties[i]));
             }
 
             if (node.hasChildren()) {
@@ -365,7 +365,7 @@ public class FilterTextBuilder {
                 if (filter instanceof Predicate predicate) {
                     child.filter(predicate);
                     if (node.getChildren().size() == 2) {
-                        child.child(buildProperty(node.getChildren().get(1)));
+                        child.child(buildPropertyRef(node.getChildren().get(1)));
                     }
                 } else {
                     throw new FilterParseException("Failed to parse predicate of property '" +
@@ -373,15 +373,15 @@ public class FilterTextBuilder {
                 }
             }
 
-            return buildSign(property, node);
+            return buildSign(propertyRef, node);
         } else {
             throw new FilterParseException("Invalid property name '" + node.getToken() + "'.");
         }
     }
 
-    private Property buildProperty(String identifier) throws FilterParseException {
+    private PropertyRef buildPropertyRef(String identifier) throws FilterParseException {
         if (!identifier.isEmpty()) {
-            return Property.of(identifier);
+            return PropertyRef.of(identifier);
         } else {
             throw new FilterParseException("Invalid empty property name.");
         }
