@@ -54,13 +54,13 @@ public class FilterJSONParser {
     }
 
     public Expression parse(Object json) throws FilterParseException {
-        if (json instanceof String text && JSON.isValid(text)) {
-            json = JSON.parse(text);
+        if (json != null) {
+            return json instanceof String text && JSON.isValid(text) ?
+                    readExpression(JSON.parse(text)) :
+                    readExpression(json);
+        } else {
+            return null;
         }
-
-        return json != null ?
-                readExpression(json) :
-                null;
     }
 
     public <T extends Expression> T parse(Object json, Class<T> type) throws FilterParseException {
