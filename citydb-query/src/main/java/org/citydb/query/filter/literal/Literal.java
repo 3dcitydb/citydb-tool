@@ -36,7 +36,9 @@ public abstract class Literal<T> implements Expression {
     }
 
     public static ScalarExpression ofScalar(Object value) {
-        if (value instanceof String stringValue) {
+        if (value instanceof ScalarExpression expression) {
+            return expression;
+        } else if (value instanceof String stringValue) {
             return StringLiteral.of(stringValue);
         } else if (value instanceof Number number) {
             return NumericLiteral.of(number);
