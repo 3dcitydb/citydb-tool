@@ -28,7 +28,7 @@ import org.citydb.query.filter.encoding.FilterParseException;
 
 import java.lang.reflect.Type;
 
-public class FilterParser implements ObjectReader<Filter> {
+public class FilterReader implements ObjectReader<Filter> {
     @Override
     public Filter readObject(JSONReader jsonReader, Type type, Object o, long l) {
         if (jsonReader.isObject()) {
