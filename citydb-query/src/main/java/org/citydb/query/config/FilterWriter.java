@@ -19,21 +19,22 @@
  * limitations under the License.
  */
 
-package org.citydb.query.filter.encoding;
+package org.citydb.query.config;
 
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
+import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.query.filter.Filter;
+import org.citydb.query.filter.encoding.FilterJSONWriter;
 
 import java.lang.reflect.Type;
 
-public class FilterConfigParser implements ObjectReader<Filter> {
+public class FilterWriter implements ObjectWriter<Filter> {
     @Override
-    public Filter readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        try {
-            return Filter.ofJSON(jsonReader.readAny());
-        } catch (FilterParseException e) {
-            return null;
+    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
+        if (o instanceof Filter filter) {
+            FilterJSONWriter.newInstance().write(filter.getExpression(), jsonWriter);
+        } else {
+            jsonWriter.writeNull();
         }
     }
 }
