@@ -23,15 +23,15 @@ package org.citydb.query;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
-import org.citydb.query.config.FilterReader;
-import org.citydb.query.config.FilterWriter;
+import org.citydb.query.filter.encoding.FilterConfigReader;
+import org.citydb.query.filter.encoding.FilterConfigWriter;
 import org.citydb.query.filter.Filter;
 
 import java.util.Optional;
 
 @SerializableConfig(name = "query")
 public class Query {
-    @JSONField(serializeUsing = FilterWriter.class, deserializeUsing = FilterReader.class)
+    @JSONField(serializeUsing = FilterConfigWriter.class, deserializeUsing = FilterConfigReader.class)
     private Filter filter;
 
     public Optional<Filter> getFilter() {

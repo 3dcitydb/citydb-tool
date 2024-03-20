@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.query.config;
+package org.citydb.query.filter.encoding;
 
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.reader.ObjectReader;
@@ -28,7 +28,7 @@ import org.citydb.query.filter.encoding.FilterParseException;
 
 import java.lang.reflect.Type;
 
-public class FilterReader implements ObjectReader<Filter> {
+public class FilterConfigReader implements ObjectReader<Filter> {
     @Override
     public Filter readObject(JSONReader jsonReader, Type type, Object o, long l) {
         if (jsonReader.isObject()) {

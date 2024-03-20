@@ -5,7 +5,6 @@ module org.citydb.query {
     requires org.citydb.config;
 
     exports org.citydb.query;
-    exports org.citydb.query.config;
     exports org.citydb.query.filter;
     exports org.citydb.query.filter.common;
     exports org.citydb.query.filter.encoding;

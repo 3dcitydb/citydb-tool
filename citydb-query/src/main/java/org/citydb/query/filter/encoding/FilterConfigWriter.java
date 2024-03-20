@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.query.config;
+package org.citydb.query.filter.encoding;
 
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.writer.ObjectWriter;
@@ -28,7 +28,7 @@ import org.citydb.query.filter.encoding.FilterJSONWriter;
 
 import java.lang.reflect.Type;
 
-public class FilterWriter implements ObjectWriter<Filter> {
+public class FilterConfigWriter implements ObjectWriter<Filter> {
     @Override
     public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
         if (o instanceof Filter filter) {
