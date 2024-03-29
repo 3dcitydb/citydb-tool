@@ -24,7 +24,6 @@ package org.citydb.query.filter.encoding;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.query.filter.Filter;
-import org.citydb.query.filter.encoding.FilterJSONWriter;
 
 import java.lang.reflect.Type;
 

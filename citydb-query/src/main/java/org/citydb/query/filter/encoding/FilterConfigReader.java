@@ -24,7 +24,6 @@ package org.citydb.query.filter.encoding;
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.query.filter.Filter;
-import org.citydb.query.filter.encoding.FilterParseException;
 
 import java.lang.reflect.Type;
 
