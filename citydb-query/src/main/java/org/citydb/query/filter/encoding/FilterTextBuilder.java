@@ -369,7 +369,7 @@ public class FilterTextBuilder {
                     }
                 } else {
                     throw new FilterParseException("Failed to parse predicate of property '" +
-                            child.getLocalName() + "'.");
+                            child.getName().getLocalName() + "'.");
                 }
             }
 

@@ -138,14 +138,11 @@ public class FilterTextWriter {
         public void visit(PropertyRef propertyRef) {
             buildSign(propertyRef);
 
-            String name;
-            if (propertyRef.getPrefix().isEmpty()) {
-                name = propertyRef.getLocalName();
-                if (TextToken.of(name) != TextToken.UNDEFINED) {
-                    name = '"' + name + '"';
-                }
-            } else {
-                name = propertyRef.getPrefix() + ":" + propertyRef.getLocalName();
+            String name = propertyRef.getName().getPrefix()
+                    .map(prefix -> prefix + ":" + propertyRef.getName().getLocalName())
+                    .orElse(propertyRef.getName().getLocalName());
+            if (TextToken.of(name) != TextToken.UNDEFINED) {
+                name = '"' + name + '"';
             }
 
             builder.append(name);

@@ -28,7 +28,7 @@ public class Name implements Serializable {
     private final String localName;
     private final String namespace;
 
-    private Name(String localName, String namespace) {
+    protected Name(String localName, String namespace) {
         this.localName = Objects.requireNonNull(localName, "The local name must not be null.");
         this.namespace = Namespaces.ensureNonNull(namespace);
     }

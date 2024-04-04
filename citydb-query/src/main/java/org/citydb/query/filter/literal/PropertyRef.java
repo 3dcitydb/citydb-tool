@@ -23,7 +23,7 @@ package org.citydb.query.filter.literal;
 
 import org.citydb.database.schema.FeatureType;
 import org.citydb.model.common.Name;
-import org.citydb.model.common.Namespaces;
+import org.citydb.model.common.PrefixedName;
 import org.citydb.model.feature.FeatureTypeProvider;
 import org.citydb.query.filter.common.*;
 import org.citydb.query.filter.operation.BooleanExpression;
@@ -33,33 +33,30 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class PropertyRef implements BooleanExpression, GeometryExpression, NumericExpression, CharacterExpression {
-    private final String localName;
-    private final String namespace;
-    private final String prefix;
+    private final PrefixedName name;
     private Predicate filter;
     private PropertyRef parent;
     private PropertyRef child;
     private Sign sign;
 
-    private PropertyRef(String localName, String namespace, String prefix) {
-        this.localName = Objects.requireNonNull(localName, "The local name must not be null.");
-        this.namespace = namespace != null ? namespace : Namespaces.EMPTY_NAMESPACE;
-        this.prefix = prefix != null ? prefix : "";
+    private PropertyRef(PrefixedName name) {
+        this.name = Objects.requireNonNull(name, "The name must not be null.");
+    }
+
+    public static PropertyRef of(String name, String namespace) {
+        return new PropertyRef(PrefixedName.of(name, namespace));
     }
 
     public static PropertyRef of(String name) {
-        int index = name.indexOf(":");
-        return index > -1 ?
-                new PropertyRef(name.substring(index + 1), null, name.substring(0, index)) :
-                new PropertyRef(name, null, null);
-    }
-
-    public static PropertyRef of(String localName, String namespace) {
-        return new PropertyRef(localName, namespace, null);
+        return of(name, null);
     }
 
     public static PropertyRef of(Name name) {
-        return new PropertyRef(name.getLocalName(), name.getNamespace(), null);
+        return of(name.getLocalName(), name.getNamespace());
+    }
+
+    public static PropertyRef of(PrefixedName name) {
+        return new PropertyRef(name);
     }
 
     public static PropertyRef of(FeatureTypeProvider provider) {
@@ -70,16 +67,8 @@ public class PropertyRef implements BooleanExpression, GeometryExpression, Numer
         return of(featureType.getName());
     }
 
-    public String getLocalName() {
-        return localName;
-    }
-
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public String getPrefix() {
-        return prefix;
+    public PrefixedName getName() {
+        return name;
     }
 
     public Optional<Predicate> getFilter() {
@@ -142,12 +131,5 @@ public class PropertyRef implements BooleanExpression, GeometryExpression, Numer
     @Override
     public void accept(FilterVisitor visitor) {
         visitor.visit(this);
-    }
-
-    @Override
-    public String toString() {
-        return prefix.isEmpty() ?
-                localName :
-                prefix + ":" + localName;
     }
 }
