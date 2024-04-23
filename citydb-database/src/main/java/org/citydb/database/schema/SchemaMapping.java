@@ -23,9 +23,9 @@ package org.citydb.database.schema;
 
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
+import org.citydb.model.common.PrefixedName;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class SchemaMapping {
     private final Map<Integer, Namespace> namespacesById = new HashMap<>();
@@ -58,12 +58,20 @@ public class SchemaMapping {
         namespace.getAlias().ifPresent(alias -> namespacesByAlias.put(alias, namespace));
     }
 
+    public Collection<DataType> getDataTypes() {
+        return dataTypesById.values();
+    }
+
     public DataType getDataType(int id) {
         return dataTypesById.getOrDefault(id, DataType.UNDEFINED);
     }
 
     public DataType getDataType(Name name) {
         return dataTypesByName.getOrDefault(name, DataType.UNDEFINED);
+    }
+
+    public DataType getDataType(String localName, String namespace) {
+        return getDataType(Name.of(localName, namespace));
     }
 
     DataType getDataTypeByIdentifier(String identifier) {
@@ -76,6 +84,10 @@ public class SchemaMapping {
         dataTypesByIdentifier.put(dataType.getIdentifier(), dataType);
     }
 
+    public Collection<FeatureType> getFeatureTypes() {
+        return featureTypesById.values();
+    }
+
     public FeatureType getFeatureType(int id) {
         return featureTypesById.getOrDefault(id, FeatureType.UNDEFINED);
     }
@@ -84,9 +96,37 @@ public class SchemaMapping {
         return featureTypesByName.getOrDefault(name, FeatureType.UNDEFINED);
     }
 
+    public FeatureType getFeatureType(String localName, String namespace) {
+        return getFeatureType(Name.of(localName, namespace));
+    }
+
+    public FeatureType getFeatureType(PrefixedName name) {
+        if (name != null) {
+            return getFeatureType(name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
+                    Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI()) :
+                    name);
+        } else {
+            return FeatureType.UNDEFINED;
+        }
+    }
+
     void addFeatureType(FeatureType featureType) {
         featureTypesById.put(featureType.getId(), featureType);
         featureTypesByName.put(featureType.getName(), featureType);
+    }
+
+    public FeatureType getSuperType(Collection<FeatureType> featureTypes) {
+        if (featureTypes != null && !featureTypes.isEmpty()) {
+            Iterator<FeatureType> iterator = featureTypes.iterator();
+            List<FeatureType> superTypes = new ArrayList<>(iterator.next().getTypeHierarchy());
+            while (iterator.hasNext()) {
+                superTypes.retainAll(iterator.next().getTypeHierarchy());
+            }
+
+            return superTypes.get(0);
+        } else {
+            return FeatureType.UNDEFINED;
+        }
     }
 
     SchemaMapping build() throws SchemaException {

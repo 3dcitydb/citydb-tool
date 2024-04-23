@@ -26,19 +26,17 @@ import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class DataType {
     public static final DataType UNDEFINED = new DataType(1, "core:Undefined", Name.of("Undefined", Namespaces.CORE),
-            Table.PROPERTY, null, null, null, null, null);
+            Table.PROPERTY, false, null, null, null, null, null);
 
     private final int id;
     private final String identifier;
     private final Name name;
     private final Table table;
+    private final boolean isAbstract;
     private final Integer superTypeId;
     private final Map<Name, Property> properties;
     private final Value value;
@@ -46,12 +44,13 @@ public class DataType {
     private final JoinTable joinTable;
     private DataType superType;
 
-    DataType(int id, String identifier, Name name, Table table, Integer superTypeId, Map<Name, Property> properties,
-             Value value, Join join, JoinTable joinTable) {
+    DataType(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
+             Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
         this.id = id;
         this.identifier = identifier;
         this.name = name;
         this.table = table;
+        this.isAbstract = isAbstract;
         this.superTypeId = superTypeId;
         this.properties = properties;
         this.value = value;
@@ -59,7 +58,7 @@ public class DataType {
         this.joinTable = joinTable;
     }
 
-    static DataType of(int id, Name name, Integer superTypeId, JSONObject object) throws SchemaException {
+    static DataType of(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object) throws SchemaException {
         String identifier = object.getString("identifier");
         String tableName = object.getString("table");
         JSONArray propertiesArray = object.getJSONArray("properties");
@@ -96,7 +95,7 @@ public class DataType {
                 }
             }
 
-            return new DataType(id, identifier, name, table, superTypeId, properties,
+            return new DataType(id, identifier, name, table, isAbstract, superTypeId, properties,
                     valueObject != null ? Value.of(valueObject) : null,
                     joinObject != null ? Join.of(joinObject) : null,
                     joinTableObject != null ? JoinTable.of(joinTableObject) : null);
@@ -121,6 +120,10 @@ public class DataType {
         return table;
     }
 
+    public boolean isAbstract() {
+        return isAbstract;
+    }
+
     public Optional<DataType> getSuperType() {
         return Optional.ofNullable(superType);
     }
@@ -139,6 +142,16 @@ public class DataType {
 
     public Optional<JoinTable> getJoinTable() {
         return Optional.ofNullable(joinTable);
+    }
+
+    public List<DataType> getTypeHierarchy() {
+        DataType superType = this;
+        List<DataType> hierarchy = new ArrayList<>();
+        do {
+            hierarchy.add(superType);
+        } while ((superType = superType.getSuperType().orElse(null)) != null);
+
+        return hierarchy;
     }
 
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
@@ -165,5 +178,10 @@ public class DataType {
         } catch (SchemaException e) {
             throw new SchemaException("Failed to build data type (ID " + id + ").", e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return name.toString();
     }
 }

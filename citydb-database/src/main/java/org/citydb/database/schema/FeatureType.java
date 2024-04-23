@@ -26,38 +26,37 @@ import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class FeatureType {
     public static final FeatureType UNDEFINED = new FeatureType(1, Name.of("Undefined", Namespaces.CORE),
-            Table.FEATURE, false, null, null, null, null);
+            Table.FEATURE, false, false, null, null, null, null);
 
     private final int id;
     private final Name name;
     private final Table table;
-    private final boolean topLevel;
+    private final boolean isAbstract;
+    private final boolean isTopLevel;
     private final Integer superTypeId;
     private final Map<Name, Property> properties;
     private final Join join;
     private final JoinTable joinTable;
     private FeatureType superType;
 
-    FeatureType(int id, Name name, Table table, boolean topLevel, Integer superTypeId,
+    FeatureType(int id, Name name, Table table, boolean isAbstract, boolean isTopLevel, Integer superTypeId,
                 Map<Name, Property> properties, Join join, JoinTable joinTable) {
         this.id = id;
         this.name = name;
         this.table = table;
-        this.topLevel = topLevel;
+        this.isAbstract = isAbstract;
+        this.isTopLevel = isTopLevel;
         this.superTypeId = superTypeId;
         this.properties = properties;
         this.join = join;
         this.joinTable = joinTable;
     }
 
-    static FeatureType of(int id, Name name, boolean topLevel, Integer superTypeId, JSONObject object) throws SchemaException {
+    static FeatureType of(int id, Name name, boolean isAbstract, boolean isTopLevel, Integer superTypeId, JSONObject object) throws SchemaException {
         String tableName = object.getString("table");
         JSONArray propertiesArray = object.getJSONArray("properties");
         JSONObject joinObject = object.getJSONObject("join");
@@ -90,7 +89,7 @@ public class FeatureType {
                 }
             }
 
-            return new FeatureType(id, name, table, topLevel, superTypeId, properties,
+            return new FeatureType(id, name, table, isAbstract, isTopLevel, superTypeId, properties,
                     joinObject != null ? Join.of(joinObject) : null,
                     joinTableObject != null ? JoinTable.of(joinTableObject) : null);
         } catch (SchemaException e) {
@@ -110,8 +109,12 @@ public class FeatureType {
         return table;
     }
 
+    public boolean isAbstract() {
+        return isAbstract;
+    }
+
     public boolean isTopLevel() {
-        return topLevel;
+        return isTopLevel;
     }
 
     public Optional<FeatureType> getSuperType() {
@@ -128,6 +131,16 @@ public class FeatureType {
 
     public Optional<JoinTable> getJoinTable() {
         return Optional.ofNullable(joinTable);
+    }
+
+    public List<FeatureType> getTypeHierarchy() {
+        FeatureType superType = this;
+        List<FeatureType> hierarchy = new ArrayList<>();
+        do {
+            hierarchy.add(superType);
+        } while ((superType = superType.getSuperType().orElse(null)) != null);
+
+        return hierarchy;
     }
 
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
@@ -156,5 +169,10 @@ public class FeatureType {
         } catch (SchemaException e) {
             throw new SchemaException("Failed to build feature type (ID " + id + ").", e);
         }
+    }
+
+    @Override
+    public String toString() {
+        return name.toString();
     }
 }

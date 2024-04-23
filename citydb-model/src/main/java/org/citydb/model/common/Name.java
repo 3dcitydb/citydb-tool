@@ -64,4 +64,11 @@ public class Name implements Serializable {
             return localName.equals(other.localName) && namespace.equals(other.namespace);
         }
     }
+
+    @Override
+    public String toString() {
+        return namespace.equals(Namespaces.EMPTY_NAMESPACE) ?
+                localName :
+                "{" + namespace + "}" + localName;
+    }
 }

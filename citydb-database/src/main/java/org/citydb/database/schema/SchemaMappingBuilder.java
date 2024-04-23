@@ -66,7 +66,7 @@ public class SchemaMappingBuilder {
 
     private void buildDataTypes(SchemaMapping schemaMapping, Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery("select id, supertype_id, typename, namespace_id, schema " +
+             ResultSet rs = stmt.executeQuery("select id, supertype_id, typename, is_abstract, namespace_id, schema " +
                      "from " + adapter.getConnectionDetails().getSchema() + "." + Table.DATATYPE)) {
             while (rs.next()) {
                 int id = rs.getInt("id");
@@ -92,6 +92,7 @@ public class SchemaMappingBuilder {
                         if (object != null) {
                             schemaMapping.addDataType(DataType.of(id,
                                     Name.of(typeName, namespace.getURI()),
+                                    rs.getInt("is_abstract") != 0,
                                     superTypeId,
                                     object));
                         } else {
@@ -107,7 +108,7 @@ public class SchemaMappingBuilder {
 
     private void buildFeatureTypes(SchemaMapping schemaMapping, Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery("select id, superclass_id, classname, is_toplevel, " +
+             ResultSet rs = stmt.executeQuery("select id, superclass_id, classname, is_abstract, is_toplevel, " +
                      "namespace_id, schema " +
                      "from " + adapter.getConnectionDetails().getSchema() + "." + Table.OBJECTCLASS)) {
             while (rs.next()) {
@@ -134,6 +135,7 @@ public class SchemaMappingBuilder {
                         if (object != null) {
                             schemaMapping.addFeatureType(FeatureType.of(id,
                                     Name.of(className, namespace.getURI()),
+                                    rs.getInt("is_abstract") != 0,
                                     rs.getInt("is_toplevel") != 0,
                                     superTypeId,
                                     object));

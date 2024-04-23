@@ -21,7 +21,6 @@
 
 package org.citydb.model.common;
 
-import java.util.Objects;
 import java.util.Optional;
 
 public class PrefixedName extends Name {
@@ -48,14 +47,11 @@ public class PrefixedName extends Name {
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(super.hashCode(), prefix);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        return super.equals(obj)
-                && obj instanceof PrefixedName other
-                && Objects.equals(prefix, other.prefix);
+    public String toString() {
+        return prefix != null
+                && !prefix.isEmpty()
+                && getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
+                prefix + ":" + getLocalName() :
+                super.toString();
     }
 }
