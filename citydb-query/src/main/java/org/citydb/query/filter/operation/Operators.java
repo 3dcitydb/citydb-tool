@@ -108,7 +108,7 @@ public class Operators {
         return Between.of(operand, lowerBound, upperBound, true);
     }
 
-    public static In in(ScalarExpression operand, List<ScalarExpression> values) {
+    public static In in(ScalarExpression operand, List<? extends ScalarExpression> values) {
         return In.of(operand, values);
     }
 
@@ -116,7 +116,7 @@ public class Operators {
         return In.of(operand, values);
     }
 
-    public static In notIn(ScalarExpression operand, List<ScalarExpression> values) {
+    public static In notIn(ScalarExpression operand, List<? extends ScalarExpression> values) {
         return In.of(operand, values, true);
     }
 
@@ -180,7 +180,7 @@ public class Operators {
         return SpatialPredicate.of(leftOperand, SpatialOperator.BEYOND, rightOperand);
     }
 
-    public static BinaryBooleanPredicate and(List<BooleanExpression> operands) {
+    public static BinaryBooleanPredicate and(List<? extends BooleanExpression> operands) {
         return BinaryBooleanPredicate.of(BooleanOperator.AND, operands);
     }
 
@@ -188,7 +188,7 @@ public class Operators {
         return BinaryBooleanPredicate.of(BooleanOperator.AND, operands);
     }
 
-    public static BinaryBooleanPredicate or(List<BooleanExpression> operands) {
+    public static BinaryBooleanPredicate or(List<? extends BooleanExpression> operands) {
         return BinaryBooleanPredicate.of(BooleanOperator.OR, operands);
     }
 

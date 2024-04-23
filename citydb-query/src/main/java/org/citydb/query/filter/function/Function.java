@@ -32,19 +32,17 @@ public class Function implements BooleanExpression, CharacterExpression, Geometr
     private final List<Argument> arguments;
     private Sign sign;
 
-    private Function(FunctionName name, List<Argument> arguments) {
+    private Function(FunctionName name, List<? extends Argument> arguments) {
         this.name = Objects.requireNonNull(name, "The function name must not be null.");
-        this.arguments = Objects.requireNonNull(arguments, "The arguments list must not be null.");
+        this.arguments = new ArrayList<>(Objects.requireNonNull(arguments, "The arguments list must not be null."));
     }
 
-    public static Function of(FunctionName name, List<Argument> arguments) {
+    public static Function of(FunctionName name, List<? extends Argument> arguments) {
         return new Function(name, arguments);
     }
 
     public static Function of(FunctionName name, Argument... arguments) {
-        return new Function(name, arguments != null ?
-                new ArrayList<>(Arrays.asList(arguments)) :
-                null);
+        return new Function(name, arguments != null ? Arrays.asList(arguments) : null);
     }
 
     public static Function noArg(FunctionName name) {
@@ -63,7 +61,7 @@ public class Function implements BooleanExpression, CharacterExpression, Geometr
         return arguments;
     }
 
-    public Function add(List<Argument> arguments) {
+    public Function add(List<? extends Argument> arguments) {
         if (arguments != null && !arguments.isEmpty()) {
             arguments.stream()
                     .filter(Objects::nonNull)

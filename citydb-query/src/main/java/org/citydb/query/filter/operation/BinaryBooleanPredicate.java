@@ -33,9 +33,9 @@ public class BinaryBooleanPredicate implements Predicate {
     private final BooleanOperator operator;
     private final List<BooleanExpression> operands;
 
-    private BinaryBooleanPredicate(BooleanOperator operator, List<BooleanExpression> operands) {
+    private BinaryBooleanPredicate(BooleanOperator operator, List<? extends BooleanExpression> operands) {
         this.operator = Objects.requireNonNull(operator, "The boolean operator must not be null.");
-        this.operands = Objects.requireNonNull(operands, "The operands list must not be null.");
+        this.operands = new ArrayList<>(Objects.requireNonNull(operands, "The operands list must not be null."));
 
         if (!BooleanOperator.BINARY_OPERATORS.contains(operator)) {
             throw new IllegalArgumentException("The boolean operator '" + operator + "' is not binary.");
@@ -44,14 +44,12 @@ public class BinaryBooleanPredicate implements Predicate {
         }
     }
 
-    public static BinaryBooleanPredicate of(BooleanOperator operator, List<BooleanExpression> operands) {
+    public static BinaryBooleanPredicate of(BooleanOperator operator, List<? extends BooleanExpression> operands) {
         return new BinaryBooleanPredicate(operator, operands);
     }
 
     public static BinaryBooleanPredicate of(BooleanOperator operator, BooleanExpression... operands) {
-        return new BinaryBooleanPredicate(operator, operands != null ?
-                new ArrayList<>(Arrays.asList(operands)) :
-                null);
+        return new BinaryBooleanPredicate(operator, operands != null ? Arrays.asList(operands) : null);
     }
 
     public static BinaryBooleanPredicate of(BooleanExpression leftOperand, BooleanOperator operator, BooleanExpression rightOperand) {
@@ -69,7 +67,7 @@ public class BinaryBooleanPredicate implements Predicate {
         return operands;
     }
 
-    public BinaryBooleanPredicate add(List<BooleanExpression> operands) {
+    public BinaryBooleanPredicate add(List<? extends BooleanExpression> operands) {
         if (operands != null && !operands.isEmpty()) {
             operands.stream()
                     .filter(Objects::nonNull)

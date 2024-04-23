@@ -35,9 +35,9 @@ public class In implements ComparisonPredicate {
     private final List<ScalarExpression> values;
     private ComparisonOperator operator;
 
-    private In(ScalarExpression operand, List<ScalarExpression> values, boolean negate) {
+    private In(ScalarExpression operand, List<? extends ScalarExpression> values, boolean negate) {
         this.operand = operand;
-        this.values = Objects.requireNonNull(values, "The values list must not be null.");
+        this.values = new ArrayList<>(Objects.requireNonNull(values, "The values list must not be null."));
         this.operator = negate ? ComparisonOperator.IN.negate() : ComparisonOperator.IN;
 
         if (values.isEmpty()) {
@@ -45,16 +45,16 @@ public class In implements ComparisonPredicate {
         }
     }
 
-    public static In of(ScalarExpression operand, List<ScalarExpression> values, boolean negate) {
+    public static In of(ScalarExpression operand, List<? extends ScalarExpression> values, boolean negate) {
         return new In(operand, values, negate);
     }
 
-    public static In of(ScalarExpression operand, List<ScalarExpression> values) {
+    public static In of(ScalarExpression operand, List<? extends ScalarExpression> values) {
         return new In(operand, values, false);
     }
 
     public static In of(ScalarExpression operand, ScalarExpression... values) {
-        return new In(operand, values != null ? new ArrayList<>(Arrays.asList(values)) : null, false);
+        return new In(operand, values != null ? Arrays.asList(values) : null, false);
     }
 
     public ScalarExpression getOperand() {
@@ -69,7 +69,7 @@ public class In implements ComparisonPredicate {
         return operator;
     }
 
-    public In add(List<ScalarExpression> values) {
+    public In add(List<? extends ScalarExpression> values) {
         if (values != null && !values.isEmpty()) {
             values.stream()
                     .filter(Objects::nonNull)
