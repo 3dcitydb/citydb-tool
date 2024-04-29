@@ -154,6 +154,17 @@ public class DataType {
         return hierarchy;
     }
 
+    public boolean isSubTypeOf(DataType dataType) {
+        DataType superType = this;
+        while ((superType = superType.getSuperType().orElse(null)) != null) {
+            if (superType == dataType) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
         if (superTypeId != null) {
             superType = schemaMapping.getDataType(superTypeId);

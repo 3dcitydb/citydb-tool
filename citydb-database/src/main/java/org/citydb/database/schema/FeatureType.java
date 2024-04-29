@@ -143,6 +143,17 @@ public class FeatureType {
         return hierarchy;
     }
 
+    public boolean isSubTypeOf(FeatureType featureType) {
+        FeatureType superType = this;
+        while ((superType = superType.getSuperType().orElse(null)) != null) {
+            if (superType == featureType) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
         if (superTypeId != null) {
             superType = schemaMapping.getFeatureType(superTypeId);
