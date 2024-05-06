@@ -63,6 +63,8 @@ subprojects {
             exports('org.apache.tomcat.jdbc.pool')
         }
         automaticModule("javax.inject-1.jar", "javax.inject")
+        module('swagger-ui-5.13.0.jar', 'org.webjars', '5.13.0') {
+        }
     }
 
     idea {
