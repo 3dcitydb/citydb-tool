@@ -18,11 +18,9 @@ module org.citydb.web {
     exports org.citydb.web.config;
     exports org.citydb.web.controller;
     exports org.citydb.web.model;
-    exports org.citydb.web.service;
 
     opens org.citydb.web to spring.core;
     opens org.citydb.web.config to spring.core;
     opens org.citydb.web.controller to spring.core;
     opens org.citydb.web.model to spring.core;
-    opens org.citydb.web.service to spring.core;
 }
