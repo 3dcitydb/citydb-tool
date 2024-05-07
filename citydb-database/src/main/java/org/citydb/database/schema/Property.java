@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Property extends SchemaElement {
-    private final Table table;
     private final Integer parentIndex;
     private final Value value;
     private final String typeIdentifier;
@@ -41,10 +40,9 @@ public class Property extends SchemaElement {
     private Map<Name, Property> properties;
     private Join join;
 
-    Property(Name name, Table table, Integer parentIndex, Value value, String typeIdentifier, String targetIdentifier,
+    Property(Name name, Integer parentIndex, Value value, String typeIdentifier, String targetIdentifier,
              Join join, JoinTable joinTable) {
         super(name);
-        this.table = table;
         this.parentIndex = parentIndex;
         this.value = value;
         this.typeIdentifier = typeIdentifier;
@@ -56,7 +54,6 @@ public class Property extends SchemaElement {
     static Property of(JSONObject object) throws SchemaException {
         String propertyName = object.getString("name");
         String namespace = object.getString("namespace");
-        String tableName = object.getString("table");
         Integer parentIndex = object.getInteger("parent");
         JSONObject valueObject = object.getJSONObject("value");
         String typeIdentifier = object.getString("type");
@@ -68,8 +65,6 @@ public class Property extends SchemaElement {
             throw new SchemaException("No name defined for the property.");
         } else if (namespace == null) {
             throw new SchemaException("No namespace defined for the property.");
-        } else if (tableName != null && joinObject == null && joinTableObject == null) {
-            throw new SchemaException("No join or join table defined for the property table " + tableName + ".");
         } else if (valueObject != null && typeIdentifier != null) {
             throw new SchemaException("A property must not define both a value and a type.");
         } else if ("core:FeatureProperty".equals(typeIdentifier) && targetIdentifier == null) {
@@ -78,20 +73,11 @@ public class Property extends SchemaElement {
             throw new SchemaException("A property must not define both a join and a join table.");
         }
 
-        Table table = Table.of(tableName);
-        if (tableName != null && table == null) {
-            throw new SchemaException("The property table " + tableName + " is not supported.");
-        }
-
-        return new Property(Name.of(propertyName, namespace), table, parentIndex,
+        return new Property(Name.of(propertyName, namespace), parentIndex,
                 valueObject != null ? Value.of(valueObject) : null,
                 typeIdentifier, targetIdentifier,
                 joinObject != null ? Join.of(joinObject) : null,
                 joinTableObject != null ? JoinTable.of(joinTableObject) : null);
-    }
-
-    public Optional<Table> getTable() {
-        return Optional.ofNullable(table);
     }
 
     Integer getParentIndex() {
