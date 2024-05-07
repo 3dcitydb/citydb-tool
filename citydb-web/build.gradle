@@ -4,6 +4,7 @@ plugins {
 }
 
 dependencies {
+    implementation project(':citydb-cli')
     implementation project(':citydb-config')
     implementation project(':citydb-io')
     implementation project(':citydb-io-citygml')
@@ -21,5 +22,13 @@ dependencies {
     }
     testImplementation ('org.springframework.boot:spring-boot-starter-test')  {
         exclude group: 'org.slf4j'
+    }
+}
+
+sourceSets {
+    main {
+        resources {
+            srcDirs "src/main/resources"
+        }
     }
 }

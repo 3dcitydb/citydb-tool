@@ -15,11 +15,14 @@ module org.citydb.web {
     requires spring.boot.autoconfigure;
     requires spring.boot;
     requires spring.core;
+    requires org.apache.logging.log4j;
+    requires org.citydb.cli;
 
     exports org.citydb.web;
     exports org.citydb.web.config;
     exports org.citydb.web.controller;
     exports org.citydb.web.schema;
+    exports org.citydb.web.util;
 
     opens org.citydb.web to spring.core;
     opens org.citydb.web.config to spring.core;

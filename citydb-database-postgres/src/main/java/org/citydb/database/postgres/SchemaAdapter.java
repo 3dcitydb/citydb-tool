@@ -163,7 +163,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     private String readFeatureHierarchyQuery() throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
-                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {
+                SchemaAdapter.class.getClassLoader().getResourceAsStream("org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
                     .replace("%SCHEMA%", adapter.getConnectionDetails().getSchema());

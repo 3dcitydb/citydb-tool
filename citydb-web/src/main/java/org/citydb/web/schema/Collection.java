@@ -11,6 +11,7 @@ public class Collection {
     private String title;
     private String description;
     private List<Link> links;
+    private Extent extent;
     private String itemType;
     @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
     private List<String> crs;
@@ -62,6 +63,15 @@ public class Collection {
 
     public Collection setLinks(List<Link> links) {
         this.links = links;
+        return this;
+    }
+
+    public Extent getExtent() {
+        return extent;
+    }
+
+    public Collection setExtent(Extent extent) {
+        this.extent = extent;
         return this;
     }
 
