@@ -30,7 +30,7 @@ INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCH
 VALUES (9, null, 'AppearanceProperty', 0, 1, '{"identifier":"core:AppearanceProperty","table":"property","join":{"table":"appearance","fromColumn":"val_appearance_id","toColumn":"id"}}');
 
 INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCHEMA)
-VALUES (10, null, 'FeatureProperty', 0, 1, '{"identifier":"core:FeatureProperty","table":"property","join":{"table":"feature","fromColumn":"val_feature_id","toColumn":"id"}}');
+VALUES (10, null, 'FeatureProperty', 0, 1, '{"identifier":"core:FeatureProperty","table":"property","join":{"table":"feature","fromColumn":"val_feature_id","toColumn":"id","conditions":[{"column":"objectclass_id","value":"@target.objectclass_id@","type":"integer"}]}}');
 
 INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCHEMA)
 VALUES (11, null, 'GeometryProperty', 0, 1, '{"identifier":"core:GeometryProperty","table":"property","properties":[{"name":"lod","namespace":"http://3dcitydb.org/3dcitydb/core/5.0","value":{"column":"val_lod","type":"string"}}],"join":{"table":"geometry_data","fromColumn":"val_geometry_id","toColumn":"id"}}');
