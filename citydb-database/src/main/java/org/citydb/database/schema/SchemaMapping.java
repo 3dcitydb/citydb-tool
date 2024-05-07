@@ -36,6 +36,7 @@ public class SchemaMapping {
     private final Map<String, DataType> dataTypesByIdentifier = new HashMap<>();
     private final Map<Integer, FeatureType> featureTypesById = new HashMap<>();
     private final Map<Name, FeatureType> featureTypesByName = new HashMap<>();
+    private final Map<String, FeatureType> featureTypesByIdentifier = new HashMap<>();
 
     SchemaMapping() {
     }
@@ -50,6 +51,12 @@ public class SchemaMapping {
 
     public Namespace getNamespaceByAlias(String alias) {
         return namespacesByAlias.getOrDefault(alias, Namespace.UNDEFINED);
+    }
+
+    public Name resolvePrefixedName(PrefixedName name) {
+        return name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
+                Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI()) :
+                name;
     }
 
     void addNamespace(Namespace namespace) {
@@ -100,19 +107,20 @@ public class SchemaMapping {
         return getFeatureType(Name.of(localName, namespace));
     }
 
+    FeatureType getFeatureTypeByIdentifier(String identifier) {
+        return featureTypesByIdentifier.getOrDefault(identifier, FeatureType.UNDEFINED);
+    }
+
     public FeatureType getFeatureType(PrefixedName name) {
-        if (name != null) {
-            return getFeatureType(name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
-                    Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI()) :
-                    name);
-        } else {
-            return FeatureType.UNDEFINED;
-        }
+        return name != null ?
+                getFeatureType(resolvePrefixedName(name)) :
+                FeatureType.UNDEFINED;
     }
 
     void addFeatureType(FeatureType featureType) {
         featureTypesById.put(featureType.getId(), featureType);
         featureTypesByName.put(featureType.getName(), featureType);
+        featureTypesByIdentifier.put(featureType.getIdentifier(), featureType);
     }
 
     public FeatureType getSuperType(Collection<FeatureType> featureTypes) {
@@ -139,6 +147,7 @@ public class SchemaMapping {
         }
 
         dataTypesByIdentifier.clear();
+        featureTypesByIdentifier.clear();
         return this;
     }
 }

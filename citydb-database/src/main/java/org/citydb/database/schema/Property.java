@@ -29,24 +29,26 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class Property {
-    private final Name name;
+public class Property extends SchemaElement {
     private final Table table;
     private final Integer parentIndex;
-    private final String typeIdentifier;
     private final Value value;
+    private final String typeIdentifier;
+    private final String targetIdentifier;
     private final JoinTable joinTable;
     private DataType type;
+    private FeatureType targetFeature;
     private Map<Name, Property> properties;
     private Join join;
 
-    Property(Name name, Table table, Integer parentIndex, String typeIdentifier, Value value, Join join,
-             JoinTable joinTable) {
-        this.name = name;
+    Property(Name name, Table table, Integer parentIndex, Value value, String typeIdentifier, String targetIdentifier,
+             Join join, JoinTable joinTable) {
+        super(name);
         this.table = table;
         this.parentIndex = parentIndex;
-        this.typeIdentifier = typeIdentifier;
         this.value = value;
+        this.typeIdentifier = typeIdentifier;
+        this.targetIdentifier = targetIdentifier;
         this.join = join;
         this.joinTable = joinTable;
     }
@@ -58,6 +60,7 @@ public class Property {
         Integer parentIndex = object.getInteger("parent");
         JSONObject valueObject = object.getJSONObject("value");
         String typeIdentifier = object.getString("type");
+        String targetIdentifier = object.getString("target");
         JSONObject joinObject = object.getJSONObject("join");
         JSONObject joinTableObject = object.getJSONObject("joinTable");
 
@@ -69,6 +72,8 @@ public class Property {
             throw new SchemaException("No join or join table defined for the property table " + tableName + ".");
         } else if (valueObject != null && typeIdentifier != null) {
             throw new SchemaException("A property must not define both a value and a type.");
+        } else if ("core:FeatureProperty".equals(typeIdentifier) && targetIdentifier == null) {
+            throw new SchemaException("A feature property must define a target feature.");
         } else if (joinObject != null && joinTableObject != null) {
             throw new SchemaException("A property must not define both a join and a join table.");
         }
@@ -78,14 +83,11 @@ public class Property {
             throw new SchemaException("The property table " + tableName + " is not supported.");
         }
 
-        return new Property(Name.of(propertyName, namespace), table, parentIndex, typeIdentifier,
+        return new Property(Name.of(propertyName, namespace), table, parentIndex,
                 valueObject != null ? Value.of(valueObject) : null,
+                typeIdentifier, targetIdentifier,
                 joinObject != null ? Join.of(joinObject) : null,
                 joinTableObject != null ? JoinTable.of(joinTableObject) : null);
-    }
-
-    public Name getName() {
-        return name;
     }
 
     public Optional<Table> getTable() {
@@ -100,8 +102,20 @@ public class Property {
         return Optional.ofNullable(value);
     }
 
+    public boolean hasType(Name name) {
+        return type != null && type.getName().equals(name);
+    }
+
+    public boolean hasType(DataType type) {
+        return this.type == type;
+    }
+
     public Optional<DataType> getType() {
         return Optional.ofNullable(type);
+    }
+
+    public Optional<FeatureType> getTargetFeature() {
+        return Optional.ofNullable(targetFeature);
     }
 
     public Map<Name, Property> getProperties() {
@@ -146,6 +160,14 @@ public class Property {
             type = schemaMapping.getDataTypeByIdentifier(typeIdentifier);
             if (type == DataType.UNDEFINED) {
                 throw new SchemaException("The property references an undefined type " + typeIdentifier + ".");
+            }
+
+            if (targetIdentifier != null) {
+                targetFeature = schemaMapping.getFeatureTypeByIdentifier(targetIdentifier);
+                if (targetFeature == FeatureType.UNDEFINED) {
+                    throw new SchemaException("The property references an undefined target feature " +
+                            targetIdentifier + ".");
+                }
             }
         }
     }

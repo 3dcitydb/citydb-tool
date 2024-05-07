@@ -26,36 +26,19 @@ import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
-import java.util.*;
+import java.util.Map;
+import java.util.Optional;
 
-public class DataType {
+public class DataType extends Type<DataType> {
     public static final DataType UNDEFINED = new DataType(1, "core:Undefined", Name.of("Undefined", Namespaces.CORE),
             Table.PROPERTY, false, null, null, null, null, null);
 
-    private final int id;
-    private final String identifier;
-    private final Name name;
-    private final Table table;
-    private final boolean isAbstract;
-    private final Integer superTypeId;
-    private final Map<Name, Property> properties;
     private final Value value;
-    private final Join join;
-    private final JoinTable joinTable;
-    private DataType superType;
 
     DataType(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
              Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
-        this.id = id;
-        this.identifier = identifier;
-        this.name = name;
-        this.table = table;
-        this.isAbstract = isAbstract;
-        this.superTypeId = superTypeId;
-        this.properties = properties;
+        super(id, identifier, name, table, isAbstract, superTypeId, properties, join, joinTable);
         this.value = value;
-        this.join = join;
-        this.joinTable = joinTable;
     }
 
     static DataType of(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object) throws SchemaException {
@@ -80,22 +63,8 @@ public class DataType {
         }
 
         try {
-            Map<Name, Property> properties = null;
-            if (propertiesArray != null && !propertiesArray.isEmpty()) {
-                properties = new LinkedHashMap<>();
-                for (Object item : propertiesArray) {
-                    if (item instanceof JSONObject propertyObject) {
-                        Property property = Property.of(propertyObject);
-                        properties.put(property.getName(), property);
-                    }
-                }
-
-                if (properties.size() != propertiesArray.size()) {
-                    throw new SchemaException("The properties array contains invalid properties.");
-                }
-            }
-
-            return new DataType(id, identifier, name, table, isAbstract, superTypeId, properties,
+            return new DataType(id, identifier, name, table, isAbstract, superTypeId,
+                    propertiesArray != null ? Type.buildProperties(propertiesArray) : null,
                     valueObject != null ? Value.of(valueObject) : null,
                     joinObject != null ? Join.of(joinObject) : null,
                     joinTableObject != null ? JoinTable.of(joinTableObject) : null);
@@ -104,65 +73,8 @@ public class DataType {
         }
     }
 
-    public int getId() {
-        return id;
-    }
-
-    String getIdentifier() {
-        return identifier;
-    }
-
-    public Name getName() {
-        return name;
-    }
-
-    public Table getTable() {
-        return table;
-    }
-
-    public boolean isAbstract() {
-        return isAbstract;
-    }
-
-    public Optional<DataType> getSuperType() {
-        return Optional.ofNullable(superType);
-    }
-
     public Optional<Value> getValue() {
         return Optional.ofNullable(value);
-    }
-
-    public Map<Name, Property> getProperties() {
-        return properties != null ? properties : Collections.emptyMap();
-    }
-
-    public Optional<Join> getJoin() {
-        return Optional.ofNullable(join);
-    }
-
-    public Optional<JoinTable> getJoinTable() {
-        return Optional.ofNullable(joinTable);
-    }
-
-    public List<DataType> getTypeHierarchy() {
-        DataType superType = this;
-        List<DataType> hierarchy = new ArrayList<>();
-        do {
-            hierarchy.add(superType);
-        } while ((superType = superType.getSuperType().orElse(null)) != null);
-
-        return hierarchy;
-    }
-
-    public boolean isSubTypeOf(DataType dataType) {
-        DataType superType = this;
-        while ((superType = superType.getSuperType().orElse(null)) != null) {
-            if (superType == dataType) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
@@ -192,7 +104,7 @@ public class DataType {
     }
 
     @Override
-    public String toString() {
-        return name.toString();
+    DataType self() {
+        return this;
     }
 }

@@ -30,7 +30,6 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class IndexHelper {
     public static final List<Index> DEFAULT_INDEXES = List.of(
@@ -52,10 +51,10 @@ public class IndexHelper {
 
     public static final List<Index> DEFAULT_NORMAL_INDEXES = DEFAULT_INDEXES.stream()
             .filter(index -> index.getType() == Index.Type.NORMAL)
-            .collect(Collectors.toList());
+            .toList();
     public static final List<Index> DEFAULT_SPATIAL_INDEXES = DEFAULT_INDEXES.stream()
             .filter(index -> index.getType() == Index.Type.SPATIAL)
-            .collect(Collectors.toList());
+            .toList();
 
     public enum Status {
         ON,
