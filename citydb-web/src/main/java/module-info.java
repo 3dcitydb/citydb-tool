@@ -6,6 +6,8 @@ module org.citydb.web {
     requires org.citydb.logging;
     requires org.citydb.database;
     requires org.citydb.operation;
+    requires io.swagger.v3.core;
+    requires io.swagger.v3.oas.annotations;
     requires io.swagger.v3.oas.models;
     requires spring.context;
     requires spring.beans;
@@ -17,10 +19,10 @@ module org.citydb.web {
     exports org.citydb.web;
     exports org.citydb.web.config;
     exports org.citydb.web.controller;
-    exports org.citydb.web.model;
+    exports org.citydb.web.schema;
 
     opens org.citydb.web to spring.core;
     opens org.citydb.web.config to spring.core;
     opens org.citydb.web.controller to spring.core;
-    opens org.citydb.web.model to spring.core;
+    opens org.citydb.web.schema to spring.core;
 }
