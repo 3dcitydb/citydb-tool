@@ -2,14 +2,20 @@
 # Shell script to create an instance of the 3D City Database
 # on PostgreSQL/PostGIS
 
-# read database connection details 
-source connection-details.sh
+# Get the current directory path of this script file
+CURRENT_DIR="$( cd "$( dirname "$0" )" && pwd )"
+if [ $# -ne 0 ]; then
+  source "$1"
+else
+  if [ -f connection-details.sh ]; then
+	  source connection-details.sh
+  else
+	  source "$CURRENT_DIR/connection-details.sh"
+  fi
+fi
 
-# add PGBIN to PATH
+# Add PGBIN to PATH
 export PATH="$PGBIN:$PATH"
-
-# cd to path of the shell script
-cd "$( cd "$( dirname "$0" )" && pwd )" > /dev/null
 
 # Welcome message
 echo ' _______   ___ _ _        ___  ___ '
@@ -36,9 +42,6 @@ echo '   Please file an issue here:'
 echo '   https://github.com/3dcitydb/3dcitydb/issues'
 echo
 echo '######################################################################################'
-
-# cd to path of the SQL scripts
-cd ../../sql-scripts
 
 # Prompt for SRID -------------------------------------------------------------
 re='^[0-9]+$'
@@ -83,10 +86,28 @@ echo 'Please enter the corresponding SRS name to be used in exports.'
 read -p "(default SRS_NAME=$SRS_NAME): " var
 SRS_NAME=${var:-$SRS_NAME}
 
+# Prompt for CHANGELOG ---------------------------------------------------------
+while [ 1 ]; do
+  echo
+  echo "Shall the changelog extension be created (yes/no)?"
+  read -p "(default CHANGELOG=no): " CHANGELOG
+  CHANGELOG=${CHANGELOG:-no}
+
+  # to lower case
+  CHANGELOG=$(echo "$CHANGELOG" | awk '{print tolower($0)}')
+
+  if [ "$CHANGELOG" = "yes" ] || [ "$CHANGELOG" = "no" ] ; then
+    break;
+  else
+    echo
+    echo "Illegal input! Enter yes or no."
+  fi
+done
+
 # Run create-db.sql to create the 3D City Database instance -------------------
 echo
 echo "Connecting to \"$PGUSER@$PGHOST:$PGPORT/$CITYDB\" ..."
-psql -d "$CITYDB" -f "create-db.sql" -v srid="$SRID" -v srs_name="$SRS_NAME"
+psql -d "$CITYDB" -f "$CURRENT_DIR/../../sql-scripts/create-db.sql" -v srid="$SRID" -v srs_name="$SRS_NAME" -v changelog="$CHANGELOG"
 
 echo
 read -rsn1 -p 'Press ENTER to quit.'

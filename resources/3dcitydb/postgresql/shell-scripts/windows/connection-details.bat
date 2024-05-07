@@ -1,7 +1,7 @@
 :: Provide your database details here -----------------------------------------
-set PGBIN=path_to_psql
-set PGHOST=your_host_address
+set PGBIN=C:\Program Files\PostgreSQL\16\bin
+set PGHOST=localhost
 set PGPORT=5432
-set CITYDB=your_database
-set PGUSER=your_username
+set CITYDB=devel-v5
+set PGUSER=citydb
 ::-----------------------------------------------------------------------------
