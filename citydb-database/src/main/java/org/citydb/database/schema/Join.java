@@ -21,25 +21,36 @@
 
 package org.citydb.database.schema;
 
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 public class Join {
     private final Table table;
     private final String fromColumn;
     private final String toColumn;
+    private final List<Condition> conditions;
 
-    Join(Table table, String fromColumn, String toColumn) {
+    Join(Table table, String fromColumn, String toColumn, List<Condition> conditions) {
         this.table = table;
         this.fromColumn = fromColumn;
         this.toColumn = toColumn;
+        this.conditions = conditions;
+    }
+
+    Join(Table table, String fromColumn, String toColumn) {
+        this(table, fromColumn, toColumn, null);
     }
 
     static Join of(JSONObject object) throws SchemaException {
         String tableName = object.getString("table");
         String fromColumn = object.getString("fromColumn");
         String toColumn = object.getString("toColumn");
+        JSONArray conditionsArray = object.getJSONArray("conditions");
 
         if (tableName == null) {
             throw new SchemaException("No table defined for the join.");
@@ -54,7 +65,21 @@ public class Join {
             throw new SchemaException("The join target " + tableName + " is not supported.");
         }
 
-        return new Join(table, fromColumn.toLowerCase(Locale.ROOT), toColumn.toLowerCase(Locale.ROOT));
+        List<Condition> conditions = null;
+        if (conditionsArray != null && !conditionsArray.isEmpty()) {
+            conditions = new ArrayList<>();
+            for (Object item : conditionsArray) {
+                if (item instanceof JSONObject conditionObject) {
+                    conditions.add(Condition.of(conditionObject));
+                }
+            }
+
+            if (conditions.size() != conditionsArray.size()) {
+                throw new SchemaException("The conditions array contains invalid conditions.");
+            }
+        }
+
+        return new Join(table, fromColumn.toLowerCase(Locale.ROOT), toColumn.toLowerCase(Locale.ROOT), conditions);
     }
 
     public Table getTable() {
@@ -67,5 +92,9 @@ public class Join {
 
     public String getToColumn() {
         return toColumn;
+    }
+
+    public List<Condition> getConditions() {
+        return conditions != null ? conditions : Collections.emptyList();
     }
 }
