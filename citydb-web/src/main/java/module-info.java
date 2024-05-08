@@ -28,4 +28,6 @@ module org.citydb.web {
     opens org.citydb.web.config to spring.core;
     opens org.citydb.web.controller to spring.core;
     opens org.citydb.web.schema to spring.core;
+    exports org.citydb.web.listener;
+    opens org.citydb.web.listener to spring.core;
 }
