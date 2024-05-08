@@ -6,13 +6,11 @@ import org.citydb.logging.LoggerManager;
 import org.citydb.web.util.DatabaseConnector;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
 
 @Component
-@Order(1)
 public class ServiceInitializer implements ApplicationListener<ApplicationReadyEvent> {
     private final Logger logger = LoggerManager.getInstance().getLogger(ServiceInitializer.class);
 
