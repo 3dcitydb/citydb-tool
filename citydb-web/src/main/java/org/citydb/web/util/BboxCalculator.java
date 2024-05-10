@@ -2,6 +2,7 @@ package org.citydb.web.util;
 
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
+import org.citydb.database.geometry.WKTWriter;
 import org.citydb.model.feature.FeatureType;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
@@ -18,11 +19,28 @@ import java.util.Collections;
 import java.util.List;
 
 public class BboxCalculator {
-    private final DatabaseAdapter adapter = DatabaseConnector.getInstance().getDatabaseManager().getAdapter();
+    private final DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
 
     public BboxCalculator() {}
 
-    public Extent calcBoundingBox(FeatureType featureType) throws SQLException {
+    public Extent getExtent(FeatureType featureType) throws SQLException {
+        Envelope envelope = getEnvelope(featureType);
+        if (envelope != null) {
+            return Extent.of(ExtentSpatial.of(Collections.singletonList(
+                    Bbox.of(List.of(
+                            BigDecimal.valueOf(envelope.getLowerCorner().getX()),
+                            BigDecimal.valueOf(envelope.getLowerCorner().getY()),
+                            BigDecimal.valueOf(envelope.getUpperCorner().getX()),
+                            BigDecimal.valueOf(envelope.getUpperCorner().getY()))
+                    )
+            )));
+        }
+
+        return null;
+    }
+
+    public Envelope getEnvelope(FeatureType featureType) throws SQLException {
+        DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
         try {
             String schema = adapter.getConnectionDetails().getSchema();
             String query = "select ST_3DExtent(envelope)::geometry from " + schema + ".feature " +
@@ -30,7 +48,7 @@ public class BboxCalculator {
 
             try (Connection connection = adapter.getPool().getConnection();
                  PreparedStatement psQuery = connection.prepareStatement(query)) {
-                 psQuery.setInt(1, adapter.getSchemaAdapter().getSchemaMapping()
+                psQuery.setInt(1, adapter.getSchemaAdapter().getSchemaMapping()
                         .getFeatureType(featureType.getName()).getId());
                 try (ResultSet rs = psQuery.executeQuery()) {
                     if (rs.next()) {
@@ -39,17 +57,7 @@ public class BboxCalculator {
                             Geometry<?> extentGeometry = adapter.getGeometryAdapter().getGeometry(extentObj);
                             Geometry<?> wgs84Extent = transform(extentGeometry, connection);
                             if (wgs84Extent != null) {
-                                Envelope envelope = wgs84Extent.getEnvelope();
-                                if (envelope != null) {
-                                    return Extent.of(ExtentSpatial.of(Collections.singletonList(
-                                            Bbox.of(List.of(
-                                                    BigDecimal.valueOf(envelope.getLowerCorner().getX()),
-                                                    BigDecimal.valueOf(envelope.getLowerCorner().getY()),
-                                                    BigDecimal.valueOf(envelope.getUpperCorner().getX()),
-                                                    BigDecimal.valueOf(envelope.getUpperCorner().getY()))
-                                            )
-                                    )));
-                                }
+                                return wgs84Extent.getEnvelope();
                             }
                         }
                     }
@@ -63,6 +71,7 @@ public class BboxCalculator {
     }
 
     private Geometry<?> transform(Geometry<?> geometry, Connection connection) throws SQLException, GeometryException {
+        DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
         try (PreparedStatement psQuery = connection.prepareStatement("select ST_Transform(?, 4326)")) {
             Object unconverted = adapter.getGeometryAdapter().getGeometry(geometry);
             psQuery.setObject(1, unconverted, adapter.getGeometryAdapter().getGeometrySQLType());

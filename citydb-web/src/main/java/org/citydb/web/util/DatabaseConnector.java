@@ -6,14 +6,14 @@ import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.logging.LoggerManager;
-import org.citydb.web.operation.GetCollectionsHandler;
+import org.citydb.web.operation.RequestHandler;
 
 import java.sql.SQLException;
 
 public class DatabaseConnector {
     private static final DatabaseConnector instance = new DatabaseConnector();
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
-    private final Logger logger = LoggerManager.getInstance().getLogger(GetCollectionsHandler.class);
+    private final Logger logger = LoggerManager.getInstance().getLogger(RequestHandler.class);
 
     private DatabaseConnector() {
     }
