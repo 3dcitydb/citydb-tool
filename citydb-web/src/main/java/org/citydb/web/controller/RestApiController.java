@@ -2,6 +2,7 @@ package org.citydb.web.controller;
 
 import org.citydb.model.feature.FeatureCollection;
 import org.citydb.model.feature.FeatureType;
+import org.citydb.web.management.VersionInfo;
 import org.citydb.web.operation.RequestHandler;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Extent;
@@ -40,13 +41,18 @@ public class RestApiController {
     }
 
     @GetMapping("/collections/{collectionId}/items")
-    public ResponseEntity<List<FeatureCollection>> getCollectionFeatures(@PathVariable("collectionId") String collectionId) {
+    public ResponseEntity<FeatureCollection> getCollectionFeatures(@PathVariable("collectionId") String collectionId) {
         FeatureCollection featureCollection;
         try {
             featureCollection = requestHandler.getFeatureCollection(FeatureType.BUILDING);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return new ResponseEntity<>(List.of(featureCollection), HttpStatus.OK);
+        return new ResponseEntity<>(featureCollection, HttpStatus.OK);
+    }
+
+    @GetMapping("/version")
+    public ResponseEntity<VersionInfo> getVersion() {
+        return new ResponseEntity<>(VersionInfo.getInstance(), HttpStatus.OK);
     }
 }

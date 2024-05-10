@@ -23,11 +23,12 @@ module org.citydb.web {
     exports org.citydb.web.controller;
     exports org.citydb.web.schema;
     exports org.citydb.web.util;
+    exports org.citydb.web.management;
+    exports org.citydb.web.listener;
 
     opens org.citydb.web to spring.core;
     opens org.citydb.web.config to spring.core;
     opens org.citydb.web.controller to spring.core;
     opens org.citydb.web.schema to spring.core;
-    exports org.citydb.web.listener;
     opens org.citydb.web.listener to spring.core;
 }
