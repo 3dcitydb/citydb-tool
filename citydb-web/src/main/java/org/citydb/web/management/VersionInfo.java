@@ -1,9 +1,12 @@
 package org.citydb.web.management;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Properties;
 
+@Schema(hidden = true)
 public class VersionInfo {
 	private static VersionInfo instance;
 

@@ -20,6 +20,7 @@ import java.util.List;
 
 public class BboxCalculator {
     private final DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
+    private final CrsTransformer crsTransformer = new CrsTransformer();
 
     public BboxCalculator() {}
 
@@ -55,7 +56,7 @@ public class BboxCalculator {
                         Object extentObj = rs.getObject(1);
                         if (!rs.wasNull()) {
                             Geometry<?> extentGeometry = adapter.getGeometryAdapter().getGeometry(extentObj);
-                            Geometry<?> wgs84Extent = transform(extentGeometry, connection);
+                            Geometry<?> wgs84Extent = crsTransformer.transform(extentGeometry, connection);
                             if (wgs84Extent != null) {
                                 return wgs84Extent.getEnvelope();
                             }
@@ -65,25 +66,6 @@ public class BboxCalculator {
             }
         } catch (GeometryException | SQLException e) {
             throw new SQLException("Failed to calculate the envelope for '" + featureType.name() + "'.", e);
-        }
-
-        return null;
-    }
-
-    private Geometry<?> transform(Geometry<?> geometry, Connection connection) throws SQLException, GeometryException {
-        DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
-        try (PreparedStatement psQuery = connection.prepareStatement("select ST_Transform(?, 4326)")) {
-            Object unconverted = adapter.getGeometryAdapter().getGeometry(geometry);
-            psQuery.setObject(1, unconverted, adapter.getGeometryAdapter().getGeometrySQLType());
-
-            try (ResultSet rs = psQuery.executeQuery()) {
-                if (rs.next()) {
-                    Object converted = rs.getObject(1);
-                    if (!rs.wasNull()) {
-                        return adapter.getGeometryAdapter().getGeometry(converted);
-                    }
-                }
-            }
         }
 
         return null;

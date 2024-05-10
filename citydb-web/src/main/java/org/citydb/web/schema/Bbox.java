@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.util.List;
 
-@Schema()
+@Schema(name = "bbox")
 public class Bbox {
     @ArraySchema(minItems = 4, maxItems = 6)
     private List<BigDecimal> value;
