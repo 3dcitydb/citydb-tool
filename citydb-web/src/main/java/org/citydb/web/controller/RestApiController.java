@@ -3,7 +3,6 @@ package org.citydb.web.controller;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureCollection;
 import org.citydb.model.feature.FeatureType;
-import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.web.management.VersionInfo;
 import org.citydb.web.operation.RequestHandler;
@@ -19,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,23 +28,48 @@ public class RestApiController {
     private final RequestHandler requestHandler = new RequestHandler();
     private final BboxCalculator bboxCalculator = new BboxCalculator();
 
-    @GetMapping("/")
+    @GetMapping("")
+    public ResponseEntity<LandingPage> getLandingPage() {
+        Link apiDefLink = Link.of("http://localhost:8080/ogcapi", "service-desc")
+                .setType("application/vnd.oai.openapi+json;version=3.0")
+                .setTitle("the API definition");
+
+        Link dataLink = Link.of("http://localhost:8080/ogcapi/collections", "data")
+                .setType("application/json")
+                .setTitle("Information about the feature collections");
+
+        LandingPage landingPage = LandingPage.of(new ArrayList<>(List.of(apiDefLink, dataLink)))
+                .setTitle("3DCityDB OGC API")
+                .setDescription("OGC Feature API for 3D City Database");
+
+        return new ResponseEntity<>(landingPage, HttpStatus.OK);
+    }
+
+    @GetMapping("/version")
     public ResponseEntity<VersionInfo> getVersion() {
         return new ResponseEntity<>(VersionInfo.getInstance(), HttpStatus.OK);
     }
 
     @GetMapping("/collections")
-    public ResponseEntity<List<Collection>> getCollections() {
+    public ResponseEntity<Collections> getCollections() {
         try {
-            Extent extent = bboxCalculator.getExtent(FeatureType.BUILDING);
-            List<Collection> collections = new ArrayList<>(
-                    List.of(Collection.of("1")
-                            .setTitle("collection 1")
-                            .setDescription("my first test collection")
-                            .setExtent(extent)
-                    )
+            List<Link> links = java.util.Collections.singletonList(
+                    Link.of("http://localhost:8080/ogcapi/collections/1/items", "items")
+                    .setType("application/geo+json")
+                    .setTitle("Buildings")
             );
+            List<Collection> collectionList = new ArrayList<>(List.of(getCollection()));
+            Collections collections = Collections.of(links, collectionList);
             return new ResponseEntity<>(collections, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/collections/{collectionId}")
+    public ResponseEntity<Collection> getCollection(@PathVariable("collectionId") String collectionId) {
+        try {
+            return new ResponseEntity<>(getCollection(), HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -67,5 +92,13 @@ public class RestApiController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return new ResponseEntity<>(featureCollectionGeoJSON, HttpStatus.OK);
+    }
+
+    private Collection getCollection() throws SQLException {
+        return Collection.of("1")
+                .setTitle("collection 1")
+                .setDescription("my first test collection")
+                .setExtent(bboxCalculator.getExtent(FeatureType.BUILDING))
+                .setLinks(List.of(Link.of("http://localhost:8080/ogcapi/collections/1/items", "items")));
     }
 }
