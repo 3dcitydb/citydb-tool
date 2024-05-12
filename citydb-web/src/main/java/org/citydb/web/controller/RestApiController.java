@@ -85,7 +85,9 @@ public class RestApiController {
                 if (feature.getEnvelope().isPresent()) {
                     Envelope envelope = feature.getEnvelope().get();
                     Envelope transformed = crsTransformer.transform(envelope, connection);
-                    featureCollectionGeoJSON.addFeature(FeatureGeoJSON.of(PointGeoJSON.of(transformed.getCenter())));
+                    FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(PointGeoJSON.of(transformed.getCenter()));
+                    featureGeoJSON.getProperties().put("id", feature.getObjectId().orElse(null));
+                    featureCollectionGeoJSON.addFeature(featureGeoJSON);
                 }
             }
         } catch (Exception e) {
