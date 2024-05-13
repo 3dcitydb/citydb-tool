@@ -76,6 +76,15 @@ public class Property extends SchemaElement {
             throw new SchemaException("A property must not define both a join and a join table.");
         }
 
+        if (typeIdentifier != null && targetIdentifier == null) {
+            targetIdentifier = switch (typeIdentifier) {
+                case "core:AddressProperty" -> "core:Address";
+                case "core:AppearanceProperty" -> "app:Appearance";
+                case "core:ImplicitGeometryProperty" -> "core:ImplicitGeometry";
+                default -> null;
+            };
+        }
+
         return new Property(Name.of(propertyName, namespace), parentIndex,
                 valueObject != null ? Value.of(valueObject) : null,
                 typeIdentifier, targetIdentifier,
