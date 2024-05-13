@@ -37,6 +37,7 @@ public class Property extends SchemaElement {
     private final JoinTable joinTable;
     private DataType type;
     private FeatureType targetFeature;
+    private GeometryType targetGeometry;
     private Map<Name, Property> properties;
     private Join join;
 
@@ -69,6 +70,8 @@ public class Property extends SchemaElement {
             throw new SchemaException("A property must not define both a value and a type.");
         } else if ("core:FeatureProperty".equals(typeIdentifier) && targetIdentifier == null) {
             throw new SchemaException("A feature property must define a target feature.");
+        } else if ("core:GeometryProperty".equals(typeIdentifier) && targetIdentifier == null) {
+            throw new SchemaException("A geometry property must define a target geometry.");
         } else if (joinObject != null && joinTableObject != null) {
             throw new SchemaException("A property must not define both a join and a join table.");
         }
@@ -102,6 +105,10 @@ public class Property extends SchemaElement {
 
     public Optional<FeatureType> getTargetFeature() {
         return Optional.ofNullable(targetFeature);
+    }
+
+    public Optional<GeometryType> getTargetGeometry() {
+        return Optional.ofNullable(targetGeometry);
     }
 
     public Map<Name, Property> getProperties() {
@@ -151,8 +158,11 @@ public class Property extends SchemaElement {
             if (targetIdentifier != null) {
                 targetFeature = schemaMapping.getFeatureTypeByIdentifier(targetIdentifier);
                 if (targetFeature == FeatureType.UNDEFINED) {
-                    throw new SchemaException("The property references an undefined target feature " +
-                            targetIdentifier + ".");
+                    targetGeometry = GeometryType.of(targetIdentifier);
+                    if (targetGeometry == null) {
+                        throw new SchemaException("The property references an undefined target " +
+                                targetIdentifier + ".");
+                    };
                 }
             }
         }
