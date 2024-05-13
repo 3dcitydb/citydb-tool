@@ -21,21 +21,10 @@
 
 package org.citydb.database.schema;
 
-import org.citydb.model.common.Name;
+import java.util.Optional;
 
-public abstract class SchemaElement {
-    final Name name;
+public interface Joinable {
+    Optional<Join> getJoin();
 
-    SchemaElement(Name name) {
-        this.name = name;
-    }
-
-    public Name getName() {
-        return name;
-    }
-
-    @Override
-    public String toString() {
-        return name.toString();
-    }
+    Optional<JoinTable> getJoinTable();
 }

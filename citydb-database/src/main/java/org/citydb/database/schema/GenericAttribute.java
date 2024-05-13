@@ -28,7 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class GenericAttribute extends SchemaElement {
+public class GenericAttribute extends SchemaObject {
     private Map<Name, GenericAttribute> genericAttributes;
 
     private GenericAttribute(Name name) {

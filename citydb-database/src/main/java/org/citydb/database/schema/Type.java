@@ -27,7 +27,7 @@ import org.citydb.model.common.Name;
 
 import java.util.*;
 
-public abstract class Type<T extends Type<T>> extends SchemaElement {
+public abstract class Type<T extends Type<T>> extends SchemaObject implements Joinable {
     final int id;
     final String identifier;
     final Table table;
@@ -96,10 +96,12 @@ public abstract class Type<T extends Type<T>> extends SchemaElement {
         return properties != null ? properties : Collections.emptyMap();
     }
 
+    @Override
     public Optional<Join> getJoin() {
         return Optional.ofNullable(join);
     }
 
+    @Override
     public Optional<JoinTable> getJoinTable() {
         return Optional.ofNullable(joinTable);
     }

@@ -29,7 +29,7 @@ import org.citydb.model.common.Namespaces;
 import java.util.Map;
 import java.util.Optional;
 
-public class DataType extends Type<DataType> {
+public class DataType extends Type<DataType> implements ValueObject {
     public static final DataType UNDEFINED = new DataType(1, "core:Undefined", Name.of("Undefined", Namespaces.CORE),
             Table.PROPERTY, false, null, null, null, null, null);
 
@@ -73,6 +73,7 @@ public class DataType extends Type<DataType> {
         }
     }
 
+    @Override
     public Optional<Value> getValue() {
         return Optional.ofNullable(value);
     }

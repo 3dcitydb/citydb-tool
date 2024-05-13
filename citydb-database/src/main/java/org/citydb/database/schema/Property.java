@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class Property extends SchemaElement {
+public class Property extends SchemaObject implements ValueObject, Joinable {
     private final Integer parentIndex;
     private final Value value;
     private final String typeIdentifier;
@@ -96,16 +96,9 @@ public class Property extends SchemaElement {
         return parentIndex;
     }
 
+    @Override
     public Optional<Value> getValue() {
         return Optional.ofNullable(value);
-    }
-
-    public boolean hasType(Name name) {
-        return type != null && type.getName().equals(name);
-    }
-
-    public boolean hasType(DataType type) {
-        return this.type == type;
     }
 
     public Optional<DataType> getType() {
@@ -132,6 +125,7 @@ public class Property extends SchemaElement {
         properties.put(property.name, property);
     }
 
+    @Override
     public Optional<Join> getJoin() {
         return Optional.ofNullable(join);
     }
@@ -141,6 +135,7 @@ public class Property extends SchemaElement {
         return this;
     }
 
+    @Override
     public Optional<JoinTable> getJoinTable() {
         return Optional.ofNullable(joinTable);
     }
