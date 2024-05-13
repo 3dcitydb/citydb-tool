@@ -116,7 +116,7 @@ public abstract class Type<T extends Type<T>> extends SchemaObject implements Jo
         return hierarchy;
     }
 
-    public boolean isSelfOrSubTypeOf(T type) {
+    public boolean isSameOrSubTypeOf(T type) {
         return this == type || isSubTypeOf(type);
     }
 
