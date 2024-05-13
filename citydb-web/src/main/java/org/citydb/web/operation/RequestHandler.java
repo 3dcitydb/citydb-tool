@@ -21,6 +21,8 @@ import org.citydb.web.schema.FeatureGeoJSON;
 import org.citydb.web.schema.PointGeoJSON;
 import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseConnector;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.stereotype.Service;
