@@ -116,6 +116,10 @@ public abstract class Type<T extends Type<T>> extends SchemaObject implements Jo
         return hierarchy;
     }
 
+    public boolean isSelfOrSubTypeOf(T type) {
+        return this == type || isSubTypeOf(type);
+    }
+
     public boolean isSubTypeOf(T type) {
         T superType = self();
         while ((superType = superType.getSuperType().orElse(null)) != null) {
