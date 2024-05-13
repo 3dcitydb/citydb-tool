@@ -21,17 +21,23 @@ import org.citydb.web.schema.FeatureGeoJSON;
 import org.citydb.web.schema.PointGeoJSON;
 import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseConnector;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Service
+@EnableCaching
 public class RequestHandler {
     private final Logger logger = LoggerManager.getInstance().getLogger(RequestHandler.class);
     private final DatabaseManager databaseManager = DatabaseConnector.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();
     private volatile boolean shouldRun = true;
 
+    @Cacheable("featureCollectionGeoJSON")
     public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId) throws OperationException {
         FeatureCollectionGeoJSON featureCollectionGeoJSON = FeatureCollectionGeoJSON.newInstance();
         CrsTransformer crsTransformer = new CrsTransformer();

@@ -17,6 +17,10 @@ dependencies {
         exclude group: 'org.slf4j'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
     }
+    implementation ('org.springframework.boot:spring-boot-starter-data-redis') {
+        exclude group: 'org.slf4j'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
     implementation ('org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0') {
         exclude group: 'org.slf4j'
     }
