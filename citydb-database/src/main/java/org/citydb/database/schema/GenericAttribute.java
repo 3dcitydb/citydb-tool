@@ -46,7 +46,7 @@ public class GenericAttribute implements SchemaObject {
 
     @Override
     public Name getName() {
-        return null;
+        return name;
     }
 
     public boolean hasGenericAttributes() {

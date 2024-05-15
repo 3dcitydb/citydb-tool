@@ -164,15 +164,15 @@ public class Property implements ValueObject, Joinable {
             if (type == DataType.UNDEFINED) {
                 throw new SchemaException("The property references an undefined type " + typeIdentifier + ".");
             }
+        }
 
-            if (targetIdentifier != null) {
-                targetFeature = schemaMapping.getFeatureTypeByIdentifier(targetIdentifier);
-                if (targetFeature == FeatureType.UNDEFINED) {
-                    targetGeometry = GeometryType.of(targetIdentifier);
-                    if (targetGeometry == null) {
-                        throw new SchemaException("The property references an undefined target " +
-                                targetIdentifier + ".");
-                    }
+        if (targetIdentifier != null) {
+            targetFeature = schemaMapping.getFeatureTypeByIdentifier(targetIdentifier);
+            if (targetFeature == FeatureType.UNDEFINED) {
+                targetGeometry = GeometryType.of(targetIdentifier);
+                if (targetGeometry == null) {
+                    throw new SchemaException("The property references an undefined target " +
+                            targetIdentifier + ".");
                 }
             }
         }
