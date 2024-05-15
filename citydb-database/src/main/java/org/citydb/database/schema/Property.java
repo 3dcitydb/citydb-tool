@@ -29,7 +29,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class Property extends SchemaObject implements ValueObject, Joinable {
+public class Property implements ValueObject, Joinable {
+    private final Name name;
     private final Integer parentIndex;
     private final Value value;
     private final String typeIdentifier;
@@ -41,9 +42,9 @@ public class Property extends SchemaObject implements ValueObject, Joinable {
     private Map<Name, Property> properties;
     private Join join;
 
-    Property(Name name, Integer parentIndex, Value value, String typeIdentifier, String targetIdentifier,
-             Join join, JoinTable joinTable) {
-        super(name);
+    private Property(Name name, Integer parentIndex, Value value, String typeIdentifier, String targetIdentifier,
+                     Join join, JoinTable joinTable) {
+        this.name = name;
         this.parentIndex = parentIndex;
         this.value = value;
         this.typeIdentifier = typeIdentifier;
@@ -92,6 +93,11 @@ public class Property extends SchemaObject implements ValueObject, Joinable {
                 joinTableObject != null ? JoinTable.of(joinTableObject) : null);
     }
 
+    @Override
+    public Name getName() {
+        return name;
+    }
+
     Integer getParentIndex() {
         return parentIndex;
     }
@@ -117,7 +123,7 @@ public class Property extends SchemaObject implements ValueObject, Joinable {
         return properties != null ? properties : Collections.emptyMap();
     }
 
-    void addProperty(Property property) {
+    private void addProperty(Property property) {
         if (properties == null) {
             properties = new LinkedHashMap<>();
         }
@@ -166,9 +172,20 @@ public class Property extends SchemaObject implements ValueObject, Joinable {
                     if (targetGeometry == null) {
                         throw new SchemaException("The property references an undefined target " +
                                 targetIdentifier + ".");
-                    };
+                    }
                 }
             }
         }
+
+        if (join != null) {
+            join.postprocess(this, schemaMapping);
+        } else if (joinTable != null) {
+            joinTable.postprocess(this, schemaMapping);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return name.toString();
     }
 }

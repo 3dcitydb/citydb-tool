@@ -21,10 +21,7 @@
 
 package org.citydb.database.schema;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public enum SimpleType implements ColumnType {
     BOOLEAN("boolean"),
@@ -38,6 +35,8 @@ public enum SimpleType implements ColumnType {
     INTEGER_ARRAY("integerArray"),
     DOUBLE_ARRAY("doubleArray"),
     STRING_ARRAY("stringArray");
+
+    public static final EnumSet<SimpleType> JOIN_CONDITION_TYPES = EnumSet.of(INTEGER, DOUBLE, STRING);
 
     private final static Map<String, SimpleType> types = new HashMap<>();
     private final String name;

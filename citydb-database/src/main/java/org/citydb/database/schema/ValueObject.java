@@ -23,6 +23,6 @@ package org.citydb.database.schema;
 
 import java.util.Optional;
 
-public interface ValueObject {
+public interface ValueObject extends SchemaObject {
     Optional<Value> getValue();
 }

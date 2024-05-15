@@ -35,8 +35,8 @@ public class DataType extends Type<DataType> implements ValueObject {
 
     private final Value value;
 
-    DataType(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
-             Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
+    private DataType(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
+                     Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
         super(id, identifier, name, table, isAbstract, superTypeId, properties, join, joinTable);
         this.value = value;
     }
@@ -78,7 +78,10 @@ public class DataType extends Type<DataType> implements ValueObject {
         return Optional.ofNullable(value);
     }
 
+    @Override
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
+        super.postprocess(schemaMapping);
+
         if (superTypeId != null) {
             superType = schemaMapping.getDataType(superTypeId);
             if (superType == DataType.UNDEFINED) {

@@ -28,6 +28,8 @@ import org.citydb.model.common.PrefixedName;
 import java.util.*;
 
 public class SchemaMapping {
+    public static final String TARGET_OBJECTCLASS_ID = "@target.objectclass_id@";
+
     private final Map<Integer, Namespace> namespacesById = new HashMap<>();
     private final Map<String, Namespace> namespacesByURI = new HashMap<>();
     private final Map<String, Namespace> namespacesByAlias = new HashMap<>();
@@ -43,6 +45,10 @@ public class SchemaMapping {
 
     public Namespace getNamespace(int id) {
         return namespacesById.getOrDefault(id, Namespace.UNDEFINED);
+    }
+
+    public Namespace getNamespace(Name name) {
+        return getNamespaceByURI(name.getNamespace());
     }
 
     public Namespace getNamespaceByURI(String namespace) {
@@ -135,6 +141,25 @@ public class SchemaMapping {
         } else {
             return FeatureType.UNDEFINED;
         }
+    }
+
+    public Set<Integer> getObjectClassIds(FeatureType featureType) {
+        return getObjectClassIds(List.of(featureType));
+    }
+
+    public Set<Integer> getObjectClassIds(Collection<FeatureType> featureTypes) {
+        Set<Integer> ids = new HashSet<>();
+        for (FeatureType featureType : featureTypes) {
+            if (featureType.isAbstract()) {
+                featureTypesById.values().stream()
+                        .filter(candidate -> !candidate.isAbstract() && candidate.isSubTypeOf(featureType))
+                        .forEach(subType -> ids.add(subType.getId()));
+            } else {
+                ids.add(featureType.getId());
+            }
+        }
+
+        return ids;
     }
 
     SchemaMapping build() throws SchemaException {

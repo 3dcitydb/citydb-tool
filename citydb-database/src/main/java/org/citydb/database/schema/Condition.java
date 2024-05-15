@@ -27,7 +27,7 @@ public class Condition {
     private final Column column;
     private final String value;
 
-    private Condition(Column column, String value) {
+    Condition(Column column, String value) {
         this.column = column;
         this.value = value;
     }
@@ -45,9 +45,9 @@ public class Condition {
             throw new SchemaException("No column data type defined for the join condition.");
         }
 
-        ColumnType type = ColumnType.of(typeName);
-        if (type == null) {
-            throw new SchemaException("The join condition uses an unsupported column data type " + typeName + ".");
+        SimpleType type = SimpleType.of(typeName);
+        if (!SimpleType.JOIN_CONDITION_TYPES.contains(type)) {
+            throw new SchemaException("The join condition uses an unsupported data type " + typeName + ".");
         }
 
         return new Condition(new Column(columnName, type), value);

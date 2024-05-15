@@ -23,7 +23,7 @@ package org.citydb.database.schema;
 
 import java.util.Optional;
 
-public interface Joinable {
+public interface Joinable extends SchemaObject {
     Optional<Join> getJoin();
 
     Optional<JoinTable> getJoinTable();

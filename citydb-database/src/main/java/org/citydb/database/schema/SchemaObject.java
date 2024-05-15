@@ -23,19 +23,6 @@ package org.citydb.database.schema;
 
 import org.citydb.model.common.Name;
 
-public abstract class SchemaObject {
-    final Name name;
-
-    SchemaObject(Name name) {
-        this.name = name;
-    }
-
-    public Name getName() {
-        return name;
-    }
-
-    @Override
-    public String toString() {
-        return name.toString();
-    }
+public interface SchemaObject {
+    Name getName();
 }

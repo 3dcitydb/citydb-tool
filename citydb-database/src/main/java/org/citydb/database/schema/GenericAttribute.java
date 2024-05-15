@@ -28,11 +28,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class GenericAttribute extends SchemaObject {
+public class GenericAttribute implements SchemaObject {
+    private final Name name;
     private Map<Name, GenericAttribute> genericAttributes;
 
     private GenericAttribute(Name name) {
-        super(Objects.requireNonNull(name, "The name must not be null."));
+        this.name = Objects.requireNonNull(name, "The name must not be null.");
     }
 
     public static GenericAttribute of(String name) {
@@ -41,6 +42,11 @@ public class GenericAttribute extends SchemaObject {
 
     public static GenericAttribute of(Name name) {
         return of(name.getLocalName());
+    }
+
+    @Override
+    public Name getName() {
+        return null;
     }
 
     public boolean hasGenericAttributes() {
@@ -61,5 +67,10 @@ public class GenericAttribute extends SchemaObject {
         }
 
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return name.toString();
     }
 }

@@ -34,8 +34,8 @@ public class FeatureType extends Type<FeatureType> {
 
     private final boolean isTopLevel;
 
-    FeatureType(int id, String identifier, Name name, Table table, boolean isAbstract, boolean isTopLevel,
-                Integer superTypeId, Map<Name, Property> properties, Join join, JoinTable joinTable) {
+    private FeatureType(int id, String identifier, Name name, Table table, boolean isAbstract, boolean isTopLevel,
+                        Integer superTypeId, Map<Name, Property> properties, Join join, JoinTable joinTable) {
         super(id, identifier, name, table, isAbstract, superTypeId, properties, join, joinTable);
         this.isTopLevel = isTopLevel;
     }
@@ -74,7 +74,10 @@ public class FeatureType extends Type<FeatureType> {
         return isTopLevel;
     }
 
+    @Override
     void postprocess(SchemaMapping schemaMapping) throws SchemaException {
+        super.postprocess(schemaMapping);
+
         if (superTypeId != null) {
             superType = schemaMapping.getFeatureType(superTypeId);
             if (superType == FeatureType.UNDEFINED) {
@@ -90,7 +93,8 @@ public class FeatureType extends Type<FeatureType> {
                     if (property.getJoin().isEmpty() && property.getJoinTable().isEmpty()) {
                         Table table = property.getType().map(DataType::getTable).orElse(null);
                         if (table == Table.PROPERTY) {
-                            property.setJoin(new Join(Table.PROPERTY, "id", "feature_id"));
+                            property.setJoin(new Join(Table.PROPERTY, "id", "feature_id")
+                                    .postprocess(this, schemaMapping));
                         }
                     }
                 }

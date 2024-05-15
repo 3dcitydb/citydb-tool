@@ -24,21 +24,18 @@ package org.citydb.database.schema;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 public class Join {
     private final Table table;
     private final String fromColumn;
     private final String toColumn;
-    private final List<Condition> conditions;
+    private Map<String, Condition> conditions;
 
-    Join(Table table, String fromColumn, String toColumn, List<Condition> conditions) {
+    private Join(Table table, String fromColumn, String toColumn, Map<String, Condition> conditions) {
         this.table = table;
-        this.fromColumn = fromColumn;
-        this.toColumn = toColumn;
+        this.fromColumn = fromColumn.toLowerCase(Locale.ROOT);
+        this.toColumn = toColumn.toLowerCase(Locale.ROOT);
         this.conditions = conditions;
     }
 
@@ -65,12 +62,13 @@ public class Join {
             throw new SchemaException("The join target " + tableName + " is not supported.");
         }
 
-        List<Condition> conditions = null;
+        Map<String, Condition> conditions = null;
         if (conditionsArray != null && !conditionsArray.isEmpty()) {
-            conditions = new ArrayList<>();
+            conditions = new LinkedHashMap<>();
             for (Object item : conditionsArray) {
                 if (item instanceof JSONObject conditionObject) {
-                    conditions.add(Condition.of(conditionObject));
+                    Condition condition = Condition.of(conditionObject);
+                    conditions.put(condition.getColumn().getName(), condition);
                 }
             }
 
@@ -79,7 +77,7 @@ public class Join {
             }
         }
 
-        return new Join(table, fromColumn.toLowerCase(Locale.ROOT), toColumn.toLowerCase(Locale.ROOT), conditions);
+        return new Join(table, fromColumn, toColumn, conditions);
     }
 
     public Table getTable() {
@@ -94,7 +92,25 @@ public class Join {
         return toColumn;
     }
 
-    public List<Condition> getConditions() {
-        return conditions != null ? conditions : Collections.emptyList();
+    public Collection<Condition> getConditions() {
+        return conditions != null ? conditions.values() : Collections.emptyList();
+    }
+
+    Join postprocess(Joinable joinable, SchemaMapping schemaMapping) {
+        if (table == Table.PROPERTY) {
+            if (conditions == null) {
+                conditions = new LinkedHashMap<>();
+            }
+
+            if (!conditions.containsKey("name")
+                    && !conditions.containsKey("namespace_id")) {
+                conditions.put("name", new Condition(new Column("name", SimpleType.STRING),
+                        joinable.getName().getLocalName()));
+                conditions.put("namespace_id", new Condition(new Column("namespace_id", SimpleType.INTEGER),
+                        String.valueOf(schemaMapping.getNamespace(joinable.getName()).getId())));
+            }
+        }
+
+        return this;
     }
 }

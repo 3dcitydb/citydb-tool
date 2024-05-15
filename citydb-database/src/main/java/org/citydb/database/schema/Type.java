@@ -27,9 +27,10 @@ import org.citydb.model.common.Name;
 
 import java.util.*;
 
-public abstract class Type<T extends Type<T>> extends SchemaObject implements Joinable {
+public abstract class Type<T extends Type<T>> implements Joinable {
     final int id;
     final String identifier;
+    final Name name;
     final Table table;
     final boolean isAbstract;
     final Integer superTypeId;
@@ -40,9 +41,9 @@ public abstract class Type<T extends Type<T>> extends SchemaObject implements Jo
 
     Type(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
          Map<Name, Property> properties, Join join, JoinTable joinTable) {
-        super(name);
         this.id = id;
         this.identifier = identifier;
+        this.name = name;
         this.table = table;
         this.isAbstract = isAbstract;
         this.superTypeId = superTypeId;
@@ -78,6 +79,11 @@ public abstract class Type<T extends Type<T>> extends SchemaObject implements Jo
 
     String getIdentifier() {
         return identifier;
+    }
+
+    @Override
+    public Name getName() {
+        return name;
     }
 
     public Table getTable() {
@@ -129,5 +135,18 @@ public abstract class Type<T extends Type<T>> extends SchemaObject implements Jo
         }
 
         return false;
+    }
+
+    void postprocess(SchemaMapping schemaMapping) throws SchemaException {
+        if (join != null) {
+            join.postprocess(this, schemaMapping);
+        } else if (joinTable != null) {
+            joinTable.postprocess(this, schemaMapping);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return name.toString();
     }
 }

@@ -32,7 +32,7 @@ public class Namespace {
     private final String uri;
     private final String alias;
 
-    Namespace(Integer id, String uri, String alias) {
+    private Namespace(Integer id, String uri, String alias) {
         this.id = id;
         this.uri = uri;
         this.alias = alias;

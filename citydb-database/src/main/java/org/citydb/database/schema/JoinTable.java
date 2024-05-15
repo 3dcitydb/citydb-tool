@@ -28,7 +28,7 @@ public class JoinTable {
     private final Join sourceJoin;
     private final Join targetJoin;
 
-    JoinTable(Table table, Join sourceJoin, Join targetJoin) {
+    private JoinTable(Table table, Join sourceJoin, Join targetJoin) {
         this.table = table;
         this.sourceJoin = sourceJoin;
         this.targetJoin = targetJoin;
@@ -65,5 +65,10 @@ public class JoinTable {
 
     public Join getTargetJoin() {
         return targetJoin;
+    }
+
+    void postprocess(Joinable joinable, SchemaMapping schemaMapping) {
+        sourceJoin.postprocess(joinable, schemaMapping);
+        targetJoin.postprocess(joinable, schemaMapping);
     }
 }
