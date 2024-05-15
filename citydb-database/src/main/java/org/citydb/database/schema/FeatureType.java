@@ -94,7 +94,7 @@ public class FeatureType extends Type<FeatureType> {
                         Table table = property.getType().map(DataType::getTable).orElse(null);
                         if (table == Table.PROPERTY) {
                             property.setJoin(new Join(Table.PROPERTY, "id", "feature_id")
-                                    .postprocess(this, schemaMapping));
+                                    .postprocess(property, schemaMapping));
                         }
                     }
                 }
