@@ -2,7 +2,7 @@ package org.citydb.web.controller;
 
 import org.citydb.model.feature.FeatureType;
 import org.citydb.web.management.VersionInfo;
-import org.citydb.web.operation.RequestHandler;
+import org.citydb.web.operation.ExportHandler;
 import org.citydb.web.schema.*;
 import org.citydb.web.util.BboxCalculator;
 import org.springframework.http.HttpStatus;
@@ -18,8 +18,8 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/ogcapi")
-public class RestApiController {
-    private final RequestHandler requestHandler = new RequestHandler();
+public class RequestController {
+    private final ExportHandler exportHandler = new ExportHandler();
     private final BboxCalculator bboxCalculator = new BboxCalculator();
 
     @GetMapping("")
@@ -73,7 +73,7 @@ public class RestApiController {
     public ResponseEntity<FeatureCollectionGeoJSON> getCollectionFeatures(@PathVariable("collectionId") String collectionId) {
         FeatureCollectionGeoJSON featureCollectionGeoJSON;
         try {
-            featureCollectionGeoJSON = requestHandler.getFeatureCollectionGeoJSON(collectionId);
+            featureCollectionGeoJSON = exportHandler.getFeatureCollectionGeoJSON(collectionId);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }

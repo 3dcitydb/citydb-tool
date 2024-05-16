@@ -1,4 +1,4 @@
-package org.citydb.web.exception;
+package org.citydb.web.operation;
 
 public class OperationException extends Exception {
 

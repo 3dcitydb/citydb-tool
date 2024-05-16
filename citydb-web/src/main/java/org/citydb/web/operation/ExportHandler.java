@@ -15,14 +15,11 @@ import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
-import org.citydb.web.exception.OperationException;
 import org.citydb.web.schema.FeatureCollectionGeoJSON;
 import org.citydb.web.schema.FeatureGeoJSON;
 import org.citydb.web.schema.PointGeoJSON;
 import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseConnector;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.stereotype.Service;
@@ -33,8 +30,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 @EnableCaching
-public class RequestHandler {
-    private final Logger logger = LoggerManager.getInstance().getLogger(RequestHandler.class);
+public class ExportHandler {
+    private final Logger logger = LoggerManager.getInstance().getLogger(ExportHandler.class);
     private final DatabaseManager databaseManager = DatabaseConnector.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();
     private volatile boolean shouldRun = true;
