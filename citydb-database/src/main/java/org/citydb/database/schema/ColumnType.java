@@ -22,7 +22,7 @@
 package org.citydb.database.schema;
 
 public interface ColumnType {
-    String getName();
+    String getIdentifier();
 
     static ColumnType of(String name) {
         ColumnType type = SimpleType.of(name);

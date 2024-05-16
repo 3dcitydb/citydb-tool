@@ -39,14 +39,14 @@ public enum SimpleType implements ColumnType {
     public static final EnumSet<SimpleType> JOIN_CONDITION_TYPES = EnumSet.of(INTEGER, DOUBLE, STRING);
 
     private final static Map<String, SimpleType> types = new HashMap<>();
-    private final String name;
+    private final String identifier;
 
     static {
-        Arrays.stream(values()).forEach(type -> types.put(type.name.toLowerCase(Locale.ROOT), type));
+        Arrays.stream(values()).forEach(type -> types.put(type.identifier.toLowerCase(Locale.ROOT), type));
     }
 
-    SimpleType(String name) {
-        this.name = name;
+    SimpleType(String identifier) {
+        this.identifier = identifier;
     }
 
     public static SimpleType of(String name) {
@@ -54,12 +54,12 @@ public enum SimpleType implements ColumnType {
     }
 
     @Override
-    public String getName() {
-        return name;
+    public String getIdentifier() {
+        return identifier;
     }
 
     @Override
     public String toString() {
-        return name;
+        return identifier;
     }
 }

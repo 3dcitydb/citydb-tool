@@ -32,7 +32,7 @@ public class Value {
     private final Integer propertyIndex;
     private Property property;
 
-    private Value(Column column) {
+    Value(Column column) {
         this.column = column;
         propertyIndex = null;
     }
