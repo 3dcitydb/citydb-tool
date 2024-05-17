@@ -37,4 +37,6 @@ module org.citydb.web {
     opens org.citydb.web.listener to spring.core;
     opens org.citydb.web.cache to spring.core;
     opens org.citydb.web.operation to spring.core, spring.beans;
+    exports org.citydb.web.schema.geojson;
+    opens org.citydb.web.schema.geojson to spring.core;
 }

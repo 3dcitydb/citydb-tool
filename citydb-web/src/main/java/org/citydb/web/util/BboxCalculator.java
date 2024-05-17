@@ -2,7 +2,6 @@ package org.citydb.web.util;
 
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
-import org.citydb.database.geometry.WKTWriter;
 import org.citydb.model.feature.FeatureType;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;

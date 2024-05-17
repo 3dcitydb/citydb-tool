@@ -1,4 +1,4 @@
-package org.citydb.web.schema;
+package org.citydb.web.schema.geojson;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -13,5 +13,5 @@ public abstract class GeometryGeoJSON {
         this.type = type;
     }
 
-    public abstract GeometryType getType();
+    public abstract String getType();
 }

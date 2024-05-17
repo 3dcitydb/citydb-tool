@@ -1,4 +1,4 @@
-package org.citydb.web.schema;
+package org.citydb.web.schema.geojson;
 
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 
@@ -10,8 +10,8 @@ public class PolygonGeoJSON extends GeometryGeoJSON {
     private List<List<List<BigDecimal>>> coordinates;
 
     @Override
-    public GeometryType getType() {
-        return GeometryType.Polygon;
+    public String getType() {
+        return GeometryType.POLYGON.toString();
     }
 
     private PolygonGeoJSON(List<List<List<BigDecimal>>> coordinates) {

@@ -1,4 +1,4 @@
-package org.citydb.web.schema;
+package org.citydb.web.schema.geojson;
 
 import java.util.HashMap;
 import java.util.Map;
