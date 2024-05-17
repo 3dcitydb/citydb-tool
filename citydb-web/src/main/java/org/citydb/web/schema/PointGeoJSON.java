@@ -1,5 +1,6 @@
 package org.citydb.web.schema;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Point;
 
@@ -8,11 +9,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class PointGeoJSON extends GeometryGeoJSON {
+    @ArraySchema(minItems = 2)
     private List<BigDecimal> coordinates;
 
     @Override
-    public String getType() {
-        return "Point";
+    public GeometryType getType() {
+        return GeometryType.Point;
     }
 
     private PointGeoJSON(List<BigDecimal> coordinates) {
