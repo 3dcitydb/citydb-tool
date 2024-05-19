@@ -33,13 +33,21 @@ public class PrefixedName extends Name {
 
     public static PrefixedName of(String name, String namespace) {
         int index = name.indexOf(":");
-        return index > -1 ?
-                new PrefixedName(name.substring(index + 1), namespace, name.substring(0, index)) :
-                new PrefixedName(name, namespace, null);
+        if (index != -1) {
+            return namespace == null || namespace.isEmpty() ?
+                    new PrefixedName(name.substring(index + 1), null, name.substring(0, index)) :
+                    new PrefixedName(name.substring(index + 1), namespace, null);
+        } else {
+            return new PrefixedName(name, namespace, null);
+        }
     }
 
     public static PrefixedName of(String name) {
         return of(name, null);
+    }
+
+    public static PrefixedName of(Name name) {
+        return new PrefixedName(name.getLocalName(), name.getNamespace(), null);
     }
 
     public Optional<String> getPrefix() {
