@@ -34,7 +34,8 @@ public class PrefixedName extends Name {
     public static PrefixedName of(String name, String namespace) {
         int index = name.indexOf(":");
         if (index != -1) {
-            return namespace == null || namespace.isEmpty() ?
+            return namespace == null
+                    || namespace.equals(Namespaces.EMPTY_NAMESPACE) ?
                     new PrefixedName(name.substring(index + 1), null, name.substring(0, index)) :
                     new PrefixedName(name.substring(index + 1), namespace, null);
         } else {
