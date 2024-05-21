@@ -8,7 +8,7 @@ import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class PagingManager
+public class FeatureRepositoryManager
         implements PagingAndSortingRepository<FeatureGeoJSON, Long> {
 
     @Override

@@ -1,4 +1,4 @@
-package org.citydb.web.management;
+package org.citydb.web.service;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -7,21 +7,21 @@ import java.time.LocalDate;
 import java.util.Properties;
 
 @Schema(hidden = true)
-public class VersionInfo {
-	private static VersionInfo instance;
+public class VersionService {
+	private static VersionService instance;
 
 	private String name = "VC OGC Web API Service";
 	private String version = "not available";
 	private String copyright = "2015-" + LocalDate.now().getYear() + ", virtualcitysystems GmbH";
 	private final Vendor vendor = new Vendor();
 
-	public static synchronized VersionInfo getInstance() {
+	public static synchronized VersionService getInstance() {
 		if (instance == null) {
-			instance = new VersionInfo();
+			instance = new VersionService();
 
 			try {
 				Properties app = new Properties();
-				app.load(VersionInfo.class.getClassLoader().getResourceAsStream("application.properties"));
+				app.load(VersionService.class.getClassLoader().getResourceAsStream("application.properties"));
 
 				instance.name = app.getProperty("name");
 				instance.version = app.getProperty("version");

@@ -1,8 +1,8 @@
 package org.citydb.web.controller;
 
 import org.citydb.model.feature.FeatureType;
-import org.citydb.web.management.VersionInfo;
-import org.citydb.web.service.ExportHandler;
+import org.citydb.web.service.VersionService;
+import org.citydb.web.service.FeatureService;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.LandingPage;
@@ -20,10 +20,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.Collections.singletonList;
+
 @RestController
 @RequestMapping("/ogcapi")
-public class RequestController {
-    private final ExportHandler exportHandler = new ExportHandler();
+public class ApiController {
+    private final FeatureService featureService = new FeatureService();
     private final BboxCalculator bboxCalculator = new BboxCalculator();
 
     @GetMapping("")
@@ -44,14 +46,14 @@ public class RequestController {
     }
 
     @GetMapping("/version")
-    public ResponseEntity<VersionInfo> getVersion() {
-        return new ResponseEntity<>(VersionInfo.getInstance(), HttpStatus.OK);
+    public ResponseEntity<VersionService> getVersion() {
+        return new ResponseEntity<>(VersionService.getInstance(), HttpStatus.OK);
     }
 
     @GetMapping("/collections")
     public ResponseEntity<Collections> getCollections() {
         try {
-            List<Link> links = java.util.Collections.singletonList(
+            List<Link> links = singletonList(
                     Link.of("http://localhost:8080/ogcapi/collections/1/items", "items")
                     .setType("application/geo+json")
                     .setTitle("Buildings")
@@ -77,7 +79,7 @@ public class RequestController {
     public ResponseEntity<FeatureCollectionGeoJSON> getCollectionFeatures(@PathVariable("collectionId") String collectionId) {
         FeatureCollectionGeoJSON featureCollectionGeoJSON;
         try {
-            featureCollectionGeoJSON = exportHandler.getFeatureCollectionGeoJSON(collectionId);
+            featureCollectionGeoJSON = featureService.getFeatureCollectionGeoJSON(collectionId);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
