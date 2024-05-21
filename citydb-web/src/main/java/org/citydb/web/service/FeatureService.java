@@ -18,14 +18,12 @@ import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
-import org.citydb.web.paging.FeatureRepository;
 import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.schema.geojson.FeatureGeoJSON;
 import org.citydb.web.schema.geojson.GeometryGeoJSON;
 import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseConnector;
 import org.citydb.web.util.GeoJsonConverter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.stereotype.Service;
@@ -37,9 +35,6 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 @EnableCaching
 public class FeatureService {
-    @Autowired
-    private FeatureRepository repository;
-
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
     private final DatabaseManager databaseManager = DatabaseConnector.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();

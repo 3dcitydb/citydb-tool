@@ -4,20 +4,21 @@ import org.citydb.web.schema.geojson.FeatureGeoJSON;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
+
 @Repository
-public class FeatureRepositoryManager
-        implements PagingAndSortingRepository<FeatureGeoJSON, Long> {
+public class FeatureRepositoryManager implements FeatureRepository {
 
     @Override
-    public Iterable<FeatureGeoJSON> findAll(Sort sort) {
-        return null;
+    public Iterable<FeatureGeoJSON> findAll(@NonNull Sort sort) {
+        return new ArrayList<>();
     }
 
     @Override
-    public Page<FeatureGeoJSON> findAll(Pageable pageable) {
+    public Page<FeatureGeoJSON> findAll(@NonNull Pageable pageable) {
         return null;
     }
 }
