@@ -1,14 +1,13 @@
 package org.citydb.web.util;
 
 import org.citydb.model.geometry.*;
-import org.citydb.web.schema.geojson.GeometryGeoJSON;
-import org.citydb.web.schema.geojson.MultiPolygonGeoJSON;
-import org.citydb.web.schema.geojson.PointGeoJSON;
-import org.citydb.web.schema.geojson.PolygonGeoJSON;
+import org.citydb.model.geometry.GeometryType;
+import org.citydb.web.schema.geojson.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class GeoJsonConverter {
 
@@ -28,28 +27,34 @@ public class GeoJsonConverter {
     }
 
     public PointGeoJSON convert(Point point) {
-        return PointGeoJSON.of(convert(point.getCoordinate()));
+        return PointGeoJSON.of(convertCoordinate(point.getCoordinate()));
     }
 
-    public PointGeoJSON convert(MultiPoint multiPoint) {
-        return null;
+    public MultiPointGeoJSON convert(MultiPoint multiPoint) {
+        List<Coordinate> coordinates = multiPoint.getPoints().stream()
+                .map(Point::getCoordinate).collect(Collectors.toList());
+
+        return MultiPointGeoJSON.of(convertCoordinates(coordinates));
     }
 
-    public PointGeoJSON convert(LineString lineString) {
-        return null;
+    public LineStringGeoJSON convert(LineString lineString) {
+        return LineStringGeoJSON.of(convertCoordinates(lineString.getPoints()));
     }
 
-    public PointGeoJSON convert(MultiLineString multiLineString) {
-        return null;
+    public MultiLineStringGeoJSON convert(MultiLineString multiLineString) {
+        List<List<List<BigDecimal>>> coordinates = multiLineString.getLineStrings().stream()
+                .map(lineString -> convertCoordinates(lineString.getPoints())).collect(Collectors.toList());
+
+        return MultiLineStringGeoJSON.of(coordinates);
     }
 
     public PolygonGeoJSON convert(Polygon polygon) {
         List<List<List<BigDecimal>>> coordinates = new ArrayList<>();
-        coordinates.add(convert(polygon.getExteriorRing()));
+
+        coordinates.add(convertCoordinates(polygon.getExteriorRing().getPoints()));
         if (polygon.hasInteriorRings()) {
-            List<LinearRing> linearRings = polygon.getInteriorRings();
-            for (int i = 0; i < linearRings.size(); i++) {
-                coordinates.add(convert(polygon.getExteriorRing()));
+            for (LinearRing linearRing : polygon.getInteriorRings()) {
+                coordinates.add(convertCoordinates(linearRing.getPoints()));
             }
         }
 
@@ -57,24 +62,24 @@ public class GeoJsonConverter {
     }
 
     public MultiPolygonGeoJSON convert(SurfaceCollection<?> surfaceCollection) {
-        List<List<List<List<BigDecimal>>>> coordinates = new ArrayList<>();
-        for (Polygon polygon : surfaceCollection.getPolygons()) {
-            coordinates.add(convert(polygon).getCoordinates());
-        }
-
-        return MultiPolygonGeoJSON.of(coordinates);
+        return MultiPolygonGeoJSON.of(convertPolygons(surfaceCollection.getPolygons()));
     }
 
-    public PointGeoJSON convert(Solid solid) {
-        return null;
+    public MultiPolygonGeoJSON convert(Solid solid) {
+        return MultiPolygonGeoJSON.of(convertPolygons(solid.getShell().getPolygons()));
     }
 
-    public PointGeoJSON convert(SolidCollection<?> solidCollection) {
-        return null;
+    public MultiPolygonGeoJSON convert(SolidCollection<?> solidCollection) {
+        List<Polygon> polygons = solidCollection.getSolids().stream()
+                .flatMap(solid -> solid.getShell().getPolygons().stream())
+                .toList();
+
+        return MultiPolygonGeoJSON.of(convertPolygons(polygons));
     }
 
-    private List<BigDecimal> convert(Coordinate point) {
+    private List<BigDecimal> convertCoordinate(Coordinate point) {
         List<BigDecimal> coordinate = new ArrayList<>();
+
         coordinate.add(BigDecimal.valueOf(point.getX()));
         coordinate.add(BigDecimal.valueOf(point.getY()));
         if (point.getDimension() == 3) {
@@ -84,10 +89,21 @@ public class GeoJsonConverter {
         return coordinate;
     }
 
-    private List<List<BigDecimal>> convert(LinearRing ring) {
-        List<List<BigDecimal>> coordinates = new ArrayList<>();
-        for (Coordinate point : ring.getPoints()) {
-            coordinates.add(convert(point));
+    private List<List<BigDecimal>> convertCoordinates(List<Coordinate> coordinates) {
+        List<List<BigDecimal>> result = new ArrayList<>();
+
+        for (Coordinate coordinate : coordinates) {
+            result.add(convertCoordinate(coordinate));
+        }
+
+        return result;
+    }
+
+    private List<List<List<List<BigDecimal>>>> convertPolygons(List<Polygon> polygons) {
+        List<List<List<List<BigDecimal>>>> coordinates = new ArrayList<>();
+
+        for (Polygon polygon : polygons) {
+            coordinates.add(convert(polygon).getCoordinates());
         }
 
         return coordinates;

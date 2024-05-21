@@ -2,6 +2,9 @@ package org.citydb.web.schema.geojson;
 
 public enum GeometryType {
     POINT("Point"),
+    MULTI_POINT("MultiPoint"),
+    LINESTRING("LineString"),
+    MULTI_LINESTRING("MultiLineString"),
     POLYGON("Polygon"),
     MULTI_POLYGON("MultiPolygon");
 

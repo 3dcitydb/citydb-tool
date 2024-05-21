@@ -25,4 +25,9 @@ public class PointGeoJSON extends GeometryGeoJSON {
     public List<BigDecimal> getCoordinates() {
         return coordinates;
     }
+
+    public PointGeoJSON setCoordinates(List<BigDecimal> coordinates) {
+        this.coordinates = coordinates;
+        return this;
+    }
 }

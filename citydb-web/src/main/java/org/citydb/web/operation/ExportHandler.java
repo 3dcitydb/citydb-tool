@@ -7,11 +7,12 @@ import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
 import org.citydb.database.DatabaseManager;
 import org.citydb.logging.LoggerManager;
-import org.citydb.model.common.Visitor;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureCollection;
 import org.citydb.model.feature.FeatureType;
-import org.citydb.model.geometry.*;
+import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.MultiSurface;
+import org.citydb.model.geometry.Polygon;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
@@ -60,9 +61,7 @@ public class ExportHandler {
                     GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(transformed);
                     FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geometryGeoJSON);
                     featureGeoJSON.getProperties().put("id", feature.getObjectId().orElse(null));
-                    if (featureCollectionGeoJSON.getFeatures().isEmpty()) {
-                        featureCollectionGeoJSON.addFeature(featureGeoJSON);
-                    }
+                    featureCollectionGeoJSON.addFeature(featureGeoJSON);
                 }
             }
         } catch (Throwable e) {
