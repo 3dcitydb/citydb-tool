@@ -15,40 +15,40 @@ public class GeoJsonConverter {
         GeometryType geometryType = geometry.getGeometryType();
 
         return switch (geometryType) {
-            case POINT -> convert((Point) geometry);
-            case MULTI_POINT -> convert((MultiPoint) geometry);
-            case LINE_STRING -> convert((LineString) geometry);
-            case MULTI_LINE_STRING -> convert((MultiLineString) geometry);
-            case POLYGON -> convert((Polygon) geometry);
-            case MULTI_SURFACE, COMPOSITE_SURFACE, TRIANGULATED_SURFACE -> convert((SurfaceCollection<?>) geometry);
-            case SOLID -> convert((Solid) geometry);
-            case MULTI_SOLID, COMPOSITE_SOLID -> convert((SolidCollection<?>) geometry);
+            case POINT -> convertPoint((Point) geometry);
+            case MULTI_POINT -> convertMultiPoint((MultiPoint) geometry);
+            case LINE_STRING -> convertLineString((LineString) geometry);
+            case MULTI_LINE_STRING -> convertMultiLineString((MultiLineString) geometry);
+            case POLYGON -> convertPolygon((Polygon) geometry);
+            case MULTI_SURFACE, COMPOSITE_SURFACE, TRIANGULATED_SURFACE -> convertSurfaceCollection((SurfaceCollection<?>) geometry);
+            case SOLID -> convertSolid((Solid) geometry);
+            case MULTI_SOLID, COMPOSITE_SOLID -> convertSolidCollection((SolidCollection<?>) geometry);
         };
     }
 
-    public PointGeoJSON convert(Point point) {
+    private PointGeoJSON convertPoint(Point point) {
         return PointGeoJSON.of(convertCoordinate(point.getCoordinate()));
     }
 
-    public MultiPointGeoJSON convert(MultiPoint multiPoint) {
+    private MultiPointGeoJSON convertMultiPoint(MultiPoint multiPoint) {
         List<Coordinate> coordinates = multiPoint.getPoints().stream()
                 .map(Point::getCoordinate).collect(Collectors.toList());
 
         return MultiPointGeoJSON.of(convertCoordinates(coordinates));
     }
 
-    public LineStringGeoJSON convert(LineString lineString) {
+    private LineStringGeoJSON convertLineString(LineString lineString) {
         return LineStringGeoJSON.of(convertCoordinates(lineString.getPoints()));
     }
 
-    public MultiLineStringGeoJSON convert(MultiLineString multiLineString) {
+    private MultiLineStringGeoJSON convertMultiLineString(MultiLineString multiLineString) {
         List<List<List<BigDecimal>>> coordinates = multiLineString.getLineStrings().stream()
                 .map(lineString -> convertCoordinates(lineString.getPoints())).collect(Collectors.toList());
 
         return MultiLineStringGeoJSON.of(coordinates);
     }
 
-    public PolygonGeoJSON convert(Polygon polygon) {
+    private PolygonGeoJSON convertPolygon(Polygon polygon) {
         List<List<List<BigDecimal>>> coordinates = new ArrayList<>();
 
         coordinates.add(convertCoordinates(polygon.getExteriorRing().getPoints()));
@@ -61,15 +61,15 @@ public class GeoJsonConverter {
         return PolygonGeoJSON.of(coordinates);
     }
 
-    public MultiPolygonGeoJSON convert(SurfaceCollection<?> surfaceCollection) {
+    private MultiPolygonGeoJSON convertSurfaceCollection(SurfaceCollection<?> surfaceCollection) {
         return MultiPolygonGeoJSON.of(convertPolygons(surfaceCollection.getPolygons()));
     }
 
-    public MultiPolygonGeoJSON convert(Solid solid) {
+    private MultiPolygonGeoJSON convertSolid(Solid solid) {
         return MultiPolygonGeoJSON.of(convertPolygons(solid.getShell().getPolygons()));
     }
 
-    public MultiPolygonGeoJSON convert(SolidCollection<?> solidCollection) {
+    private MultiPolygonGeoJSON convertSolidCollection(SolidCollection<?> solidCollection) {
         List<Polygon> polygons = solidCollection.getSolids().stream()
                 .flatMap(solid -> solid.getShell().getPolygons().stream())
                 .toList();
@@ -103,7 +103,7 @@ public class GeoJsonConverter {
         List<List<List<List<BigDecimal>>>> coordinates = new ArrayList<>();
 
         for (Polygon polygon : polygons) {
-            coordinates.add(convert(polygon).getCoordinates());
+            coordinates.add(convertPolygon(polygon).getCoordinates());
         }
 
         return coordinates;
