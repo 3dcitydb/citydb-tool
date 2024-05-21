@@ -6,7 +6,7 @@ import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.logging.LoggerManager;
-import org.citydb.web.operation.ExportHandler;
+import org.citydb.web.service.ExportHandler;
 
 import java.sql.SQLException;
 

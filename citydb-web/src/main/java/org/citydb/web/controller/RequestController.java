@@ -2,7 +2,7 @@ package org.citydb.web.controller;
 
 import org.citydb.model.feature.FeatureType;
 import org.citydb.web.management.VersionInfo;
-import org.citydb.web.operation.ExportHandler;
+import org.citydb.web.service.ExportHandler;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.LandingPage;

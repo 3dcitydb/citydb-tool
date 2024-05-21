@@ -1,4 +1,4 @@
-package org.citydb.web.operation;
+package org.citydb.web.service;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
