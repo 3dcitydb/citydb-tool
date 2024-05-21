@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 
-@Repository
 public class FeatureRepositoryManager implements FeatureRepository {
 
     @Override

@@ -26,10 +26,11 @@ module org.citydb.web {
     exports org.citydb.web.controller;
     exports org.citydb.web.schema;
     exports org.citydb.web.util;
-    exports org.citydb.web.management;
+    exports org.citydb.web.config;
     exports org.citydb.web.listener;
     exports org.citydb.web.cache;
     exports org.citydb.web.service;
+    exports org.citydb.web.paging;
 
     opens org.citydb.web to spring.core;
     opens org.citydb.web.swagger to spring.core;
@@ -38,6 +39,7 @@ module org.citydb.web {
     opens org.citydb.web.listener to spring.core;
     opens org.citydb.web.cache to spring.core;
     opens org.citydb.web.service to spring.core, spring.beans;
-    exports org.citydb.web.schema.geojson;
     opens org.citydb.web.schema.geojson to spring.core;
+
+    exports org.citydb.web.schema.geojson;
 }

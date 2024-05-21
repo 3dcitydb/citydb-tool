@@ -17,9 +17,9 @@ public class CollectionService {
 
     public Collections getCollections() throws ServiceException {
         List<Link> links = singletonList(
-                Link.of("http://localhost:8080/ogcapi/collections/1/items", "items")
+                Link.of("http://localhost:8080/ogcapi/collections/building/items", "items")
                         .setType("application/geo+json")
-                        .setTitle("Buildings")
+                        .setTitle("building items")
         );
         try {
             return Collections.of(links, new ArrayList<>(List.of(getCollection())));
@@ -37,10 +37,10 @@ public class CollectionService {
     }
 
     private Collection getCollection() throws SQLException {
-        return Collection.of("1")
-                .setTitle("collection 1")
-                .setDescription("my first test collection")
+        return Collection.of("building")
+                .setTitle("Building")
+                .setDescription("A collection of the building feature type")
                 .setExtent(bboxCalculator.getExtent(FeatureType.BUILDING))
-                .setLinks(List.of(Link.of("http://localhost:8080/ogcapi/collections/1/items", "items")));
+                .setLinks(List.of(Link.of("http://localhost:8080/ogcapi/collections/building/items", "items")));
     }
 }

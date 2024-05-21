@@ -58,7 +58,7 @@ public class FeatureService {
                     });
                     surfaces.setSRID(databaseManager.getAdapter().getDatabaseMetadata().getSpatialReference().getSRID());
                     Geometry<?> transformed = crsTransformer.transform(surfaces, connection);
-                    GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(transformed);
+                    GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(surfaces);
                     FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geometryGeoJSON);
                     featureGeoJSON.getProperties().put("id", feature.getObjectId().orElse(null));
                     featureCollectionGeoJSON.addFeature(featureGeoJSON);
