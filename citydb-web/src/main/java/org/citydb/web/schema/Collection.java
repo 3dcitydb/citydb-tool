@@ -19,7 +19,6 @@ public class Collection {
     private Collection(String id, List<String> crs) {
         this.id = id;
         this.crs = crs;
-        this.itemType = "feature";
     }
 
     public static Collection of(String id) {
