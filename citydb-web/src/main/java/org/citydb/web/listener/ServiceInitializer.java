@@ -20,9 +20,12 @@ import java.sql.SQLException;
 public class ServiceInitializer implements ApplicationListener<ApplicationReadyEvent> {
     private final Logger logger = LoggerManager.getInstance().getLogger(ServiceInitializer.class);
     private final WebOptions webOptions = WebOptions.getInstance();
+    private final Environment environment;
 
     @Autowired
-    private Environment environment;
+    public ServiceInitializer(Environment environment) {
+        this.environment = environment;
+    }
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
