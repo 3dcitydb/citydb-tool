@@ -7,7 +7,6 @@ import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.service.CollectionService;
 import org.citydb.web.service.FeatureService;
 import org.citydb.web.service.PageService;
-import org.citydb.web.service.VersionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/ogcapi")
+@RequestMapping("${citydb.openapi.context-path}")
 public class ApiController {
     private PageService pageService;
     private FeatureService featureService;
@@ -41,11 +40,6 @@ public class ApiController {
     @GetMapping("")
     public ResponseEntity<LandingPage> getLandingPage() {
         return new ResponseEntity<>(pageService.getLandingPage(), HttpStatus.OK);
-    }
-
-    @GetMapping("/version")
-    public ResponseEntity<VersionService> getVersion() {
-        return new ResponseEntity<>(VersionService.getInstance(), HttpStatus.OK);
     }
 
     @GetMapping("/collections")

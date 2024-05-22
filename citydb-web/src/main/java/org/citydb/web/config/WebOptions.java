@@ -7,19 +7,10 @@ import org.springframework.context.annotation.Configuration;
 @SerializableConfig(name = "webOptions")
 @Configuration
 public class WebOptions {
-    private String currentAddress;
     private FeatureTypes featureTypes;
 
     public WebOptions() {
         featureTypes = new FeatureTypes();
-    }
-
-    public String getCurrentAddress() {
-        return currentAddress;
-    }
-
-    public void setCurrentAddress(String currentAddress) {
-        this.currentAddress = currentAddress;
     }
 
     public FeatureTypes getFeatureTypes() {

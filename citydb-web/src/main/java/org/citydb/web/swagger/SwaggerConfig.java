@@ -13,19 +13,19 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig {
 
-    @Value("${citydb.openapi.dev-url}")
+    @Value("${citydb.openapi.url}")
     private String devUrl;
 
     @Bean
     public OpenAPI openAPI() {
         Server devServer = new Server();
         devServer.setUrl(devUrl);
-        devServer.setDescription("Example OGC API Server");
+        devServer.setDescription("3DCityDB OGC API - Features");
 
         Info info = new Info()
-                .title("OGC API - Features Example")
+                .title("3DCityDB OGC API - Features")
                 .version("1.0")
-                .description("OGC API - Features - Part 1: Core corrigendum 1.0.1 is an OGC Standard.")
+                .description("3DCityDB OGC API - Features.")
                 .termsOfService("https://www.ogc.org/standards/")
                 .license(new License()
                         .name("Apache License")

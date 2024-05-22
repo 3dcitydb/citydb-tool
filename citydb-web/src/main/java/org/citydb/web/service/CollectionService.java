@@ -5,6 +5,7 @@ import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.Link;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,6 +16,9 @@ import static java.util.Collections.singletonList;
 public class CollectionService {
     private Collections collections;
     private WebOptions webOptions;
+
+    @Value("${citydb.openapi.address}")
+    private String address;
 
     @Autowired
     public void setWebOptions(WebOptions webOptions) {
@@ -30,8 +34,6 @@ public class CollectionService {
     }
 
     private void initialize() {
-        String address = webOptions.getCurrentAddress();
-
         List<Link> linkList = singletonList(Link.of(address + "/collections", "items")
                         .setType("application/geo+json"));
 
