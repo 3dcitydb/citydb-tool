@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -43,10 +44,19 @@ public class FeatureService {
 
     @Cacheable("featureCollectionGeoJSON")
     public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId) throws ServiceException {
+        FeatureType featureType = Arrays.stream(FeatureType.values())
+                .filter(type -> type.name().equalsIgnoreCase(collectionId))
+                .findFirst()
+                .orElse(null);
+
+        if (featureType == null) {
+            throw new ServiceException("No features are found for the collection '" + collectionId + "'.");
+        }
+
         FeatureCollectionGeoJSON featureCollectionGeoJSON = FeatureCollectionGeoJSON.newInstance();
         CrsTransformer crsTransformer = new CrsTransformer();
         try (Connection connection = databaseManager.getAdapter().getPool().getConnection()) {
-            FeatureCollection featureCollection = getFeatureCollection(FeatureType.BUILDING);
+            FeatureCollection featureCollection = getFeatureCollection(featureType);
             for (Feature feature : featureCollection.getFeatures()) {
                 if (feature.getEnvelope().isPresent()) {
                     MultiSurface surfaces = MultiSurface.empty();
