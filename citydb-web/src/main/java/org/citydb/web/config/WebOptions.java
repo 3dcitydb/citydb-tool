@@ -2,20 +2,16 @@ package org.citydb.web.config;
 
 import org.citydb.config.SerializableConfig;
 import org.citydb.web.config.feature.FeatureTypes;
+import org.springframework.context.annotation.Configuration;
 
 @SerializableConfig(name = "webOptions")
+@Configuration
 public class WebOptions {
     private String currentAddress;
     private FeatureTypes featureTypes;
 
-    private static final WebOptions instance = new WebOptions();
-
     public WebOptions() {
         featureTypes = new FeatureTypes();
-    }
-
-    public static WebOptions getInstance() {
-        return instance;
     }
 
     public String getCurrentAddress() {

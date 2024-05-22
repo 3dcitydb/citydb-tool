@@ -8,6 +8,7 @@ import org.citydb.web.service.CollectionService;
 import org.citydb.web.service.FeatureService;
 import org.citydb.web.service.PageService;
 import org.citydb.web.service.VersionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +19,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/ogcapi")
 public class ApiController {
-    private final PageService pageService = new PageService();
-    private final FeatureService featureService = new FeatureService();
-    private final CollectionService collectionService = new CollectionService();
+    private PageService pageService;
+    private FeatureService featureService;
+    private CollectionService collectionService;
+
+    @Autowired
+    public void setPageService(PageService service) {
+        this.pageService = service;
+    }
+
+    @Autowired
+    public void setFeatureService(FeatureService service) {
+        this.featureService = service;
+    }
+
+    @Autowired
+    public void setCollectionService(CollectionService service) {
+        this.collectionService = service;
+    }
 
     @GetMapping("")
     public ResponseEntity<LandingPage> getLandingPage() {

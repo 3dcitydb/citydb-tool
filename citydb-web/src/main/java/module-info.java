@@ -27,12 +27,14 @@ module org.citydb.web {
     exports org.citydb.web.schema;
     exports org.citydb.web.util;
     exports org.citydb.web.config;
+    exports org.citydb.web.config.feature;
     exports org.citydb.web.listener;
     exports org.citydb.web.cache;
     exports org.citydb.web.service;
     exports org.citydb.web.paging;
 
     opens org.citydb.web to spring.core;
+    opens org.citydb.web.config to spring.core;
     opens org.citydb.web.swagger to spring.core;
     opens org.citydb.web.controller to spring.core;
     opens org.citydb.web.schema to spring.core;

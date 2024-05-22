@@ -3,12 +3,20 @@ package org.citydb.web.service;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.schema.LandingPage;
 import org.citydb.web.schema.Link;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Service
 public class PageService {
-    private final WebOptions webOptions = WebOptions.getInstance();
+    private WebOptions webOptions;
+
+    @Autowired
+    public void setWebOptions(WebOptions webOptions) {
+        this.webOptions = webOptions;
+    }
 
     public LandingPage getLandingPage() {
         String address = webOptions.getCurrentAddress();
