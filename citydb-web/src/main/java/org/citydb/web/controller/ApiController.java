@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("${citydb.openapi.context-path}")
+@RequestMapping("${server.ogcapi.context-path}")
 public class ApiController {
     private PageService pageService;
     private FeatureService featureService;

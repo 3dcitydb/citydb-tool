@@ -13,7 +13,7 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig {
 
-    @Value("${citydb.openapi.url}")
+    @Value("${server.url}")
     private String devUrl;
 
     @Bean

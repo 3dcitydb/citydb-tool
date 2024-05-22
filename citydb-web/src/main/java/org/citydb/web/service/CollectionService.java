@@ -17,7 +17,7 @@ public class CollectionService {
     private Collections collections;
     private WebOptions webOptions;
 
-    @Value("${citydb.openapi.address}")
+    @Value("${server.ogcapi.url}")
     private String address;
 
     @Autowired
@@ -39,6 +39,8 @@ public class CollectionService {
 
         List<Collection> collectionList = webOptions.getFeatureTypes().getFeatureTypes().stream()
                 .map(featureType -> Collection.of(featureType.getId())
+                        .setTitle(featureType.getName().getLocalName())
+                        .setDescription(featureType.getName().toString())
                         .setLinks(List.of(Link.of(address + "/collections/" + featureType.getId() + "/items", "items"))))
                 .toList();
 

@@ -10,7 +10,7 @@ import java.util.List;
 
 @Service
 public class PageService {
-    @Value("${citydb.openapi.address}")
+    @Value("${server.ogcapi.url}")
     private String address;
 
     public LandingPage getLandingPage() {
