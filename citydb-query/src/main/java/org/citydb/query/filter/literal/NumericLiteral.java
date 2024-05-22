@@ -79,7 +79,9 @@ public class NumericLiteral extends Literal<Number> implements NumericExpression
 
     @Override
     public NumericExpression negate() {
-        value = -value.doubleValue();
+        value = isInteger() ?
+                -value.intValue() :
+                -value.doubleValue();
         return this;
     }
 
