@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
-@EnableCaching
 public class FeatureService {
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
     private final DatabaseManager databaseManager = DatabaseConnector.getInstance().getDatabaseManager();
