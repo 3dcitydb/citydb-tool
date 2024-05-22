@@ -4,7 +4,10 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapterException;
+import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
+import org.citydb.database.postgres.PostgresqlAdapter;
 import org.citydb.logging.LoggerManager;
 import org.citydb.web.service.FeatureService;
 
@@ -26,7 +29,7 @@ public class DatabaseConnector {
         return instance;
     }
 
-    public void connect() throws SQLException, DatabaseException {
+    public void connect() throws SQLException, DatabaseException, DatabaseAdapterException {
         if (databaseManager.isConnected()) {
             return;
         }
@@ -37,7 +40,11 @@ public class DatabaseConnector {
                 .setUser("postgres")
                 .setPassword("125125");
         logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
-        databaseManager.connect(connectionDetails);
+
+        DatabaseAdapterManager adapterManager = DatabaseAdapterManager.newInstance();
+        adapterManager.register(new PostgresqlAdapter());
+
+        databaseManager.connect(connectionDetails, adapterManager);
         databaseManager.logDatabaseMetadata(Level.INFO);
     }
 }

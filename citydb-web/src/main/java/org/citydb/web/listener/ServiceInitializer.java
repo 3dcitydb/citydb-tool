@@ -2,6 +2,7 @@ package org.citydb.web.listener;
 
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
+import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.logging.LoggerManager;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
@@ -32,9 +33,10 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
         DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
+
         try {
             databaseConnector.connect();
-        } catch (SQLException | DatabaseException e) {
+        } catch (SQLException | DatabaseException | DatabaseAdapterException e) {
             throw new RuntimeException(e);
         }
 
