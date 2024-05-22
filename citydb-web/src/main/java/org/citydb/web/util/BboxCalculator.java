@@ -24,7 +24,11 @@ public class BboxCalculator {
     public BboxCalculator() {}
 
     public Extent getExtent(FeatureType featureType) throws SQLException {
-        Envelope envelope = getEnvelope(featureType);
+        return getExtent(featureType, 4326);
+    }
+
+    public Extent getExtent(FeatureType featureType, Integer srid) throws SQLException {
+        Envelope envelope = getEnvelope(featureType, srid);
         if (envelope != null) {
             return Extent.of(ExtentSpatial.of(Collections.singletonList(
                     Bbox.of(List.of(
@@ -39,7 +43,7 @@ public class BboxCalculator {
         return null;
     }
 
-    public Envelope getEnvelope(FeatureType featureType) throws SQLException {
+    public Envelope getEnvelope(FeatureType featureType, Integer srid) throws SQLException {
         DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
         try {
             String schema = adapter.getConnectionDetails().getSchema();
@@ -55,7 +59,7 @@ public class BboxCalculator {
                         Object extentObj = rs.getObject(1);
                         if (!rs.wasNull()) {
                             Geometry<?> extentGeometry = adapter.getGeometryAdapter().getGeometry(extentObj);
-                            Geometry<?> wgs84Extent = crsTransformer.transform(extentGeometry, connection);
+                            Geometry<?> wgs84Extent = crsTransformer.transform(extentGeometry, srid, connection);
                             if (wgs84Extent != null) {
                                 return wgs84Extent.getEnvelope();
                             }

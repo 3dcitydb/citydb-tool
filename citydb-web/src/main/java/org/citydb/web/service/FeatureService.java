@@ -43,7 +43,7 @@ public class FeatureService {
     private final GeoJsonConverter geoJsonConverter = new GeoJsonConverter();
 
     @Cacheable("featureCollectionGeoJSON")
-    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId) throws ServiceException {
+    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId, Integer srid) throws ServiceException {
         FeatureType featureType = Arrays.stream(FeatureType.values())
                 .filter(type -> type.getName().getLocalName().equalsIgnoreCase(collectionId))
                 .findFirst()
@@ -67,7 +67,7 @@ public class FeatureService {
                         }
                     });
                     surfaces.setSRID(databaseManager.getAdapter().getDatabaseMetadata().getSpatialReference().getSRID());
-                    Geometry<?> transformed = crsTransformer.transform(surfaces, connection);
+                    Geometry<?> transformed = srid != null ? crsTransformer.transform(surfaces, srid, connection) : surfaces;
                     GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(transformed);
                     FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geometryGeoJSON);
                     featureGeoJSON.getProperties().put("id", feature.getObjectId().orElse(null));

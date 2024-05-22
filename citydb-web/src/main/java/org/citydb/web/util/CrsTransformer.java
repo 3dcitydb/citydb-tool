@@ -14,11 +14,11 @@ import java.sql.SQLException;
 public class CrsTransformer {
     private final DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
 
-    public Envelope transform(Envelope envelope, Connection connection) throws SQLException, GeometryException {
+    public Envelope transform(Envelope envelope, Integer srid, Connection connection) throws SQLException, GeometryException {
         Polygon polygon = Polygon.of(envelope);
         envelope.getSRID().map(polygon::setSRID);
 
-        Geometry<?> geometry = transform(polygon, connection);
+        Geometry<?> geometry = transform(polygon, srid, connection);
         if (geometry != null) {
             return geometry.getEnvelope();
         }
@@ -26,12 +26,12 @@ public class CrsTransformer {
         return null;
     }
 
-    public Geometry<?> transform(Geometry<?> geometry, Connection connection) throws SQLException, GeometryException {
+    public Geometry<?> transform(Geometry<?> geometry, Integer srid, Connection connection) throws SQLException, GeometryException {
         DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
-        try (PreparedStatement psQuery = connection.prepareStatement("select ST_Transform(?, 4326)")) {
+        try (PreparedStatement psQuery = connection.prepareStatement("select ST_Transform(?, ?)")) {
             Object unconverted = adapter.getGeometryAdapter().getGeometry(geometry);
             psQuery.setObject(1, unconverted, adapter.getGeometryAdapter().getGeometrySQLType());
-
+            psQuery.setInt(2, srid);
             try (ResultSet rs = psQuery.executeQuery()) {
                 if (rs.next()) {
                     Object converted = rs.getObject(1);
