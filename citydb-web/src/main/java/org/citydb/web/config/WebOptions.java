@@ -1,32 +1,36 @@
 package org.citydb.web.config;
 
 import org.citydb.config.SerializableConfig;
-import org.citydb.model.feature.FeatureType;
-import org.citydb.web.schema.Collection;
-import org.citydb.web.schema.Collections;
-import org.citydb.web.schema.Link;
-
-import java.util.List;
-
-import static java.util.Collections.singletonList;
+import org.citydb.web.config.feature.FeatureTypes;
 
 @SerializableConfig(name = "webOptions")
 public class WebOptions {
-    private Collections featureCollections;
+    private String currentAddress;
+    private FeatureTypes featureTypes;
+
+    private static final WebOptions instance = new WebOptions();
 
     public WebOptions() {
-        featureCollections = Collections.of(
-                singletonList(Link.of("http://localhost:8080/ogcapi/collections", "items")
-                        .setType("application/geo+json")),
-                singletonList(Collection.of(FeatureType.BUILDING.getName().getLocalName())
-                        .setLinks(List.of(Link.of("http://localhost:8080/ogcapi/collections/building/items", "items")))));
+        featureTypes = new FeatureTypes();
     }
 
-    public Collections getFeatureCollections() {
-        return featureCollections;
+    public static WebOptions getInstance() {
+        return instance;
     }
 
-    public void setFeatureCollections(Collections featureCollections) {
-        this.featureCollections = featureCollections;
+    public String getCurrentAddress() {
+        return currentAddress;
+    }
+
+    public void setCurrentAddress(String currentAddress) {
+        this.currentAddress = currentAddress;
+    }
+
+    public FeatureTypes getFeatureTypes() {
+        return featureTypes;
+    }
+
+    public void setFeatureTypes(FeatureTypes featureTypes) {
+        this.featureTypes = featureTypes;
     }
 }

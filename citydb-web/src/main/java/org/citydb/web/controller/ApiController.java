@@ -22,7 +22,6 @@ public class ApiController {
     private final FeatureService featureService = new FeatureService();
     private final CollectionService collectionService = new CollectionService();
 
-
     @GetMapping("")
     public ResponseEntity<LandingPage> getLandingPage() {
         return new ResponseEntity<>(pageService.getLandingPage(), HttpStatus.OK);
