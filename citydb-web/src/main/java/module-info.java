@@ -33,7 +33,6 @@ module org.citydb.web {
     exports org.citydb.web.listener;
     exports org.citydb.web.cache;
     exports org.citydb.web.service;
-    exports org.citydb.web.paging;
 
     opens org.citydb.web to spring.core;
     opens org.citydb.web.config to spring.core;

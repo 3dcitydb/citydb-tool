@@ -3,6 +3,7 @@ package org.citydb.web.listener;
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapterException;
+import org.citydb.database.schema.SchemaMapping;
 import org.citydb.logging.LoggerManager;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
@@ -14,7 +15,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Component
@@ -37,11 +37,16 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
             throw new RuntimeException(e);
         }
 
+        SchemaMapping schemaMapping = databaseConnector.getDatabaseManager().getAdapter().getSchemaAdapter().getSchemaMapping();
+
         FeatureTypes featureTypes = new FeatureTypes();
-        featureTypes.setFeatureTypes(
-                Arrays.stream(org.citydb.model.feature.FeatureType.values())
-                .map(f -> new FeatureType(f.getName())).collect(Collectors.toList())
-        );
+        if (featureTypes.getFeatureTypes().isEmpty()) {
+            featureTypes.setFeatureTypes(
+                    schemaMapping.getFeatureTypes().stream()
+                            .filter(org.citydb.database.schema.FeatureType::isTopLevel)
+                            .map(f -> new FeatureType(f.getName())).collect(Collectors.toList())
+            );
+        }
         webOptions.setFeatureTypes(featureTypes);
 
         logger.info("OGC API Service initialized successfully.");
