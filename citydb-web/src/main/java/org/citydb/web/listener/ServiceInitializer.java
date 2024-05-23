@@ -9,15 +9,10 @@ import org.citydb.web.config.feature.FeatureType;
 import org.citydb.web.config.feature.FeatureTypes;
 import org.citydb.web.util.DatabaseConnector;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationListener;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.net.InetAddress;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.stream.Collectors;

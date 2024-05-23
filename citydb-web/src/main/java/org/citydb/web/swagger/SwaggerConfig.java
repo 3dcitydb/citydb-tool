@@ -13,13 +13,9 @@ import java.util.List;
 @Configuration
 public class SwaggerConfig {
 
-    @Value("${server.url}")
-    private String devUrl;
-
     @Bean
     public OpenAPI openAPI() {
         Server devServer = new Server();
-        devServer.setUrl(devUrl);
         devServer.setDescription("3DCityDB OGC API - Features");
 
         Info info = new Info()

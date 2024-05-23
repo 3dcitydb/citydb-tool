@@ -1,11 +1,12 @@
 package org.citydb.web.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.Link;
+import org.citydb.web.util.ServerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,38 +18,37 @@ public class CollectionService {
     private Collections collections;
     private WebOptions webOptions;
 
-    @Value("${server.ogcapi.url}")
-    private String address;
-
     @Autowired
     public void setWebOptions(WebOptions webOptions) {
         this.webOptions = webOptions;
     }
 
-    public Collections getCollections() {
+    public Collections getCollections(HttpServletRequest request) throws ServiceException {
         if (collections == null) {
-            initialize();
+            initialize(request);
         }
 
         return collections;
     }
 
-    private void initialize() {
-        List<Link> linkList = singletonList(Link.of(address + "/collections", "items")
+    private void initialize(HttpServletRequest request) throws ServiceException {
+        String address = ServerUtil.getServiceURL(request) + "/collections";
+
+        List<Link> linkList = singletonList(Link.of(address, "items")
                         .setType("application/geo+json"));
 
         List<Collection> collectionList = webOptions.getFeatureTypes().getFeatureTypes().stream()
                 .map(featureType -> Collection.of(featureType.getId())
                         .setTitle(featureType.getName().getLocalName())
                         .setDescription(featureType.getName().toString())
-                        .setLinks(List.of(Link.of(address + "/collections/" + featureType.getId() + "/items", "items"))))
+                        .setLinks(List.of(Link.of(address + "/"+ featureType.getId() + "/items", "items"))))
                 .toList();
 
         collections = Collections.of(linkList, collectionList);
     }
 
-    public Collection getCollection(String id) throws ServiceException {
-        Collection collection = getCollections().findCollectionById(id);
+    public Collection getCollection(String id, HttpServletRequest request) throws ServiceException {
+        Collection collection = getCollections(request).findCollectionById(id);
         if (collection == null) {
             throw new ServiceException("Feature collection '" + id + "' not found.");
         }
