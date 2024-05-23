@@ -30,4 +30,5 @@ dependencies {
         exclude group: 'org.slf4j'
     }
     compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 }
