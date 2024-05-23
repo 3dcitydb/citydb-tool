@@ -21,4 +21,5 @@ dependencies {
     implementation'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
     compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
+    testImplementation'org.springframework.boot:spring-boot-starter-test'
 }

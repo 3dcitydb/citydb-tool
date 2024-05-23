@@ -1,13 +1,12 @@
 package org.citydb.web.listener;
 
 import org.apache.logging.log4j.Logger;
-import org.citydb.config.Config;
-import org.citydb.config.ConfigException;
-import org.citydb.config.ConfigManager;
+import org.citydb.cli.ExecutionException;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.logging.LoggerManager;
+import org.citydb.web.config.ConfigLoader;
 import org.citydb.web.config.Constants;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
@@ -18,8 +17,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
@@ -27,17 +24,26 @@ import java.util.stream.Collectors;
 @Component
 public class ServiceInitializer implements ApplicationListener<ApplicationReadyEvent> {
     private final Logger logger = LoggerManager.getInstance().getLogger(ServiceInitializer.class);
-    private final WebOptions webOptions;
+    private final ConfigLoader configLoader;
 
     @Autowired
-    public ServiceInitializer(WebOptions webOptions) {
-        this.webOptions = webOptions;
+    public ServiceInitializer(ConfigLoader configLoader) {
+        this.configLoader = configLoader;
     }
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
-        DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
+        if (configLoader.getWebOptions() == null) {
+            try {
+                configLoader.loadConfig(Paths.get(Constants.CONFIG_FILE));
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
+        WebOptions webOptions = configLoader.getWebOptions();
+
+        DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
         try {
             databaseConnector.connect(webOptions.getDatabaseConnection());
         } catch (SQLException | DatabaseException | DatabaseAdapterException e) {
