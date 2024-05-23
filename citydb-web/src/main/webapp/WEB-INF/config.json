@@ -1,0 +1,15 @@
+{
+  "databaseOptions": {
+    "connections": {
+      "uuid_1": {
+        "databaseName": "PostgreSQL",
+        "user": "postgres",
+        "password": "125125",
+        "host": "localhost",
+        "port": 5433,
+        "database": "test_citydb_v5"
+      }
+    },
+    "defaultConnection": "uuid_1"
+  }
+}

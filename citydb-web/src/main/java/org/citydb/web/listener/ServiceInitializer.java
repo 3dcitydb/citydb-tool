@@ -1,10 +1,14 @@
 package org.citydb.web.listener;
 
 import org.apache.logging.log4j.Logger;
+import org.citydb.config.Config;
+import org.citydb.config.ConfigException;
+import org.citydb.config.ConfigManager;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.logging.LoggerManager;
+import org.citydb.web.config.Constants;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
 import org.citydb.web.config.feature.FeatureTypes;
@@ -14,6 +18,9 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 
