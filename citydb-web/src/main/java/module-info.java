@@ -21,6 +21,7 @@ module org.citydb.web {
     requires spring.aop;
     requires spring.data.commons;
     requires org.citydb.database.postgres;
+    requires jakarta.servlet;
 
     exports org.citydb.web;
     exports org.citydb.web.swagger;

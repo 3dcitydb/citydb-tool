@@ -3,7 +3,7 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.4'
 }
 
-apply plugin:'war'
+apply plugin: 'war'
 
 dependencies {
     implementation project(':citydb-cli')
@@ -14,21 +14,23 @@ dependencies {
     implementation project(':citydb-database')
     implementation project(':citydb-operation')
     implementation project(':citydb-database-postgres')
-    api project(':citydb-plugin')
-    implementation ('org.springframework.boot:spring-boot-starter-web') {
+    implementation project(':citydb-plugin')
+    implementation('org.springframework.boot:spring-boot-starter-web') {
+        exclude group: 'org.slf4j'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
+    implementation('org.springframework.boot:spring-boot-starter-data-redis') {
         exclude group: 'org.slf4j'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
     }
-    implementation ('org.springframework.boot:spring-boot-starter-data-redis') {
-        exclude group: 'org.slf4j'
-        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
-    }
-    implementation ('org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0') {
+    implementation('org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0') {
         exclude group: 'org.slf4j'
     }
-    testImplementation ('org.springframework.boot:spring-boot-starter-test')  {
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude group: 'org.slf4j'
     }
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
 }
 
 sourceSets {

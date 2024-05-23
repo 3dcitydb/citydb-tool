@@ -65,6 +65,7 @@ subprojects {
         automaticModule("javax.inject-1.jar", "javax.inject")
         module('swagger-ui-5.13.0.jar', 'org.webjars', '5.13.0') {
         }
+        module("javax.servlet-api-3.1.0.jar", "javax.servlet", '3.1.0')
     }
 
     idea {
