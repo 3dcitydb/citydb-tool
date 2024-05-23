@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class Property implements ValueObject, Joinable {
+public class Property implements ValueObject, Typeable, Joinable {
     private final Name name;
     private final Integer parentIndex;
     private final Value value;
@@ -107,6 +107,7 @@ public class Property implements ValueObject, Joinable {
         return Optional.ofNullable(value);
     }
 
+    @Override
     public Optional<DataType> getType() {
         return Optional.ofNullable(type);
     }

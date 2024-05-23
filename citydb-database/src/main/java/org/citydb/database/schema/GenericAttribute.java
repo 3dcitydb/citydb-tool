@@ -27,17 +27,28 @@ import org.citydb.model.common.Namespaces;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
-public class GenericAttribute implements SchemaObject {
+public class GenericAttribute implements ValueObject, Typeable {
     private final Name name;
-    private Map<Name, GenericAttribute> genericAttributes;
+    private DataType type;
+    private Map<Name, GenericAttribute> attributes;
 
-    private GenericAttribute(Name name) {
-        this.name = Objects.requireNonNull(name, "The name must not be null.");
+    private GenericAttribute(Name name, DataType type) {
+        this.name = Objects.requireNonNull(name, "The attribute name must not be null.");
+        this.type = type;
+    }
+
+    public static GenericAttribute of(String name, DataType type) {
+        return new GenericAttribute(Name.of(name, Namespaces.GENERICS), type);
     }
 
     public static GenericAttribute of(String name) {
-        return new GenericAttribute(Name.of(name, Namespaces.GENERICS));
+        return of(name, null);
+    }
+
+    public static GenericAttribute of(Name name, DataType type) {
+        return of(name.getLocalName(), type);
     }
 
     public static GenericAttribute of(Name name) {
@@ -49,21 +60,38 @@ public class GenericAttribute implements SchemaObject {
         return name;
     }
 
-    public boolean hasGenericAttributes() {
-        return genericAttributes != null && !genericAttributes.isEmpty();
+    @Override
+    public Optional<Value> getValue() {
+        return Optional.ofNullable(type != null ?
+                type.getValue().orElse(null) :
+                null);
     }
 
-    public Map<Name, GenericAttribute> getGenericAttributes() {
-        if (genericAttributes == null) {
-            genericAttributes = new LinkedHashMap<>();
+    @Override
+    public Optional<DataType> getType() {
+        return Optional.ofNullable(type);
+    }
+
+    public GenericAttribute setType(DataType value) {
+        this.type = value;
+        return this;
+    }
+
+    public boolean hasAttributes() {
+        return attributes != null && !attributes.isEmpty();
+    }
+
+    public Map<Name, GenericAttribute> getAttributes() {
+        if (attributes == null) {
+            attributes = new LinkedHashMap<>();
         }
 
-        return genericAttributes;
+        return attributes;
     }
 
-    public GenericAttribute addGenericAttribute(GenericAttribute genericAttribute) {
-        if (genericAttribute != null) {
-            getGenericAttributes().put(genericAttribute.name, genericAttribute);
+    public GenericAttribute addAttribute(GenericAttribute attribute) {
+        if (attribute != null) {
+            getAttributes().put(attribute.name, attribute);
         }
 
         return this;

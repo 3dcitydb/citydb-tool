@@ -59,8 +59,8 @@ public enum GeometryType implements ColumnType {
         this.name = name;
     }
 
-    public static GeometryType of(String name) {
-        return name != null ? types.get(name.toLowerCase(Locale.ROOT)) : null;
+    public static GeometryType of(String identifier) {
+        return identifier != null ? types.get(identifier.toLowerCase(Locale.ROOT)) : null;
     }
 
     @Override

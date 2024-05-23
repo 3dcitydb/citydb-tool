@@ -49,8 +49,8 @@ public enum SimpleType implements ColumnType {
         this.identifier = identifier;
     }
 
-    public static SimpleType of(String name) {
-        return name != null ? types.get(name.toLowerCase(Locale.ROOT)) : null;
+    public static SimpleType of(String identifier) {
+        return identifier != null ? types.get(identifier.toLowerCase(Locale.ROOT)) : null;
     }
 
     @Override
