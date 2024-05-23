@@ -14,21 +14,19 @@ dependencies {
     implementation project(':citydb-operation')
     implementation project(':citydb-database-postgres')
     implementation project(':citydb-plugin')
+    implementation'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+    implementation ('info.picocli:picocli-spring-boot-starter:4.7.5') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
     implementation('org.springframework.boot:spring-boot-starter-web') {
-        exclude group: 'org.slf4j'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }
     implementation('org.springframework.boot:spring-boot-starter-data-redis') {
-        exclude group: 'org.slf4j'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
     }
-    implementation('org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0') {
-        exclude group: 'org.slf4j'
-    }
-    testImplementation('org.springframework.boot:spring-boot-starter-test') {
-        exclude group: 'org.slf4j'
-    }
+
+    testImplementation'org.springframework.boot:spring-boot-starter-test'
     compileOnly 'jakarta.servlet:jakarta.servlet-api:6.0.0'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 }

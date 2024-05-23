@@ -29,20 +29,15 @@ public class DatabaseConnector {
         return instance;
     }
 
-    public void connect() throws SQLException, DatabaseException, DatabaseAdapterException {
+    public void connect(ConnectionDetails connectionDetails) throws SQLException, DatabaseException, DatabaseAdapterException {
         if (databaseManager.isConnected()) {
             return;
         }
-        ConnectionDetails connectionDetails = new ConnectionDetails();
-        connectionDetails.setHost("localhost")
-                .setPort(5433)
-                .setDatabase("test_citydb_v5")
-                .setUser("postgres")
-                .setPassword("125125");
-        logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
 
         DatabaseAdapterManager adapterManager = DatabaseAdapterManager.newInstance();
         adapterManager.register(new PostgresqlAdapter());
+
+        logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
 
         databaseManager.connect(connectionDetails, adapterManager);
         databaseManager.logDatabaseMetadata(Level.INFO);

@@ -45,4 +45,6 @@ module org.citydb.web {
     opens org.citydb.web.schema.geojson to spring.core;
 
     exports org.citydb.web.schema.geojson;
+    exports org.citydb.web.command;
+    opens org.citydb.web.command to info.picocli, spring.core;
 }

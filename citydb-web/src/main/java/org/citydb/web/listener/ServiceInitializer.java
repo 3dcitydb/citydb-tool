@@ -32,7 +32,7 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
         DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
 
         try {
-            databaseConnector.connect();
+            databaseConnector.connect(webOptions.getDatabaseConnection());
         } catch (SQLException | DatabaseException | DatabaseAdapterException e) {
             throw new RuntimeException(e);
         }
