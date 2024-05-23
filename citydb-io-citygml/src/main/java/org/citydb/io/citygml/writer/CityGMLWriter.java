@@ -69,7 +69,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
         try {
             store = PersistentMapStore.newInstance();
-            logger.debug("Initialized local cache at " + store.getBackingFile() + ".");
+            logger.debug("Initialized local cache at {}.", store.getBackingFile());
         } catch (IOException e) {
             throw new WriteException("Failed to initialize local cache.", e);
         }

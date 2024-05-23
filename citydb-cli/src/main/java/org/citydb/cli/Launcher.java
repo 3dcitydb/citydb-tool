@@ -201,12 +201,12 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     .collect(Collectors.joining(" "));
             exitCode = cmd.getExecutionStrategy().execute(parseResult);
 
-            logger.info("Total execution time: " + formatElapsedTime(Duration.between(start, Instant.now())) + ".");
+            logger.info("Total execution time: {}.", formatElapsedTime(Duration.between(start, Instant.now())));
 
             if (exitCode == CommandLine.ExitCode.OK) {
-                logger.info(CliConstants.APP_COMMAND + " successfully completed.");
+                logger.info("{} successfully completed.", CliConstants.APP_COMMAND);
             } else {
-                logger.warn(CliConstants.APP_COMMAND + " execution failed.");
+                logger.warn("{} execution failed.", CliConstants.APP_COMMAND);
             }
         } catch (CommandLine.ParameterException e) {
             cmd.getParameterExceptionHandler().handleParseException(e, args);
@@ -223,7 +223,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     @Override
     public Integer call() throws ExecutionException {
         initializeLogging();
-        logger.info("Starting " + CliConstants.APP_NAME + ", " + "version " + CliConstants.APP_VERSION + ".");
+        logger.info("Starting {}, version {}.", CliConstants.APP_NAME, CliConstants.APP_VERSION);
 
         if (pidFile != null) {
             createPidFile();
@@ -235,7 +235,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
         loadPlugins();
 
-        logger.info("Executing '" + subCommandName + "' command.");
+        logger.info("Executing '{}' command.", subCommandName);
         return CommandLine.ExitCode.OK;
     }
 
@@ -254,7 +254,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 logFile = logFile.resolve(manager.logFile().getPath());
             }
 
-            logger.debug("Writing log messages to " + logFile.toAbsolutePath() + ".");
+            logger.debug("Writing log messages to {}.", logFile.toAbsolutePath());
             manager.logFile()
                     .setLogLevel(logLevel.level)
                     .setPath(logFile)
@@ -265,7 +265,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     private void createPidFile() throws ExecutionException {
         try {
-            logger.debug("Creating PID file at " + pidFile.toAbsolutePath() + ".");
+            logger.debug("Creating PID file at {}.", pidFile.toAbsolutePath());
             PidFile.create(pidFile, true);
         } catch (IOException e) {
             throw new ExecutionException("Failed to create PID file.", e);
@@ -273,7 +273,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     }
 
     private void loadConfig() throws ExecutionException {
-        logger.info("Loading configuration from file " + configFile + "...");
+        logger.info("Loading configuration from file {}...", configFile);
         try {
             config.putAll(ConfigManager.newInstance().read(configFile, Config.class, Config::new));
         } catch (Exception e) {
@@ -287,9 +287,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             for (Plugin plugin : pluginManager.getPlugins()) {
                 String name = "\"" + plugin.getMetadata().getName() + "\" (" + plugin.getClass().getName() + ")";
                 if (plugin.isEnabled()) {
-                    logger.info("Loaded plugin " + name + ".");
+                    logger.info("Loaded plugin {}.", name);
                 } else {
-                    logger.debug("Disabling plugin " + name + ".");
+                    logger.debug("Disabling plugin {}.", name);
                 }
             }
         } else {
@@ -342,7 +342,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     private void logException(Throwable e) {
         helper.logException(e);
-        logger.warn(CliConstants.APP_COMMAND + " execution failed.");
+        logger.warn("{} execution failed.", CliConstants.APP_COMMAND);
     }
 
     private String formatElapsedTime(Duration elapsed) {

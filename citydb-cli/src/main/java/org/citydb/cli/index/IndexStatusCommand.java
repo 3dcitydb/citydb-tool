@@ -51,8 +51,8 @@ public class IndexStatusCommand extends IndexController {
         for (int i = 0; i < indexes.size(); i++) {
             try {
                 Index index = indexes.get(i);
-                logger.info("[" + (i + 1) + "|" + indexes.size() + "] Database index on " + index + ": "
-                        + (indexHelper.exists(index) ? "on" : "off"));
+                logger.info("[{}|{}] Database index on {}: {}", i + 1, indexes.size(), index,
+                        indexHelper.exists(index) ? "on" : "off");
             } catch (SQLException e) {
                 throw new ExecutionException("Failed to query status of database indexes.", e);
             }

@@ -118,7 +118,7 @@ public class DeleteCommand implements Command {
                             statistics.add(objectClassId);
                             long count = counter.incrementAndGet();
                             if (count % 1000 == 0) {
-                                logger.info(count + " features processed.");
+                                logger.info("{} features processed.", count);
                             }
                         } else {
                             abort(id, t);

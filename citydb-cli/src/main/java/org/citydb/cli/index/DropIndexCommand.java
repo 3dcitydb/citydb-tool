@@ -49,7 +49,7 @@ public class DropIndexCommand extends IndexController {
         for (int i = 0; i < indexes.size(); i++) {
             try {
                 Index index = indexes.get(i);
-                logger.info("[" + (i + 1) + "|" + indexes.size() + "] Dropping database index on " + index + ".");
+                logger.info("[{}|{}] Dropping database index on {}.", i + 1, indexes.size(), index);
                 indexHelper.drop(index);
             } catch (SQLException e) {
                 throw new ExecutionException("Failed to drop database indexes.", e);

@@ -115,7 +115,7 @@ public abstract class ExportController implements Command {
 
             AtomicLong counter = new AtomicLong();
 
-            logger.info("Exporting to " + ioManager.getFileFormat(ioAdapter) + " file " + outputFile.getFile() + ".");
+            logger.info("Exporting to {} file {}.", ioManager.getFileFormat(ioAdapter), outputFile.getFile());
             writer.initialize(outputFile, writeOptions);
 
             logger.info("Querying features matching the request...");
@@ -131,7 +131,7 @@ public abstract class ExportController implements Command {
                                         statistics.add(feature);
                                         long count = counter.incrementAndGet();
                                         if (count % 1000 == 0) {
-                                            logger.info(count + " features exported.");
+                                            logger.info("{} features exported.", count);
                                         }
                                     } else {
                                         abort(feature, id, e);

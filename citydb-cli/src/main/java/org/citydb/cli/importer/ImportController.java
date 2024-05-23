@@ -99,10 +99,10 @@ public abstract class ImportController implements Command {
 
         List<InputFile> inputFiles = getInputFiles(ioAdapter, ioManager);
         if (inputFiles.isEmpty()) {
-            logger.warn("No files found at " + inputFileOptions.joinFiles() + ".");
+            logger.warn("No files found at {}.", inputFileOptions.joinFiles());
             return true;
         } else {
-            logger.info("Found " + inputFiles.size() + " file(s) at " + inputFileOptions.joinFiles() + ".");
+            logger.info("Found {} file(s) at {}.", inputFiles.size(), inputFileOptions.joinFiles());
         }
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
@@ -135,8 +135,7 @@ public abstract class ImportController implements Command {
 
             for (int i = 0; shouldRun && i < inputFiles.size(); i++) {
                 InputFile inputFile = inputFiles.get(i);
-                logger.info("[" + (i + 1) + "|" + inputFiles.size() + "] Importing file " +
-                        inputFile.getContentFile() + ".");
+                logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
 
                 try (FeatureReader reader = ioAdapter.createReader()) {
                     logger.debug("Preprocessing input file...");
@@ -150,7 +149,7 @@ public abstract class ImportController implements Command {
                                 if (descriptor != null) {
                                     long count = counter.incrementAndGet();
                                     if (count % 1000 == 0) {
-                                        logger.info(count + " features processed.");
+                                        logger.info("{} features processed.", count);
                                     }
                                 } else {
                                     reader.cancel();
@@ -191,7 +190,7 @@ public abstract class ImportController implements Command {
 
     protected List<InputFile> getInputFiles(IOAdapter ioAdapter, IOAdapterManager ioManager) throws ExecutionException {
         try {
-            logger.debug("Searching for " + ioManager.getFileFormat(ioAdapter) + " input files...");
+            logger.debug("Searching for {} input files...", ioManager.getFileFormat(ioAdapter));
             return InputFiles.of(inputFileOptions.getFiles())
                     .withFileExtensions(ioManager.getFileExtensions(ioAdapter))
                     .withMediaType(ioManager.getMediaType(ioAdapter))

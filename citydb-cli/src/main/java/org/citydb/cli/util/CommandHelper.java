@@ -80,7 +80,7 @@ public class CommandHelper {
 
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
-            logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
+            logger.info("Connecting to database {}.", connectionDetails.toConnectString());
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
             databaseManager.logDatabaseMetadata(Level.INFO);
@@ -108,7 +108,7 @@ public class CommandHelper {
             List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
             for (int i = 0; i < indexes.size(); i++) {
                 Index index = indexes.get(i);
-                logger.debug("Creating database index " + (i + 1) + " of " + indexes.size() + " on " + index + ".");
+                logger.debug("Creating database index {} of {} on {}.", i + 1, indexes.size(), index);
                 indexHelper.create(index);
             }
         } catch (SQLException e) {
@@ -122,7 +122,7 @@ public class CommandHelper {
             List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
             for (int i = 0; i < indexes.size(); i++) {
                 Index index = indexes.get(i);
-                logger.debug("Dropping database index " + (i + 1) + " of " + indexes.size() + " on " + index + ".");
+                logger.debug("Dropping database index {} of {} on {}.", i + 1, indexes.size(), index);
                 indexHelper.drop(index);
             }
         } catch (SQLException e) {

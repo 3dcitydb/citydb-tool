@@ -75,7 +75,7 @@ public class CityGMLReader implements FeatureReader {
 
         try {
             store = PersistentMapStore.newInstance();
-            logger.debug("Initialized local cache at " + store.getBackingFile() + ".");
+            logger.debug("Initialized local cache at {}.", store.getBackingFile());
         } catch (IOException e) {
             throw new ReadException("Failed to initialize local cache.", e);
         }

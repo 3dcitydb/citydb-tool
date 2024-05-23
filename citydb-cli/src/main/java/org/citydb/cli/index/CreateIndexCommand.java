@@ -50,7 +50,7 @@ public class CreateIndexCommand extends IndexController {
         for (int i = 0; i < indexes.size(); i++) {
             try {
                 Index index = indexes.get(i);
-                logger.info("[" + (i + 1) + "|" + indexes.size() + "] Creating database index on " + index + ".");
+                logger.info("[{}|{}] Creating database index on {}.", i + 1, indexes.size(), index);
                 indexHelper.create(index);
             } catch (SQLException e) {
                 throw new ExecutionException("Failed to create database indexes.", e);
