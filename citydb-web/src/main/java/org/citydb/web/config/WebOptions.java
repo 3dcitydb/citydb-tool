@@ -3,17 +3,20 @@ package org.citydb.web.config;
 import org.citydb.config.Config;
 import org.citydb.config.SerializableConfig;
 import org.citydb.database.connection.ConnectionDetails;
-import org.citydb.web.config.feature.FeatureTypes;
+import org.citydb.web.config.feature.FeatureType;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @SerializableConfig(name = "webOptions")
 @Configuration
 public class WebOptions {
-    private FeatureTypes featureTypes;
+    private Map<String, FeatureType> featureTypes;
     private ConnectionDetails databaseConnection;
 
     public WebOptions() {
-        featureTypes = new FeatureTypes();
+        featureTypes = new HashMap<>();
         databaseConnection = new ConnectionDetails();
     }
 
@@ -23,11 +26,11 @@ public class WebOptions {
         setDatabaseConnection(source.databaseConnection);
     }
 
-    public FeatureTypes getFeatureTypes() {
+    public Map<String, FeatureType> getFeatureTypes() {
         return featureTypes;
     }
 
-    public void setFeatureTypes(FeatureTypes featureTypes) {
+    public void setFeatureTypes(Map<String, FeatureType> featureTypes) {
         this.featureTypes = featureTypes;
     }
 

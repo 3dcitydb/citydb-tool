@@ -18,12 +18,14 @@ import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
+import org.citydb.web.config.WebOptions;
 import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.schema.geojson.FeatureGeoJSON;
 import org.citydb.web.schema.geojson.GeometryGeoJSON;
 import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseController;
 import org.citydb.web.util.GeoJsonConverter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
@@ -40,15 +42,24 @@ public class FeatureService {
     private volatile boolean shouldRun = true;
     private final GeoJsonConverter geoJsonConverter = new GeoJsonConverter();
 
+    private final WebOptions webOptions;
+
+    @Autowired
+    public FeatureService(WebOptions webOptions) {
+        this.webOptions = webOptions;
+    }
+
+
     @Cacheable("featureCollectionGeoJSON")
     public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId, Integer srid) throws ServiceException {
-        FeatureType featureType = Arrays.stream(FeatureType.values())
-                .filter(type -> type.getName().getLocalName().equalsIgnoreCase(collectionId))
-                .findFirst()
-                .orElse(null);
+        org.citydb.web.config.feature.FeatureType configFeatureType = webOptions.getFeatureTypes().get(collectionId);
+        if (configFeatureType == null) {
+            throw new ServiceException("The connection '" + collectionId + "' is not found.");
+        }
 
+        FeatureType featureType = FeatureType.of(configFeatureType.getName(), configFeatureType.getNamespace());
         if (featureType == null) {
-            throw new ServiceException("No features are found for the collection '" + collectionId + "'.");
+            throw new ServiceException("No feature type  '" + collectionId + "' is not found.");
         }
 
         FeatureCollectionGeoJSON featureCollectionGeoJSON = FeatureCollectionGeoJSON.newInstance();

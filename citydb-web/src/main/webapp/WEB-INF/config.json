@@ -7,6 +7,12 @@
       "host": "localhost",
       "port": 5433,
       "database": "test_citydb_v5"
+    },
+    "featureTypes": {
+      "building": {
+        "name": "Building",
+        "namespace": "http://3dcitydb.org/3dcitydb/building/5.0"
+      }
     }
   }
 }

@@ -34,14 +34,12 @@ public class CollectionService {
     private void initialize(HttpServletRequest request) throws ServiceException {
         String address = ServerUtil.getServiceURL(request) + "/collections";
 
-        List<Link> linkList = singletonList(Link.of(address, "items")
-                        .setType("application/geo+json"));
-
-        List<Collection> collectionList = webOptions.getFeatureTypes().getItems().stream()
-                .map(featureType -> Collection.of(featureType.getId())
-                        .setTitle(featureType.getName().getLocalName())
-                        .setDescription(featureType.getName().toString())
-                        .setLinks(List.of(Link.of(address + "/"+ featureType.getId() + "/items", "items"))))
+        List<Link> linkList = singletonList(Link.of(address, "items").setType("application/geo+json"));
+        List<Collection> collectionList = webOptions.getFeatureTypes().entrySet().stream()
+                .map(entry -> Collection.of(entry.getKey())
+                        .setTitle(entry.getValue().getName())
+                        .setDescription(entry.getValue().getNamespace())
+                        .setLinks(List.of(Link.of(address + "/"+ entry.getKey() + "/items", "items"))))
                 .toList();
 
         collections = Collections.of(linkList, collectionList);

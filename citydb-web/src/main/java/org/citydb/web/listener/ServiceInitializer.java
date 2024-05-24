@@ -3,11 +3,9 @@ package org.citydb.web.listener;
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapterException;
-import org.citydb.database.schema.SchemaMapping;
 import org.citydb.logging.LoggerManager;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
-import org.citydb.web.config.feature.FeatureTypes;
 import org.citydb.web.util.DatabaseController;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,6 +14,8 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 import java.sql.SQLException;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -39,12 +39,11 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
 
         // add top-level feature types as fallback
         if (webOptions.getFeatureTypes().isEmpty()) {
-            FeatureTypes featureTypes = new FeatureTypes();
-            SchemaMapping schemaMapping = databaseController.getDatabaseManager().getAdapter().getSchemaAdapter().getSchemaMapping();
-            featureTypes.setItems(schemaMapping.getFeatureTypes().stream()
-                            .filter(org.citydb.database.schema.FeatureType::isTopLevel)
-                            .map(f -> new FeatureType(f.getName())).collect(Collectors.toList())
-            );
+            Map<String, FeatureType> featureTypes = databaseController.getDatabaseManager().getAdapter().getSchemaAdapter()
+                    .getSchemaMapping().getFeatureTypes().stream()
+                    .filter(org.citydb.database.schema.FeatureType::isTopLevel)
+                    .map(f -> new FeatureType(f.getName().getLocalName(), f.getName().getNamespace()))
+                    .collect(Collectors.toMap(FeatureType::getName, Function.identity()));
             webOptions.setFeatureTypes(featureTypes);
         }
 

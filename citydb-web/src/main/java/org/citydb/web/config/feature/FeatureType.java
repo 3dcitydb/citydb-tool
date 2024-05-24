@@ -1,31 +1,27 @@
 package org.citydb.web.config.feature;
 
-import org.citydb.model.common.Name;
-
-import java.util.Locale;
-
 public class FeatureType {
-    private String id;
-    private Name name;
+    private String name;
+    private String namespace;
 
-    public FeatureType(Name name) {
+    public FeatureType(String name, String namespace) {
         this.name = name;
-        this.id = name.getLocalName().toLowerCase(Locale.ROOT);
+        this.namespace = namespace;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public Name getName() {
+    public String getName() {
         return name;
     }
 
-    public void setName(Name name) {
+    public void setName(String name) {
         this.name = name;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }
