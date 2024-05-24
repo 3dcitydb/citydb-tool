@@ -4,17 +4,21 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FeatureTypes {
-    private List<FeatureType> featureTypes;
+    private List<FeatureType> items;
 
     public FeatureTypes() {
-        featureTypes = new ArrayList<>();
+        items = new ArrayList<>();
     }
 
-    public List<FeatureType> getFeatureTypes() {
-        return featureTypes;
+    public List<FeatureType> getItems() {
+        return items;
     }
 
-    public void setFeatureTypes(List<FeatureType> featureTypes) {
-        this.featureTypes = featureTypes;
+    public void setItems(List<FeatureType> items) {
+        this.items = items;
+    }
+
+    public boolean isEmpty() {
+        return items.isEmpty();
     }
 }

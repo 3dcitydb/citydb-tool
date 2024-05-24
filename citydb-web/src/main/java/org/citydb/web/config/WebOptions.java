@@ -12,10 +12,15 @@ public class WebOptions {
     private FeatureTypes featureTypes;
     private ConnectionDetails databaseConnection;
 
+    public WebOptions() {
+        featureTypes = new FeatureTypes();
+        databaseConnection = new ConnectionDetails();
+    }
+
     public void apply(Config config) {
-        WebOptions source = config.get(WebOptions.class);
-        setFeatureTypes(source.featureTypes != null ? source.featureTypes : new FeatureTypes());
-        setDatabaseConnection(source.databaseConnection != null? source.databaseConnection : new ConnectionDetails());
+        WebOptions source = config.getOrElse(WebOptions.class, WebOptions::new);
+        setFeatureTypes(source.featureTypes);
+        setDatabaseConnection(source.databaseConnection);
     }
 
     public FeatureTypes getFeatureTypes() {

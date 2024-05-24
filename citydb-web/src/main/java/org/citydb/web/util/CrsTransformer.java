@@ -12,7 +12,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class CrsTransformer {
-    private final DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
+    private final DatabaseController databaseController = DatabaseController.getInstance();
 
     public Envelope transform(Envelope envelope, Integer srid, Connection connection) throws SQLException, GeometryException {
         Polygon polygon = Polygon.of(envelope);
@@ -27,7 +27,7 @@ public class CrsTransformer {
     }
 
     public Geometry<?> transform(Geometry<?> geometry, Integer srid, Connection connection) throws SQLException, GeometryException {
-        DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
+        DatabaseAdapter adapter = this.databaseController.getDatabaseManager().getAdapter();
         try (PreparedStatement psQuery = connection.prepareStatement("select ST_Transform(?, ?)")) {
             Object unconverted = adapter.getGeometryAdapter().getGeometry(geometry);
             psQuery.setObject(1, unconverted, adapter.getGeometryAdapter().getGeometrySQLType());

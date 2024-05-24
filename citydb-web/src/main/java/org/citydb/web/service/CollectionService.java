@@ -37,7 +37,7 @@ public class CollectionService {
         List<Link> linkList = singletonList(Link.of(address, "items")
                         .setType("application/geo+json"));
 
-        List<Collection> collectionList = webOptions.getFeatureTypes().getFeatureTypes().stream()
+        List<Collection> collectionList = webOptions.getFeatureTypes().getItems().stream()
                 .map(featureType -> Collection.of(featureType.getId())
                         .setTitle(featureType.getName().getLocalName())
                         .setDescription(featureType.getName().toString())

@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class BboxCalculator {
-    private final DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
+    private final DatabaseController databaseController = DatabaseController.getInstance();
     private final CrsTransformer crsTransformer = new CrsTransformer();
 
     public BboxCalculator() {}
@@ -44,7 +44,7 @@ public class BboxCalculator {
     }
 
     public Envelope getEnvelope(FeatureType featureType, Integer srid) throws SQLException {
-        DatabaseAdapter adapter = this.databaseConnector.getDatabaseManager().getAdapter();
+        DatabaseAdapter adapter = this.databaseController.getDatabaseManager().getAdapter();
         try {
             String schema = adapter.getConnectionDetails().getSchema();
             String query = "select ST_3DExtent(envelope)::geometry from " + schema + ".feature " +

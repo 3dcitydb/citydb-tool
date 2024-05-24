@@ -22,10 +22,9 @@ import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.schema.geojson.FeatureGeoJSON;
 import org.citydb.web.schema.geojson.GeometryGeoJSON;
 import org.citydb.web.util.CrsTransformer;
-import org.citydb.web.util.DatabaseConnector;
+import org.citydb.web.util.DatabaseController;
 import org.citydb.web.util.GeoJsonConverter;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
@@ -36,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class FeatureService {
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
-    private final DatabaseManager databaseManager = DatabaseConnector.getInstance().getDatabaseManager();
+    private final DatabaseManager databaseManager = DatabaseController.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();
     private volatile boolean shouldRun = true;
     private final GeoJsonConverter geoJsonConverter = new GeoJsonConverter();

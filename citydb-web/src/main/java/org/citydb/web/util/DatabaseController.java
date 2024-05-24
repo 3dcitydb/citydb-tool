@@ -4,6 +4,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
@@ -13,19 +14,19 @@ import org.citydb.web.service.FeatureService;
 
 import java.sql.SQLException;
 
-public class DatabaseConnector {
-    private static final DatabaseConnector instance = new DatabaseConnector();
+public class DatabaseController {
+    private static final DatabaseController instance = new DatabaseController();
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
 
-    private DatabaseConnector() {
+    private DatabaseController() {
     }
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
     }
 
-    public static DatabaseConnector getInstance() {
+    public static DatabaseController getInstance() {
         return instance;
     }
 
