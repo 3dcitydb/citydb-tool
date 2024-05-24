@@ -21,9 +21,11 @@
 
 package org.citydb.cli.exporter.citygml;
 
+import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.cli.option.UpgradeOptions;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -58,8 +60,14 @@ public class CityGMLExportCommand extends ExportController {
     }
 
     @Override
-    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
-        CityGMLFormatOptions options = formatOptions.get(CityGMLFormatOptions.class);
+    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException {
+        CityGMLFormatOptions options;
+        try {
+            options = formatOptions.get(CityGMLFormatOptions.class);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get CityGML format options from config.", e);
+        }
+
         if (options != null) {
             if (Command.hasMatchedOption("--citygml-version", commandSpec)) {
                 options.setVersion(version);

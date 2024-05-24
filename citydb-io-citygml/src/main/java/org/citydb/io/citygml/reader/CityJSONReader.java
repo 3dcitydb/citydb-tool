@@ -22,6 +22,7 @@
 package org.citydb.io.citygml.reader;
 
 import org.apache.logging.log4j.Logger;
+import org.citydb.config.ConfigException;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
@@ -74,9 +75,16 @@ public class CityJSONReader implements FeatureReader {
             throw new ReadException("Failed to initialize local cache.", e);
         }
 
+        CityJSONFormatOptions formatOptions;
+        try {
+            formatOptions = options.getFormatOptions().get(CityJSONFormatOptions.class);
+        } catch (ConfigException e) {
+            throw new ReadException("Failed to get CityJSON format options from config.", e);
+        }
+
         factory = CityJSONReaderFactory.newInstance(cityJSONContext)
                 .setReadOptions(options)
-                .setFormatOptions(options.getFormatOptions().get(CityJSONFormatOptions.class));
+                .setFormatOptions(formatOptions);
 
         isInitialized = true;
         shouldRun = true;

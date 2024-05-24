@@ -26,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.option.ConnectionOptions;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -59,7 +60,13 @@ public class CommandHelper {
                 options.toConnectionDetails() :
                 new ConnectionDetails();
 
-        DatabaseOptions databaseOptions = config.get(DatabaseOptions.class);
+        DatabaseOptions databaseOptions;
+        try {
+            databaseOptions = config.get(DatabaseOptions.class);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get database options from config.", e);
+        }
+
         if (databaseOptions != null) {
             databaseOptions.getDefaultConnection().ifPresent(defaults -> connectionDetails
                     .setHost(connectionDetails.getHost(defaults.getHost()))
