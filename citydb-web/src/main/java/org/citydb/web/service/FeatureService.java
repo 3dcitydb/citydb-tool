@@ -13,6 +13,8 @@ import org.citydb.model.feature.FeatureType;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.MultiSurface;
 import org.citydb.model.geometry.Polygon;
+import org.citydb.model.property.Attribute;
+import org.citydb.model.property.DataType;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
@@ -31,7 +33,8 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -49,7 +52,6 @@ public class FeatureService {
         this.webOptions = webOptions;
     }
 
-
     @Cacheable("featureCollectionGeoJSON")
     public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId, Integer srid) throws ServiceException {
         org.citydb.web.config.feature.FeatureType configFeatureType = webOptions.getFeatureTypes().get(collectionId);
@@ -65,23 +67,36 @@ public class FeatureService {
         FeatureCollectionGeoJSON featureCollectionGeoJSON = FeatureCollectionGeoJSON.newInstance();
         CrsTransformer crsTransformer = new CrsTransformer();
         try (Connection connection = databaseManager.getAdapter().getPool().getConnection()) {
-            FeatureCollection featureCollection = getFeatureCollection(featureType);
+            FeatureCollection featureCollection = doExport(featureType);
             for (Feature feature : featureCollection.getFeatures()) {
-                if (feature.getEnvelope().isPresent()) {
-                    MultiSurface surfaces = MultiSurface.empty();
-                    feature.accept(new ModelWalker() {
-                        @Override
-                        public void visit(Polygon polygon) {
-                            surfaces.getPolygons().add(polygon);
+                MultiSurface surfaces = MultiSurface.empty();
+                feature.accept(new ModelWalker() {
+                    @Override
+                    public void visit(Polygon polygon) {
+                        surfaces.getPolygons().add(polygon);
+                    }
+                });
+                surfaces.setSRID(databaseManager.getAdapter().getDatabaseMetadata().getSpatialReference().getSRID());
+                Geometry<?> transformed = srid != null ? crsTransformer.transform(surfaces, srid, connection) : surfaces;
+                GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(transformed);
+                FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geometryGeoJSON);
+                Map<String, Object> properties = new HashMap<>();
+                properties.put("objectId", feature.getObjectId().orElse(null));
+                for (Attribute attribute : feature.getAttributes().getAll()) {
+                    if (attribute.getDataType().isPresent()) {
+                        String attrName = attribute.getName().getLocalName();
+                        switch (DataType.of(attribute.getDataType().get())) {
+                            case INTEGER -> properties.put(attrName, attribute.getIntValue().orElse(null));
+                            case DOUBLE -> properties.put(attrName, attribute.getDoubleValue().orElse(null));
+                            case STRING, CODE -> properties.put(attrName, attribute.getStringValue().orElse(null));
+                            case URI -> properties.put(attrName, attribute.getURI().orElse(null));
+                            case TIMESTAMP -> properties.put(attrName, attribute.getTimeStamp().orElse(null));
+                            case BOOLEAN -> properties.put(attrName, 1 == attribute.getIntValue().orElse(0L));
                         }
-                    });
-                    surfaces.setSRID(databaseManager.getAdapter().getDatabaseMetadata().getSpatialReference().getSRID());
-                    Geometry<?> transformed = srid != null ? crsTransformer.transform(surfaces, srid, connection) : surfaces;
-                    GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(transformed);
-                    FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geometryGeoJSON);
-                    featureGeoJSON.getProperties().put("id", feature.getObjectId().orElse(null));
-                    featureCollectionGeoJSON.addFeature(featureGeoJSON);
+                    }
                 }
+                featureGeoJSON.setProperties(properties);
+                featureCollectionGeoJSON.addFeature(featureGeoJSON);
             }
         } catch (Throwable e) {
             throw new ServiceException("A fatal error has occurred during export. GeoJSON feature collection", e);
@@ -89,7 +104,7 @@ public class FeatureService {
         return featureCollectionGeoJSON;
     }
 
-    private FeatureCollection getFeatureCollection(FeatureType featureType) throws SQLException, ExportException {
+    private FeatureCollection doExport(FeatureType featureType) throws SQLException, ExportException {
         FeatureCollection featureCollection = FeatureCollection.empty();
         String schema = databaseManager.getAdapter().getConnectionDetails().getSchema();
         int featureTypeId = databaseManager.getAdapter().getSchemaAdapter().getSchemaMapping().getFeatureType(featureType.getName()).getId();
