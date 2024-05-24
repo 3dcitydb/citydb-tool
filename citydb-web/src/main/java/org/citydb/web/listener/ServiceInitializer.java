@@ -1,13 +1,10 @@
 package org.citydb.web.listener;
 
 import org.apache.logging.log4j.Logger;
-import org.citydb.cli.ExecutionException;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.logging.LoggerManager;
-import org.citydb.web.config.ConfigLoader;
-import org.citydb.web.config.Constants;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
 import org.citydb.web.config.feature.FeatureTypes;
@@ -17,32 +14,21 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.stream.Collectors;
 
 @Component
 public class ServiceInitializer implements ApplicationListener<ApplicationReadyEvent> {
     private final Logger logger = LoggerManager.getInstance().getLogger(ServiceInitializer.class);
-    private final ConfigLoader configLoader;
+    private final WebOptions webOptions;
 
     @Autowired
-    public ServiceInitializer(ConfigLoader configLoader) {
-        this.configLoader = configLoader;
+    public ServiceInitializer(WebOptions webOptions) {
+        this.webOptions = webOptions;
     }
 
     @Override
     public void onApplicationEvent(ApplicationReadyEvent event) {
-        if (configLoader.getWebOptions() == null) {
-            try {
-                configLoader.loadConfig(Paths.get(Constants.CONFIG_FILE));
-            } catch (ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        WebOptions webOptions = configLoader.getWebOptions();
-
         DatabaseConnector databaseConnector = DatabaseConnector.getInstance();
         try {
             databaseConnector.connect(webOptions.getDatabaseConnection());

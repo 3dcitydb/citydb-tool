@@ -1,5 +1,6 @@
 package org.citydb.web.config;
 
+import org.citydb.config.Config;
 import org.citydb.config.SerializableConfig;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.web.config.feature.FeatureTypes;
@@ -11,8 +12,10 @@ public class WebOptions {
     private FeatureTypes featureTypes;
     private ConnectionDetails databaseConnection;
 
-    public WebOptions() {
-        featureTypes = new FeatureTypes();
+    public void apply(Config config) {
+        WebOptions source = config.get(WebOptions.class);
+        setFeatureTypes(source.featureTypes != null ? source.featureTypes : new FeatureTypes());
+        setDatabaseConnection(source.databaseConnection != null? source.databaseConnection : new ConnectionDetails());
     }
 
     public FeatureTypes getFeatureTypes() {

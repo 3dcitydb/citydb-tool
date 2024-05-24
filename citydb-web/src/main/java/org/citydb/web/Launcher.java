@@ -13,21 +13,25 @@ import picocli.CommandLine;
 
 @SpringBootApplication
 @EnableCaching
-public class Launcher extends SpringBootServletInitializer implements CommandLineRunner {
-    private final Command command;
-    private final ApplicationContext appContext;
+public class Launcher extends SpringBootServletInitializer implements CommandLineRunner  {
+    private Command command;
+    private ApplicationContext applicationContext;
 
     @Autowired
-    Launcher(Command command, ApplicationContext appContext) {
+    void setCommand(Command command) {
         this.command = command;
-        this.appContext = appContext;
+    }
+
+    @Autowired
+    void setApplicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
     }
 
     @Override
     public void run(String... args) {
         int exitCode = new CommandLine(command).execute(args);
         if (exitCode != CommandLine.ExitCode.OK) {
-            System.exit(SpringApplication.exit(appContext, () -> exitCode));
+            System.exit(SpringApplication.exit(applicationContext, () -> exitCode));
         }
     }
 

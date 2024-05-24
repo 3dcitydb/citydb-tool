@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping(value = Constants.SERVICE_CONTEXT_PATH)
-public class ApiController {
+public class RequestController {
     private PageService pageService;
     private FeatureService featureService;
     private CollectionService collectionService;
