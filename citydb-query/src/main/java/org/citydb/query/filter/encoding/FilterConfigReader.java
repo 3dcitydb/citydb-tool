@@ -21,6 +21,7 @@
 
 package org.citydb.query.filter.encoding;
 
+import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.query.filter.Filter;
@@ -34,7 +35,7 @@ public class FilterConfigReader implements ObjectReader<Filter> {
             try {
                 return Filter.ofJSON(jsonReader.readAny());
             } catch (FilterParseException e) {
-                //
+                throw new JSONException("Failed to parse query filter expression.", e);
             }
         }
 
