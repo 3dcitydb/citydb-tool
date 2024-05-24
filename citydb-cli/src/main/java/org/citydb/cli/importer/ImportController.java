@@ -28,6 +28,7 @@ import org.citydb.cli.command.Command;
 import org.citydb.cli.option.*;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigObject;
 import org.citydb.core.file.InputFile;
 import org.citydb.database.DatabaseManager;
@@ -200,8 +201,14 @@ public abstract class ImportController implements Command {
         }
     }
 
-    protected ReadOptions getReadOptions() {
-        ReadOptions readOptions = config.getOrElse(ReadOptions.class, ReadOptions::new);
+    protected ReadOptions getReadOptions() throws ExecutionException {
+        ReadOptions readOptions;
+        try {
+            readOptions = config.getOrElse(ReadOptions.class, ReadOptions::new);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get read options from config.", e);
+        }
+
         if (failFast != null) {
             readOptions.setFailFast(failFast);
         }
@@ -221,8 +228,14 @@ public abstract class ImportController implements Command {
         return readOptions;
     }
 
-    protected ImportOptions getImportOptions() {
-        ImportOptions importOptions = config.getOrElse(ImportOptions.class, ImportOptions::new);
+    protected ImportOptions getImportOptions() throws ExecutionException {
+        ImportOptions importOptions;
+        try {
+            importOptions = config.getOrElse(ImportOptions.class, ImportOptions::new);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get import options from config.", e);
+        }
+
         if (threadsOption.getNumberOfThreads() != null) {
             importOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }

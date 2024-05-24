@@ -33,6 +33,7 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigObject;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
@@ -177,8 +178,14 @@ public abstract class ExportController implements Command {
         }
     }
 
-    protected ExportOptions getExportOptions() {
-        ExportOptions exportOptions = config.getOrElse(ExportOptions.class, ExportOptions::new);
+    protected ExportOptions getExportOptions() throws ExecutionException {
+        ExportOptions exportOptions;
+        try {
+            exportOptions = config.getOrElse(ExportOptions.class, ExportOptions::new);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get export options from config.", e);
+        }
+
         if (threadsOption.getNumberOfThreads() != null) {
             exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }
@@ -186,8 +193,14 @@ public abstract class ExportController implements Command {
         return exportOptions;
     }
 
-    protected WriteOptions getWriteOptions(DatabaseAdapter databaseAdapter) {
-        WriteOptions writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
+    protected WriteOptions getWriteOptions(DatabaseAdapter databaseAdapter) throws ExecutionException {
+        WriteOptions writeOptions;
+        try {
+            writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get write options from config.", e);
+        }
+
         if (failFast != null) {
             writeOptions.setFailFast(failFast);
         }

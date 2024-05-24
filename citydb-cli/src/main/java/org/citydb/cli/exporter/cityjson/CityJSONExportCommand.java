@@ -24,6 +24,7 @@ package org.citydb.cli.exporter.cityjson;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigObject;
 import org.citydb.database.DatabaseManager;
 import org.citydb.io.IOAdapter;
@@ -107,8 +108,14 @@ public class CityJSONExportCommand extends ExportController {
     }
 
     @Override
-    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) {
-        CityJSONFormatOptions options = formatOptions.get(CityJSONFormatOptions.class);
+    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException {
+        CityJSONFormatOptions options;
+        try {
+            options = formatOptions.get(CityJSONFormatOptions.class);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get CityJSON format options from config.", e);
+        }
+
         if (options != null) {
             if (Command.hasMatchedOption("--cityjson-version", commandSpec)) {
                 options.setVersion(version);

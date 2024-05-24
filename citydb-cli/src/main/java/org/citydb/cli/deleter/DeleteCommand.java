@@ -33,6 +33,7 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.logging.LoggerManager;
@@ -175,8 +176,14 @@ public class DeleteCommand implements Command {
         return select;
     }
 
-    private DeleteOptions getDeleteOptions() {
-        DeleteOptions deleteOptions = config.get(DeleteOptions.class);
+    private DeleteOptions getDeleteOptions() throws ExecutionException {
+        DeleteOptions deleteOptions;
+        try {
+            deleteOptions = config.get(DeleteOptions.class);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get delete options from config.", e);
+        }
+
         if (deleteOptions != null) {
             if (Command.hasMatchedOption("--delete-mode", commandSpec)) {
                 deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);

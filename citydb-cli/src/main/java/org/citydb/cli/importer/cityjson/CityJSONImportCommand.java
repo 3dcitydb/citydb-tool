@@ -21,8 +21,10 @@
 
 package org.citydb.cli.importer.cityjson;
 
+import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.importer.ImportController;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -49,8 +51,14 @@ public class CityJSONImportCommand extends ImportController {
     }
 
     @Override
-    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
-        CityJSONFormatOptions options = formatOptions.get(CityJSONFormatOptions.class);
+    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException {
+        CityJSONFormatOptions options;
+        try {
+            options = formatOptions.get(CityJSONFormatOptions.class);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get CityJSON format options from config.", e);
+        }
+
         if (options != null) {
             if (Command.hasMatchedOption("--no-map-unknown-objects", commandSpec)) {
                 options.setMapUnsupportedTypesToGenerics(mapUnknownObjects);

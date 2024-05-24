@@ -21,8 +21,10 @@
 
 package org.citydb.cli.importer.citygml;
 
+import org.citydb.cli.ExecutionException;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.cli.option.UpgradeOptions;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -49,8 +51,13 @@ public class CityGMLImportCommand extends ImportController {
     }
 
     @Override
-    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
-        CityGMLFormatOptions options = formatOptions.getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+    protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException {
+        CityGMLFormatOptions options;
+        try {
+            options = formatOptions.getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get CityGML format options from config.", e);
+        }
 
         if (importXALSource != null) {
             options.setImportXALSource(importXALSource);

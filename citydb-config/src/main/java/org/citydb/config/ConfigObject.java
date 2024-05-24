@@ -30,42 +30,46 @@ import java.util.function.Supplier;
 
 public class ConfigObject<T> extends LinkedHashMap<String, T> {
 
-    public <E extends T> E get(Class<E> type) {
+    public <E extends T> E get(Class<E> type) throws ConfigException {
         return get(getName(type), type);
     }
 
-    public <E extends T> E get(String name, Class<E> type) {
+    public <E extends T> E get(String name, Class<E> type) throws ConfigException {
         Object object = get(name);
         if (type.isInstance(object)) {
             return type.cast(object);
         } else if (object instanceof JSONObject) {
-            E config = JSON.parseObject(object.toString(), type);
-            if (config != null) {
-                set(config);
-                return config;
+            try {
+                E config = JSON.parseObject(object.toString(), type);
+                if (config != null) {
+                    set(config);
+                    return config;
+                }
+            } catch (Exception e) {
+                throw new ConfigException("Failed to parse JSON config object.", e);
             }
         }
 
         return null;
     }
 
-    public <E extends T> E getOrElse(Class<E> type, Supplier<E> supplier) {
+    public <E extends T> E getOrElse(Class<E> type, Supplier<E> supplier) throws ConfigException {
         return getOrElse(getName(type), type, supplier);
     }
 
-    public <E extends T> E getOrElse(String name, Class<E> type, Supplier<E> supplier) {
+    public <E extends T> E getOrElse(String name, Class<E> type, Supplier<E> supplier) throws ConfigException {
         return getOrCreate(name, type, supplier, false);
     }
 
-    public <E extends T> E computeIfAbsent(Class<E> type, Supplier<E> supplier) {
+    public <E extends T> E computeIfAbsent(Class<E> type, Supplier<E> supplier) throws ConfigException {
         return computeIfAbsent(getName(type), type, supplier);
     }
 
-    public <E extends T> E computeIfAbsent(String name, Class<E> type, Supplier<E> supplier) {
+    public <E extends T> E computeIfAbsent(String name, Class<E> type, Supplier<E> supplier) throws ConfigException {
         return getOrCreate(name, type, supplier, true);
     }
 
-    private <E extends T> E getOrCreate(String name, Class<E> type, Supplier<E> supplier, boolean putValue) {
+    private <E extends T> E getOrCreate(String name, Class<E> type, Supplier<E> supplier, boolean putValue) throws ConfigException {
         E config = get(name, type);
         if (config == null) {
             config = supplier.get();
@@ -94,11 +98,11 @@ public class ConfigObject<T> extends LinkedHashMap<String, T> {
         return containsKey(name);
     }
 
-    public <E extends T> void ifPresent(Class<E> type, Consumer<E> action) {
+    public <E extends T> void ifPresent(Class<E> type, Consumer<E> action) throws ConfigException {
         ifPresent(getName(type), type, action);
     }
 
-    public <E extends T> void ifPresent(String name, Class<E> type, Consumer<E> action) {
+    public <E extends T> void ifPresent(String name, Class<E> type, Consumer<E> action) throws ConfigException {
         E config = get(name, type);
         if (config != null) {
             action.accept(config);
