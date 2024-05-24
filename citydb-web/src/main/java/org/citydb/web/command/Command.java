@@ -19,7 +19,7 @@ import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 @Component
-@CommandLine.Command(name = "mailCommand")
+@CommandLine.Command(name = "command")
 public class Command implements Callable<Integer> {
 
     @CommandLine.Option(names = "--config-file", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<file>",
