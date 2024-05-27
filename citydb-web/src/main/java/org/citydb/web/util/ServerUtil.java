@@ -3,7 +3,7 @@ package org.citydb.web.util;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.citydb.web.config.Constants;
-import org.citydb.web.service.ServiceException;
+import org.citydb.web.exception.ServiceException;
 
 import java.net.MalformedURLException;
 import java.net.URL;

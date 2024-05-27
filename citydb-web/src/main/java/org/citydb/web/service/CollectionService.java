@@ -2,6 +2,7 @@ package org.citydb.web.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.citydb.web.config.WebOptions;
+import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.Link;

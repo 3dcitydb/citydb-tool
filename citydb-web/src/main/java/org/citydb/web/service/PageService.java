@@ -1,6 +1,7 @@
 package org.citydb.web.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.LandingPage;
 import org.citydb.web.schema.Link;
 import org.citydb.web.util.ServerUtil;

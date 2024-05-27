@@ -1,6 +1,7 @@
 package org.citydb.web.schema;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.citydb.web.exception.ServiceException;
 
 @Schema(name = "exception")
 public class Exception {
@@ -14,6 +15,10 @@ public class Exception {
 
     public static Exception of(String code) {
         return new Exception(code);
+    }
+
+    public static Exception of(ServiceException e) {
+        return of(String.valueOf(e.getHttpStatus().value())).setDescription(e.getFullMessage());
     }
 
     public String getCode() {

@@ -21,6 +21,7 @@ import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.web.config.WebOptions;
+import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.schema.geojson.FeatureGeoJSON;
 import org.citydb.web.schema.geojson.GeometryGeoJSON;

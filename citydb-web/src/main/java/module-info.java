@@ -37,7 +37,6 @@ module org.citydb.web {
     opens org.citydb.web.config to spring.core;
     opens org.citydb.web.swagger to spring.core;
     opens org.citydb.web.controller to spring.core;
-    opens org.citydb.web.schema to spring.core;
     opens org.citydb.web.listener to spring.core;
     opens org.citydb.web.cache to spring.core;
     opens org.citydb.web.service to spring.core, spring.beans;
@@ -46,4 +45,7 @@ module org.citydb.web {
     exports org.citydb.web.schema.geojson;
     exports org.citydb.web.command;
     opens org.citydb.web.command to info.picocli, spring.core;
+    exports org.citydb.web.exception;
+    opens org.citydb.web.exception to spring.beans, spring.core;
+    opens org.citydb.web.schema to spring.beans, spring.core;
 }
