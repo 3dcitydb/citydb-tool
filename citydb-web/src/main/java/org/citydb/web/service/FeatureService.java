@@ -120,10 +120,10 @@ public class FeatureService {
         DatabaseAdapter adapter = databaseManager.getAdapter();
         String query = "select id from " + adapter.getConnectionDetails().getSchema() + ".feature " +
                 "where objectclass_id = " + featureType.getId() + " and termination_date is null";
-        QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
-        Exporter exporter = Exporter.newInstance();
+        QueryExecutor executor = QueryExecutor.of(adapter);
+        FeatureStatistics statistics = new FeatureStatistics(adapter);
         FeatureCollection featureCollection = FeatureCollection.empty();
+        Exporter exporter = Exporter.newInstance();
         AtomicBoolean shouldRun = new AtomicBoolean(true);
         try (QueryResult result = executor.executeQuery(query)) {
             exporter.startSession(adapter, new ExportOptions());
