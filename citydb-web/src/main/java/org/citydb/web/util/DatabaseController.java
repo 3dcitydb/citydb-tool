@@ -4,7 +4,6 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
-import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
@@ -30,17 +29,17 @@ public class DatabaseController {
         return instance;
     }
 
-    public void connect(ConnectionDetails connectionDetails) throws SQLException, DatabaseException, DatabaseAdapterException {
-        if (databaseManager.isConnected()) {
-            return;
+    public void connect(ConnectionDetails connectionDetails) throws DatabaseException {
+        if (!databaseManager.isConnected()) {
+            try {
+                DatabaseAdapterManager adapterManager = DatabaseAdapterManager.newInstance();
+                adapterManager.register(new PostgresqlAdapter());
+                logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
+                databaseManager.connect(connectionDetails, adapterManager);
+                databaseManager.logDatabaseMetadata(Level.INFO);
+            } catch (SQLException | DatabaseAdapterException | DatabaseException e) {
+                throw new DatabaseException(e);
+            }
         }
-
-        DatabaseAdapterManager adapterManager = DatabaseAdapterManager.newInstance();
-        adapterManager.register(new PostgresqlAdapter());
-
-        logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
-
-        databaseManager.connect(connectionDetails, adapterManager);
-        databaseManager.logDatabaseMetadata(Level.INFO);
     }
 }

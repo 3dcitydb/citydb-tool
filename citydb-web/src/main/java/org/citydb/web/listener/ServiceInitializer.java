@@ -2,7 +2,6 @@ package org.citydb.web.listener;
 
 import org.apache.logging.log4j.Logger;
 import org.citydb.database.DatabaseException;
-import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.logging.LoggerManager;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.config.feature.FeatureType;
@@ -13,7 +12,6 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
-import java.sql.SQLException;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -33,11 +31,10 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
         DatabaseController databaseController = DatabaseController.getInstance();
         try {
             databaseController.connect(webOptions.getDatabaseConnection());
-        } catch (SQLException | DatabaseException | DatabaseAdapterException e) {
-            throw new RuntimeException(e);
+        } catch (DatabaseException e) {
+            throw new RuntimeException("Failed to connect to the ity database", e);
         }
 
-        // add top-level feature types as fallback
         if (webOptions.getFeatureTypes().isEmpty()) {
             Map<String, FeatureType> featureTypes = databaseController.getDatabaseManager().getAdapter().getSchemaAdapter()
                     .getSchemaMapping().getFeatureTypes().stream()
