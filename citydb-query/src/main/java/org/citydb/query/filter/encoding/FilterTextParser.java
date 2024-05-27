@@ -163,16 +163,16 @@ public class FilterTextParser {
     }
 
     private Node readTemporalExpression(Tokenizer tokenizer) throws FilterParseException {
-        Node geometry = readTimeIntervalLiteral(tokenizer);
-        return geometry != Node.EMPTY ?
-                geometry :
+        Node timeInterval = readTimeIntervalLiteral(tokenizer);
+        return timeInterval != Node.EMPTY ?
+                timeInterval :
                 readTerminal(tokenizer);
     }
 
     private Node readArrayExpression(Tokenizer tokenizer) throws FilterParseException {
-        Node geometry = readArray(tokenizer);
-        return geometry != Node.EMPTY ?
-                geometry :
+        Node array = readArray(tokenizer);
+        return array != Node.EMPTY ?
+                array :
                 readTerminal(tokenizer);
     }
 

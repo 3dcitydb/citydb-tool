@@ -32,7 +32,6 @@ import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -281,11 +280,9 @@ public class FilterTextBuilder {
                 throw new FilterParseException("Failed to parse '" + node.getToken() + "' as date literal.", e);
             }
         } else if (node.getToken().getType() == TextToken.TIMESTAMP) {
-            try {
-                return TimestampLiteral.of(OffsetDateTime.parse(node.getToken().getValue()));
-            } catch (DateTimeParseException e) {
-                throw new FilterParseException("Failed to parse '" + node.getToken() + "' as timestamp literal.", e);
-            }
+            return TimestampLiteral.of(node.getToken().getValue())
+                    .orElseThrow(() -> new FilterParseException("Failed to parse '" +
+                            node.getToken() + "' as timestamp literal."));
         } else {
             throw new FilterParseException("Failed to parse '" + node.getToken() + "' as time instant literal.");
         }
@@ -329,12 +326,9 @@ public class FilterTextBuilder {
     }
 
     private NumericLiteral buildNumericLiteral(Node node) throws FilterParseException {
-        try {
-            return NumericLiteral.of(Double.parseDouble(node.getSign().map(TextToken::toString).orElse("") +
-                    node.getToken().getValue()));
-        } catch (NumberFormatException e) {
-            throw new FilterParseException("Failed to parse '" + node.getToken() + "' as numeric literal.");
-        }
+        return NumericLiteral.of(node.getSign().map(TextToken::toString).orElse("") + node.getToken().getValue())
+                .orElseThrow(() -> new FilterParseException("Failed to parse '" +
+                        node.getToken() + "' as numeric literal."));
     }
 
     private Expression buildIdentifier(Node node) throws FilterParseException {

@@ -34,7 +34,6 @@ import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
 
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -315,11 +314,9 @@ public class FilterJSONParser {
     }
 
     private TimestampLiteral readTimestampLiteral(String timestampString) throws FilterParseException {
-        try {
-            return TimestampLiteral.of(OffsetDateTime.parse(timestampString));
-        } catch (DateTimeParseException e) {
-            throw new FilterParseException("Failed to parse '" + timestampString + "' as timestamp literal.", e);
-        }
+        return TimestampLiteral.of(timestampString)
+                .orElseThrow(() -> new FilterParseException("Failed to parse '" +
+                        timestampString + "' as timestamp literal."));
     }
 
     private Expression readTimeInterval(JSONArray array) throws FilterParseException {

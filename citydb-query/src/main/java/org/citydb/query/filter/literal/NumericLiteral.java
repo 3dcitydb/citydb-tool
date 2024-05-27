@@ -29,33 +29,61 @@ import org.citydb.query.filter.operation.NumericExpression;
 import java.util.Optional;
 
 public class NumericLiteral extends Literal<Number> implements NumericExpression, ScalarExpression {
+    private final boolean isInteger;
 
-    private NumericLiteral(Number value) {
+    private NumericLiteral(long value) {
         super(value);
+        this.isInteger = true;
+    }
+
+    private NumericLiteral(double value) {
+        super(value);
+        this.isInteger = false;
     }
 
     public static NumericLiteral of(Number value) {
-        return new NumericLiteral(value);
+        if (value instanceof Long
+                || value instanceof Integer
+                || value instanceof Short
+                || value instanceof Byte) {
+            return new NumericLiteral(value.longValue());
+        } else if (value instanceof Double
+                || value instanceof Float) {
+            return new NumericLiteral(value.doubleValue());
+        } else {
+            try {
+                return new NumericLiteral(Long.parseLong(String.valueOf(value)));
+            } catch (NumberFormatException e) {
+                return new NumericLiteral(value.doubleValue());
+            }
+        }
     }
 
     public static NumericLiteral of(Object value, Number defaultValue) {
-        return of(value).orElse(new NumericLiteral(defaultValue));
+        return of(value).orElse(of(defaultValue));
     }
 
     public static Optional<NumericLiteral> of(Object value) {
         if (value instanceof Number number) {
-            return Optional.of(new NumericLiteral(number));
+            return Optional.of(of(number));
         } else {
+            String number = String.valueOf(value);
             try {
-                return Optional.of(new NumericLiteral(Double.parseDouble(String.valueOf(value))));
-            } catch (Exception e) {
+                return Optional.of(new NumericLiteral(Long.parseLong(number)));
+            } catch (NumberFormatException e) {
+                //
+            }
+
+            try {
+                return Optional.of(new NumericLiteral(Double.parseDouble(number)));
+            } catch (NumberFormatException e) {
                 return Optional.empty();
             }
         }
     }
 
     public boolean isInteger() {
-        return value.longValue() == value.doubleValue();
+        return isInteger;
     }
 
     public long intValue() {
@@ -63,7 +91,7 @@ public class NumericLiteral extends Literal<Number> implements NumericExpression
     }
 
     public boolean isFloatingPoint() {
-        return !isInteger();
+        return !isInteger;
     }
 
     public double doubleValue() {
@@ -79,7 +107,7 @@ public class NumericLiteral extends Literal<Number> implements NumericExpression
 
     @Override
     public NumericExpression negate() {
-        value = isInteger() ?
+        value = isInteger ?
                 -value.intValue() :
                 -value.doubleValue();
         return this;
