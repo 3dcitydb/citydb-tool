@@ -1,9 +1,13 @@
 package org.citydb.web.controller;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.citydb.web.config.Constants;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
+import org.citydb.web.schema.Exception;
 import org.citydb.web.schema.LandingPage;
 import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.service.CollectionService;
@@ -38,11 +42,17 @@ public class RequestController {
     }
 
     @GetMapping("")
-    public ResponseEntity<LandingPage> getLandingPage(HttpServletRequest request) {
+    @ApiResponse(responseCode = "200", description = "Lading page",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = LandingPage.class)))
+    @ApiResponse(responseCode = "500", description = "Internal Server Error",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Exception.class)))
+    public ResponseEntity<Object> getLandingPage(HttpServletRequest request) {
         try {
             return new ResponseEntity<>(pageService.getLandingPage(request), HttpStatus.OK);
         } catch (ServiceException e) {
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            Exception exception = Exception.of(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+                    .setDescription(e.getMessage());
+            return new ResponseEntity<>(exception, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -50,7 +60,7 @@ public class RequestController {
     public ResponseEntity<Collections> getCollections(HttpServletRequest request) {
         try {
             return new ResponseEntity<>(collectionService.getCollections(request), HttpStatus.OK);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -59,7 +69,7 @@ public class RequestController {
     public ResponseEntity<Collection> getCollection(@PathVariable("collectionId") String collectionId, HttpServletRequest request) {
         try {
             return new ResponseEntity<>(collectionService.getCollection(collectionId, request), HttpStatus.OK);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -70,7 +80,7 @@ public class RequestController {
     ) {
         try {
             return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(collectionId, srid), HttpStatus.OK);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
