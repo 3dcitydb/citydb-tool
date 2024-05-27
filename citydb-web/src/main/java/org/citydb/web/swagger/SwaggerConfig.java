@@ -14,9 +14,6 @@ public class SwaggerConfig {
 
     @Bean
     public OpenAPI openAPI() {
-        Server devServer = new Server();
-        devServer.setDescription("3DCityDB OGC API - Features");
-
         Info info = new Info()
                 .title("3DCityDB OGC API - Features")
                 .version("1.0")
@@ -26,7 +23,6 @@ public class SwaggerConfig {
                         .name("Apache License")
                         .url("http://www.apache.org/licenses/"));
 
-
-        return new OpenAPI().info(info).servers(List.of(devServer));
+        return new OpenAPI().info(info);
     }
 }
