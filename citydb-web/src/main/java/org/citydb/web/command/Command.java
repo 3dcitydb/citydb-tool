@@ -47,13 +47,15 @@ public class Command implements Callable<Integer> {
                 config.putAll(ConfigManager.newInstance().read(configFile, Config.class, Config::new));
             } catch (Exception e) {
                 logger.error("Failed to load config file.", e);
+                return CommandLine.ExitCode.SOFTWARE;
             }
         } else {
             // try to load from resource
             try (InputStream stream = new BufferedInputStream(servletContext.getResourceAsStream(Constants.CONFIG_FILE))) {
                 config.putAll(JSON.parseObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8), Config.class));
             } catch (Exception e) {
-                //
+                logger.error("Failed to load config file.", e);
+                return CommandLine.ExitCode.SOFTWARE;
             }
         }
 
