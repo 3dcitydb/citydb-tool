@@ -83,7 +83,8 @@ public class RequestController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Exception.class)))
     @GetMapping("/collections/{collectionId}/items")
     public ResponseEntity<Object> getCollectionFeatures(
-            @PathVariable("collectionId") String collectionId, @RequestParam(value = "srid", required = false) Integer srid
+            @PathVariable("collectionId") String collectionId,
+            @RequestParam(value = "srid", required = false) Integer srid
     ) {
         try {
             return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(collectionId, srid), HttpStatus.OK);

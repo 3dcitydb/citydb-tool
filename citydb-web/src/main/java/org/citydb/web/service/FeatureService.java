@@ -6,10 +6,11 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.QueryExecutor;
 import org.citydb.cli.util.QueryResult;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.schema.FeatureType;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureCollection;
-import org.citydb.model.feature.FeatureType;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.MultiSurface;
 import org.citydb.model.geometry.Polygon;
@@ -24,28 +25,26 @@ import org.citydb.web.config.WebOptions;
 import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.schema.geojson.FeatureGeoJSON;
-import org.citydb.web.schema.geojson.GeometryGeoJSON;
 import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseController;
 import org.citydb.web.util.GeoJsonConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 public class FeatureService {
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
     private final DatabaseManager databaseManager = DatabaseController.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();
-    private volatile boolean shouldRun = true;
     private final GeoJsonConverter geoJsonConverter = new GeoJsonConverter();
-
     private final WebOptions webOptions;
 
     @Autowired
@@ -54,20 +53,23 @@ public class FeatureService {
     }
 
     @Cacheable("featureCollectionGeoJSON")
-    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String collectionId, Integer srid) throws ServiceException {
-        org.citydb.web.config.feature.FeatureType configFeatureType = webOptions.getFeatureTypes().get(collectionId);
+    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String id, Integer srid) throws ServiceException {
+        org.citydb.web.config.feature.FeatureType configFeatureType = webOptions.getFeatureTypes().get(id);
         if (configFeatureType == null) {
-            throw new ServiceException("The connection '" + collectionId + "' is not found.");
+            throw new ServiceException(HttpStatus.NOT_FOUND, "The connection '" + id + "' is not found.");
         }
 
-        FeatureType featureType = FeatureType.of(configFeatureType.getName(), configFeatureType.getNamespace());
+        DatabaseAdapter adapter = databaseManager.getAdapter();
+
+        FeatureType featureType = adapter.getSchemaAdapter().getSchemaMapping()
+                .getFeatureType(configFeatureType.getName(), configFeatureType.getNamespace());
         if (featureType == null) {
-            throw new ServiceException("No feature type  '" + collectionId + "' is not found.");
+            throw new ServiceException(HttpStatus.NOT_FOUND, "Feature type  '" + id + "' is not supported.");
         }
 
         FeatureCollectionGeoJSON featureCollectionGeoJSON = FeatureCollectionGeoJSON.newInstance();
-        CrsTransformer crsTransformer = new CrsTransformer();
-        try (Connection connection = databaseManager.getAdapter().getPool().getConnection()) {
+
+        try (Connection connection = adapter.getPool().getConnection()) {
             FeatureCollection featureCollection = doExport(featureType);
             for (Feature feature : featureCollection.getFeatures()) {
                 MultiSurface surfaces = MultiSurface.empty();
@@ -77,12 +79,17 @@ public class FeatureService {
                         surfaces.getPolygons().add(polygon);
                     }
                 });
-                surfaces.setSRID(databaseManager.getAdapter().getDatabaseMetadata().getSpatialReference().getSRID());
-                Geometry<?> transformed = srid != null ? crsTransformer.transform(surfaces, srid, connection) : surfaces;
-                GeometryGeoJSON geometryGeoJSON = geoJsonConverter.convert(transformed);
-                FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geometryGeoJSON);
+                surfaces.setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID());
+                Geometry<?> transformed = srid != null ?
+                        CrsTransformer.transform(surfaces, srid, connection, adapter.getGeometryAdapter()) :
+                        surfaces;
+
+                if (transformed == null) {
+                    throw new ServiceException(HttpStatus.BAD_REQUEST, "The target CRS is not supported by the database");
+                }
+
+                FeatureGeoJSON featureGeoJSON = FeatureGeoJSON.of(geoJsonConverter.convert(transformed));
                 Map<String, Object> properties = new HashMap<>();
-                properties.put("objectId", feature.getObjectId().orElse(null));
                 for (Attribute attribute : feature.getAttributes().getAll()) {
                     if (attribute.getDataType().isPresent()) {
                         String attrName = attribute.getName().getLocalName();
@@ -96,40 +103,39 @@ public class FeatureService {
                         }
                     }
                 }
+
                 featureGeoJSON.setProperties(properties);
                 featureCollectionGeoJSON.addFeature(featureGeoJSON);
             }
+        } catch (SQLException | ExportException e) {
+            throw new ServiceException("Failed to export feature collection from database", e);
         } catch (Throwable e) {
-            throw new ServiceException("A fatal error has occurred during export. GeoJSON feature collection", e);
+            throw new ServiceException("A fatal error has occurred during while creating the feature collection", e);
         }
+
         return featureCollectionGeoJSON;
     }
 
     private FeatureCollection doExport(FeatureType featureType) throws SQLException, ExportException {
-        FeatureCollection featureCollection = FeatureCollection.empty();
-        String schema = databaseManager.getAdapter().getConnectionDetails().getSchema();
-        int featureTypeId = databaseManager.getAdapter().getSchemaAdapter().getSchemaMapping().getFeatureType(featureType.getName()).getId();
-        String query = "select id from " + schema + ".feature " +
-                "where objectclass_id = " + featureTypeId + " and termination_date is null";
+        DatabaseAdapter adapter = databaseManager.getAdapter();
+        String query = "select id from " + adapter.getConnectionDetails().getSchema() + ".feature " +
+                "where objectclass_id = " + featureType.getId() + " and termination_date is null";
         QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         Exporter exporter = Exporter.newInstance();
-        AtomicLong counter = new AtomicLong();
+        FeatureCollection featureCollection = FeatureCollection.empty();
+        AtomicBoolean shouldRun = new AtomicBoolean(true);
         try (QueryResult result = executor.executeQuery(query)) {
-            exporter.startSession(databaseManager.getAdapter(), new ExportOptions());
-            while (shouldRun && result.hasNext()) {
+            exporter.startSession(adapter, new ExportOptions());
+            while (shouldRun.get() && result.hasNext()) {
                 long id = result.getId();
                 exporter.exportFeature(id).whenComplete((feature, t) -> {
                     if (feature != null) {
                         statistics.add(feature);
                         featureCollection.addFeature(feature);
-                        long count = counter.incrementAndGet();
-                        if (count % 1000 == 0) {
-                            logger.info(count + " features exported.");
-                        }
                     } else {
-                        if (shouldRun) {
-                            shouldRun = false;
+                        if (shouldRun.get()) {
+                            shouldRun.set(false);
                             logger.warn("Database export aborted due to an error.");
                             helper.logException("Failed to export feature (ID: " + id + ")." , t);
                         }
@@ -144,8 +150,8 @@ public class FeatureService {
             } else {
                 logger.info("No features exported.");
             }
-            logger.info("Bounding box calculation successfully completed.");
         }
+
         return featureCollection;
     }
 }

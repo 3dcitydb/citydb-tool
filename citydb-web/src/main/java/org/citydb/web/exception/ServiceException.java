@@ -2,8 +2,10 @@ package org.citydb.web.exception;
 
 import org.springframework.http.HttpStatus;
 
+import java.util.Objects;
+
 public class ServiceException extends Exception {
-    private final HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+    private HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
 
     public ServiceException() {
         super();
@@ -19,6 +21,15 @@ public class ServiceException extends Exception {
 
     public ServiceException(String message, Throwable cause) {
         super(message, cause);
+    }
+
+    public ServiceException(HttpStatus status, String message) {
+        this(status, message, null);
+    }
+
+    public ServiceException(HttpStatus status, String message, Throwable cause) {
+        this(message, cause);
+        this.status = Objects.requireNonNull(status);
     }
 
     public String getFullMessage() {
