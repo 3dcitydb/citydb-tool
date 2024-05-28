@@ -1,7 +1,6 @@
 package org.citydb.web.service;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.citydb.web.cache.CacheNames;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.Collection;
@@ -9,7 +8,6 @@ import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.Link;
 import org.citydb.web.util.ServerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,13 +24,21 @@ public class CollectionService {
         this.webOptions = webOptions;
     }
 
-    @Cacheable(CacheNames.COLLECTIONS_CACHE)
     public Collections getCollections(HttpServletRequest request) throws ServiceException {
         if (collections == null) {
             initialize(request);
         }
 
         return collections;
+    }
+
+    public Collection getCollection(String id, HttpServletRequest request) throws ServiceException {
+        Collection collection = getCollections(request).findCollectionById(id);
+        if (collection == null) {
+            throw new ServiceException("Feature collection '" + id + "' not found.");
+        }
+
+        return collection;
     }
 
     private void initialize(HttpServletRequest request) throws ServiceException {
@@ -47,14 +53,5 @@ public class CollectionService {
                 .toList();
 
         collections = Collections.of(linkList, collectionList);
-    }
-
-    public Collection getCollection(String id, HttpServletRequest request) throws ServiceException {
-        Collection collection = getCollections(request).findCollectionById(id);
-        if (collection == null) {
-            throw new ServiceException("Feature collection '" + id + "' not found.");
-        }
-
-        return collection;
     }
 }

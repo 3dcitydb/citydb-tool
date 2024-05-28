@@ -1,6 +1,5 @@
 package org.citydb.web.util;
 
-
 import jakarta.servlet.http.HttpServletRequest;
 import org.citydb.web.config.Constants;
 import org.citydb.web.exception.ServiceException;
