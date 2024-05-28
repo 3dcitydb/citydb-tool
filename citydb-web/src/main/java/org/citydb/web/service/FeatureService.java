@@ -29,7 +29,6 @@ import org.citydb.web.util.CrsTransformer;
 import org.citydb.web.util.DatabaseController;
 import org.citydb.web.util.GeoJsonConverter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -52,7 +51,6 @@ public class FeatureService {
         this.webOptions = webOptions;
     }
 
-    @Cacheable("featureCollectionGeoJSON")
     public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String id, Integer srid) throws ServiceException {
         org.citydb.web.config.feature.FeatureType configFeatureType = webOptions.getFeatureTypes().get(id);
         if (configFeatureType == null) {

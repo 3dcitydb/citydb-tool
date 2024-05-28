@@ -8,6 +8,7 @@ import org.citydb.web.schema.Collections;
 import org.citydb.web.schema.Link;
 import org.citydb.web.util.ServerUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class CollectionService {
         this.webOptions = webOptions;
     }
 
+    @Cacheable("collections")
     public Collections getCollections(HttpServletRequest request) throws ServiceException {
         if (collections == null) {
             initialize(request);
