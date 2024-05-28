@@ -32,7 +32,7 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
         try {
             databaseController.connect(webOptions.getDatabaseConnection());
         } catch (DatabaseException e) {
-            throw new RuntimeException("Failed to connect to the ity database", e);
+            throw new RuntimeException("Failed to connect to the city database", e);
         }
 
         if (webOptions.getFeatureTypes().isEmpty()) {

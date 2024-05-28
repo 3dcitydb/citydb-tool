@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON;
 import jakarta.servlet.ServletContext;
 import org.apache.logging.log4j.Logger;
 import org.citydb.config.Config;
+import org.citydb.config.ConfigException;
 import org.citydb.config.ConfigManager;
 import org.citydb.logging.LoggerManager;
 import org.citydb.web.config.Constants;
@@ -59,7 +60,12 @@ public class Command implements Callable<Integer> {
             }
         }
 
-        webOptions.apply(config);
+        try {
+            webOptions.apply(config);
+        } catch (ConfigException e) {
+            logger.error("Invalid config file for the application.", e);
+            return CommandLine.ExitCode.SOFTWARE;
+        }
 
         return CommandLine.ExitCode.OK;
     }
