@@ -19,10 +19,15 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.nio.file.Path;
 import java.util.Objects;
 
 @RestController
@@ -89,40 +94,33 @@ public class RequestController {
     @ApiResponse(responseCode = "200", description = "Fetch features of the feature collection with id collectionId.",
             content = {
                     @Content(mediaType = Constants.GEOJSON_MEDIA_TYPE, schema = @Schema(implementation = FeatureGeoJSON.class)),
+                    @Content(mediaType = Constants.CITYJSON_MEDIA_TYPE),
                     @Content(mediaType = Constants.CITYGML_MEDIA_TYPE)
             }
     )
     @ApiResponse(responseCode = "500", description = "Internal Server Error",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Exception.class)))
     @GetMapping("/collections/{collectionId}/items")
-    public ResponseEntity<Object> getCollectionFeatures(
-            HttpServletRequest request,
-            @PathVariable("collectionId") String collectionId,
-            @RequestParam(value = "srid", required = false) Integer srid
-    ) {
-        String contentType = request.getHeader("accept");
-        if (Objects.equals(contentType, Constants.GEOJSON_MEDIA_TYPE)) {
-            try {
-                return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(collectionId, srid), HttpStatus.OK);
-            } catch (ServiceException e) {
-                return new ResponseEntity<>(Exception.of(e), e.getHttpStatus());
-            }
-        } else {
-            try {
-                String filePath = "D:\\Daten\\Berlin\\all_wo_app\\data.gml";
-                File file = new File(filePath);
-                long fileSizeInBytes = file.length();
+    public ResponseEntity<Object> getCollectionFeatures(HttpServletRequest request, @PathVariable("collectionId") String collectionId) {
+        try {
+            String contentType = request.getHeader("accept");
+            if (Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE)
+                    || Objects.equals(contentType, Constants.CITYJSON_MEDIA_TYPE)) {
+                Path filePath = featureService.getFeatureCollectionCityGML(collectionId, contentType);
+                File file = filePath.toFile();
                 FileInputStream fileInputStream = new FileInputStream(file);
-                InputStreamResource inputStreamResource = new InputStreamResource(fileInputStream);
                 return ResponseEntity.ok()
-                        .contentLength(fileSizeInBytes)
+                        .contentLength(file.length())
                         .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .header("Content-Disposition", "attachment; filename=\"" + filePath + "\"")
-                        .body(inputStreamResource);
-            } catch (java.lang.Exception e) {
-                ServiceException serviceException = new ServiceException(e);
-                return new ResponseEntity<>(Exception.of(serviceException), serviceException.getHttpStatus());
+                        .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
+                        .body(new InputStreamResource(fileInputStream));
+            } else {
+                return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(collectionId), HttpStatus.OK);
             }
+        } catch (ServiceException e) {
+            return new ResponseEntity<>(Exception.of(e), e.getHttpStatus());
+        } catch (FileNotFoundException e) {
+            return new ResponseEntity<>(Exception.of(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

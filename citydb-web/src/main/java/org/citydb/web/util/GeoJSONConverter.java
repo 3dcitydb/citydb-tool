@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class GeoJsonConverter {
+public class GeoJSONConverter {
 
     public GeometryGeoJSON convert(Geometry<?> geometry){
         GeometryType geometryType = geometry.getGeometryType();
