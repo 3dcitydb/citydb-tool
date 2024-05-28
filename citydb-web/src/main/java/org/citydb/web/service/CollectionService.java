@@ -1,6 +1,7 @@
 package org.citydb.web.service;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.citydb.web.cache.CacheNames;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.Collection;
@@ -25,7 +26,7 @@ public class CollectionService {
         this.webOptions = webOptions;
     }
 
-    @Cacheable("collections")
+    @Cacheable(CacheNames.COLLECTIONS_CACHE)
     public Collections getCollections(HttpServletRequest request) throws ServiceException {
         if (collections == null) {
             initialize(request);
