@@ -11,6 +11,7 @@ import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.io.IOAdapter;
+import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.citygml.CityGMLAdapter;
@@ -55,6 +56,12 @@ public class FeatureService {
     public Path getFeatureCollectionCityGML(String id, String contentType) throws ServiceException {
         try {
             IOAdapterManager ioManager = helper.createIOAdapterManager();
+            if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
+                ioManager.register(new CityGMLAdapter());
+            }
+            if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
+                ioManager.register(new CityJSONAdapter());
+            }
             IOAdapter ioAdapter = Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE) ?
                     ioManager.getAdapter(CityGMLAdapter.class) :
                     ioManager.getAdapter(CityJSONAdapter.class);
@@ -73,7 +80,7 @@ public class FeatureService {
             }
 
             return dataPath;
-        } catch (IOException | WriteException | ExecutionException e) {
+        } catch (IOException | WriteException | ExecutionException | IOAdapterException e) {
             throw new ServiceException("Failed to write CityGML data to file.", e);
         }
     }
