@@ -31,19 +31,19 @@ public class ServiceInitializer implements ApplicationListener<ApplicationReadyE
         DatabaseController databaseController = DatabaseController.getInstance();
         try {
             databaseController.connect(webOptions.getDatabaseConnection());
+
+            if (webOptions.getFeatureTypes().isEmpty()) {
+                Map<String, FeatureType> featureTypes = databaseController.getDatabaseManager().getAdapter().getSchemaAdapter()
+                        .getSchemaMapping().getFeatureTypes().stream()
+                        .filter(org.citydb.database.schema.FeatureType::isTopLevel)
+                        .map(f -> new FeatureType(f.getName().getLocalName(), f.getName().getNamespace()))
+                        .collect(Collectors.toMap(FeatureType::getName, Function.identity()));
+                webOptions.setFeatureTypes(featureTypes);
+            }
+
+            logger.info("OGC API Service initialized successfully.");
         } catch (DatabaseException e) {
-            throw new RuntimeException("Failed to connect to the city database", e);
+            throw new RuntimeException("Failed to connect initialize the application.", e);
         }
-
-        if (webOptions.getFeatureTypes().isEmpty()) {
-            Map<String, FeatureType> featureTypes = databaseController.getDatabaseManager().getAdapter().getSchemaAdapter()
-                    .getSchemaMapping().getFeatureTypes().stream()
-                    .filter(org.citydb.database.schema.FeatureType::isTopLevel)
-                    .map(f -> new FeatureType(f.getName().getLocalName(), f.getName().getNamespace()))
-                    .collect(Collectors.toMap(FeatureType::getName, Function.identity()));
-            webOptions.setFeatureTypes(featureTypes);
-        }
-
-        logger.info("OGC API Service initialized successfully.");
     }
 }

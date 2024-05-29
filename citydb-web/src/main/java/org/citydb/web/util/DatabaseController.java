@@ -18,8 +18,7 @@ public class DatabaseController {
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
 
-    private DatabaseController() {
-    }
+    private DatabaseController() {}
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
@@ -32,13 +31,13 @@ public class DatabaseController {
     public void connect(ConnectionDetails connectionDetails) throws DatabaseException {
         if (!databaseManager.isConnected()) {
             try {
-                DatabaseAdapterManager adapterManager = DatabaseAdapterManager.newInstance();
-                adapterManager.register(new PostgresqlAdapter());
                 logger.info("Connecting to database " + connectionDetails.toConnectString() + ".");
+                DatabaseAdapterManager adapterManager = DatabaseAdapterManager.newInstance()
+                        .register(new PostgresqlAdapter());
                 databaseManager.connect(connectionDetails, adapterManager);
                 databaseManager.logDatabaseMetadata(Level.INFO);
             } catch (SQLException | DatabaseAdapterException | DatabaseException e) {
-                throw new DatabaseException(e);
+                throw new DatabaseException("Failed to connect to the database", e);
             }
         }
     }
