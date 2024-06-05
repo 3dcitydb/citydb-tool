@@ -24,9 +24,6 @@ package org.citydb.database.adapter;
 import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.*;
 
-import java.util.Iterator;
-import java.util.Set;
-
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
     private final IndexHelper indexHelper;
@@ -46,6 +43,7 @@ public abstract class SchemaAdapter {
     public abstract String getCreateIndex(Index index);
     public abstract String getDropIndex(Index index);
     public abstract String getIndexExists(Index index);
+    public abstract SqlHelper getSqlHelper();
     protected abstract String getCityDBVersion();
     protected abstract String getSpatialReference();
     protected abstract SpatialReferenceType getSpatialReferenceType(String type);
@@ -60,36 +58,5 @@ public abstract class SchemaAdapter {
 
     public IndexHelper getIndexHelper() {
         return indexHelper;
-    }
-
-    public String getInOperator(String column, Set<Long> values) {
-        if (values.isEmpty()) {
-            return column + " = 0";
-        } else if (values.size() == 1) {
-            return column + " = " + values.iterator().next();
-        }
-
-        int i = 0;
-        StringBuilder builder = new StringBuilder();
-        Iterator<Long> iterator = values.iterator();
-        while (iterator.hasNext()) {
-            if (i == 0) {
-                if (!builder.isEmpty()) {
-                    builder.append(" or ");
-                }
-
-                builder.append(column).append(" in (");
-            }
-
-            builder.append(iterator.next());
-            if (++i == getMaximumNumberOfItemsForInOperator() || !iterator.hasNext()) {
-                builder.append(")");
-                i = 0;
-            } else {
-                builder.append(",");
-            }
-        }
-
-        return builder.toString();
     }
 }

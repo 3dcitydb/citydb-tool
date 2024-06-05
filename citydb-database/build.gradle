@@ -2,6 +2,7 @@ dependencies {
     api project(':citydb-core')
     api project(':citydb-logging')
     api project(':citydb-model')
+    api 'org.citydb:sqlbuilder:3.0.0-SNAPSHOT'
     implementation project(':citydb-config')
     implementation 'org.apache.tomcat:tomcat-jdbc:10.1.20'
 }

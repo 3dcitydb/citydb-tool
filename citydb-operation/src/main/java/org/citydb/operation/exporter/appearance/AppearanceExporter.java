@@ -69,8 +69,8 @@ public class AppearanceExporter extends DatabaseExporter {
 
     private String getQuery(Set<Long> ids, Set<Long> implicitGeometryIds) {
         return getBaseQuery() +
-                "where " + adapter.getSchemaAdapter().getInOperator("a.id", ids) +
-                " or " + adapter.getSchemaAdapter().getInOperator("a.implicit_geometry_id", implicitGeometryIds);
+                "where " + helper.getInOperator("a.id", ids) +
+                " or " + helper.getInOperator("a.implicit_geometry_id", implicitGeometryIds);
     }
 
     public Appearance doExport(long id) throws ExportException, SQLException {

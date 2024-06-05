@@ -38,6 +38,7 @@ import org.citydb.operation.exporter.util.TableHelper;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 
@@ -137,6 +138,37 @@ public class ExportHelper {
     public boolean lookupAndPut(ExternalFile externalFile) {
         String objectId = externalFile.getObjectId().orElse(null);
         return objectId != null && !externalFileIdCache.add(objectId);
+    }
+
+    public String getInOperator(String column, Set<Long> values) {
+        if (values.isEmpty()) {
+            return column + " = 0";
+        } else if (values.size() == 1) {
+            return column + " = " + values.iterator().next();
+        }
+
+        int i = 0;
+        StringBuilder builder = new StringBuilder();
+        Iterator<Long> iterator = values.iterator();
+        while (iterator.hasNext()) {
+            if (i == 0) {
+                if (!builder.isEmpty()) {
+                    builder.append(" or ");
+                }
+
+                builder.append(column).append(" in (");
+            }
+
+            builder.append(iterator.next());
+            if (++i == adapter.getSchemaAdapter().getMaximumNumberOfItemsForInOperator() || !iterator.hasNext()) {
+                builder.append(")");
+                i = 0;
+            } else {
+                builder.append(",");
+            }
+        }
+
+        return builder.toString();
     }
 
     Feature exportFeature(long id) throws ExportException {

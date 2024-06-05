@@ -37,11 +37,13 @@ import java.util.stream.Collectors;
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final LazyInitializer<String, IOException> featureHierarchyQuery;
     private final LazyInitializer<String, IOException> recursiveImplicitGeometryQuery;
+    private final SqlHelper sqlHelper;
 
     SchemaAdapter(DatabaseAdapter adapter) {
         super(adapter);
         featureHierarchyQuery = LazyInitializer.of(this::readFeatureHierarchyQuery);
         recursiveImplicitGeometryQuery = LazyInitializer.of(this::readRecursiveImplicitGeometryQuery);
+        sqlHelper = new SqlHelper(this);
     }
 
     @Override
@@ -103,6 +105,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 "join pg_namespace n on n.oid = c.relnamespace " +
                 "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
                 "and c.relname = '" + index.getName() + "' limit 1";
+    }
+
+    @Override
+    public SqlHelper getSqlHelper() {
+        return sqlHelper;
     }
 
     @Override
