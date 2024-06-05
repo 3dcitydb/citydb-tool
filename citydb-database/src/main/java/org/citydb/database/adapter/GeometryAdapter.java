@@ -36,7 +36,7 @@ public abstract class GeometryAdapter {
         this.adapter = adapter;
     }
 
-    public abstract int getGeometrySQLType();
+    public abstract int getGeometrySqlType();
     public abstract String getGeometryTypeName();
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;

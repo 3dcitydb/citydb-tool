@@ -77,9 +77,9 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
 
         Object referencePoint = getGeometry(property.getReferencePoint().orElse(null), true);
         if (referencePoint != null) {
-            stmt.setObject(9, referencePoint, adapter.getGeometryAdapter().getGeometrySQLType());
+            stmt.setObject(9, referencePoint, adapter.getGeometryAdapter().getGeometrySqlType());
         } else {
-            stmt.setNull(9, adapter.getGeometryAdapter().getGeometrySQLType(),
+            stmt.setNull(9, adapter.getGeometryAdapter().getGeometrySqlType(),
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 

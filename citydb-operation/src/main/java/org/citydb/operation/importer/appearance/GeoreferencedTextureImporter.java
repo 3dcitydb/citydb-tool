@@ -64,9 +64,9 @@ public class GeoreferencedTextureImporter extends TextureImporter {
                 .map(Geometry::force2D)
                 .orElse(null), false);
         if (referencePoint != null) {
-            stmt.setObject(12, referencePoint, adapter.getGeometryAdapter().getGeometrySQLType());
+            stmt.setObject(12, referencePoint, adapter.getGeometryAdapter().getGeometrySqlType());
         } else {
-            stmt.setNull(12, adapter.getGeometryAdapter().getGeometrySQLType(),
+            stmt.setNull(12, adapter.getGeometryAdapter().getGeometrySqlType(),
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 

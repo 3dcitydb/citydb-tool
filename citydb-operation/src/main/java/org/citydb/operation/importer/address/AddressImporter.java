@@ -80,9 +80,9 @@ public class AddressImporter extends DatabaseImporter {
 
         Object multiPoint = getGeometry(address.getMultiPoint().orElse(null), true);
         if (multiPoint != null) {
-            stmt.setObject(13, multiPoint, adapter.getGeometryAdapter().getGeometrySQLType());
+            stmt.setObject(13, multiPoint, adapter.getGeometryAdapter().getGeometrySqlType());
         } else {
-            stmt.setNull(13, adapter.getGeometryAdapter().getGeometrySQLType(),
+            stmt.setNull(13, adapter.getGeometryAdapter().getGeometrySqlType(),
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 

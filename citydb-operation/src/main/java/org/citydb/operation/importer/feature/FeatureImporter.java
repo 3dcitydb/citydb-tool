@@ -65,9 +65,9 @@ public class FeatureImporter extends DatabaseImporter {
 
         Object envelope = getEnvelope(feature.getEnvelope().orElse(null));
         if (envelope != null) {
-            stmt.setObject(6, envelope, adapter.getGeometryAdapter().getGeometrySQLType());
+            stmt.setObject(6, envelope, adapter.getGeometryAdapter().getGeometrySqlType());
         } else {
-            stmt.setNull(6, adapter.getGeometryAdapter().getGeometrySQLType(),
+            stmt.setNull(6, adapter.getGeometryAdapter().getGeometrySqlType(),
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 

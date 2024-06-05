@@ -38,7 +38,7 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     @Override
-    public int getGeometrySQLType() {
+    public int getGeometrySqlType() {
         return Types.OTHER;
     }
 
