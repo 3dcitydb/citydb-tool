@@ -75,16 +75,21 @@ public class FilterTextBuilder {
         Expression expression = buildExpression(node);
         if (type.isInstance(expression)) {
             return type.cast(expression);
-        } else {
-            Matcher matcher = Pattern.compile("(([A-Z]?[a-z]+)|([A-Z]))").matcher(type.getSimpleName());
-            List<String> words = new ArrayList<>();
-            while (matcher.find()) {
-                words.add(matcher.group(0).toLowerCase(Locale.ROOT));
+        } else if (expression instanceof Literal<?> literal) {
+            T converted = literal.cast(type).orElse(null);
+            if (converted != null) {
+                return converted;
             }
-
-            throw new FilterParseException("Failed to parse '" + node.getToken() + "' as " +
-                    String.join(" ", words) + ".");
         }
+
+        Matcher matcher = Pattern.compile("(([A-Z]?[a-z]+)|([A-Z]))").matcher(type.getSimpleName());
+        List<String> words = new ArrayList<>();
+        while (matcher.find()) {
+            words.add(matcher.group(0).toLowerCase(Locale.ROOT));
+        }
+
+        throw new FilterParseException("Failed to parse '" + node.getToken() + "' as " +
+                String.join(" ", words) + ".");
     }
 
     private Predicate buildBooleanPredicate(Node node) throws FilterParseException {
