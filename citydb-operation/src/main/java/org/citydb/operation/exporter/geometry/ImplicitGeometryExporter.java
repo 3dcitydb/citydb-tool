@@ -69,7 +69,7 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
 
     private String getQuery(Set<Long> ids) {
         return getBaseQuery() +
-                "where " + adapter.getSchemaAdapter().getInOperator("ig.id", ids);
+                "where " + helper.getInOperator("ig.id", ids);
     }
 
     public ImplicitGeometry doExport(long id) throws ExportException, SQLException {

@@ -1,6 +1,5 @@
 dependencies {
     api project(':citydb-database')
     api project(':citydb-model')
-    api 'org.citydb:sqlbuilder:3.0.0-SNAPSHOT'
     implementation project(':citydb-config')
 }
