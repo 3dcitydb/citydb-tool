@@ -23,7 +23,8 @@ package org.citydb.database.schema;
 
 import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;
-import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.literal.Literal;
+import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.In;
 import org.citydb.sqlbuilder.operation.Operators;
@@ -48,30 +49,28 @@ public abstract class SqlHelper {
     }
 
     public BooleanExpression getInOperator(Column column, Collection<?> values, boolean negate) {
-        List<Placeholder> placeholders = values != null ?
-                values.stream().map(Placeholder::of).toList() :
-                null;
-        if (placeholders == null || placeholders.isEmpty()) {
+        List<ScalarExpression> expressions = Literal.ofScalarList(values);
+        if (expressions == null || expressions.isEmpty()) {
             return Operators.isNull(column, negate);
-        } else if (placeholders.size() == 1) {
-            return Operators.eq(column, placeholders.iterator().next(), negate);
+        } else if (expressions.size() == 1) {
+            return Operators.eq(column, expressions.iterator().next(), negate);
         }
 
         int size = schemaAdapter.getMaximumNumberOfItemsForInOperator();
-        if (placeholders.size() > size) {
+        if (expressions.size() > size) {
             List<In> operators = new ArrayList<>();
-            while (placeholders.size() > size) {
-                operators.add(In.of(column, placeholders.subList(0, size), negate));
-                placeholders = placeholders.subList(size, placeholders.size());
+            while (expressions.size() > size) {
+                operators.add(In.of(column, expressions.subList(0, size), negate));
+                expressions = expressions.subList(size, expressions.size());
             }
 
-            if (!placeholders.isEmpty()) {
-                operators.add(In.of(column, placeholders, negate));
+            if (!expressions.isEmpty()) {
+                operators.add(In.of(column, expressions, negate));
             }
 
             return negate ? Operators.and(operators) : Operators.or(operators);
         } else {
-            return In.of(column, placeholders, negate);
+            return In.of(column, expressions, negate);
         }
     }
 }
