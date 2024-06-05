@@ -53,7 +53,7 @@ public class RequestController {
     }
 
     @GetMapping("")
-    @ApiResponse(responseCode = "200", description = "Lading page",
+    @ApiResponse(responseCode = "200", description = "${api.response.landingPage.200.description}",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = LandingPage.class)))
     @ApiResponse(responseCode = "500", description = "Internal Server Error",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Exception.class)))
