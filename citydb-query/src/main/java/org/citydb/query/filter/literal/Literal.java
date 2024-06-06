@@ -23,6 +23,7 @@ package org.citydb.query.filter.literal;
 
 import org.citydb.query.filter.common.CharacterExpression;
 import org.citydb.query.filter.common.Expression;
+import org.citydb.query.filter.common.PatternExpression;
 import org.citydb.query.filter.common.ScalarExpression;
 import org.citydb.query.filter.operation.BooleanExpression;
 import org.citydb.query.filter.operation.NumericExpression;
@@ -68,7 +69,8 @@ public abstract class Literal<T> implements Expression {
             return NumericLiteral.of(value)
                     .filter(type::isInstance)
                     .map(type::cast);
-        } else if (CharacterExpression.class.isAssignableFrom(type)) {
+        } else if (CharacterExpression.class.isAssignableFrom(type)
+                || PatternExpression.class.isAssignableFrom(type)) {
             return Optional.of(type.cast(StringLiteral.of(value)));
         } else if (TimestampLiteral.class.isAssignableFrom(type)) {
             return TimestampLiteral.of(value)

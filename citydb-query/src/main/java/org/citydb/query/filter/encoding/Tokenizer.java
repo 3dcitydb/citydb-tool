@@ -240,8 +240,8 @@ public class Tokenizer {
         return token;
     }
 
-    private StreamTokenizer createTokenizer(String cql) {
-        StreamTokenizer tokenizer = new StreamTokenizer(new StringReader(cql));
+    private StreamTokenizer createTokenizer(String text) {
+        StreamTokenizer tokenizer = new StreamTokenizer(new StringReader(text));
         tokenizer.resetSyntax();
         tokenizer.wordChars('\u0000', '\uFFFF');
         tokenizer.whitespaceChars(0, ' ');
