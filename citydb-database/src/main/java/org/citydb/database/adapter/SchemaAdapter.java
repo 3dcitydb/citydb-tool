@@ -43,7 +43,7 @@ public abstract class SchemaAdapter {
     public abstract String getCreateIndex(Index index);
     public abstract String getDropIndex(Index index);
     public abstract String getIndexExists(Index index);
-    public abstract SqlHelper getSqlHelper();
+    public abstract OperationHelper getOperationHelper();
     protected abstract String getCityDBVersion();
     protected abstract String getSpatialReference();
     protected abstract SpatialReferenceType getSpatialReferenceType(String type);

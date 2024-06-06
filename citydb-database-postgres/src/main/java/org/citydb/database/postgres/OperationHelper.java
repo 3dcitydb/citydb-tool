@@ -25,19 +25,34 @@ import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.function.Function;
 
-public class SqlHelper extends org.citydb.database.schema.SqlHelper {
+public class OperationHelper extends org.citydb.database.schema.OperationHelper {
 
-    SqlHelper(SchemaAdapter schemaAdapter) {
+    OperationHelper(SchemaAdapter schemaAdapter) {
         super(schemaAdapter);
     }
 
     @Override
-    public Expression getToDateFunction(Expression expression) {
+    public Expression toDate(Expression expression) {
         return Function.of("date", expression);
     }
 
     @Override
-    public Expression getUpperFunction(Expression expression) {
+    public Expression upper(Expression expression) {
         return Function.of("upper", expression);
+    }
+
+    @Override
+    public Expression lower(Expression expression) {
+        return Function.of("lower", expression);
+    }
+
+    @Override
+    public Expression intDivision(Expression leftOperand, Expression rightOperand) {
+        return Function.of("div", leftOperand, rightOperand);
+    }
+
+    @Override
+    public Expression power(Expression leftOperand, Expression rightOperand) {
+        return Function.of("power", leftOperand, rightOperand);
     }
 }

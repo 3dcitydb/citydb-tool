@@ -37,13 +37,13 @@ import java.util.stream.Collectors;
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final LazyInitializer<String, IOException> featureHierarchyQuery;
     private final LazyInitializer<String, IOException> recursiveImplicitGeometryQuery;
-    private final SqlHelper sqlHelper;
+    private final OperationHelper operationHelper;
 
     SchemaAdapter(DatabaseAdapter adapter) {
         super(adapter);
         featureHierarchyQuery = LazyInitializer.of(this::readFeatureHierarchyQuery);
         recursiveImplicitGeometryQuery = LazyInitializer.of(this::readRecursiveImplicitGeometryQuery);
-        sqlHelper = new SqlHelper(this);
+        operationHelper = new OperationHelper(this);
     }
 
     @Override
@@ -108,8 +108,8 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public SqlHelper getSqlHelper() {
-        return sqlHelper;
+    public OperationHelper getOperationHelper() {
+        return operationHelper;
     }
 
     @Override

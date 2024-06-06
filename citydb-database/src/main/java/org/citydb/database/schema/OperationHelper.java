@@ -34,21 +34,24 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-public abstract class SqlHelper {
+public abstract class OperationHelper {
     protected final SchemaAdapter schemaAdapter;
 
-    protected SqlHelper(SchemaAdapter schemaAdapter) {
+    protected OperationHelper(SchemaAdapter schemaAdapter) {
         this.schemaAdapter = schemaAdapter;
     }
 
-    public abstract Expression getToDateFunction(Expression expression);
-    public abstract Expression getUpperFunction(Expression expression);
+    public abstract Expression toDate(Expression expression);
+    public abstract Expression upper(Expression expression);
+    public abstract Expression lower(Expression expression);
+    public abstract Expression intDivision(Expression leftOperand, Expression rightOperand);
+    public abstract Expression power(Expression leftOperand, Expression rightOperand);
 
-    public BooleanExpression getInOperator(Column column, Collection<?> values) {
-        return getInOperator(column, values, false);
+    public BooleanExpression in(Column column, Collection<?> values) {
+        return in(column, values, false);
     }
 
-    public BooleanExpression getInOperator(Column column, Collection<?> values, boolean negate) {
+    public BooleanExpression in(Column column, Collection<?> values, boolean negate) {
         List<ScalarExpression> expressions = Literal.ofScalarList(values);
         if (expressions == null || expressions.isEmpty()) {
             return Operators.isNull(column, negate);
