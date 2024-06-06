@@ -32,7 +32,6 @@ public abstract class FilterWalker implements FilterVisitor {
         between.getOperand().accept(this);
         between.getLowerBound().accept(this);
         between.getUpperBound().accept(this);
-        between.getOperand().accept(this);
     }
 
     @Override
