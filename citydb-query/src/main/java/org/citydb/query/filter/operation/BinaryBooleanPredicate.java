@@ -22,14 +22,14 @@
 package org.citydb.query.filter.operation;
 
 import org.citydb.query.filter.common.FilterVisitor;
-import org.citydb.query.filter.common.Predicate;
+import org.citydb.query.filter.common.LogicalPredicate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class BinaryBooleanPredicate implements Predicate {
+public class BinaryBooleanPredicate implements LogicalPredicate {
     private final BooleanOperator operator;
     private final List<BooleanExpression> operands;
 

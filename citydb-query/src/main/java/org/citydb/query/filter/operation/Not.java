@@ -22,11 +22,11 @@
 package org.citydb.query.filter.operation;
 
 import org.citydb.query.filter.common.FilterVisitor;
-import org.citydb.query.filter.common.Predicate;
+import org.citydb.query.filter.common.LogicalPredicate;
 
 import java.util.Objects;
 
-public class Not implements Predicate {
+public class Not implements LogicalPredicate {
     private final BooleanExpression operand;
 
     private Not(BooleanExpression operand) {
