@@ -24,8 +24,8 @@ package org.citydb.query.filter.function;
 import java.util.*;
 
 public enum FunctionName {
-    CASEI("CASEI"),
     ACCENTI("ACCENTI"),
+    CASEI("CASEI"),
     INDEX("INDEX");
 
     private final static Map<String, FunctionName> identifiers = new HashMap<>();

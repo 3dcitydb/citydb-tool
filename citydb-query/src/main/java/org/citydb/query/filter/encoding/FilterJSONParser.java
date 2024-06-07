@@ -83,20 +83,15 @@ public class FilterJSONParser {
         Expression expression = readExpression(json);
         if (type.isInstance(expression)) {
             return type.cast(expression);
-        } else if (expression instanceof Literal<?> literal) {
-            T converted = literal.cast(type).orElse(null);
-            if (converted != null) {
-                return converted;
+        } else {
+            Matcher matcher = Pattern.compile("(([A-Z]?[a-z]+)|([A-Z]))").matcher(type.getSimpleName());
+            List<String> words = new ArrayList<>();
+            while (matcher.find()) {
+                words.add(matcher.group(0).toLowerCase(Locale.ROOT));
             }
-        }
 
-        Matcher matcher = Pattern.compile("(([A-Z]?[a-z]+)|([A-Z]))").matcher(type.getSimpleName());
-        List<String> words = new ArrayList<>();
-        while (matcher.find()) {
-            words.add(matcher.group(0).toLowerCase(Locale.ROOT));
+            throw new FilterParseException("Failed to parse '" + json + "' as " + String.join(" ", words) + ".");
         }
-
-        throw new FilterParseException("Failed to parse '" + json + "' as " + String.join(" ", words) + ".");
     }
 
     private Expression readObject(JSONObject object) throws FilterParseException {

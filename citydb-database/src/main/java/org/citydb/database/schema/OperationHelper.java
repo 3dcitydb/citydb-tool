@@ -41,11 +41,17 @@ public abstract class OperationHelper {
         this.schemaAdapter = schemaAdapter;
     }
 
-    public abstract Expression toDate(Expression expression);
-    public abstract Expression upper(Expression expression);
-    public abstract Expression lower(Expression expression);
     public abstract Expression intDivision(Expression leftOperand, Expression rightOperand);
+
+    public abstract Expression lower(Expression expression);
+
+    public abstract Expression toDate(Expression expression);
+
     public abstract Expression power(Expression leftOperand, Expression rightOperand);
+
+    public abstract Expression unaccent(Expression expression);
+
+    public abstract Expression upper(Expression expression);
 
     public BooleanExpression in(Column column, Collection<?> values) {
         return in(column, values, false);

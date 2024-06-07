@@ -32,13 +32,8 @@ public class OperationHelper extends org.citydb.database.schema.OperationHelper 
     }
 
     @Override
-    public Expression toDate(Expression expression) {
-        return Function.of("date", expression);
-    }
-
-    @Override
-    public Expression upper(Expression expression) {
-        return Function.of("upper", expression);
+    public Expression intDivision(Expression leftOperand, Expression rightOperand) {
+        return Function.of("div", leftOperand, rightOperand);
     }
 
     @Override
@@ -47,12 +42,22 @@ public class OperationHelper extends org.citydb.database.schema.OperationHelper 
     }
 
     @Override
-    public Expression intDivision(Expression leftOperand, Expression rightOperand) {
-        return Function.of("div", leftOperand, rightOperand);
+    public Expression toDate(Expression expression) {
+        return Function.of("date", expression);
     }
 
     @Override
     public Expression power(Expression leftOperand, Expression rightOperand) {
         return Function.of("power", leftOperand, rightOperand);
+    }
+
+    @Override
+    public Expression unaccent(Expression expression) {
+        return Function.of("unaccent", expression);
+    }
+
+    @Override
+    public Expression upper(Expression expression) {
+        return Function.of("upper", expression);
     }
 }
