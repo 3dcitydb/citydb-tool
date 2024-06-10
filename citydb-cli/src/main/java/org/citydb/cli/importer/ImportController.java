@@ -29,7 +29,7 @@ import org.citydb.cli.option.*;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
-import org.citydb.config.ConfigObject;
+import org.citydb.config.common.ConfigObject;
 import org.citydb.core.file.InputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.io.IOAdapter;

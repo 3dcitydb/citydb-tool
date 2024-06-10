@@ -21,5 +21,7 @@
 
 package org.citydb.config;
 
+import org.citydb.config.common.ConfigObject;
+
 public class Config extends ConfigObject<Object> {
 }

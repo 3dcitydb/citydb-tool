@@ -25,7 +25,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
-import org.citydb.config.ConfigObject;
+import org.citydb.config.common.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;

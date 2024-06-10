@@ -23,9 +23,9 @@ package org.citydb.query;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
+import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterConfigReader;
 import org.citydb.query.filter.encoding.FilterConfigWriter;
-import org.citydb.query.filter.Filter;
 
 import java.util.Optional;
 

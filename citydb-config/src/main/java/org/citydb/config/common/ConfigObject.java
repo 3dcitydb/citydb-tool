@@ -19,10 +19,12 @@
  * limitations under the License.
  */
 
-package org.citydb.config;
+package org.citydb.config.common;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.config.ConfigException;
+import org.citydb.config.SerializableConfig;
 
 import java.util.LinkedHashMap;
 import java.util.function.Consumer;

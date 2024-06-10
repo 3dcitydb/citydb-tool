@@ -21,8 +21,8 @@
 
 package org.citydb.io.writer;
 
-import org.citydb.config.ConfigObject;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SpatialReference;
 import org.citydb.io.writer.option.OutputFormatOptions;
 

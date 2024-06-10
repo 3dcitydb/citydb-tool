@@ -21,8 +21,8 @@
 
 package org.citydb.io.reader;
 
-import org.citydb.config.ConfigObject;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.common.ConfigObject;
 import org.citydb.io.reader.option.InputFormatOptions;
 
 import java.util.Optional;

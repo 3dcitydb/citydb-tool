@@ -26,7 +26,7 @@ import org.citydb.cli.command.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.cli.option.UpgradeOptions;
 import org.citydb.config.ConfigException;
-import org.citydb.config.ConfigObject;
+import org.citydb.config.common.ConfigObject;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityGMLAdapter;
