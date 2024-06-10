@@ -23,8 +23,8 @@ package org.citydb.io.writer;
 
 import org.citydb.config.ConfigObject;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.common.SpatialReference;
 import org.citydb.io.writer.option.OutputFormatOptions;
-import org.citydb.io.writer.option.SpatialReference;
 
 import java.util.Optional;
 

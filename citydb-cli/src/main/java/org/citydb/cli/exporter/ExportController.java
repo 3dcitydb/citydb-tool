@@ -44,7 +44,7 @@ import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.option.OutputFormatOptions;
-import org.citydb.io.writer.option.SpatialReference;
+import org.citydb.config.common.SpatialReference;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.ExportOptions;

@@ -19,16 +19,18 @@
  * limitations under the License.
  */
 
-package org.citydb.io.writer.option;
+package org.citydb.config.common;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 
+import java.util.Optional;
+
 public class SpatialReference {
-    private int srid;
+    private Integer srid;
     private String uri;
 
-    public int getSRID() {
-        return srid;
+    public Optional<Integer> getSRID() {
+        return Optional.ofNullable(srid);
     }
 
     @JSONField(name = "srid")
@@ -37,8 +39,8 @@ public class SpatialReference {
         return this;
     }
 
-    public String getURI() {
-        return uri;
+    public Optional<String> getURI() {
+        return Optional.ofNullable(uri);
     }
 
     @JSONField(name = "uri")
