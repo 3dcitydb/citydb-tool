@@ -160,6 +160,6 @@ public class ConnectionDetails {
     }
 
     public String toConnectString() {
-        return user + "@" + host + ":" + port + "/" + database;
+        return user + "@" + host + (port != null ? ":" + port : "") + "/" + database;
     }
 }
