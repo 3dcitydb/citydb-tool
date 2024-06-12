@@ -1,10 +1,10 @@
 @SuppressWarnings("requires-transitive-automatic")
 module org.citydb.core {
-    requires transitive com.alibaba.fastjson2;
-    requires transitive org.apache.tika.core;
     requires org.apache.commons.compress;
     requires org.apache.commons.io;
     requires com.h2database.mvstore;
+    requires transitive com.alibaba.fastjson2;
+    requires transitive org.apache.tika.core;
 
     exports org.citydb.core;
     exports org.citydb.core.cache;

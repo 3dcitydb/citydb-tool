@@ -55,6 +55,7 @@ subprojects {
     }
 
     extraJavaModuleInfo {
+        failOnMissingModuleInfo.set(false)
         module('tomcat-jdbc-10.1.20.jar', 'org.apache.tomcat.jdbc', '10.1.20') {
             requires('java.sql')
             requires('java.management')

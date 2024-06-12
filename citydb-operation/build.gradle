@@ -1,4 +1,4 @@
 dependencies {
-    implementation project(':citydb-config')
     api project(':citydb-database')
+    implementation project(':citydb-config')
 }

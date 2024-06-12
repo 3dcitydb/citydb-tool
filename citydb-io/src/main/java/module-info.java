@@ -1,10 +1,8 @@
 module org.citydb.io {
+    requires java.sql;
     requires transitive org.citydb.config;
     requires transitive org.citydb.core;
     requires transitive org.citydb.model;
-    requires java.sql;
-
-    uses org.citydb.io.IOAdapter;
 
     exports org.citydb.io;
     exports org.citydb.io.reader;
@@ -13,4 +11,6 @@ module org.citydb.io {
     exports org.citydb.io.validator;
     exports org.citydb.io.writer;
     exports org.citydb.io.writer.option;
+
+    uses org.citydb.io.IOAdapter;
 }

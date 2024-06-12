@@ -5,6 +5,8 @@ plugins {
 }
 
 dependencies {
+    api project(':citydb-plugin')
+    api 'info.picocli:picocli:4.7.5'
     implementation project(':citydb-config')
     implementation project(':citydb-io')
     implementation project(':citydb-io-citygml')
@@ -12,8 +14,6 @@ dependencies {
     implementation project(':citydb-database')
     implementation project(':citydb-operation')
     implementation project(':citydb-database-postgres')
-    api project(':citydb-plugin')
-    api 'info.picocli:picocli:4.7.5'
 }
 
 processResources {
