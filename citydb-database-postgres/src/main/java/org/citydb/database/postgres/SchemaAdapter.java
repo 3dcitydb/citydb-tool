@@ -21,7 +21,7 @@
 
 package org.citydb.database.postgres;
 
-import org.citydb.core.concurrent.LazyInitializer;
+import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.Index;
@@ -35,14 +35,14 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
-    private final LazyInitializer<String, IOException> featureHierarchyQuery;
-    private final LazyInitializer<String, IOException> recursiveImplicitGeometryQuery;
+    private final LazyCheckedInitializer<String, IOException> featureHierarchyQuery;
+    private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
     private final OperationHelper operationHelper;
 
     SchemaAdapter(DatabaseAdapter adapter) {
         super(adapter);
-        featureHierarchyQuery = LazyInitializer.of(this::readFeatureHierarchyQuery);
-        recursiveImplicitGeometryQuery = LazyInitializer.of(this::readRecursiveImplicitGeometryQuery);
+        featureHierarchyQuery = LazyCheckedInitializer.of(this::readFeatureHierarchyQuery);
+        recursiveImplicitGeometryQuery = LazyCheckedInitializer.of(this::readRecursiveImplicitGeometryQuery);
         operationHelper = new OperationHelper(this);
     }
 

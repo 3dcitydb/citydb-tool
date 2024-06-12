@@ -23,18 +23,18 @@ package org.citydb.core.concurrent;
 
 import org.citydb.core.function.CheckedSupplier;
 
-public class LazyInitializer<T, E extends Throwable> {
+public class LazyCheckedInitializer<T, E extends Throwable> {
     private final Object lock = new Object();
     private final CheckedSupplier<T, E> supplier;
     private volatile boolean initialized = false;
     private T object = null;
 
-    private LazyInitializer(CheckedSupplier<T, E> supplier) {
+    private LazyCheckedInitializer(CheckedSupplier<T, E> supplier) {
         this.supplier = supplier;
     }
 
-    public static <T, E extends Exception> LazyInitializer<T, E> of(CheckedSupplier<T, E> supplier) {
-        return new LazyInitializer<>(supplier);
+    public static <T, E extends Exception> LazyCheckedInitializer<T, E> of(CheckedSupplier<T, E> supplier) {
+        return new LazyCheckedInitializer<>(supplier);
     }
 
     public T get() throws E {

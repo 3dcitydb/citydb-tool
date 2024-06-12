@@ -23,7 +23,7 @@ package org.citydb.operation.exporter;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
-import org.citydb.core.concurrent.LazyInitializer;
+import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
 
@@ -34,7 +34,7 @@ import java.nio.file.Path;
 @SerializableConfig(name = "exportOptions")
 public class ExportOptions {
     @JSONField(serialize = false, deserialize = false)
-    private final LazyInitializer<OutputFile, IOException> tempOutputFile = LazyInitializer.of(
+    private final LazyCheckedInitializer<OutputFile, IOException> tempOutputFile = LazyCheckedInitializer.of(
             () -> new RegularOutputFile(Files.createTempDirectory("citydb-").resolve("output.tmp")));
 
     @JSONField(serialize = false, deserialize = false)
