@@ -25,6 +25,7 @@ public enum SpatialReferenceType {
     PROJECTED_CRS,
     GEOGRAPHIC_CRS,
     GEODETIC_CRS,
+    GEOCENTRIC_CRS,
     COMPOUND_CRS,
     ENGINEERING_CRS,
     UNKNOWN_CRS

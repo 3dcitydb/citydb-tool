@@ -128,7 +128,8 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         return switch (type.toUpperCase(Locale.ROOT)) {
             case "PROJCRS", "PROJECTEDCRS", "PROJCS" -> SpatialReferenceType.PROJECTED_CRS;
             case "GEOGCRS", "GEOGRAPHICCRS", "GEOGCS" -> SpatialReferenceType.GEOGRAPHIC_CRS;
-            case "GEODCRS", "GEODETICCRS", "GEOCCS" -> SpatialReferenceType.GEODETIC_CRS;
+            case "GEODCRS", "GEODETICCRS" -> SpatialReferenceType.GEODETIC_CRS;
+            case "GEOCCS" -> SpatialReferenceType.GEOCENTRIC_CRS;
             case "COMPOUNDCRS", "COMPDCS", "COMPD_CS" -> SpatialReferenceType.COMPOUND_CRS;
             case "ENGCRS", "ENGINEERINGCRS", "LOCAL_CS" -> SpatialReferenceType.ENGINEERING_CRS;
             default -> SpatialReferenceType.UNKNOWN_CRS;
