@@ -19,15 +19,33 @@
  * limitations under the License.
  */
 
-package org.citydb.database.metadata;
+package org.citydb.config.common;
 
-public enum SpatialReferenceType {
-    PROJECTED_CRS,
-    GEOGRAPHIC_CRS,
-    GEOGRAPHIC3D_CRS,
-    GEODETIC_CRS,
-    GEOCENTRIC_CRS,
-    COMPOUND_CRS,
-    ENGINEERING_CRS,
-    UNKNOWN_CRS
+import com.alibaba.fastjson2.annotation.JSONField;
+
+import java.util.Optional;
+
+public class SpatialReferenceOption {
+    private Integer srid;
+    private String uri;
+
+    public Optional<Integer> getSRID() {
+        return Optional.ofNullable(srid);
+    }
+
+    @JSONField(name = "srid")
+    public SpatialReferenceOption setSRID(int srid) {
+        this.srid = srid;
+        return this;
+    }
+
+    public Optional<String> getURI() {
+        return Optional.ofNullable(uri);
+    }
+
+    @JSONField(name = "uri")
+    public SpatialReferenceOption setURI(String uri) {
+        this.uri = uri;
+        return this;
+    }
 }

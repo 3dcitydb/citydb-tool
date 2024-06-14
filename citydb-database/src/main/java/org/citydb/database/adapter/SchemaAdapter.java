@@ -45,7 +45,8 @@ public abstract class SchemaAdapter {
     public abstract String getIndexExists(Index index);
     public abstract OperationHelper getOperationHelper();
     protected abstract String getCityDBVersion();
-    protected abstract String getSpatialReference();
+    protected abstract String getDatabaseSrs();
+    protected abstract String getSpatialReference(int srid);
     protected abstract SpatialReferenceType getSpatialReferenceType(String type);
 
     void buildSchemaMapping() throws SchemaException {

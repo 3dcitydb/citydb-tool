@@ -22,15 +22,20 @@
 package org.citydb.database.adapter;
 
 import com.alibaba.fastjson2.JSONObject;
-import org.citydb.database.geometry.GeometryBuilder;
-import org.citydb.database.geometry.GeometryException;
-import org.citydb.database.geometry.PropertiesBuilder;
+import org.citydb.database.geometry.*;
+import org.citydb.database.metadata.SpatialReference;
 import org.citydb.model.geometry.Geometry;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public abstract class GeometryAdapter {
     protected final DatabaseAdapter adapter;
     private final GeometryBuilder geometryBuilder = new GeometryBuilder();
     private final PropertiesBuilder propertiesBuilder = new PropertiesBuilder();
+    private final SrsIdentifierParser parser = SrsIdentifierParser.newInstance();
 
     protected GeometryAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
@@ -53,5 +58,29 @@ public abstract class GeometryAdapter {
 
     public JSONObject buildGeometryProperties(Geometry<?> geometry) {
         return propertiesBuilder.buildProperties(geometry);
+    }
+
+    public SpatialReference getSpatialReference(int srid) throws SQLException {
+        return getSpatialReference(srid, null);
+    }
+
+    public SpatialReference getSpatialReference(String uri) throws SrsParseException, SQLException {
+        return getSpatialReference(parser.parse(uri), uri);
+    }
+
+    public SpatialReference getSpatialReference(int srid, String uri) throws SQLException {
+        try (Connection connection = adapter.getPool().getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet rs = statement.executeQuery(adapter.getSchemaAdapter().getSpatialReference(srid))) {
+            if (rs.next()) {
+                return SpatialReference.of(srid,
+                        adapter.getSchemaAdapter().getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
+                        rs.getString("coord_ref_sys_name"),
+                        uri,
+                        rs.getString("wktext"));
+            }
+        }
+
+        throw new SQLException("Failed to find spatial reference system for SRID " + srid + ".");
     }
 }
