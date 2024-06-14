@@ -86,14 +86,14 @@ public class SpatialReference {
     private CoordinateReferenceSystem buildDefinition() {
         CoordinateReferenceSystem crs = null;
         try {
-            crs = CRS.decode("EPSG:" + srid);
+            crs = CRS.parseWKT(wkt);
         } catch (Exception e) {
             //
         }
 
         if (crs == null) {
             try {
-                crs = CRS.decode(uri);
+                crs = CRS.decode("EPSG:" + srid);
             } catch (Exception e) {
                 //
             }
@@ -101,7 +101,7 @@ public class SpatialReference {
 
         if (crs == null) {
             try {
-                crs = CRS.parseWKT(wkt);
+                crs = CRS.decode(uri);
             } catch (Exception e) {
                 //
             }
