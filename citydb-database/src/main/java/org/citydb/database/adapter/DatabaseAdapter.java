@@ -58,7 +58,7 @@ public abstract class DatabaseAdapter {
         try (Connection connection = pool.getConnection()) {
             DatabaseMetaData vendorMetadata = connection.getMetaData();
             databaseMetadata = DatabaseMetadata.of(getCityDBVersion(connection),
-                    getSpatialReference(connection),
+                    getDatabaseSrs(connection),
                     vendorMetadata.getDatabaseProductName(),
                     vendorMetadata.getDatabaseProductVersion(),
                     vendorMetadata.getDatabaseMajorVersion(),
@@ -106,9 +106,9 @@ public abstract class DatabaseAdapter {
         throw new SQLException("Failed to retrieve the version of the 3DCityDB.");
     }
 
-    private SpatialReference getSpatialReference(Connection connection) throws SQLException {
+    private SpatialReference getDatabaseSrs(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(schemaAdapter.getSpatialReference())) {
+             ResultSet rs = stmt.executeQuery(schemaAdapter.getDatabaseSrs())) {
             if (rs.next()) {
                 return SpatialReference.of(rs.getInt("srid"),
                         schemaAdapter.getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),

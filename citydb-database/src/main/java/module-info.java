@@ -1,3 +1,4 @@
+@SuppressWarnings("requires-transitive-automatic")
 module org.citydb.database {
     requires org.citydb.config;
     requires org.apache.tomcat.jdbc;
@@ -5,6 +6,8 @@ module org.citydb.database {
     requires transitive org.citydb.logging;
     requires transitive org.citydb.model;
     requires transitive org.citydb.sqlbuilder;
+    requires transitive org.geotools.api;
+    requires transitive org.geotools.referencing;
     requires transitive java.sql;
 
     exports org.citydb.database;

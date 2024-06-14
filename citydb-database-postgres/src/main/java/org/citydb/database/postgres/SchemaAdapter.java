@@ -118,9 +118,16 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    protected String getSpatialReference() {
+    protected String getDatabaseSrs() {
         return "select srid, coord_ref_sys_kind, coord_ref_sys_name, srs_name, wktext " +
                 "from citydb_pkg.db_metadata()";
+    }
+
+    @Override
+    protected String getSpatialReference(int srid) {
+        return "select split_part(srtext, '[', 1) as coord_ref_sys_kind, " +
+                "split_part(srtext, '\"', 2) as coord_ref_sys_name, " +
+                "srtext as wktext from spatial_ref_sys where srid = " + srid;
     }
 
     @Override

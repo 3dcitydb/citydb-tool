@@ -21,19 +21,28 @@
 
 package org.citydb.database.metadata;
 
+import org.citydb.core.concurrent.LazyInitializer;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.referencing.CRS;
+
+import java.util.Objects;
+import java.util.Optional;
+
 public class SpatialReference {
     private final int srid;
     private final SpatialReferenceType type;
     private final String name;
     private final String uri;
     private final String wkt;
+    private final LazyInitializer<CoordinateReferenceSystem> definition;
 
     private SpatialReference(int srid, SpatialReferenceType type, String name, String uri, String wkt) {
         this.srid = srid;
-        this.type = type;
-        this.name = name;
-        this.uri = uri;
-        this.wkt = wkt;
+        this.type = Objects.requireNonNullElse(type, SpatialReferenceType.UNKNOWN_CRS);
+        this.name = Objects.requireNonNullElse(name, "n/a");
+        this.uri = Objects.requireNonNullElse(uri, "http://www.opengis.net/def/crs/EPSG/0/" + srid);
+        this.wkt = Objects.requireNonNullElse(wkt, "");
+        definition = LazyInitializer.of(this::buildDefinition);
     }
 
     public static SpatialReference of(int srid, SpatialReferenceType type, String name, String uri, String wkt) {
@@ -58,5 +67,46 @@ public class SpatialReference {
 
     public String getWKT() {
         return wkt;
+    }
+
+    public Optional<CoordinateReferenceSystem> getDefinition() {
+        return Optional.ofNullable(definition.get());
+    }
+
+    public int getDimension() {
+        if (definition.get() != null) {
+            return definition.get().getCoordinateSystem().getDimension();
+        } else {
+            return type == SpatialReferenceType.COMPOUND_CRS
+                    || type == SpatialReferenceType.GEOGRAPHIC3D_CRS ?
+                    3 : 2;
+        }
+    }
+
+    private CoordinateReferenceSystem buildDefinition() {
+        CoordinateReferenceSystem crs = null;
+        try {
+            crs = CRS.decode("EPSG:" + srid);
+        } catch (Exception e) {
+            //
+        }
+
+        if (crs == null) {
+            try {
+                crs = CRS.decode(uri);
+            } catch (Exception e) {
+                //
+            }
+        }
+
+        if (crs == null) {
+            try {
+                crs = CRS.parseWKT(wkt);
+            } catch (Exception e) {
+                //
+            }
+        }
+
+        return crs;
     }
 }

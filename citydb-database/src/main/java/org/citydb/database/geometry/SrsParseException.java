@@ -19,33 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.config.common;
+package org.citydb.database.geometry;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+public class SrsParseException extends Exception {
 
-import java.util.Optional;
-
-public class SpatialReference {
-    private Integer srid;
-    private String uri;
-
-    public Optional<Integer> getSRID() {
-        return Optional.ofNullable(srid);
+    public SrsParseException() {
+        super();
     }
 
-    @JSONField(name = "srid")
-    public SpatialReference setSRID(int srid) {
-        this.srid = srid;
-        return this;
+    public SrsParseException(String message) {
+        super(message);
     }
 
-    public Optional<String> getURI() {
-        return Optional.ofNullable(uri);
+    public SrsParseException(Throwable cause) {
+        super(cause);
     }
 
-    @JSONField(name = "uri")
-    public SpatialReference setURI(String uri) {
-        this.uri = uri;
-        return this;
+    public SrsParseException(String message, Throwable cause) {
+        super(message, cause);
     }
 }
