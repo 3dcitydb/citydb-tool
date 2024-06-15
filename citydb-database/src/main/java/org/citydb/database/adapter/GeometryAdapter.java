@@ -69,18 +69,25 @@ public abstract class GeometryAdapter {
     }
 
     public SpatialReference getSpatialReference(int srid, String uri) throws SQLException {
-        try (Connection connection = adapter.getPool().getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(adapter.getSchemaAdapter().getSpatialReference(srid))) {
-            if (rs.next()) {
-                return SpatialReference.of(srid,
-                        adapter.getSchemaAdapter().getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
-                        rs.getString("coord_ref_sys_name"),
-                        uri,
-                        rs.getString("wktext"));
+        SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
+        if (srid == databaseSrs.getSRID()) {
+            return databaseSrs.getURI().equals(uri) ?
+                    databaseSrs :
+                    SpatialReference.of(srid, databaseSrs.getType(), databaseSrs.getName(), uri, databaseSrs.getWKT());
+        } else {
+            try (Connection connection = adapter.getPool().getConnection();
+                 Statement statement = connection.createStatement();
+                 ResultSet rs = statement.executeQuery(adapter.getSchemaAdapter().getSpatialReference(srid))) {
+                if (rs.next()) {
+                    return SpatialReference.of(srid,
+                            adapter.getSchemaAdapter().getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
+                            rs.getString("coord_ref_sys_name"),
+                            uri,
+                            rs.getString("wktext"));
+                }
             }
-        }
 
-        throw new SQLException("Failed to find spatial reference system for SRID " + srid + ".");
+            throw new SQLException("The SRID " + srid + " is not supported by the database.");
+        }
     }
 }
