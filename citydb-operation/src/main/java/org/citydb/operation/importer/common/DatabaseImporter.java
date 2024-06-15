@@ -31,7 +31,6 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.Polygon;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
@@ -94,7 +93,7 @@ public abstract class DatabaseImporter {
     }
 
     protected Object getEnvelope(Envelope envelope) throws ImportException {
-        return envelope != null ? getGeometry(Polygon.of(envelope), true) : null;
+        return envelope != null ? getGeometry(envelope.convertToPolygon(), true) : null;
     }
 
     protected void addBatch() throws SQLException {

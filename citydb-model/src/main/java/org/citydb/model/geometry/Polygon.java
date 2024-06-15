@@ -65,20 +65,6 @@ public class Polygon extends Surface<Polygon> {
         return new Polygon(exteriorRing, null, false);
     }
 
-    public static Polygon of(Envelope envelope) {
-        Objects.requireNonNull(envelope, "The envelope must not be null.");
-        Coordinate lowerLeft = envelope.getLowerCorner();
-        Coordinate upperRight = envelope.getUpperCorner();
-        Coordinate lowerRight = Coordinate.of(upperRight.getX(), lowerLeft.getY());
-        Coordinate upperLeft = Coordinate.of(lowerLeft.getX(), upperRight.getY());
-        if (envelope.getDimension() == 3) {
-            lowerRight.setZ(lowerLeft.getZ());
-            upperLeft.setZ(upperRight.getZ());
-        }
-
-        return Polygon.of(LinearRing.of(Arrays.asList(lowerLeft, lowerRight, upperRight, upperLeft, lowerLeft)));
-    }
-
     public static Polygon empty() {
         return new Polygon(LinearRing.empty(), null, false);
     }

@@ -23,6 +23,7 @@ package org.citydb.model.geometry;
 
 import org.citydb.model.common.Child;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -191,5 +192,18 @@ public class Envelope extends Child implements SrsReference {
 
     public Envelope include(Geometry<?> geometry) {
         return include(geometry.getEnvelope());
+    }
+
+    public Polygon convertToPolygon() {
+        Coordinate lowerRight = Coordinate.of(upperCorner.getX(), lowerCorner.getY());
+        Coordinate upperLeft = Coordinate.of(lowerCorner.getX(), upperCorner.getY());
+        if (getDimension() == 3) {
+            lowerRight.setZ(lowerCorner.getZ());
+            upperLeft.setZ(upperCorner.getZ());
+        }
+
+        return Polygon.of(LinearRing.of(Arrays.asList(lowerCorner, lowerRight, upperCorner, upperLeft, lowerCorner)))
+                .setSRID(srid)
+                .setSrsName(srsName);
     }
 }
