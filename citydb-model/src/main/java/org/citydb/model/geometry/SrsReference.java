@@ -26,16 +26,16 @@ import org.citydb.model.feature.Feature;
 
 import java.util.Optional;
 
-public interface SRSReference {
+public interface SrsReference {
     Optional<Integer> getSRID();
-    SRSReference setSRID(Integer srid);
+    SrsReference setSRID(Integer srid);
     Optional<String> getSrsName();
-    SRSReference setSrsName(String srsName);
+    SrsReference setSrsName(String srsName);
 
-    default SRSReference getInheritedSRSReference() {
+    default SrsReference getInheritedSRSReference() {
         if (this instanceof Child parent) {
             while ((parent = parent.getParent().orElse(null)) != null) {
-                if (parent instanceof SRSReference reference) {
+                if (parent instanceof SrsReference reference) {
                     return reference;
                 } else if (parent instanceof Feature feature) {
                     Envelope envelope = feature.getEnvelope().orElse(null);

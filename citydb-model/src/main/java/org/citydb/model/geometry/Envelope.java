@@ -26,7 +26,7 @@ import org.citydb.model.common.Child;
 import java.util.Objects;
 import java.util.Optional;
 
-public class Envelope extends Child implements SRSReference {
+public class Envelope extends Child implements SrsReference {
     private final Coordinate lowerCorner;
     private final Coordinate upperCorner;
     private Integer srid;
@@ -56,7 +56,7 @@ public class Envelope extends Child implements SRSReference {
     @Override
     public Optional<Integer> getSRID() {
         if (srid == null) {
-            SRSReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSRSReference();
             if (parent != null) {
                 return parent.getSRID();
             }
@@ -74,7 +74,7 @@ public class Envelope extends Child implements SRSReference {
     @Override
     public Optional<String> getSrsName() {
         if (srsName == null) {
-            SRSReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSRSReference();
             if (parent != null) {
                 return parent.getSrsName();
             }

@@ -29,7 +29,7 @@ import org.citydb.model.walker.ModelWalker;
 
 import java.util.Optional;
 
-public abstract class Geometry<T extends Geometry<?>> extends Child implements Referencable, Visitable, SRSReference, Describable<GeometryDescriptor> {
+public abstract class Geometry<T extends Geometry<?>> extends Child implements Referencable, Visitable, SrsReference, Describable<GeometryDescriptor> {
     private String objectId;
     private Integer srid;
     private String srsName;
@@ -53,7 +53,7 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements R
     @Override
     public Optional<Integer> getSRID() {
         if (srid == null) {
-            SRSReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSRSReference();
             if (parent != null) {
                 return parent.getSRID();
             }
@@ -71,7 +71,7 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements R
     @Override
     public Optional<String> getSrsName() {
         if (srsName == null) {
-            SRSReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSRSReference();
             if (parent != null) {
                 return parent.getSrsName();
             }
