@@ -31,7 +31,7 @@ import java.sql.Types;
 
 public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter {
     private final WKBParser parser = new WKBParser();
-    private final WKBWriter writer = new WKBWriter();
+    private final WKBWriter writer = new WKBWriter().includeSRID(true);
 
     GeometryAdapter(DatabaseAdapter adapter) {
         super(adapter);
