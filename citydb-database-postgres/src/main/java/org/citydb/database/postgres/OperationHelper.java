@@ -24,6 +24,7 @@ package org.citydb.database.postgres;
 import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.function.Function;
+import org.citydb.sqlbuilder.literal.ScalarExpression;
 
 public class OperationHelper extends org.citydb.database.schema.OperationHelper {
 
@@ -32,32 +33,32 @@ public class OperationHelper extends org.citydb.database.schema.OperationHelper 
     }
 
     @Override
-    public Expression intDivision(Expression leftOperand, Expression rightOperand) {
+    public Expression intDivision(ScalarExpression leftOperand, ScalarExpression rightOperand) {
         return Function.of("div", leftOperand, rightOperand);
     }
 
     @Override
-    public Expression lower(Expression expression) {
+    public Expression lower(ScalarExpression expression) {
         return Function.of("lower", expression);
     }
 
     @Override
-    public Expression toDate(Expression expression) {
+    public Expression toDate(ScalarExpression expression) {
         return Function.of("date", expression);
     }
 
     @Override
-    public Expression power(Expression leftOperand, Expression rightOperand) {
+    public Expression power(ScalarExpression leftOperand, ScalarExpression rightOperand) {
         return Function.of("power", leftOperand, rightOperand);
     }
 
     @Override
-    public Expression unaccent(Expression expression) {
+    public Expression unaccent(ScalarExpression expression) {
         return Function.of("unaccent", expression);
     }
 
     @Override
-    public Expression upper(Expression expression) {
+    public Expression upper(ScalarExpression expression) {
         return Function.of("upper", expression);
     }
 }
