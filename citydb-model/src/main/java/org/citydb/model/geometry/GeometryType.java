@@ -51,16 +51,16 @@ public enum GeometryType {
         this.typeName = typeName;
     }
 
+    public static GeometryType fromDatabaseValue(int value) {
+        return types.get(value);
+    }
+
     public int getDatabaseValue() {
         return value;
     }
 
     public String getTypeName() {
         return typeName;
-    }
-
-    public static GeometryType fromDatabaseValue(int value) {
-        return types.get(value);
     }
 
     @Override
