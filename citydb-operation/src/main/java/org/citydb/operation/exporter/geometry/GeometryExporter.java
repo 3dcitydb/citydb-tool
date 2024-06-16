@@ -69,7 +69,7 @@ public class GeometryExporter extends DatabaseExporter {
                 if (geometry != null) {
                     if (!isImplicit) {
                         geometry.setSRID(helper.getSRID())
-                                .setSrsName(helper.getSrsName());
+                                .setSrsIdentifier(helper.getSrsIdentifier());
                     }
 
                     return geometry.setDescriptor(GeometryDescriptor.of(id, rs.getLong("geometry_feature_id")));

@@ -32,21 +32,21 @@ public class SpatialReference {
     private final int srid;
     private final SpatialReferenceType type;
     private final String name;
-    private final String uri;
+    private final String identifier;
     private final String wkt;
     private final LazyInitializer<CoordinateReferenceSystem> definition;
 
-    private SpatialReference(int srid, SpatialReferenceType type, String name, String uri, String wkt) {
+    private SpatialReference(int srid, SpatialReferenceType type, String name, String identifier, String wkt) {
         this.srid = srid;
         this.type = Objects.requireNonNullElse(type, SpatialReferenceType.UNKNOWN_CRS);
         this.name = Objects.requireNonNullElse(name, "n/a");
-        this.uri = Objects.requireNonNullElse(uri, "http://www.opengis.net/def/crs/EPSG/0/" + srid);
+        this.identifier = Objects.requireNonNullElse(identifier, "http://www.opengis.net/def/crs/EPSG/0/" + srid);
         this.wkt = Objects.requireNonNullElse(wkt, "");
         definition = LazyInitializer.of(this::buildDefinition);
     }
 
-    public static SpatialReference of(int srid, SpatialReferenceType type, String name, String uri, String wkt) {
-        return new SpatialReference(srid, type, name, uri, wkt);
+    public static SpatialReference of(int srid, SpatialReferenceType type, String name, String identifier, String wkt) {
+        return new SpatialReference(srid, type, name, identifier, wkt);
     }
 
     public int getSRID() {
@@ -61,8 +61,8 @@ public class SpatialReference {
         return name;
     }
 
-    public String getURI() {
-        return uri;
+    public String getIdentifier() {
+        return identifier;
     }
 
     public String getWKT() {
@@ -101,7 +101,7 @@ public class SpatialReference {
 
         if (crs == null) {
             try {
-                crs = CRS.decode(uri);
+                crs = CRS.decode(identifier);
             } catch (Exception e) {
                 //
             }

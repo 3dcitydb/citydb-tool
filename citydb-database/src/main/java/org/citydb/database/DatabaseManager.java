@@ -134,7 +134,7 @@ public class DatabaseManager {
             consumer.accept("Schema: " + adapter.getConnectionDetails().getSchema());
             consumer.accept("SRID: " + adapter.getDatabaseMetadata().getSpatialReference().getSRID());
             consumer.accept("SRS name: " + adapter.getDatabaseMetadata().getSpatialReference().getName());
-            consumer.accept("SRS URI: " + adapter.getDatabaseMetadata().getSpatialReference().getURI());
+            consumer.accept("SRS URI: " + adapter.getDatabaseMetadata().getSpatialReference().getIdentifier());
         }
     }
 }

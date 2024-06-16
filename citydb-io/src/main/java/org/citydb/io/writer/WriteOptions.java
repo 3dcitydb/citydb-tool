@@ -23,7 +23,7 @@ package org.citydb.io.writer;
 
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
-import org.citydb.config.common.SpatialReferenceOption;
+import org.citydb.config.common.SrsReference;
 import org.citydb.io.writer.option.OutputFormatOptions;
 
 import java.util.Optional;
@@ -33,7 +33,7 @@ public class WriteOptions {
     private boolean failFast;
     private int numberOfThreads;
     private String encoding;
-    private SpatialReferenceOption spatialReference;
+    private SrsReference spatialReference;
     private ConfigObject<OutputFormatOptions> formatOptions;
 
     public boolean isFailFast() {
@@ -63,11 +63,11 @@ public class WriteOptions {
         return this;
     }
 
-    public Optional<SpatialReferenceOption> getSpatialReference() {
+    public Optional<SrsReference> getSpatialReference() {
         return Optional.ofNullable(spatialReference);
     }
 
-    public WriteOptions setSpatialReference(SpatialReferenceOption spatialReference) {
+    public WriteOptions setSpatialReference(SrsReference spatialReference) {
         this.spatialReference = spatialReference;
         return this;
     }

@@ -31,7 +31,7 @@ public class Envelope extends Child implements SrsReference {
     private final Coordinate lowerCorner;
     private final Coordinate upperCorner;
     private Integer srid;
-    private String srsName;
+    private String srsIdentifier;
 
     private Envelope(Coordinate lowerCorner, Coordinate upperCorner) {
         this.lowerCorner = Objects.requireNonNull(lowerCorner, "The lower corner must not be null.");
@@ -73,20 +73,20 @@ public class Envelope extends Child implements SrsReference {
     }
 
     @Override
-    public Optional<String> getSrsName() {
-        if (srsName == null) {
+    public Optional<String> getSrsIdentifier() {
+        if (srsIdentifier == null) {
             SrsReference parent = getInheritedSRSReference();
             if (parent != null) {
-                return parent.getSrsName();
+                return parent.getSrsIdentifier();
             }
         }
 
-        return Optional.ofNullable(srsName);
+        return Optional.ofNullable(srsIdentifier);
     }
 
     @Override
-    public Envelope setSrsName(String srsName) {
-        this.srsName = srsName;
+    public Envelope setSrsIdentifier(String srsIdentifier) {
+        this.srsIdentifier = srsIdentifier;
         return this;
     }
 
@@ -204,6 +204,6 @@ public class Envelope extends Child implements SrsReference {
 
         return Polygon.of(LinearRing.of(Arrays.asList(lowerCorner, lowerRight, upperCorner, upperLeft, lowerCorner)))
                 .setSRID(srid)
-                .setSrsName(srsName);
+                .setSrsIdentifier(srsIdentifier);
     }
 }

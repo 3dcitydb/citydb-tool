@@ -137,7 +137,7 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
                             multiply(matrix, template.getLowerCorner()),
                             multiply(matrix, template.getUpperCorner()))
                     .setSRID(referencePoint.getSRID().orElse(null))
-                    .setSrsName(referencePoint.getSrsName().orElse(null));
+                    .setSrsIdentifier(referencePoint.getSrsIdentifier().orElse(null));
         } else {
             return null;
         }

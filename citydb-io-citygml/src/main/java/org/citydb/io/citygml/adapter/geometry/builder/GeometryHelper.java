@@ -133,7 +133,7 @@ public class GeometryHelper {
             Geometry<?> geometry = builder.build(source);
             if (geometry != null) {
                 geometry.setObjectId(source.getId())
-                        .setSrsName(helper.getInheritedSrsName(source));
+                        .setSrsIdentifier(helper.getInheritedSrsName(source));
                 if (force2D) {
                     geometry.force2D();
                 }
@@ -152,7 +152,7 @@ public class GeometryHelper {
                     Geometry<?> geometry = getGeometry(source.getRelativeGeometry().getObject(), force2D);
                     if (geometry != null) {
                         return ImplicitGeometryProperty.of(name, ImplicitGeometry.of(geometry
-                                .setSrsName(source.getRelativeGeometry().getObject().getSrsName())));
+                                .setSrsIdentifier(source.getRelativeGeometry().getObject().getSrsName())));
                     }
                 } else if (source.getRelativeGeometry().getHref() != null) {
                     return ImplicitGeometryProperty.of(name, Reference.of(

@@ -65,7 +65,7 @@ public abstract class AbstractFeatureAdapter<T extends AbstractFeature> extends 
             target.setEnvelope(Envelope.of(
                             Coordinate.of(coordinates.get(0), coordinates.get(1), coordinates.get(2)),
                             Coordinate.of(coordinates.get(3), coordinates.get(4), coordinates.get(5)))
-                    .setSrsName(helper.getInheritedSrsName(source.getBoundedBy().getEnvelope())));
+                    .setSrsIdentifier(helper.getInheritedSrsName(source.getBoundedBy().getEnvelope())));
         }
 
         if (source.hasADEProperties()) {

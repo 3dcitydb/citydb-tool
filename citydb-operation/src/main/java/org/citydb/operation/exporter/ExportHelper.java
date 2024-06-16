@@ -50,7 +50,7 @@ public class ExportHelper {
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
     private final int srid;
-    private final String srsName;
+    private final String srsIdentifier;
     private final Set<String> featureIdCache = new HashSet<>();
     private final Set<String> surfaceDataIdCache = new HashSet<>();
     private final Set<String> implicitGeometryIdCache = new HashSet<>();
@@ -66,7 +66,7 @@ public class ExportHelper {
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
         srid = adapter.getDatabaseMetadata().getSpatialReference().getSRID();
-        srsName = adapter.getDatabaseMetadata().getSpatialReference().getURI();
+        srsIdentifier = adapter.getDatabaseMetadata().getSpatialReference().getIdentifier();
     }
 
     public DatabaseAdapter getAdapter() {
@@ -97,8 +97,8 @@ public class ExportHelper {
         return srid;
     }
 
-    public String getSrsName() {
-        return srsName;
+    public String getSrsIdentifier() {
+        return srsIdentifier;
     }
 
     public String createId() {

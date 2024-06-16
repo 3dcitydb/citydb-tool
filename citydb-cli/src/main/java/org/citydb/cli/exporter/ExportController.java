@@ -35,7 +35,7 @@ import org.citydb.cli.util.QueryResult;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
-import org.citydb.config.common.SpatialReferenceOption;
+import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -214,9 +214,9 @@ public abstract class ExportController implements Command {
         }
 
         if (writeOptions.getSpatialReference().isEmpty()) {
-            writeOptions.setSpatialReference(new SpatialReferenceOption()
+            writeOptions.setSpatialReference(new SrsReference()
                     .setSRID(databaseAdapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                    .setURI(databaseAdapter.getDatabaseMetadata().getSpatialReference().getURI()));
+                    .setIdentifier(databaseAdapter.getDatabaseMetadata().getSpatialReference().getIdentifier()));
         }
 
         return writeOptions;

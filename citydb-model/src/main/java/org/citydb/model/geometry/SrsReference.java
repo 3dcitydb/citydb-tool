@@ -29,8 +29,8 @@ import java.util.Optional;
 public interface SrsReference {
     Optional<Integer> getSRID();
     SrsReference setSRID(Integer srid);
-    Optional<String> getSrsName();
-    SrsReference setSrsName(String srsName);
+    Optional<String> getSrsIdentifier();
+    SrsReference setSrsIdentifier(String srsIdentifier);
 
     default SrsReference getInheritedSRSReference() {
         if (this instanceof Child parent) {

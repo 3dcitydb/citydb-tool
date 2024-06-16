@@ -25,27 +25,26 @@ import com.alibaba.fastjson2.annotation.JSONField;
 
 import java.util.Optional;
 
-public class SpatialReferenceOption {
+public class SrsReference {
     private Integer srid;
-    private String uri;
+    private String identifier;
 
     public Optional<Integer> getSRID() {
         return Optional.ofNullable(srid);
     }
 
     @JSONField(name = "srid")
-    public SpatialReferenceOption setSRID(int srid) {
+    public SrsReference setSRID(int srid) {
         this.srid = srid;
         return this;
     }
 
-    public Optional<String> getURI() {
-        return Optional.ofNullable(uri);
+    public Optional<String> getIdentifier() {
+        return Optional.ofNullable(identifier);
     }
 
-    @JSONField(name = "uri")
-    public SpatialReferenceOption setURI(String uri) {
-        this.uri = uri;
+    public SrsReference setIdentifier(String uri) {
+        this.identifier = uri;
         return this;
     }
 }

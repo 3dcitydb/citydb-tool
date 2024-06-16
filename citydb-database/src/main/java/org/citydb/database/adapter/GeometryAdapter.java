@@ -64,16 +64,20 @@ public abstract class GeometryAdapter {
         return getSpatialReference(srid, null);
     }
 
-    public SpatialReference getSpatialReference(String uri) throws SrsParseException, SQLException {
-        return getSpatialReference(parser.parse(uri), uri);
+    public SpatialReference getSpatialReference(String identifier) throws SrsParseException, SQLException {
+        return getSpatialReference(parser.parse(identifier), identifier);
     }
 
-    public SpatialReference getSpatialReference(int srid, String uri) throws SQLException {
+    public SpatialReference getSpatialReference(int srid, String identifier) throws SQLException {
         SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
         if (srid == databaseSrs.getSRID()) {
-            return databaseSrs.getURI().equals(uri) ?
+            return databaseSrs.getIdentifier().equals(identifier) ?
                     databaseSrs :
-                    SpatialReference.of(srid, databaseSrs.getType(), databaseSrs.getName(), uri, databaseSrs.getWKT());
+                    SpatialReference.of(srid,
+                            databaseSrs.getType(),
+                            databaseSrs.getName(),
+                            identifier,
+                            databaseSrs.getWKT());
         } else {
             try (Connection connection = adapter.getPool().getConnection();
                  Statement statement = connection.createStatement();
@@ -82,7 +86,7 @@ public abstract class GeometryAdapter {
                     return SpatialReference.of(srid,
                             adapter.getSchemaAdapter().getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
                             rs.getString("coord_ref_sys_name"),
-                            uri,
+                            identifier,
                             rs.getString("wktext"));
                 }
             }

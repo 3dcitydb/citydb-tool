@@ -32,7 +32,7 @@ import java.util.Optional;
 public abstract class Geometry<T extends Geometry<?>> extends Child implements Referencable, Visitable, SrsReference, Describable<GeometryDescriptor> {
     private String objectId;
     private Integer srid;
-    private String srsName;
+    private String srsIdentifier;
     private GeometryDescriptor descriptor;
 
     public abstract int getVertexDimension();
@@ -69,20 +69,20 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements R
     }
 
     @Override
-    public Optional<String> getSrsName() {
-        if (srsName == null) {
+    public Optional<String> getSrsIdentifier() {
+        if (srsIdentifier == null) {
             SrsReference parent = getInheritedSRSReference();
             if (parent != null) {
-                return parent.getSrsName();
+                return parent.getSrsIdentifier();
             }
         }
 
-        return Optional.ofNullable(srsName);
+        return Optional.ofNullable(srsIdentifier);
     }
 
     @Override
-    public T setSrsName(String srsName) {
-        this.srsName = srsName;
+    public T setSrsIdentifier(String srsIdentifier) {
+        this.srsIdentifier = srsIdentifier;
         return self();
     }
 
@@ -168,6 +168,6 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements R
 
         return envelope
                 .setSRID(srid)
-                .setSrsName(srsName);
+                .setSrsIdentifier(srsIdentifier);
     }
 }
