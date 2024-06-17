@@ -70,10 +70,45 @@ public class Tokenizer {
         }
     }
 
+    String substring(Token beginToken) {
+        return substring(beginToken, false);
+    }
+
+    String substring(Token beginToken, boolean includeNext) {
+        return substring(indexOf(beginToken), includeNext ? index + 1 : index);
+    }
+
+    private String substring(int beginIndex, int endIndex) {
+        beginIndex = Math.max(0, beginIndex);
+        endIndex = Math.min(endIndex, tokens.size());
+
+        List<String> tokens = new ArrayList<>();
+        for (int i = beginIndex; i < endIndex; i++) {
+            Token token = this.tokens.get(i);
+            tokens.add(switch (token.getType()) {
+                case SINGLE_QUOTE -> "'" + token + "'";
+                case DOUBLE_QUOTE -> "\"" + token + "\"";
+                default -> token.toString();
+            });
+        }
+
+        return String.join(" ", tokens);
+    }
+
     private Token getToken(int index) {
         return index >= 0 && index < tokens.size() ?
                 tokens.get(index) :
                 Token.EOF;
+    }
+
+    private int indexOf(Token token) {
+        for (int i = 0; i < tokens.size(); i++) {
+            if (tokens.get(i) == token) {
+                return i;
+            }
+        }
+
+        return 0;
     }
 
     private Tokenizer initialize(String text) throws FilterParseException {

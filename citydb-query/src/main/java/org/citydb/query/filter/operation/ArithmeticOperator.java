@@ -74,4 +74,9 @@ public enum ArithmeticOperator {
     public boolean takesPrecedenceOver(ArithmeticOperator other) {
         return precedence < other.precedence;
     }
+
+    @Override
+    public String toString() {
+        return jsonToken.toString();
+    }
 }

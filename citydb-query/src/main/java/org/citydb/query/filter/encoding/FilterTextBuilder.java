@@ -122,10 +122,21 @@ public class FilterTextBuilder {
     }
 
     private SpatialPredicate buildSpatialPredicate(Node node) throws FilterParseException {
+        if (TextToken.BINARY_SPATIAL_OPERATORS.contains(node.getToken().getType())) {
+            return buildBinarySpatialPredicate(node);
+        } else if (node.getToken().getType() == TextToken.S_DWITHIN
+                || node.getToken().getType() == TextToken.S_BEYOND) {
+            return buildSpatialDistancePredicate(node);
+        } else {
+            throw new FilterParseException("Unsupported spatial operator '" + node.getToken() + "'.");
+        }
+    }
+
+    private BinarySpatialPredicate buildBinarySpatialPredicate(Node node) throws FilterParseException {
         if (node.getChildren().size() == 2) {
             SpatialOperator operator = SpatialOperator.of(node.getToken().getType());
             if (operator != null) {
-                return SpatialPredicate.of(
+                return BinarySpatialPredicate.of(
                         buildExpression(node.getChildren().get(0), GeometryExpression.class),
                         operator,
                         buildExpression(node.getChildren().get(1), GeometryExpression.class));
@@ -133,7 +144,31 @@ public class FilterTextBuilder {
                 throw new FilterParseException("Invalid spatial operator '" + node.getToken() + "'.");
             }
         } else {
-            throw new FilterParseException("A spatial predicate requires two operands.");
+            throw new FilterParseException("A binary spatial predicate requires two operands.");
+        }
+    }
+
+    private DWithin buildSpatialDistancePredicate(Node node) throws FilterParseException {
+        if (node.getChildren().size() == 3 || node.getChildren().size() == 4) {
+            Distance distance = Distance.of(
+                    buildExpression(node.getChildren().get(2), NumericLiteral.class).doubleValue());
+            if (node.getChildren().size() == 4) {
+                StringLiteral literal = buildExpression(node.getChildren().get(3), StringLiteral.class);
+                DistanceUnit unit = DistanceUnit.of(literal.getValue());
+                if (unit != null) {
+                    distance.setUnit(unit);
+                } else {
+                    throw new FilterParseException("Unsupported distance unit '" + literal.getValue() + "'.");
+                }
+            }
+
+            return DWithin.of(
+                    buildExpression(node.getChildren().get(0), GeometryExpression.class),
+                    buildExpression(node.getChildren().get(1), GeometryExpression.class),
+                    distance,
+                    node.getToken().getType() == TextToken.S_BEYOND);
+        } else {
+            throw new FilterParseException("A spatial distance predicate requires at three or four operands.");
         }
     }
 

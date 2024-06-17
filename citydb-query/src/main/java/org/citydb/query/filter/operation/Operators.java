@@ -21,10 +21,7 @@
 
 package org.citydb.query.filter.operation;
 
-import org.citydb.query.filter.common.Expression;
-import org.citydb.query.filter.common.GeometryExpression;
-import org.citydb.query.filter.common.PatternExpression;
-import org.citydb.query.filter.common.ScalarExpression;
+import org.citydb.query.filter.common.*;
 import org.citydb.query.filter.literal.StringLiteral;
 
 import java.util.Arrays;
@@ -140,44 +137,44 @@ public class Operators {
         return Like.of(operand, pattern, true);
     }
 
-    public static SpatialPredicate intersects(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.INTERSECTS, rightOperand);
+    public static BinarySpatialPredicate intersects(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.INTERSECTS, rightOperand);
     }
 
-    public static SpatialPredicate contains(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.CONTAINS, rightOperand);
+    public static BinarySpatialPredicate contains(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.CONTAINS, rightOperand);
     }
 
-    public static SpatialPredicate crosses(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.CROSSES, rightOperand);
+    public static BinarySpatialPredicate crosses(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.CROSSES, rightOperand);
     }
 
-    public static SpatialPredicate disjoint(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.DISJOINT, rightOperand);
+    public static BinarySpatialPredicate disjoint(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.DISJOINT, rightOperand);
     }
 
-    public static SpatialPredicate equals(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.EQUALS, rightOperand);
+    public static BinarySpatialPredicate equals(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.EQUALS, rightOperand);
     }
 
-    public static SpatialPredicate overlaps(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.OVERLAPS, rightOperand);
+    public static BinarySpatialPredicate overlaps(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.OVERLAPS, rightOperand);
     }
 
-    public static SpatialPredicate touches(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.TOUCHES, rightOperand);
+    public static BinarySpatialPredicate touches(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.TOUCHES, rightOperand);
     }
 
-    public static SpatialPredicate within(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.WITHIN, rightOperand);
+    public static BinarySpatialPredicate within(GeometryExpression leftOperand, GeometryExpression rightOperand) {
+        return BinarySpatialPredicate.of(leftOperand, SpatialOperator.WITHIN, rightOperand);
     }
 
-    public static SpatialPredicate dWithin(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.DWITHIN, rightOperand);
+    public static DWithin dWithin(GeometryExpression leftOperand, GeometryExpression rightOperand, Distance distance) {
+        return DWithin.of(leftOperand, rightOperand, distance);
     }
 
-    public static SpatialPredicate beyond(GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        return SpatialPredicate.of(leftOperand, SpatialOperator.BEYOND, rightOperand);
+    public static DWithin beyond(GeometryExpression leftOperand, GeometryExpression rightOperand, Distance distance) {
+        return DWithin.of(leftOperand, rightOperand, distance, true);
     }
 
     public static BinaryBooleanPredicate and(List<? extends BooleanExpression> operands) {

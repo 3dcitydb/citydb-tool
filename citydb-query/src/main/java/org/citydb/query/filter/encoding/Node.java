@@ -66,7 +66,8 @@ public class Node {
         } else if (TextToken.UNARY_COMPARISON_OPERATORS.contains(token.getType())
                 || TextToken.BINARY_COMPARISON_OPERATORS.contains(token.getType())) {
             return new Node(NodeType.COMPARISON_PREDICATE, token);
-        } else if (TextToken.SPATIAL_OPERATORS.contains(token.getType())) {
+        } else if (TextToken.BINARY_SPATIAL_OPERATORS.contains(token.getType())
+                || TextToken.SPATIAL_DISTANCE_OPERATORS.contains(token.getType())) {
             return new Node(NodeType.SPATIAL_PREDICATE, token);
         } else if (TextToken.TEMPORAL_OPERATORS.contains(token.getType())) {
             return new Node(NodeType.TEMPORAL_PREDICATE, token);

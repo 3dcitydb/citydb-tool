@@ -63,8 +63,8 @@ public class FilterTextParser {
             if (right != Node.EMPTY) {
                 left = chain(left, operator, right);
             } else {
-                throw new FilterParseException("Failed to parse boolean expression '" + left.getToken() + " " +
-                        operator + " " + tokenizer.nextToken() + "'.");
+                throw new FilterParseException("Failed to parse boolean expression '" +
+                        tokenizer.substring(right.getToken(), true) + "'.");
             }
         }
 
@@ -91,8 +91,8 @@ public class FilterTextParser {
             if (operand != Node.EMPTY) {
                 return Node.of(not).addChild(operand);
             } else {
-                throw new FilterParseException("Failed to parse NOT predicate '" + not + " " +
-                        tokenizer.nextToken() + "'.");
+                throw new FilterParseException("Failed to parse NOT predicate '" +
+                        tokenizer.substring(not, true) + "'.");
             }
         }
 
@@ -100,8 +100,10 @@ public class FilterTextParser {
     }
 
     private Node readPredicate(Tokenizer tokenizer) throws FilterParseException {
-        if (TextToken.SPATIAL_OPERATORS.contains(tokenizer.lookAhead().getType())) {
+        if (TextToken.BINARY_SPATIAL_OPERATORS.contains(tokenizer.lookAhead().getType())) {
             return readBinaryExpressionPredicate(tokenizer.nextToken(), this::readSpatialExpression, tokenizer);
+        } else if (TextToken.SPATIAL_DISTANCE_OPERATORS.contains(tokenizer.lookAhead().getType())) {
+            return readSpatialDistancePredicate(tokenizer.nextToken(), tokenizer);
         } else if (TextToken.TEMPORAL_OPERATORS.contains(tokenizer.lookAhead().getType())) {
             return readBinaryExpressionPredicate(tokenizer.nextToken(), this::readTemporalExpression, tokenizer);
         } else if (TextToken.ARRAY_OPERATORS.contains(tokenizer.lookAhead().getType())) {
@@ -115,43 +117,63 @@ public class FilterTextParser {
         if (tokenizer.lookAhead().getType() == TextToken.L_BRACKET) {
             tokenizer.nextToken();
             Node predicate = readBooleanExpression(tokenizer);
+            require(tokenizer.nextToken(), TextToken.R_BRACKET, "Failed to parse property step predicate.");
+            Node propertyRef = Node.of(NodeType.PROPERTY_REF, identifier.getToken()).addChild(predicate);
 
-            if (tokenizer.nextToken().getType() == TextToken.R_BRACKET) {
-                Node propertyRef = Node.of(NodeType.PROPERTY_REF, identifier.getToken()).addChild(predicate);
-                if (tokenizer.lookAhead().getType() == TextToken.IDENTIFIER) {
-                    Node terminal = readTerminal(tokenizer);
-                    if (terminal.getToken().getValue().startsWith(".")) {
-                        terminal.getToken().setValue(terminal.getToken().getValue().substring(1));
-                    }
-
-                    propertyRef.addChild(terminal);
+            if (tokenizer.lookAhead().getType() == TextToken.IDENTIFIER) {
+                Node terminal = readTerminal(tokenizer);
+                if (terminal.getToken().getValue().startsWith(".")) {
+                    terminal.getToken().setValue(terminal.getToken().getValue().substring(1));
                 }
 
-                return propertyRef;
-            } else {
-                throw new FilterParseException("Expected '" + TextToken.R_BRACKET + "' but found '" +
-                        tokenizer.currentToken() + "' while parsing a property predicate.");
+                propertyRef.addChild(terminal);
             }
+
+            return propertyRef;
         }
 
         return Node.EMPTY;
     }
 
     private Node readBinaryExpressionPredicate(Token function, ExpressionReader<Tokenizer, Node> reader, Tokenizer tokenizer) throws FilterParseException {
-        Token lparen = tokenizer.nextToken();
+        require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse binary predicate.");
         Node left = reader.readExpression(tokenizer);
-        Token comma = tokenizer.nextToken();
+        require(tokenizer.nextToken(), TextToken.COMMA, "Failed to parse binary predicate.");
         Node right = reader.readExpression(tokenizer);
+        require(tokenizer.nextToken(), TextToken.R_PAREN, "Failed to parse binary predicate.");
 
-        if (lparen.getType() == TextToken.L_PAREN
-                && left != Node.EMPTY
-                && comma.getType() == TextToken.COMMA
-                && right != Node.EMPTY
-                && tokenizer.nextToken().getType() == TextToken.R_PAREN) {
+        if (left != Node.EMPTY
+                && right != Node.EMPTY) {
             return Node.of(function).addChild(left).addChild(right);
         } else {
-            throw new FilterParseException("Failed to parse binary expression predicate '" + function +
-                    lparen + left.getToken() + comma + right.getToken() + tokenizer.currentToken() + "'.");
+            throw new FilterParseException("Failed to parse binary predicate '" +
+                    tokenizer.substring(function) + "'.");
+        }
+    }
+
+    private Node readSpatialDistancePredicate(Token operator, Tokenizer tokenizer) throws FilterParseException {
+        require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse spatial distance predicate.");
+        Node left = readSpatialExpression(tokenizer);
+        require(tokenizer.nextToken(), TextToken.COMMA, "Failed to parse spatial distance predicate.");
+        Node right = readSpatialExpression(tokenizer);
+        require(tokenizer.nextToken(), TextToken.COMMA, "Failed to parse spatial distance predicate.");
+        Node distance = readNumericLiteral(tokenizer);
+
+        Node unit = Node.EMPTY;
+        if (tokenizer.lookAhead().getType() == TextToken.COMMA) {
+            tokenizer.nextToken();
+            unit = readLiteral(tokenizer);
+        }
+
+        require(tokenizer.nextToken(), TextToken.R_PAREN, "Failed to parse spatial distance predicate.");
+
+        if (left != Node.EMPTY
+                && right != Node.EMPTY
+                && distance != Node.EMPTY) {
+            return Node.of(operator).addChild(left).addChild(right).addChild(distance).addChild(unit);
+        } else {
+            throw new FilterParseException("Failed to parse spatial distance predicate '" +
+                    tokenizer.substring(operator) + "'.");
         }
     }
 
@@ -208,8 +230,8 @@ public class FilterTextParser {
         if (right != Node.EMPTY) {
             return Node.of(operator).addChild(left).addChild(right);
         } else {
-            throw new FilterParseException("Failed to parse binary comparison predicate '" + left.getToken() + " " +
-                    operator + " " + tokenizer.nextToken() + "'.");
+            throw new FilterParseException("Failed to parse comparison expression '" +
+                    tokenizer.substring(right.getToken(), true) + "'.");
         }
     }
 
@@ -218,40 +240,34 @@ public class FilterTextParser {
         if (pattern != Node.EMPTY) {
             return Node.of(operator).addChild(left).addChild(pattern);
         } else {
-            throw new FilterParseException("Failed to parse LIKE predicate '" + left.getToken() + " " +
-                    operator + " " + tokenizer.nextToken() + "'.");
+            throw new FilterParseException("Failed to parse LIKE predicate '" +
+                    tokenizer.substring(left.getToken(), true) + "'.");
         }
     }
 
     private Node readBetweenPredicate(Node left, Token operator, Tokenizer tokenizer) throws FilterParseException {
         Node lowerBound = readArithmeticExpression(tokenizer);
-        Token and = tokenizer.nextToken();
+        require(tokenizer.nextToken(), TextToken.AND, "Failed to parse BETWEEN predicate.");
         Node upperBound = readArithmeticExpression(tokenizer);
 
         if (lowerBound != Node.EMPTY
-                && and.getType() == TextToken.AND
                 && upperBound != Node.EMPTY) {
             return Node.of(operator).addChild(left).addChild(lowerBound).addChild(upperBound);
         } else {
-            throw new FilterParseException("Failed to parse BETWEEN predicate '" + left.getToken() + " "
-                    + operator + " " + lowerBound.getToken() + " " + and + " " + tokenizer.nextToken() + "'.");
+            throw new FilterParseException("Failed to parse BETWEEN predicate '" +
+                    tokenizer.substring(left.getToken(), true) + "'.");
         }
     }
 
     private Node readInPredicate(Node left, Token operator, Tokenizer tokenizer) throws FilterParseException {
-        Token lparen = tokenizer.nextToken();
+        require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse IN predicate.");
         Node in = Node.of(operator).addChild(left);
         do {
             in.addChild(readScalarExpression(tokenizer));
         } while (tokenizer.nextToken().getType() == TextToken.COMMA);
 
-        if (lparen.getType() == TextToken.L_PAREN
-                && tokenizer.currentToken().getType() == TextToken.R_PAREN) {
-            return in;
-        } else {
-            throw new FilterParseException("Failed to parse IN predicate '" + left.getToken() + " "
-                    + operator + lparen + tokenizer.currentToken() + "'.");
-        }
+        require(tokenizer.currentToken(), TextToken.R_PAREN, "Failed to parse IN predicate.");
+        return in;
     }
 
     private Node readComparisonOperand(Tokenizer tokenizer) throws FilterParseException {
@@ -287,8 +303,8 @@ public class FilterTextParser {
             if (right != Node.EMPTY) {
                 left = chain(left, operator, right);
             } else {
-                throw new FilterParseException("Failed to parse arithmetic expression '" + left.getToken() + " " +
-                        operator + " " + tokenizer.nextToken() + "'.");
+                throw new FilterParseException("Failed to parse arithmetic expression '" +
+                        tokenizer.substring(right.getToken(), true) + "'.");
             }
         }
 
@@ -299,12 +315,8 @@ public class FilterTextParser {
         if (tokenizer.lookAhead().getType() == TextToken.L_PAREN) {
             tokenizer.nextToken();
             Node operand = readArithmeticExpression(tokenizer);
-            if (tokenizer.nextToken().getType() == TextToken.R_PAREN) {
-                return operand.setEnclosed();
-            } else {
-                throw new FilterParseException("Expected '" + TextToken.R_PAREN + "' but found '" +
-                        tokenizer.currentToken() + "' while parsing an arithmetic expression.");
-            }
+            require(tokenizer.nextToken(), TextToken.R_PAREN, "Failed to parse arithmetic expression.");
+            return operand.setEnclosed();
         } else if (tokenizer.lookAhead().getType() == TextToken.PLUS
                 || tokenizer.lookAhead().getType() == TextToken.MINUS) {
             Token sign = tokenizer.nextToken();
@@ -315,7 +327,7 @@ public class FilterTextParser {
                         operand;
             } else {
                 throw new FilterParseException("Failed to parse signed arithmetic operand '" +
-                        sign + tokenizer.nextToken() + "'.");
+                        tokenizer.substring(sign, true) + "'.");
             }
         } else {
             return readTerminal(tokenizer);
@@ -330,12 +342,9 @@ public class FilterTextParser {
                 function.addChild(readArgument(tokenizer));
             } while (tokenizer.nextToken().getType() == TextToken.COMMA);
 
-            if (tokenizer.currentToken().getType() == TextToken.R_PAREN) {
-                return function;
-            } else {
-                throw new FilterParseException("Expected '" + TextToken.R_PAREN + "' but found '" +
-                        tokenizer.currentToken() + "' while parsing the '" + identifier.getToken() + "' function.");
-            }
+            require(tokenizer.currentToken(), TextToken.R_PAREN, "Failed to parse '" + identifier.getToken() +
+                    "' function.");
+            return function;
         }
 
         return Node.EMPTY;
@@ -371,12 +380,8 @@ public class FilterTextParser {
                 array.addChild(readArgument(tokenizer));
             } while (tokenizer.nextToken().getType() == TextToken.COMMA);
 
-            if (tokenizer.currentToken().getType() == TextToken.R_PAREN) {
-                return array;
-            } else {
-                throw new FilterParseException("Expected '" + TextToken.R_PAREN + "' but found '" +
-                        tokenizer.currentToken() + "' while parsing an array.");
-            }
+            require(tokenizer.currentToken(), TextToken.R_PAREN, "Failed to parse array.");
+            return array;
         }
 
         return Node.EMPTY;
@@ -393,18 +398,13 @@ public class FilterTextParser {
     }
 
     private Node readBBoxLiteral(Node bbox, Tokenizer tokenizer) throws FilterParseException {
-        Token lparen = tokenizer.nextToken();
+        require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse BBOX literal.");
         do {
             bbox.addChild(readNumericLiteral(tokenizer));
         } while (tokenizer.nextToken().getType() == TextToken.COMMA);
 
-        if (lparen.getType() == TextToken.L_PAREN
-                && tokenizer.currentToken().getType() == TextToken.R_PAREN) {
-            return bbox;
-        } else {
-            throw new FilterParseException("Failed to parse BBOX literal '" + bbox.getToken() + " "
-                    + lparen + tokenizer.currentToken() + "'.");
-        }
+        require(tokenizer.currentToken(), TextToken.R_PAREN, "Failed to parse BBOX literal.");
+        return bbox;
     }
 
     private Node readNumericLiteral(Tokenizer tokenizer) throws FilterParseException {
@@ -426,20 +426,18 @@ public class FilterTextParser {
     private Node readTimeIntervalLiteral(Tokenizer tokenizer) throws FilterParseException {
         if (tokenizer.lookAhead().getType() == TextToken.INTERVAL) {
             Node interval = Node.of(tokenizer.nextToken());
-            Token lparen = tokenizer.nextToken();
+            require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse time interval literal.");
             Node start = readTerminal(tokenizer);
-            Token comma = tokenizer.nextToken();
+            require(tokenizer.nextToken(), TextToken.COMMA, "Failed to parse time interval literal.");
             Node end = readTerminal(tokenizer);
+            require(tokenizer.nextToken(), TextToken.R_PAREN, "Failed to parse time interval literal.");
 
-            if (lparen.getType() == TextToken.L_PAREN
-                    && start != Node.EMPTY
-                    && comma.getType() == TextToken.COMMA
-                    && end != Node.EMPTY
-                    && tokenizer.nextToken().getType() == TextToken.R_PAREN) {
+            if (start != Node.EMPTY
+                    && end != Node.EMPTY) {
                 return interval.addChild(start).addChild(end);
             } else {
-                throw new FilterParseException("Failed to parse time interval literal '" + interval.getToken() +
-                        lparen + start.getToken() + comma + end.getToken() + tokenizer.currentToken() + "'.");
+                throw new FilterParseException("Failed to parse time interval literal '" +
+                        tokenizer.substring(interval.getToken()) + "'.");
             }
         } else {
             return Node.EMPTY;
@@ -481,6 +479,13 @@ public class FilterTextParser {
             return left;
         } else {
             return Node.of(operator).addChild(left).addChild(right);
+        }
+    }
+
+    private void require(Token token, TextToken type, String message) throws FilterParseException {
+        if (token.getType() != type) {
+            throw new FilterParseException(message,
+                    new FilterParseException("Expected '" + type + "' but found '" + token + "'."));
         }
     }
 

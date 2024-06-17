@@ -60,5 +60,7 @@ public interface FilterVisitor {
 
     void visit(Not not);
 
-    void visit(SpatialPredicate predicate);
+    void visit(BinarySpatialPredicate predicate);
+
+    void visit(DWithin dWithin);
 }

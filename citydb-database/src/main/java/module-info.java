@@ -7,6 +7,7 @@ module org.citydb.database {
     requires transitive org.citydb.model;
     requires transitive org.citydb.sqlbuilder;
     requires transitive org.geotools.api;
+    requires transitive org.geotools.metadata;
     requires transitive org.geotools.referencing;
     requires transitive java.sql;
 

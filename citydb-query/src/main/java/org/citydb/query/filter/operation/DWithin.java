@@ -21,29 +21,32 @@
 
 package org.citydb.query.filter.operation;
 
+import org.citydb.query.filter.common.Distance;
 import org.citydb.query.filter.common.FilterVisitor;
 import org.citydb.query.filter.common.GeometryExpression;
-import org.citydb.query.filter.common.Predicate;
+import org.citydb.query.filter.common.SpatialPredicate;
 
 import java.util.Objects;
 
-public class SpatialPredicate implements Predicate {
-    private SpatialOperator operator;
+public class DWithin implements SpatialPredicate {
     private final GeometryExpression leftOperand;
     private final GeometryExpression rightOperand;
+    private final Distance distance;
+    private SpatialOperator operator;
 
-    private SpatialPredicate(SpatialOperator operator, GeometryExpression leftOperand, GeometryExpression rightOperand) {
-        this.operator = Objects.requireNonNull(operator, "The spatial operator must not be null.");
+    private DWithin(GeometryExpression leftOperand, GeometryExpression rightOperand, Distance distance, boolean negate) {
         this.leftOperand = Objects.requireNonNull(leftOperand, "The left operand must not be null.");
         this.rightOperand = Objects.requireNonNull(rightOperand, "The right operand must not be null.");
+        this.distance = Objects.requireNonNull(distance, "The distance must not be null.");
+        operator = negate ? SpatialOperator.BEYOND : SpatialOperator.DWITHIN;
     }
 
-    public static SpatialPredicate of(GeometryExpression leftOperand, SpatialOperator operator, GeometryExpression rightOperand) {
-        return new SpatialPredicate(operator, leftOperand, rightOperand);
+    public static DWithin of(GeometryExpression leftOperand, GeometryExpression rightOperand, Distance distance, boolean negate) {
+        return new DWithin(leftOperand, rightOperand, distance, negate);
     }
 
-    public SpatialOperator getOperator() {
-        return operator;
+    public static DWithin of(GeometryExpression leftOperand, GeometryExpression rightOperand, Distance distance) {
+        return new DWithin(leftOperand, rightOperand, distance, false);
     }
 
     public GeometryExpression getLeftOperand() {
@@ -54,27 +57,20 @@ public class SpatialPredicate implements Predicate {
         return rightOperand;
     }
 
+    public Distance getDistance() {
+        return distance;
+    }
+
+    public SpatialOperator getOperator() {
+        return operator;
+    }
+
     @Override
-    public Predicate negate() {
-        return switch (operator) {
-            case INTERSECTS -> {
-                operator = SpatialOperator.DISJOINT;
-                yield this;
-            }
-            case DISJOINT -> {
-                operator = SpatialOperator.INTERSECTS;
-                yield this;
-            }
-            case CONTAINS -> {
-                operator = SpatialOperator.WITHIN;
-                yield this;
-            }
-            case WITHIN -> {
-                operator = SpatialOperator.CONTAINS;
-                yield this;
-            }
-            default -> Not.of(this);
-        };
+    public DWithin negate() {
+        operator = operator == SpatialOperator.DWITHIN ?
+                SpatialOperator.BEYOND :
+                SpatialOperator.DWITHIN;
+        return this;
     }
 
     @Override

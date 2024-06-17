@@ -113,8 +113,14 @@ public abstract class FilterWalker implements FilterVisitor {
     }
 
     @Override
-    public void visit(SpatialPredicate predicate) {
+    public void visit(BinarySpatialPredicate predicate) {
         predicate.getLeftOperand().accept(this);
         predicate.getRightOperand().accept(this);
+    }
+
+    @Override
+    public void visit(DWithin dWithin) {
+        dWithin.getLeftOperand().accept(this);
+        dWithin.getRightOperand().accept(this);
     }
 }

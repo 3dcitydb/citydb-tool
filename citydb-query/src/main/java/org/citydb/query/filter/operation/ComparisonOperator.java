@@ -99,4 +99,9 @@ public enum ComparisonOperator {
             case NOT_IN -> IN;
         };
     }
+
+    @Override
+    public String toString() {
+        return jsonToken.toString();
+    }
 }

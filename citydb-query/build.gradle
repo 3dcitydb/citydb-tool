@@ -2,4 +2,5 @@ dependencies {
     api project(':citydb-database')
     api project(':citydb-model')
     implementation project(':citydb-config')
+    implementation 'systems.uom:systems-quantity:2.1'
 }

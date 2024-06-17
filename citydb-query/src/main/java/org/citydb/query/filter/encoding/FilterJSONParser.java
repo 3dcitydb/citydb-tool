@@ -135,8 +135,10 @@ public class FilterJSONParser {
             return readBinaryBooleanPredicate(token, args);
         } else if (token == JSONToken.NOT) {
             return readNotPredicate(args);
-        } else if (JSONToken.SPATIAL_OPERATORS.contains(token)) {
-            return readSpatialPredicate(token, args);
+        } else if (JSONToken.BINARY_SPATIAL_OPERATORS.contains(token)) {
+            return readBinarySpatialPredicate(token, args);
+        } else if (JSONToken.SPATIAL_DISTANCE_OPERATORS.contains(token)) {
+            return readSpatialDistancePredicate(token, args);
         } else if (JSONToken.TEMPORAL_OPERATORS.contains(token)) {
             return readTemporalPredicate(token, args);
         } else if (JSONToken.ARRAY_OPERATORS.contains(token)) {
@@ -156,7 +158,7 @@ public class FilterJSONParser {
         } else if (token == JSONToken.UNDEFINED) {
             return readFunction(op, args);
         } else {
-            return null;
+            throw new FilterParseException("Unsupported operator '" + op + "'.");
         }
     }
 
@@ -189,11 +191,11 @@ public class FilterJSONParser {
         }
     }
 
-    private SpatialPredicate readSpatialPredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private BinarySpatialPredicate readBinarySpatialPredicate(JSONToken op, JSONArray args) throws FilterParseException {
         if (args.size() == 2) {
             SpatialOperator operator = SpatialOperator.of(op);
             if (operator != null) {
-                return SpatialPredicate.of(
+                return BinarySpatialPredicate.of(
                         readExpression(args.get(0), GeometryExpression.class),
                         operator,
                         readExpression(args.get(1), GeometryExpression.class));
@@ -201,7 +203,30 @@ public class FilterJSONParser {
                 throw new FilterParseException("Invalid spatial operator '" + op + "'.");
             }
         } else {
-            throw new FilterParseException("A spatial predicate requires two operands.");
+            throw new FilterParseException("A binary spatial predicate requires two operands.");
+        }
+    }
+
+    private DWithin readSpatialDistancePredicate(JSONToken op, JSONArray args) throws FilterParseException {
+        if (args.size() == 3 || args.size() == 4) {
+            Distance distance = Distance.of(readExpression(args.get(2), NumericLiteral.class).doubleValue());
+            if (args.size() == 4) {
+                StringLiteral literal = readExpression(args.get(3), StringLiteral.class);
+                DistanceUnit unit = DistanceUnit.of(literal.getValue());
+                if (unit != null) {
+                    distance.setUnit(unit);
+                } else {
+                    throw new FilterParseException("Unsupported distance unit '" + literal.getValue() + "'.");
+                }
+            }
+
+            return DWithin.of(
+                    readExpression(args.get(0), GeometryExpression.class),
+                    readExpression(args.get(1), GeometryExpression.class),
+                    distance,
+                    op == JSONToken.S_BEYOND);
+        } else {
+            throw new FilterParseException("A spatial distance predicate requires three or four operands.");
         }
     }
 

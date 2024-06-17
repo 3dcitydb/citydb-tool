@@ -231,11 +231,28 @@ public class FilterJSONWriter {
         }
 
         @Override
-        public void visit(SpatialPredicate predicate) {
+        public void visit(BinarySpatialPredicate predicate) {
             startOp(predicate.getOperator().getJSONToken().value());
             predicate.getLeftOperand().accept(this);
             jsonWriter.writeComma();
             predicate.getRightOperand().accept(this);
+            endOp();
+        }
+
+        @Override
+        public void visit(DWithin dWithin) {
+            startOp(dWithin.getOperator().getJSONToken().value());
+            dWithin.getLeftOperand().accept(this);
+            jsonWriter.writeComma();
+            dWithin.getRightOperand().accept(this);
+            if (dWithin.getDistance().getValue() != 0) {
+                jsonWriter.writeComma();
+                jsonWriter.writeDouble(dWithin.getDistance().getValue());
+                dWithin.getDistance().getUnit().ifPresent(unit -> {
+                    jsonWriter.writeComma();
+                    jsonWriter.writeString(unit.toString());
+                });
+            }
             endOp();
         }
 

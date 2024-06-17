@@ -21,48 +21,49 @@
 
 package org.citydb.query.filter.common;
 
+import org.citydb.query.filter.operation.BinarySpatialPredicate;
+import org.citydb.query.filter.operation.DWithin;
 import org.citydb.query.filter.operation.Operators;
-import org.citydb.query.filter.operation.SpatialPredicate;
 
 public interface GeometryExpression extends Argument {
 
-    default SpatialPredicate intersects(GeometryExpression operand) {
+    default BinarySpatialPredicate intersects(GeometryExpression operand) {
         return Operators.intersects(this, operand);
     }
 
-    default SpatialPredicate contains(GeometryExpression operand) {
+    default BinarySpatialPredicate contains(GeometryExpression operand) {
         return Operators.contains(this, operand);
     }
 
-    default SpatialPredicate crosses(GeometryExpression operand) {
+    default BinarySpatialPredicate crosses(GeometryExpression operand) {
         return Operators.crosses(this, operand);
     }
 
-    default SpatialPredicate disjoint(GeometryExpression operand) {
+    default BinarySpatialPredicate disjoint(GeometryExpression operand) {
         return Operators.disjoint(this, operand);
     }
 
-    default SpatialPredicate equals(GeometryExpression operand) {
+    default BinarySpatialPredicate equals(GeometryExpression operand) {
         return Operators.equals(this, operand);
     }
 
-    default SpatialPredicate overlaps(GeometryExpression operand) {
+    default BinarySpatialPredicate overlaps(GeometryExpression operand) {
         return Operators.overlaps(this, operand);
     }
 
-    default SpatialPredicate touches(GeometryExpression operand) {
+    default BinarySpatialPredicate touches(GeometryExpression operand) {
         return Operators.touches(this, operand);
     }
 
-    default SpatialPredicate within(GeometryExpression operand) {
+    default BinarySpatialPredicate within(GeometryExpression operand) {
         return Operators.within(this, operand);
     }
 
-    default SpatialPredicate dWithin(GeometryExpression operand) {
-        return Operators.dWithin(this, operand);
+    default DWithin dWithin(GeometryExpression operand, Distance distance) {
+        return Operators.dWithin(this, operand, distance);
     }
 
-    default SpatialPredicate beyond(GeometryExpression operand) {
-        return Operators.beyond(this, operand);
+    default DWithin beyond(GeometryExpression operand, Distance distance) {
+        return Operators.beyond(this, operand, distance);
     }
 }

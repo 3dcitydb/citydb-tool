@@ -247,12 +247,29 @@ public class FilterTextWriter {
         }
 
         @Override
-        public void visit(SpatialPredicate predicate) {
+        public void visit(BinarySpatialPredicate predicate) {
             builder.append(predicate.getOperator().getTextToken());
             builder.append("(");
             predicate.getLeftOperand().accept(this);
             builder.append(", ");
             predicate.getRightOperand().accept(this);
+            builder.append(")");
+        }
+
+        @Override
+        public void visit(DWithin dWithin) {
+            builder.append(dWithin.getOperator().getTextToken());
+            builder.append("(");
+            dWithin.getLeftOperand().accept(this);
+            builder.append(", ");
+            dWithin.getRightOperand().accept(this);
+            if (dWithin.getDistance().getValue() != 0) {
+                builder.append(", ")
+                        .append(dWithin.getDistance().getValue());
+                dWithin.getDistance().getUnit().ifPresent(unit -> builder.append(", '")
+                        .append(unit)
+                        .append("'"));
+            }
             builder.append(")");
         }
 
