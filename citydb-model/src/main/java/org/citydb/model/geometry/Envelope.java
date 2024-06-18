@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
-public class Envelope extends Child implements SrsReference {
+public class Envelope extends Child implements SpatialObject {
     private final Coordinate lowerCorner;
     private final Coordinate upperCorner;
     private Integer srid;
@@ -50,7 +50,8 @@ public class Envelope extends Child implements SrsReference {
         return upperCorner;
     }
 
-    public int getDimension() {
+    @Override
+    public int getVertexDimension() {
         return (lowerCorner.getDimension() == 2 || upperCorner.getDimension() == 2) ? 2 : 3;
     }
 
@@ -102,7 +103,7 @@ public class Envelope extends Child implements SrsReference {
                 (lowerCorner.getY() + upperCorner.getY()) / 2,
                 (lowerCorner.getZ() + upperCorner.getZ()) / 2);
 
-        return getDimension() == 2 ? center.force2D() : center;
+        return getVertexDimension() == 2 ? center.force2D() : center;
     }
 
     public boolean contains(Coordinate coordinate) {
@@ -111,7 +112,7 @@ public class Envelope extends Child implements SrsReference {
                 && coordinate.getY() >= lowerCorner.getY()
                 && coordinate.getY() <= upperCorner.getY();
 
-        if (contains && coordinate.getDimension() == 3 && getDimension() == 3) {
+        if (contains && coordinate.getDimension() == 3 && getVertexDimension() == 3) {
             contains = coordinate.getZ() >= lowerCorner.getZ()
                     && coordinate.getZ() <= upperCorner.getZ();
         }
@@ -129,7 +130,7 @@ public class Envelope extends Child implements SrsReference {
                 && coordinate.getY() > lowerCorner.getY()
                 && coordinate.getY() < upperCorner.getY();
 
-        if (within && coordinate.getDimension() == 3 && getDimension() == 3) {
+        if (within && coordinate.getDimension() == 3 && getVertexDimension() == 3) {
             within = coordinate.getZ() > lowerCorner.getZ()
                     && coordinate.getZ() < upperCorner.getZ();
         }
@@ -147,7 +148,7 @@ public class Envelope extends Child implements SrsReference {
                 || envelope.lowerCorner.getY() > upperCorner.getY()
                 || envelope.upperCorner.getY() < lowerCorner.getY();
 
-        if (!disconnected && envelope.getDimension() == 3 && getDimension() == 3) {
+        if (!disconnected && envelope.getVertexDimension() == 3 && getVertexDimension() == 3) {
             disconnected = envelope.lowerCorner.getZ() > upperCorner.getZ()
                     || envelope.upperCorner.getZ() < lowerCorner.getZ();
         }
@@ -172,7 +173,7 @@ public class Envelope extends Child implements SrsReference {
             upperCorner.setY(coordinate.getY());
         }
 
-        if (coordinate.getDimension() == 3 && getDimension() == 3) {
+        if (coordinate.getDimension() == 3 && getVertexDimension() == 3) {
             if (coordinate.getZ() < lowerCorner.getZ()) {
                 lowerCorner.setZ(coordinate.getZ());
             }
@@ -197,7 +198,7 @@ public class Envelope extends Child implements SrsReference {
     public Polygon convertToPolygon() {
         Coordinate lowerRight = Coordinate.of(upperCorner.getX(), lowerCorner.getY());
         Coordinate upperLeft = Coordinate.of(lowerCorner.getX(), upperCorner.getY());
-        if (getDimension() == 3) {
+        if (getVertexDimension() == 3) {
             lowerRight.setZ(lowerCorner.getZ());
             upperLeft.setZ(upperCorner.getZ());
         }

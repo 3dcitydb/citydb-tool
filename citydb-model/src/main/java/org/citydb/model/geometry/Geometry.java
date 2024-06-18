@@ -29,13 +29,12 @@ import org.citydb.model.walker.ModelWalker;
 
 import java.util.Optional;
 
-public abstract class Geometry<T extends Geometry<?>> extends Child implements Referencable, Visitable, SrsReference, Describable<GeometryDescriptor> {
+public abstract class Geometry<T extends Geometry<?>> extends Child implements SpatialObject, Referencable, Visitable, Describable<GeometryDescriptor> {
     private String objectId;
     private Integer srid;
     private String srsIdentifier;
     private GeometryDescriptor descriptor;
 
-    public abstract int getVertexDimension();
     public abstract GeometryType getGeometryType();
     abstract T self();
 

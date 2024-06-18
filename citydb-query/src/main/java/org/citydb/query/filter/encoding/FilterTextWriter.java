@@ -74,7 +74,7 @@ public class FilterTextWriter {
         public void visit(BBoxLiteral literal) {
             Coordinate lowerCorner = literal.getValue().getLowerCorner();
             Coordinate upperCorner = literal.getValue().getUpperCorner();
-            List<Double> coordinates = literal.getValue().getDimension() == 2 ?
+            List<Double> coordinates = literal.getValue().getVertexDimension() == 2 ?
                     List.of(lowerCorner.getX(), lowerCorner.getY(),
                             upperCorner.getX(), upperCorner.getY()) :
                     List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
