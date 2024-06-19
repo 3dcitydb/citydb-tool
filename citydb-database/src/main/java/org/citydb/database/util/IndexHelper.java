@@ -19,9 +19,10 @@
  * limitations under the License.
  */
 
-package org.citydb.database.schema;
+package org.citydb.database.util;
 
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.schema.Index;
 
 import java.sql.Connection;
 import java.sql.ResultSet;

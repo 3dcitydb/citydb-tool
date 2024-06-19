@@ -33,7 +33,7 @@ import org.citydb.database.DatabaseOptions;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.schema.Index;
-import org.citydb.database.schema.IndexHelper;
+import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.logging.LoggerManager;

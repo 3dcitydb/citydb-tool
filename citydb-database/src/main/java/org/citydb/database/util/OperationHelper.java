@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.database.schema;
+package org.citydb.database.util;
 
 import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;

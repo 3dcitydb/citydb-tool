@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
-import org.citydb.database.schema.IndexHelper;
+import org.citydb.database.util.IndexHelper;
 import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 

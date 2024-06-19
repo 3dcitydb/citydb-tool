@@ -26,7 +26,7 @@ import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 
-public class OperationHelper extends org.citydb.database.schema.OperationHelper {
+public class OperationHelper extends org.citydb.database.util.OperationHelper {
 
     OperationHelper(SchemaAdapter schemaAdapter) {
         super(schemaAdapter);

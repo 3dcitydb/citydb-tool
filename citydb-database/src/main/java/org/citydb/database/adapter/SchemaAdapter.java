@@ -23,6 +23,8 @@ package org.citydb.database.adapter;
 
 import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.*;
+import org.citydb.database.util.IndexHelper;
+import org.citydb.database.util.OperationHelper;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
