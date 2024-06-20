@@ -141,11 +141,18 @@ public class FilterTextWriter {
             String name = propertyRef.getName().getPrefix()
                     .map(prefix -> prefix + ":" + propertyRef.getName().getLocalName())
                     .orElse(propertyRef.getName().getLocalName());
-            if (TextToken.of(name) != TextToken.UNDEFINED) {
-                name = '"' + name + '"';
+            if (TextToken.of(name) == TextToken.UNDEFINED) {
+                builder.append(name);
+            } else {
+                builder.append('"')
+                        .append(name)
+                        .append('"');
             }
 
-            builder.append(name);
+            propertyRef.getTypeCast().ifPresent(typeCast ->
+                    builder.append("::")
+                            .append(typeCast));
+
             propertyRef.getFilter().ifPresent(filter -> {
                 builder.append("[");
                 buildStepPredicate(filter);
@@ -161,7 +168,7 @@ public class FilterTextWriter {
         @Override
         public void visit(Function function) {
             buildSign(function);
-            builder.append(function.getName())
+            builder.append(function.getName().getTextToken())
                     .append("(")
                     .append(function.getArguments().stream()
                             .map(FilterTextWriter.this::write)

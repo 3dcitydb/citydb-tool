@@ -66,7 +66,7 @@ public enum JSONToken {
     S_OVERLAPS("s_overlaps"),
     S_CROSSES("s_crosses"),
     S_CONTAINS("s_contains"),
-    S_DWITHIN("s_dwithin"),
+    S_DWITHIN("s_dWithin"),
     S_BEYOND("s_beyond"),
     A_EQUALS("a_equals"),
     A_CONTAINS("a_contains"),

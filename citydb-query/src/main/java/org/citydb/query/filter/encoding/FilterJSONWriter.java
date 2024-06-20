@@ -32,7 +32,6 @@ import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
 
 import java.util.List;
-import java.util.Locale;
 
 public class FilterJSONWriter {
 
@@ -134,7 +133,7 @@ public class FilterJSONWriter {
             if (function.getSign() == Sign.MINUS) {
                 negate(function);
             } else {
-                startOp(function.getName().getIdentifier().toLowerCase(Locale.ROOT));
+                startOp(function.getName().getJsonToken());
                 writeList(function.getArguments(), jsonWriter::writeComma);
                 endOp();
             }

@@ -130,6 +130,10 @@ public class Tokenizer {
             } else if (TextToken.GEOMETRIES.contains(token.getType())
                     && token.getType() != TextToken.BBOX) {
                 token = rewriteGeometry(token, tokenizer);
+            } else if (token.getType() == TextToken.DOUBLE_QUOTE) {
+                token = rewriteTypeCast(token, tokenizer);
+            } else if (token.getType() == TextToken.IDENTIFIER) {
+                failOnTypeCast(token);
             }
 
             tokens.add(token);
@@ -247,6 +251,41 @@ public class Tokenizer {
         }
 
         return Token.of(token.getType(), wkt.toString());
+    }
+
+    private Token rewriteTypeCast(Token token, StreamTokenizer tokenizer) throws FilterParseException {
+        Token next = lookAhead(tokenizer);
+        if (next.getType() == TextToken.IDENTIFIER
+                && next.getValue().startsWith("::")) {
+            nextToken(tokenizer);
+            return Token.of(token.getType(), token.getValue() + next.getValue());
+        } else {
+            return token;
+        }
+    }
+
+    private void failOnTypeCast(Token token) throws FilterParseException {
+        int index = token.getValue().indexOf("::");
+        if (index != -1) {
+            String value = token.getValue().substring(0, index);
+            TextToken type = TextToken.of(value);
+            if (index == 0
+                    || type == TextToken.TRUE
+                    || type == TextToken.FALSE
+                    || isNumber(value)) {
+                throw new FilterParseException("Invalid use of type cast '" +
+                        token.getValue().substring(index) + "'.");
+            }
+        }
+    }
+
+    private boolean isNumber(String value) {
+        try {
+            Double.parseDouble(value);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private Token nextToken(StreamTokenizer tokenizer) throws FilterParseException {

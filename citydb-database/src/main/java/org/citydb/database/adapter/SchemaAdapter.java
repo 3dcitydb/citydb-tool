@@ -25,14 +25,17 @@ import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.*;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.database.util.OperationHelper;
+import org.citydb.database.util.SqlHelper;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
+    private final SqlHelper sqlHelper;
     private final IndexHelper indexHelper;
     private SchemaMapping schemaMapping;
 
     protected SchemaAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
+        sqlHelper = SqlHelper.newInstance(adapter);
         indexHelper = IndexHelper.newInstance(adapter);
     }
 
@@ -57,6 +60,10 @@ public abstract class SchemaAdapter {
 
     public SchemaMapping getSchemaMapping() {
         return schemaMapping;
+    }
+
+    public SqlHelper getSqlHelper() {
+        return sqlHelper;
     }
 
     public IndexHelper getIndexHelper() {

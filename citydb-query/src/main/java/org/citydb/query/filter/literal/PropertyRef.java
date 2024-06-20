@@ -26,37 +26,42 @@ import org.citydb.model.common.Name;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.feature.FeatureTypeProvider;
 import org.citydb.query.filter.common.*;
-import org.citydb.query.filter.operation.BooleanExpression;
+import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.filter.operation.NumericExpression;
 
 import java.util.Objects;
 import java.util.Optional;
 
-public class PropertyRef implements BooleanExpression, GeometryExpression, NumericExpression, CharacterExpression {
+public class PropertyRef implements GeometryExpression, NumericExpression, CharacterExpression {
     private final PrefixedName name;
+    private final String typeCast;
     private Predicate filter;
     private PropertyRef parent;
     private PropertyRef child;
     private Sign sign;
 
-    private PropertyRef(PrefixedName name) {
+    private PropertyRef(PrefixedName name, String typeCast) {
         this.name = Objects.requireNonNull(name, "The name must not be null.");
+        this.typeCast = typeCast;
     }
 
     public static PropertyRef of(String name, String namespace) {
-        return new PropertyRef(PrefixedName.of(name, namespace));
+        int index = name != null ? name.indexOf("::") : -1;
+        return index != -1 ?
+                new PropertyRef(PrefixedName.of(name.substring(0, index), namespace), name.substring(index + 2)) :
+                new PropertyRef(PrefixedName.of(name, namespace), null);
     }
 
-    public static PropertyRef of(String name) {
+    public static PropertyRef of(String name) throws FilterParseException {
         return of(name, null);
     }
 
     public static PropertyRef of(Name name) {
-        return of(name.getLocalName(), name.getNamespace());
+        return of(PrefixedName.of(name));
     }
 
     public static PropertyRef of(PrefixedName name) {
-        return new PropertyRef(name);
+        return new PropertyRef(name, null);
     }
 
     public static PropertyRef of(FeatureTypeProvider provider) {
@@ -69,6 +74,10 @@ public class PropertyRef implements BooleanExpression, GeometryExpression, Numer
 
     public PrefixedName getName() {
         return name;
+    }
+
+    public Optional<String> getTypeCast() {
+        return Optional.ofNullable(typeCast);
     }
 
     public Optional<Predicate> getFilter() {
@@ -88,7 +97,7 @@ public class PropertyRef implements BooleanExpression, GeometryExpression, Numer
         return Optional.ofNullable(child);
     }
 
-    public PropertyRef child(String name) {
+    public PropertyRef child(String name) throws FilterParseException {
         return child(of(name));
     }
 
@@ -115,6 +124,26 @@ public class PropertyRef implements BooleanExpression, GeometryExpression, Numer
         } else {
             return this;
         }
+    }
+
+    public PropertyRef first() {
+        PropertyRef first = this;
+        PropertyRef parent = this;
+        while ((parent = parent.parent) != null) {
+            first = parent;
+        }
+
+        return first;
+    }
+
+    public PropertyRef last() {
+        PropertyRef last = this;
+        PropertyRef child = this;
+        while ((child = child.child) != null) {
+            last = child;
+        }
+
+        return last;
     }
 
     @Override
