@@ -43,8 +43,8 @@ public class SrsReference {
         return Optional.ofNullable(identifier);
     }
 
-    public SrsReference setIdentifier(String uri) {
-        this.identifier = uri;
+    public SrsReference setIdentifier(String identifier) {
+        this.identifier = identifier;
         return this;
     }
 }
