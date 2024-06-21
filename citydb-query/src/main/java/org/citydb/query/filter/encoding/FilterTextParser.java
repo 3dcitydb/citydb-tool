@@ -108,6 +108,8 @@ public class FilterTextParser {
             return readBinaryExpressionPredicate(tokenizer.nextToken(), this::readTemporalExpression, tokenizer);
         } else if (TextToken.ARRAY_OPERATORS.contains(tokenizer.lookAhead().getType())) {
             return readBinaryExpressionPredicate(tokenizer.nextToken(), this::readArrayExpression, tokenizer);
+        } else if (tokenizer.lookAhead().getType() == TextToken.SQL) {
+            return readSqlExpression(tokenizer.nextToken(), tokenizer);
         } else {
             return readComparisonPredicate(tokenizer);
         }
@@ -196,6 +198,19 @@ public class FilterTextParser {
         return array != Node.EMPTY ?
                 array :
                 readTerminal(tokenizer);
+    }
+
+    private Node readSqlExpression(Token sqlOperator, Tokenizer tokenizer) throws FilterParseException {
+        require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse SQL expression.");
+        Node queryExpression = readTerminal(tokenizer);
+        require(tokenizer.nextToken(), TextToken.R_PAREN, "Failed to parse SQL expression.");
+
+        if (queryExpression != Node.EMPTY) {
+            return Node.of(sqlOperator).addChild(queryExpression);
+        } else {
+            throw new FilterParseException("Failed to parse SQL expression '" +
+                    tokenizer.substring(sqlOperator) + "'.");
+        }
     }
 
     private Node readComparisonPredicate(Tokenizer tokenizer) throws FilterParseException {

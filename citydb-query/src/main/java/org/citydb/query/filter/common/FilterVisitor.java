@@ -26,31 +26,27 @@ import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
 
 public interface FilterVisitor {
-    void visit(BBoxLiteral literal);
-
-    void visit(BooleanLiteral literal);
-
-    void visit(DateLiteral literal);
-
-    void visit(GeometryLiteral literal);
-
-    void visit(NumericLiteral literal);
-
-    void visit(StringLiteral literal);
-
-    void visit(TimestampLiteral literal);
-
-    void visit(PropertyRef propertyRef);
-
-    void visit(Function function);
-
     void visit(ArithmeticExpression expression);
+
+    void visit(BBoxLiteral literal);
 
     void visit(Between between);
 
     void visit(BinaryBooleanPredicate predicate);
 
     void visit(BinaryComparisonPredicate predicate);
+
+    void visit(BinarySpatialPredicate predicate);
+
+    void visit(BooleanLiteral literal);
+
+    void visit(DateLiteral literal);
+
+    void visit(DWithin dWithin);
+
+    void visit(Function function);
+
+    void visit(GeometryLiteral literal);
 
     void visit(In in);
 
@@ -60,7 +56,13 @@ public interface FilterVisitor {
 
     void visit(Not not);
 
-    void visit(BinarySpatialPredicate predicate);
+    void visit(NumericLiteral literal);
 
-    void visit(DWithin dWithin);
+    void visit(PropertyRef propertyRef);
+
+    void visit(StringLiteral literal);
+
+    void visit(SqlExpression expression);
+
+    void visit(TimestampLiteral literal);
 }

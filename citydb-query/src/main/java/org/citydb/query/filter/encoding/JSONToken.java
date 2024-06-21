@@ -87,6 +87,7 @@ public enum JSONToken {
     T_OVERLAPS("t_overlaps"),
     T_STARTEDBY("t_startedBy"),
     T_STARTS("t_starts"),
+    SQL("sql"),
     OP("op"),
     ARGS("args"),
     UNDEFINED("");

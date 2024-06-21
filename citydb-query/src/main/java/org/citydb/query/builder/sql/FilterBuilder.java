@@ -28,10 +28,7 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.common.*;
 import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.*;
-import org.citydb.query.filter.operation.ArithmeticExpression;
-import org.citydb.query.filter.operation.BinaryBooleanPredicate;
-import org.citydb.query.filter.operation.BooleanOperator;
-import org.citydb.query.filter.operation.IsNull;
+import org.citydb.query.filter.operation.*;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.query.Select;
@@ -44,6 +41,7 @@ public class FilterBuilder {
     private final ComparisonPredicateBuilder comparisonPredicateBuilder;
     private final SpatialPredicateBuilder spatialPredicateBuilder;
     private final LogicalPredicateBuilder logicalPredicateBuilder;
+    private final SqlExpressionBuilder sqlExpressionBuilder;
     private final ArithmeticExpressionBuilder arithmeticExpressionBuilder;
     private final FunctionBuilder functionBuilder;
 
@@ -52,6 +50,7 @@ public class FilterBuilder {
         comparisonPredicateBuilder = ComparisonPredicateBuilder.of(this, helper);
         spatialPredicateBuilder = SpatialPredicateBuilder.of(this, helper);
         logicalPredicateBuilder = LogicalPredicateBuilder.of(this);
+        sqlExpressionBuilder = SqlExpressionBuilder.newInstance();
         arithmeticExpressionBuilder = ArithmeticExpressionBuilder.of(this, helper);
         functionBuilder = FunctionBuilder.of(this, helper);
     }
@@ -85,6 +84,8 @@ public class FilterBuilder {
             return spatialPredicateBuilder.build(spatialPredicate, select, context, negate);
         } else if (expression instanceof LogicalPredicate logicalPredicate) {
             return logicalPredicateBuilder.build(logicalPredicate, select, context, negate);
+        } else if (expression instanceof SqlExpression sqlExpression) {
+            return sqlExpressionBuilder.build(sqlExpression, context, negate);
         } else if (expression instanceof ArithmeticExpression arithmeticExpression) {
             return arithmeticExpressionBuilder.build(arithmeticExpression, select, context, negate);
         } else if (expression instanceof Function function) {
