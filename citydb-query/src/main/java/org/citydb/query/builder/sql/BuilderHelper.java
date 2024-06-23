@@ -29,6 +29,7 @@ import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SpatialOperationHelper;
+import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.SpatialObject;
 import org.citydb.query.Query;
@@ -131,10 +132,18 @@ public class BuilderHelper {
             Set<FeatureType> featureTypes = new HashSet<>();
             for (PrefixedName name : query.getFeatureTypes()) {
                 FeatureType featureType = getSchemaMapping().getFeatureType(name);
+                if (featureType == FeatureType.UNDEFINED
+                        && name.getPrefix().isEmpty()
+                        && name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
+                    featureType = getSchemaMapping().getFeatureTypes().stream()
+                            .filter(candidate -> candidate.getName().getLocalName().equals(name.getLocalName()))
+                            .findFirst().orElse(FeatureType.UNDEFINED);
+                }
+
                 if (featureType == FeatureType.UNDEFINED) {
-                    throw new QueryBuildException("The feature type " + name + " is undefined.");
+                    throw new QueryBuildException("The feature type '" + name + "' is undefined.");
                 } else if (featureType.getTable() != org.citydb.database.schema.Table.FEATURE) {
-                    throw new QueryBuildException("The feature type " + name + " is not supported in queries.");
+                    throw new QueryBuildException("The feature type '" + name + "' is not supported in queries.");
                 } else {
                     featureTypes.add(featureType);
                 }
