@@ -38,6 +38,11 @@ import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.PluginManager;
+import org.citydb.query.Query;
+import org.citydb.query.builder.QueryBuildException;
+import org.citydb.query.executor.QueryExecutor;
+import org.citydb.sqlbuilder.SqlBuildOptions;
+import org.citydb.sqlbuilder.common.SqlObject;
 
 import java.sql.SQLException;
 import java.util.Collection;
@@ -107,6 +112,20 @@ public class CommandHelper {
         }
 
         return manager;
+    }
+
+    public QueryExecutor getQueryExecutor(Query query, DatabaseAdapter adapter) throws ExecutionException {
+        try {
+            return QueryExecutor.builder(adapter).build(query);
+        } catch (QueryBuildException e) {
+            throw new ExecutionException("Failed to build database query.", e);
+        }
+    }
+
+    public String getFormattedSql(SqlObject object, DatabaseAdapter adapter) {
+        return adapter.getSchemaAdapter().getSqlHelper().toSql(object, SqlBuildOptions.defaults()
+                .setKeywordCase(SqlBuildOptions.KeywordCase.UPPERCASE)
+                .setIndent("  "));
     }
 
     public void createIndexes(DatabaseAdapter adapter) throws ExecutionException {

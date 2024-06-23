@@ -1,6 +1,7 @@
 module org.citydb.operation {
     requires org.citydb.config;
     requires transitive org.citydb.database;
+    requires transitive org.citydb.query;
 
     exports org.citydb.operation.deleter;
     exports org.citydb.operation.deleter.common;

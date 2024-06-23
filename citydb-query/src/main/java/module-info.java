@@ -12,6 +12,7 @@ module org.citydb.query {
     exports org.citydb.query.builder.common;
     exports org.citydb.query.builder.schema;
     exports org.citydb.query.builder.sql;
+    exports org.citydb.query.executor;
     exports org.citydb.query.feature;
     exports org.citydb.query.filter;
     exports org.citydb.query.filter.common;
@@ -19,4 +20,5 @@ module org.citydb.query {
     exports org.citydb.query.filter.function;
     exports org.citydb.query.filter.literal;
     exports org.citydb.query.filter.operation;
+    exports org.citydb.query.util;
 }

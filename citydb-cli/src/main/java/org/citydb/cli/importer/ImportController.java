@@ -107,6 +107,10 @@ public abstract class ImportController implements Command {
         }
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        ReadOptions readOptions = getReadOptions();
+        readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
+        ImportOptions importOptions = getImportOptions();
+
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
 
@@ -127,10 +131,6 @@ public abstract class ImportController implements Command {
                     .setFeatureStatisticsConsumer(StatisticsConsumer.of(statistics::merge, preview ?
                             StatisticsConsumer.Mode.COUNT_ALL :
                             StatisticsConsumer.Mode.COUNT_COMMITTED));
-
-            ReadOptions readOptions = getReadOptions();
-            readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
-            ImportOptions importOptions = getImportOptions();
 
             AtomicLong counter = new AtomicLong();
 

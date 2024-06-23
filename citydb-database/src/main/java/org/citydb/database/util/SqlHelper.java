@@ -112,7 +112,7 @@ public class SqlHelper {
         }
     }
 
-    public String toSql(SqlObject sqlObject, SqlBuildOptions options) {
+    public String toSql(SqlObject object, SqlBuildOptions options) {
         options.setPlaceholderBuilder((placeholder, op) -> {
             Object value = placeholder.getValue().orElse(null);
             if (value instanceof Boolean booleanValue) {
@@ -130,7 +130,7 @@ public class SqlHelper {
             }
         });
 
-        return SqlBuilder.newInstance().build(sqlObject, options);
+        return SqlBuilder.newInstance().build(object, options);
     }
 
     private String toSql(Geometry<?> geometry) {

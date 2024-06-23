@@ -27,21 +27,26 @@ import org.citydb.cli.exporter.ExportController;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.util.SqlHelper;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.writer.CityJSONFormatOptions;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
+import org.citydb.query.builder.sql.SqlQueryBuilder;
+import org.citydb.sqlbuilder.common.SqlObject;
+import org.citydb.sqlbuilder.query.Select;
 import org.citygml4j.cityjson.adapter.appearance.serializer.AppearanceSerializer;
 import org.citygml4j.cityjson.adapter.geometry.serializer.GeometrySerializer;
 import org.citygml4j.cityjson.model.CityJSONVersion;
 import picocli.CommandLine;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -182,14 +187,20 @@ public class CityJSONExportCommand extends ExportController {
     @Override
     protected void initialize(DatabaseManager databaseManager) throws ExecutionException {
         try {
+            logger.info("Retrieving global template geometries...");
             Exporter exporter = Exporter.newInstance();
-            String query = databaseManager.getAdapter().getSchemaAdapter()
-                    .getRecursiveImplicitGeometryQuery(getQuery(databaseManager.getAdapter()));
+            ExportOptions exportOptions = getExportOptions();
+            SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
+
+            Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
+                    .build(getQuery(exportOptions));
+            SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
+                    .getRecursiveImplicitGeometryQuery(featureQuery);
 
             try (Connection connection = databaseManager.getAdapter().getPool().getConnection();
-                 Statement stmt = connection.createStatement();
-                 ResultSet rs = stmt.executeQuery(query)) {
-                exporter.startSession(databaseManager.getAdapter(), getExportOptions());
+                 PreparedStatement stmt = helper.prepareStatement(query, connection);
+                 ResultSet rs = stmt.executeQuery()) {
+                exporter.startSession(databaseManager.getAdapter(), exportOptions);
                 while (shouldRun && rs.next()) {
                     long id = rs.getLong("id");
                     String lod = rs.getString("lod");

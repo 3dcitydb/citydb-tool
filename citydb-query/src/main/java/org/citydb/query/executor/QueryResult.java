@@ -19,30 +19,40 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.util;
-
-import org.citydb.database.adapter.DatabaseAdapter;
+package org.citydb.query.executor;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
-public class QueryExecutor {
-    private final DatabaseAdapter adapter;
+public class QueryResult implements AutoCloseable {
+    private final Connection connection;
+    private final PreparedStatement stmt;
+    private final ResultSet rs;
 
-    private QueryExecutor(DatabaseAdapter adapter) {
-        this.adapter = adapter;
+    QueryResult(Connection connection, PreparedStatement stmt, ResultSet rs) {
+        this.connection = connection;
+        this.stmt = stmt;
+        this.rs = rs;
     }
 
-    public static QueryExecutor of(DatabaseAdapter adapter) {
-        return new QueryExecutor(adapter);
+    public boolean hasNext() throws SQLException {
+        return rs.next();
     }
 
-    public QueryResult executeQuery(String query) throws SQLException {
-        Connection connection = adapter.getPool().getConnection();
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(query);
-        return new QueryResult(connection, stmt, rs);
+    public long getId() throws SQLException {
+        return rs.getLong("id");
+    }
+
+    public int getObjectClassId() throws SQLException {
+        return rs.getInt("objectclass_id");
+    }
+
+    @Override
+    public void close() throws SQLException {
+        connection.close();
+        stmt.close();
+        rs.close();
     }
 }

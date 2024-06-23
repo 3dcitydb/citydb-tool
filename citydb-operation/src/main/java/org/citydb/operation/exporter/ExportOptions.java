@@ -26,10 +26,12 @@ import org.citydb.config.SerializableConfig;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
+import org.citydb.query.Query;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 @SerializableConfig(name = "exportOptions")
 public class ExportOptions {
@@ -41,6 +43,7 @@ public class ExportOptions {
     private OutputFile outputFile;
     private int numberOfThreads;
     private int numberOfTextureBuckets;
+    private Query query;
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -79,6 +82,15 @@ public class ExportOptions {
 
     public ExportOptions setNumberOfTextureBuckets(int numberOfTextureBuckets) {
         this.numberOfTextureBuckets = numberOfTextureBuckets;
+        return this;
+    }
+
+    public Optional<Query> getQuery() {
+        return Optional.ofNullable(query);
+    }
+
+    public ExportOptions setQuery(Query query) {
+        this.query = query;
         return this;
     }
 }

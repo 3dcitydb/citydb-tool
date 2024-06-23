@@ -26,6 +26,9 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
+import org.citydb.sqlbuilder.common.SqlObject;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.util.PlainText;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -77,9 +80,9 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public String getRecursiveImplicitGeometryQuery(String featureQuery) {
+    public SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery) {
         try {
-            return recursiveImplicitGeometryQuery.get().replace("%FEATURE_QUERY%", featureQuery);
+            return PlainText.of(recursiveImplicitGeometryQuery.get(), featureQuery);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create recursive implicit geometry query.", e);
         }

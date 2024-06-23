@@ -26,6 +26,8 @@ import org.citydb.database.schema.*;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SqlHelper;
+import org.citydb.sqlbuilder.common.SqlObject;
+import org.citydb.sqlbuilder.query.Select;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
@@ -44,7 +46,7 @@ public abstract class SchemaAdapter {
     public abstract int getMaximumBatchSize();
     public abstract int getMaximumNumberOfItemsForInOperator();
     public abstract String getFeatureHierarchyQuery();
-    public abstract String getRecursiveImplicitGeometryQuery(String featureQuery);
+    public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
     public abstract String getCreateIndex(Index index);
     public abstract String getDropIndex(Index index);
     public abstract String getIndexExists(Index index);

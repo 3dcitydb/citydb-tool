@@ -25,13 +25,8 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.command.Command;
-import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.ConnectionOptions;
-import org.citydb.cli.option.OutputFileOptions;
-import org.citydb.cli.option.ThreadsOption;
+import org.citydb.cli.option.*;
 import org.citydb.cli.util.CommandHelper;
-import org.citydb.cli.util.QueryExecutor;
-import org.citydb.cli.util.QueryResult;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
@@ -50,6 +45,11 @@ import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
+import org.citydb.query.Query;
+import org.citydb.query.executor.QueryExecutor;
+import org.citydb.query.executor.QueryResult;
+import org.citydb.query.filter.encoding.FilterParseException;
+import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,9 +65,9 @@ public abstract class ExportController implements Command {
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
 
-    @CommandLine.Option(names = {"-q", "--query"}, paramLabel = "<select>",
-            description = "SQL select statement to use as filter query.")
-    private String query;
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Query and filter options:%n")
+    private QueryOptions queryOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
@@ -101,18 +101,19 @@ public abstract class ExportController implements Command {
                         .orElse(null));
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
-        QueryExecutor executor = QueryExecutor.of(databaseManager.getAdapter());
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
+        ExportOptions exportOptions = getExportOptions();
+        WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
+        writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
+        QueryExecutor executor = helper.getQueryExecutor(getQuery(exportOptions), databaseManager.getAdapter());
 
+        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         initialize(databaseManager);
 
         try (OutputFile outputFile = builder.newOutputFile(outputFileOptions.getFile());
              FeatureWriter writer = ioAdapter.createWriter()) {
             Exporter exporter = Exporter.newInstance();
-            ExportOptions exportOptions = getExportOptions().setOutputFile(outputFile);
-            WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
-            writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
+            exportOptions.setOutputFile(outputFile);
 
             AtomicLong counter = new AtomicLong();
 
@@ -120,7 +121,10 @@ public abstract class ExportController implements Command {
             writer.initialize(outputFile, writeOptions);
 
             logger.info("Querying features matching the request...");
-            try (QueryResult result = executor.executeQuery(getQuery(databaseManager.getAdapter()))) {
+            logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
+                    databaseManager.getAdapter()));
+
+            try (QueryResult result = executor.executeQuery()) {
                 exporter.startSession(databaseManager.getAdapter(), exportOptions);
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
@@ -165,16 +169,13 @@ public abstract class ExportController implements Command {
         return shouldRun;
     }
 
-    protected String getQuery(DatabaseAdapter adapter) {
-        String schema = adapter.getConnectionDetails().getSchema();
-        if (query != null) {
-            return "select f.id from " + schema + ".feature f " +
-                    "where f.id in (" + query + ")" +
-                    "and f.termination_date is null";
-        } else {
-            return "select f.id from " + schema + ".feature f " +
-                    "inner join " + schema + ".objectclass o on o.id = f.objectclass_id " +
-                    "where o.is_toplevel = 1 and f.termination_date is null";
+    protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
+        try {
+            return queryOptions != null ?
+                    queryOptions.getQuery() :
+                    exportOptions.getQuery().orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
+        } catch (FilterParseException e) {
+            throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
     }
 
@@ -193,7 +194,7 @@ public abstract class ExportController implements Command {
         return exportOptions;
     }
 
-    protected WriteOptions getWriteOptions(DatabaseAdapter databaseAdapter) throws ExecutionException {
+    protected WriteOptions getWriteOptions(DatabaseAdapter adapter) throws ExecutionException {
         WriteOptions writeOptions;
         try {
             writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
@@ -215,8 +216,8 @@ public abstract class ExportController implements Command {
 
         if (writeOptions.getSpatialReference().isEmpty()) {
             writeOptions.setSpatialReference(new SrsReference()
-                    .setSRID(databaseAdapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                    .setIdentifier(databaseAdapter.getDatabaseMetadata().getSpatialReference().getIdentifier()));
+                    .setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID())
+                    .setIdentifier(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier()));
         }
 
         return writeOptions;
