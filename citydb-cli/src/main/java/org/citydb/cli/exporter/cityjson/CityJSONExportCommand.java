@@ -32,6 +32,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.writer.CityJSONFormatOptions;
+import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.option.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.ExportOptions;
@@ -103,7 +104,6 @@ public class CityJSONExportCommand extends ExportController {
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
-    private final Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
     private volatile boolean shouldRun = true;
     private Throwable exception;
 
@@ -176,20 +176,15 @@ public class CityJSONExportCommand extends ExportController {
             options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
         }
 
-        if (!globalTemplates.isEmpty()) {
-            globalTemplates.forEach(options::addGlobalTemplate);
-            globalTemplates.clear();
-        }
-
         return options;
     }
 
     @Override
-    protected void initialize(DatabaseManager databaseManager) throws ExecutionException {
+    protected void initialize(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
         try {
             logger.info("Retrieving global template geometries...");
+            Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
             Exporter exporter = Exporter.newInstance();
-            ExportOptions exportOptions = getExportOptions();
             SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
 
             Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
@@ -220,6 +215,10 @@ public class CityJSONExportCommand extends ExportController {
 
             if (exception != null) {
                 throw exception;
+            } else if (!globalTemplates.isEmpty()) {
+                CityJSONFormatOptions options = writeOptions.getFormatOptions()
+                        .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
+                globalTemplates.forEach(options::addGlobalTemplate);
             }
         } catch (Throwable e) {
             throw new ExecutionException("Failed to process global template geometries.", e);

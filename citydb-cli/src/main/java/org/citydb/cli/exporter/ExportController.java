@@ -83,7 +83,7 @@ public abstract class ExportController implements Command {
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
     protected abstract OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException;
-    protected void initialize(DatabaseManager databaseManager) throws ExecutionException {}
+    protected void initialize(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {}
 
     @Override
     public Integer call() throws ExecutionException {
@@ -108,7 +108,7 @@ public abstract class ExportController implements Command {
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
-        initialize(databaseManager);
+        initialize(exportOptions, writeOptions, databaseManager);
 
         try (OutputFile outputFile = builder.newOutputFile(outputFileOptions.getFile());
              FeatureWriter writer = ioAdapter.createWriter()) {
