@@ -234,9 +234,9 @@ public class SqlContextBuilder {
                             SchemaMapping.TARGET_OBJECTCLASS_ID + " token.");
                 }
             } else {
-                BooleanExpression expression = Operators.eq(
-                        toTable.column(condition.getColumn().getName()),
-                        getLiteral(condition));
+                BooleanExpression expression = condition.getValue().equalsIgnoreCase("null") ?
+                        Operators.isNull(toTable.column(condition.getColumn().getName())) :
+                        Operators.eq(toTable.column(condition.getColumn().getName()), getLiteral(condition));
                 if (useLateral) {
                     getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
                 } else {

@@ -97,6 +97,14 @@ public class FeatureType extends Type<FeatureType> {
                                     .postprocess(property, schemaMapping));
                         }
                     }
+
+                    Join join = property.getJoin().orElse(null);
+                    if (join != null
+                            && join.getTable() == Table.PROPERTY
+                            && !join.hasConditionOn("parent_id")
+                            && hasDuplicateChildProperty(property)) {
+                        join.addCondition(new Condition(new Column("parent_id", SimpleType.INTEGER), "null"));
+                    }
                 }
 
                 properties.values().removeIf(property -> property.getParentIndex() != null);
@@ -104,6 +112,17 @@ public class FeatureType extends Type<FeatureType> {
         } catch (SchemaException e) {
             throw new SchemaException("Failed to build feature type (ID " + id + ").", e);
         }
+    }
+
+    private boolean hasDuplicateChildProperty(Property property) {
+        Property duplicate = property.getProperties().get(property.getName());
+        if (duplicate == null) {
+            duplicate = property.getType()
+                    .map(type -> type.getProperties().get(property.getName()))
+                    .orElse(null);
+        }
+
+        return duplicate != null && duplicate.getJoin().isPresent();
     }
 
     @Override
