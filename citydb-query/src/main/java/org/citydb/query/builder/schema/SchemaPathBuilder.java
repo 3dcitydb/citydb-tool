@@ -171,9 +171,8 @@ public class SchemaPathBuilder {
         if (useGenericsAsFallback
                 && (name.getNamespace().equals(Namespaces.GENERICS)
                 || name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE))) {
-            if (parent.getSchemaObject() instanceof GenericAttribute
-                    || (parent.getSchemaObject() instanceof Type<?> type
-                    && (type.getTable() == Table.FEATURE || type.getTable() == Table.PROPERTY))) {
+            Table table = getTable(parent);
+            if (table == Table.FEATURE || table == Table.PROPERTY) {
                 GenericAttribute attribute = GenericAttribute.of(name);
                 if (propertyRef.getTypeCast().isPresent()) {
                     attribute.setType(propertyRef.getTypeCast()
@@ -239,6 +238,21 @@ public class SchemaPathBuilder {
 
     private Name getName(PropertyRef propertyRef) {
         return schemaMapping.resolvePrefixedName(propertyRef.getName());
+    }
+
+    private Table getTable(Node node) {
+        do {
+            if (node.getSchemaObject() instanceof Type<?> type) {
+                return type.getTable();
+            } else if (node.getSchemaObject() instanceof Typeable typeable
+                    && typeable.getType().isPresent()) {
+                return typeable.getType().get().getTable();
+            } else if (node.getSchemaObject() instanceof GenericAttribute) {
+                return Table.PROPERTY;
+            }
+        } while ((node = node.getParent().orElse(null)) != null);
+
+        return null;
     }
 
     private Node appendTarget(Node parent, PropertyRef childRef) throws SchemaPathException {
