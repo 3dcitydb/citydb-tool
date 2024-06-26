@@ -133,7 +133,7 @@ public class SchemaPathBuilder {
             node = getNode(name, attribute);
         }
 
-        return node != null ? node : getNode(propertyRef, name, useGenericsAsFallback);
+        return node != null ? node : getNode(propertyRef, name, parent, useGenericsAsFallback);
     }
 
     private Node getNode(Name name, FeatureType type) {
@@ -167,21 +167,27 @@ public class SchemaPathBuilder {
         return object != null ? Node.of(object) : null;
     }
 
-    private Node getNode(PropertyRef propertyRef, Name name, boolean useGenericsAsFallback) throws SchemaPathException {
+    private Node getNode(PropertyRef propertyRef, Name name, Node parent, boolean useGenericsAsFallback) throws SchemaPathException {
         if (useGenericsAsFallback
                 && (name.getNamespace().equals(Namespaces.GENERICS)
                 || name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE))) {
-            GenericAttribute attribute = GenericAttribute.of(name);
-            if (propertyRef.getTypeCast().isPresent()) {
-                attribute.setType(propertyRef.getTypeCast()
-                        .map(TypeCast::of)
-                        .map(typeCast -> typeCast.getType().getName())
-                        .map(schemaMapping::getDataType)
-                        .orElseThrow(() -> new SchemaPathException("Type cast '::" +
-                                propertyRef.getTypeCast().get() + "' is not supported.")));
-            }
+            if (parent.getSchemaObject() instanceof GenericAttribute
+                    || (parent.getSchemaObject() instanceof Type<?> type
+                    && (type.getTable() == Table.FEATURE || type.getTable() == Table.PROPERTY))) {
+                GenericAttribute attribute = GenericAttribute.of(name);
+                if (propertyRef.getTypeCast().isPresent()) {
+                    attribute.setType(propertyRef.getTypeCast()
+                            .map(TypeCast::of)
+                            .map(typeCast -> typeCast.getType().getName())
+                            .map(schemaMapping::getDataType)
+                            .orElseThrow(() -> new SchemaPathException("Type cast '::" +
+                                    propertyRef.getTypeCast().get() + "' is not supported.")));
+                }
 
-            return Node.of(attribute);
+                return Node.of(attribute);
+            } else {
+                throw new SchemaPathException("'" + name + "' is not a valid child of " + parent + ".");
+            }
         } else {
             return null;
         }
