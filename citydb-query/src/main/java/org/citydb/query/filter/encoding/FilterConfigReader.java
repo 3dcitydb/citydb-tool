@@ -31,14 +31,16 @@ import java.lang.reflect.Type;
 public class FilterConfigReader implements ObjectReader<Filter> {
     @Override
     public Filter readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        if (jsonReader.isObject()) {
-            try {
+        try {
+            if (jsonReader.isObject()) {
                 return Filter.ofJSON(jsonReader.readAny());
-            } catch (FilterParseException e) {
-                throw new JSONException("Failed to parse query filter expression.", e);
+            } else if (jsonReader.isString()) {
+                return Filter.ofText(jsonReader.readString());
+            } else {
+                return null;
             }
+        } catch (FilterParseException e) {
+            throw new JSONException("Failed to parse query filter expression.", e);
         }
-
-        return null;
     }
 }
