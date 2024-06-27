@@ -25,7 +25,7 @@ import java.util.concurrent.*;
 
 public class ExecutorHelper {
 
-    public static ExecutorService newFixedAndBlockingThreadPool(int nThreads, int capacity, ThreadFactory factory) {
+    public static ThreadPoolExecutor newFixedAndBlockingThreadPool(int nThreads, int capacity, ThreadFactory factory) {
         BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(capacity) {
             @Override
             public boolean offer(Runnable o) {
@@ -41,11 +41,11 @@ public class ExecutorHelper {
         return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, queue, factory);
     }
 
-    public static ExecutorService newFixedAndBlockingThreadPool(int nThreads, int capacity) {
+    public static ThreadPoolExecutor newFixedAndBlockingThreadPool(int nThreads, int capacity) {
         return newFixedAndBlockingThreadPool(nThreads, capacity, Executors.defaultThreadFactory());
     }
 
-    public static ExecutorService newFixedAndBlockingThreadPool(int nThreads) {
+    public static ThreadPoolExecutor newFixedAndBlockingThreadPool(int nThreads) {
         return newFixedAndBlockingThreadPool(nThreads, nThreads * 2);
     }
 }
