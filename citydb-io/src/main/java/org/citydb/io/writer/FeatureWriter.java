@@ -28,7 +28,9 @@ import java.util.concurrent.CompletableFuture;
 
 public interface FeatureWriter extends AutoCloseable {
     void initialize(OutputFile file, WriteOptions options) throws WriteException;
+
     CompletableFuture<Boolean> write(Feature feature) throws WriteException;
+
     void cancel();
 
     @Override

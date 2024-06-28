@@ -167,7 +167,7 @@ public class AddressBuilder extends XALWalker {
             add(identifier.getContent());
             return this;
         }
-        
+
         ContentBuilder add(ContentBuilder other) {
             add(other.build());
             return this;
@@ -181,7 +181,7 @@ public class AddressBuilder extends XALWalker {
                     builder.append(delimiter).append(content);
                 }
             }
-            
+
             return this;
         }
 

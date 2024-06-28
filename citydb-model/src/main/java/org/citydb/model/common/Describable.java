@@ -25,5 +25,6 @@ import java.util.Optional;
 
 public interface Describable<T extends DatabaseDescriptor> {
     Optional<T> getDescriptor();
+
     Describable<T> setDescriptor(T descriptor);
 }

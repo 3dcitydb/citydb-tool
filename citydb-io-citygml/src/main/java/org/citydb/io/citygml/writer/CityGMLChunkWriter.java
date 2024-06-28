@@ -81,7 +81,7 @@ public class CityGMLChunkWriter {
     }
 
     CityGMLChunkWriter setPrefix(String prefix, String namespaceURI) {
-        writer.withPrefix(prefix,namespaceURI);
+        writer.withPrefix(prefix, namespaceURI);
         return this;
     }
 

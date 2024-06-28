@@ -27,6 +27,9 @@ import org.citydb.model.common.Child;
 
 @IndexSubclasses
 public interface ModelBuilder<T, R extends Child> {
-    default R createModel(T source) throws ModelBuildException { return null; }
+    default R createModel(T source) throws ModelBuildException {
+        return null;
+    }
+
     void build(T source, R target, ModelBuilderHelper helper) throws ModelBuildException;
 }

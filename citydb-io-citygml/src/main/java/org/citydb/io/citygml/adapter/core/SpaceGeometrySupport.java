@@ -241,7 +241,7 @@ public class SpaceGeometrySupport<T extends AbstractSpace> {
         this.lod2ImplicitRepresentation = lod2ImplicitRepresentation;
         return this;
     }
-    
+
     boolean supportsLod3ImplicitRepresentation(CityGMLVersion version, T target) {
         return lod3ImplicitRepresentation != null && lod3ImplicitRepresentation.apply(version, target);
     }
@@ -249,7 +249,7 @@ public class SpaceGeometrySupport<T extends AbstractSpace> {
     public SpaceGeometrySupport<T> withLod3ImplicitRepresentation() {
         return withLod3ImplicitRepresentation((version, target) -> true);
     }
-    
+
     public SpaceGeometrySupport<T> withLod3ImplicitRepresentation(BiFunction<CityGMLVersion, T, Boolean> lod3ImplicitRepresentation) {
         this.lod3ImplicitRepresentation = lod3ImplicitRepresentation;
         return this;

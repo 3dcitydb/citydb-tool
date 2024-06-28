@@ -106,7 +106,7 @@ public class DeleteCommand implements Command {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
         }
 
-        try  {
+        try {
             logger.info("Querying features matching the request...");
             try (QueryResult result = executor.executeQuery(getQuery(databaseManager.getAdapter()))) {
                 deleter.startSession(databaseManager.getAdapter(), getDeleteOptions());

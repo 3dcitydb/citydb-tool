@@ -85,6 +85,7 @@ public abstract class ImportController implements Command {
     private volatile boolean shouldRun = true;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
+
     protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
 
     @Override

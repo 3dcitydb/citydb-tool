@@ -82,8 +82,11 @@ public abstract class ExportController implements Command {
     private volatile boolean shouldRun = true;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
+
     protected abstract OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException;
-    protected void initialize(DatabaseManager databaseManager) throws ExecutionException {}
+
+    protected void initialize(DatabaseManager databaseManager) throws ExecutionException {
+    }
 
     @Override
     public Integer call() throws ExecutionException {

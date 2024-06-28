@@ -43,6 +43,7 @@ public abstract class DatabaseDeleter {
     }
 
     protected abstract PreparedStatement getDeleteStatement(Connection connection) throws SQLException;
+
     protected abstract void executeBatch(Long[] ids) throws DeleteException, SQLException;
 
     protected void addBatch(long id) throws DeleteException, SQLException {

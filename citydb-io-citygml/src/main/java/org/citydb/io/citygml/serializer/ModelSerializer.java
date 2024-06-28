@@ -28,6 +28,9 @@ import org.citydb.model.common.Child;
 @IndexSubclasses
 public interface ModelSerializer<T extends Child, R> {
     R createObject(T source) throws ModelSerializeException;
+
     void serialize(T source, R target, ModelSerializerHelper helper) throws ModelSerializeException;
-    default void postSerialize(T source, R target, ModelSerializerHelper helper) throws ModelSerializeException {}
+
+    default void postSerialize(T source, R target, ModelSerializerHelper helper) throws ModelSerializeException {
+    }
 }

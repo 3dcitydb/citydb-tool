@@ -36,6 +36,7 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     private GeometryDescriptor descriptor;
 
     public abstract GeometryType getGeometryType();
+
     abstract T self();
 
     @Override

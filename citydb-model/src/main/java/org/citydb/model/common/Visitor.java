@@ -31,21 +31,38 @@ import org.citydb.model.geometry.*;
 
 public interface Visitor {
     void visit(Address address);
+
     void visit(Appearance appearance);
+
     void visit(CompositeSolid compositeSolid);
+
     void visit(CompositeSurface compositeSurface);
+
     void visit(Feature feature);
+
     void visit(GeoreferencedTexture texture);
+
     void visit(ImplicitGeometry implicitGeometry);
+
     void visit(LineString lineString);
+
     void visit(MultiLineString multiLineString);
+
     void visit(MultiPoint multiPoint);
+
     void visit(MultiSolid multiSolid);
+
     void visit(MultiSurface multiSurface);
+
     void visit(ParameterizedTexture texture);
+
     void visit(Point point);
+
     void visit(Polygon polygon);
+
     void visit(Solid solid);
+
     void visit(TriangulatedSurface triangulatedSurface);
+
     void visit(X3DMaterial material);
 }

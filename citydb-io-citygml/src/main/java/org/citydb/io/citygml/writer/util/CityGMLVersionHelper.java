@@ -122,7 +122,7 @@ public class CityGMLVersionHelper {
         put(FeatureType.WINDOW, CityGMLVersion.v3_0);
         put(FeatureType.WINDOW_SURFACE, CityGMLVersion.values());
     }
-    
+
     private static void put(FeatureType featureType, CityGMLVersion... versions) {
         versionsByFeatureType.put(featureType.getName(), Set.of(versions));
     }

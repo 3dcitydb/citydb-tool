@@ -299,7 +299,7 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
             addAppearance(appearanceProperty);
         } else if (property instanceof AddressProperty addressProperty) {
             addAddress(addressProperty);
-        }  else if (property instanceof Attribute attribute) {
+        } else if (property instanceof Attribute attribute) {
             addAttribute(attribute);
         }
     }

@@ -25,6 +25,7 @@ import org.citydb.core.file.InputFile;
 
 public interface Validator extends AutoCloseable {
     void validate(InputFile file) throws ValidateException;
+
     void cancel();
 
     @Override

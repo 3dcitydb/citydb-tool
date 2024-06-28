@@ -97,7 +97,7 @@ public class ExternalFile implements Referencable, Serializable {
     public String getFileLocation() {
         return path != null ? path.toString() : uri;
     }
-    
+
     @Override
     public String toString() {
         return getFileLocation();

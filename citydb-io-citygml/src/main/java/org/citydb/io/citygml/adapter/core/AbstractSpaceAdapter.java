@@ -48,7 +48,7 @@ import java.util.List;
 
 public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends AbstractCityObjectAdapter<T> {
     final SpaceGeometrySupport<T> geometrySupport = new SpaceGeometrySupport<>();
-    
+
     public AbstractSpaceAdapter() {
         configureSerializer(geometrySupport);
     }
@@ -300,7 +300,7 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
             }
         }
     }
-    
+
     protected void configureSerializer(SpaceGeometrySupport<T> geometrySupport) {
     }
 

@@ -37,18 +37,31 @@ public abstract class SchemaAdapter {
     }
 
     public abstract String getDefaultSchema();
+
     public abstract String getNextSequenceValues(Sequence sequence);
+
     public abstract int getMaximumBatchSize();
+
     public abstract int getMaximumNumberOfItemsForInOperator();
+
     public abstract String getFeatureHierarchyQuery();
+
     public abstract String getRecursiveImplicitGeometryQuery(String featureQuery);
+
     public abstract String getCreateIndex(Index index);
+
     public abstract String getDropIndex(Index index);
+
     public abstract String getIndexExists(Index index);
+
     public abstract OperationHelper getOperationHelper();
+
     protected abstract String getCityDBVersion();
+
     protected abstract String getDatabaseSrs();
+
     protected abstract String getSpatialReference(int srid);
+
     protected abstract SpatialReferenceType getSpatialReferenceType(String type);
 
     void buildSchemaMapping() throws SchemaException {

@@ -28,6 +28,8 @@ import java.lang.annotation.*;
 @Retention(value = RetentionPolicy.RUNTIME)
 public @interface FileFormat {
     String name();
+
     String mediaType();
+
     String[] fileExtensions();
 }

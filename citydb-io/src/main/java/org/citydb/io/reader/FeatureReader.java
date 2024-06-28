@@ -28,7 +28,9 @@ import java.util.function.Consumer;
 
 public interface FeatureReader extends AutoCloseable {
     void initialize(InputFile file, ReadOptions options) throws ReadException;
+
     void read(Consumer<Feature> consumer) throws ReadException;
+
     void cancel();
 
     @Override

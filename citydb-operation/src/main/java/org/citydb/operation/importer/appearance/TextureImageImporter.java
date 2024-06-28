@@ -43,7 +43,7 @@ public class TextureImageImporter extends DatabaseImporter {
 
     @Override
     protected String getInsertStatement() {
-        return "insert into " + tableHelper.getPrefixedTableName(table)  +
+        return "insert into " + tableHelper.getPrefixedTableName(table) +
                 "(id, image_uri, image_data, mime_type, mime_type_codespace) " +
                 "values (" + String.join(",", Collections.nCopies(5, "?")) + ")";
     }
