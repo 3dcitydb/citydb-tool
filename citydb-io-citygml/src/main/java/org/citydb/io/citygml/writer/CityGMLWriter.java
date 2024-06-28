@@ -48,8 +48,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
     private CityGMLChunkWriter writer;
     private PersistentMapStore store;
-    private ExecutorService converterService;
-    private ExecutorService writerService;
+    private ExecutorService service;
     private ThreadLocal<ModelSerializerHelper> helpers;
     private CountLatch countLatch;
 
@@ -80,11 +79,9 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
             throw new WriteException("Failed to initialize local cache.", e);
         }
 
-        int threads = options.getNumberOfThreads() > 0 ?
+        service = ExecutorHelper.newFixedAndBlockingThreadPool(1, (options.getNumberOfThreads() > 0 ?
                 options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors());
-        converterService = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
-        writerService = ExecutorHelper.newFixedAndBlockingThreadPool(1, threads * 2);
+                Math.max(2, Runtime.getRuntime().availableProcessors())) * 2);
         helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, context)
                 .initialize(options, formatOptions));
         countLatch = new CountLatch();
@@ -95,53 +92,51 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public CompletableFuture<Boolean> write(Feature feature) throws WriteException {
-        if (!isInitialized) {
-            throw new WriteException("Illegal to write data when writer has not been initialized.");
-        }
-
-        CompletableFuture<Boolean> result = new CompletableFuture<>();
         if (shouldRun) {
-            countLatch.increment();
-            converterService.execute(() -> {
-                try {
-                    AbstractFeature converted = helpers.get().getTopLevelFeature(feature);
-                    write(writer.bufferMember(converted), result);
-                } catch (Throwable e) {
-                    shouldRun = false;
-                    result.completeExceptionally(new WriteException("Failed to write feature.", e));
-                } finally {
-                    countLatch.decrement();
-                }
-            });
+            try {
+                AbstractFeature converted = helpers.get().getTopLevelFeature(feature);
+                return write(writer.bufferMember(converted));
+            } catch (Throwable e) {
+                shouldRun = false;
+                throw new WriteException("Failed to write feature.", e);
+            }
+        } else {
+            return new CompletableFuture<>();
         }
-
-        return result;
     }
 
     @Override
     public void write(AbstractFeature feature) throws WriteException {
-        write(writer.bufferMember(feature), new CompletableFuture<>());
+        write(writer.bufferMember(feature));
     }
 
-    private void write(SAXBuffer buffer, CompletableFuture<Boolean> result) {
+    private CompletableFuture<Boolean> write(SAXBuffer buffer) {
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
         if (shouldRun) {
-            countLatch.increment();
-            writerService.execute(() -> {
-                try {
-                    if (buffer != null && !buffer.isEmpty()) {
-                        buffer.send(writer.getContentHandler(), false);
-                        result.complete(true);
-                    } else {
-                        result.complete(false);
+            if (isInitialized) {
+                countLatch.increment();
+                service.execute(() -> {
+                    try {
+                        if (buffer != null && !buffer.isEmpty()) {
+                            buffer.send(writer.getContentHandler(), false);
+                            result.complete(true);
+                        } else {
+                            result.complete(false);
+                        }
+                    } catch (Throwable e) {
+                        shouldRun = false;
+                        result.completeExceptionally(new WriteException("Failed to write feature.", e));
+                    } finally {
+                        countLatch.decrement();
                     }
-                } catch (Throwable e) {
-                    shouldRun = false;
-                    result.completeExceptionally(new WriteException("Failed to write feature.", e));
-                } finally {
-                    countLatch.decrement();
-                }
-            });
+                });
+            } else {
+                result.completeExceptionally(
+                        new WriteException("Illegal to write data when writer has not been initialized."));
+            }
         }
+
+        return result;
     }
 
     @Override
@@ -159,8 +154,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
             } catch (Exception e) {
                 throw new WriteException("Failed to close CityGML writer.", e);
             } finally {
-                converterService.shutdown();
-                writerService.shutdown();
+                service.shutdown();
                 isInitialized = false;
             }
         }

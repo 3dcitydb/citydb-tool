@@ -37,7 +37,6 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citygml4j.cityjson.CityJSONContext;
 import org.citygml4j.cityjson.writer.AbstractCityJSONWriter;
-import org.citygml4j.cityjson.writer.CityJSONWriteException;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
@@ -88,9 +87,9 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
             throw new WriteException("Failed to initialize local cache.", e);
         }
 
-        service = ExecutorHelper.newFixedAndBlockingThreadPool(1, options.getNumberOfThreads() > 0 ?
+        service = ExecutorHelper.newFixedAndBlockingThreadPool(1, (options.getNumberOfThreads() > 0 ?
                 options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors() * 2));
+                Math.max(2, Runtime.getRuntime().availableProcessors())) * 2);
         helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, adapterContext)
                 .initialize(options, formatOptions));
         countLatch = new CountLatch();
@@ -102,41 +101,51 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public CompletableFuture<Boolean> write(Feature feature) throws WriteException {
-        if (!isInitialized) {
-            throw new WriteException("Illegal to write data when writer has not been initialized.");
-        }
-
-        CompletableFuture<Boolean> result = new CompletableFuture<>();
         if (shouldRun) {
-            countLatch.increment();
-            service.execute(() -> {
-                try {
-                    AbstractFeature converted = helpers.get().getTopLevelFeature(feature);
-                    if (converted != null) {
-                        writer.writeCityObject(converted);
-                        result.complete(true);
-                    } else {
-                        result.complete(false);
-                    }
-                } catch (Throwable e) {
-                    shouldRun = false;
-                    result.completeExceptionally(new WriteException("Failed to write feature.", e));
-                } finally {
-                    countLatch.decrement();
-                }
-            });
+            try {
+                AbstractFeature converted = helpers.get().getTopLevelFeature(feature);
+                return writeCityObject(converted);
+            } catch (Throwable e) {
+                shouldRun = false;
+                throw new WriteException("Failed to write feature.", e);
+            }
+        } else {
+            return new CompletableFuture<>();
         }
-
-        return result;
     }
 
     @Override
     public void write(AbstractFeature feature) throws WriteException {
-        try {
-            writer.writeCityObject(feature);
-        } catch (CityJSONWriteException e) {
-            throw new WriteException("Failed to write feature.", e);
+        writeCityObject(feature);
+    }
+
+    private CompletableFuture<Boolean> writeCityObject(AbstractFeature feature) {
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        if (shouldRun) {
+            if (isInitialized) {
+                countLatch.increment();
+                service.execute(() -> {
+                    try {
+                        if (feature != null) {
+                            writer.writeCityObject(feature);
+                            result.complete(true);
+                        } else {
+                            result.complete(false);
+                        }
+                    } catch (Throwable e) {
+                        shouldRun = false;
+                        result.completeExceptionally(new WriteException("Failed to write feature.", e));
+                    } finally {
+                        countLatch.decrement();
+                    }
+                });
+            } else {
+                result.completeExceptionally(
+                        new WriteException("Illegal to write data when writer has not been initialized."));
+            }
         }
+
+        return result;
     }
 
     private void processGlobalTemplates(List<ImplicitGeometry> globalTemplates) throws WriteException {
