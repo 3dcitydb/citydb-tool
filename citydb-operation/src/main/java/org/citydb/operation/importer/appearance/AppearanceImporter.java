@@ -36,7 +36,7 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 
 public class AppearanceImporter extends DatabaseImporter {
-    public enum Type {FEATURE, IMPLICIT_GEOMETRY, GLOBAL};
+    public enum Type {FEATURE, IMPLICIT_GEOMETRY, GLOBAL}
 
     public AppearanceImporter(ImportHelper helper) throws SQLException {
         super(Table.APPEARANCE, helper);

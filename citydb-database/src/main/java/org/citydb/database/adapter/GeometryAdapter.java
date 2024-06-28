@@ -43,8 +43,11 @@ public abstract class GeometryAdapter {
     }
 
     public abstract int getGeometrySqlType();
+
     public abstract String getGeometryTypeName();
+
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
+
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;
     public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
     public abstract SpatialOperationHelper getSpatialOperationHelper();

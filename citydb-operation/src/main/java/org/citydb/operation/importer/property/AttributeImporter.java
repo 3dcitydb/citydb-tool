@@ -103,7 +103,7 @@ public class AttributeImporter extends PropertyImporter {
 
         if (attribute.hasProperties()) {
             for (Property<?> child : attribute.getProperties().getAll()) {
-                if (child instanceof Attribute childAttribute)  {
+                if (child instanceof Attribute childAttribute) {
                     doImport(childAttribute, parentId, featureId);
                 } else if (child instanceof FeatureProperty property) {
                     tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)

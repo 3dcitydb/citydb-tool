@@ -37,6 +37,7 @@ public abstract class SurfaceData<T extends SurfaceData<?>> extends Child implem
     private Boolean isFront;
 
     abstract T self();
+
     public abstract Name getName();
 
     @Override

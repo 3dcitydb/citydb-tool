@@ -28,8 +28,11 @@ import java.util.Optional;
 
 public interface SrsReference {
     Optional<Integer> getSRID();
+
     SrsReference setSRID(Integer srid);
+
     Optional<String> getSrsIdentifier();
+
     SrsReference setSrsIdentifier(String srsIdentifier);
 
     default SrsReference getInheritedSRSReference() {

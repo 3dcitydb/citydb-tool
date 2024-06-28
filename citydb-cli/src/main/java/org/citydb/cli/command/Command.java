@@ -30,8 +30,12 @@ import java.util.concurrent.Callable;
 public interface Command extends Callable<Integer> {
     @Override
     Integer call() throws ExecutionException;
-    default void preprocess(CommandLine commandLine) throws Exception {}
-    default void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {}
+
+    default void preprocess(CommandLine commandLine) throws Exception {
+    }
+
+    default void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {
+    }
 
     static boolean hasMatchedOption(String name, CommandLine.Model.CommandSpec commandSpec) {
         return commandSpec.commandLine().getParseResult().hasMatchedOption(name);

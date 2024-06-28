@@ -109,7 +109,7 @@ public class DeleteCommand implements Command {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
         }
 
-        try  {
+        try {
             logger.info("Querying features matching the request...");
             logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
                     databaseManager.getAdapter()));

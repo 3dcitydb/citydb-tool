@@ -25,7 +25,10 @@ import java.util.Optional;
 
 public interface Identifiable extends Referencable {
     Optional<String> getIdentifier();
+
     Identifiable setIdentifier(String identifier);
+
     Optional<String> getIdentifierCodeSpace();
+
     Identifiable setIdentifierCodeSpace(String identifierCodeSpace);
 }

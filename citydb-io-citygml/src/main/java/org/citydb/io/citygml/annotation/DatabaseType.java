@@ -28,5 +28,6 @@ import java.lang.annotation.*;
 @Retention(value = RetentionPolicy.RUNTIME)
 public @interface DatabaseType {
     String name();
+
     String namespace();
 }

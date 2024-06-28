@@ -76,7 +76,7 @@ public enum SpatialOperator {
     public TextToken getTextToken() {
         return textToken;
     }
-    
+
     @Override
     public String toString() {
         return jsonToken.toString();

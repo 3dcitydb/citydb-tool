@@ -27,6 +27,7 @@ import java.util.Optional;
 
 public interface Referencable {
     Optional<String> getObjectId();
+
     Referencable setObjectId(String objectId);
 
     default String getOrCreateObjectId(IdCreator idCreator) {

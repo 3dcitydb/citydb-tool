@@ -252,7 +252,7 @@ public class ModelWalker implements Visitor {
         if (property instanceof Property<?> object) {
             visit(object);
         }
-        
+
         if (shouldWalk) {
             visitObject(property.getObject().orElse(null));
         }

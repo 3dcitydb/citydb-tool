@@ -49,7 +49,7 @@ public class FeatureDeleter extends DatabaseDeleter {
                     stmt.append(", reason_for_update = '").append(reasonForUpdate).append("'"));
 
             helper.getOptions().getLineage().ifPresent(lineage ->
-                stmt.append(", lineage = '").append(lineage).append("'"));
+                    stmt.append(", lineage = '").append(lineage).append("'"));
 
             stmt.append(" where id = ? and termination_date is null");
             return connection.prepareStatement(stmt.toString());
