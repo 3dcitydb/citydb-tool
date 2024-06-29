@@ -59,10 +59,10 @@ public class FilterBuilder {
         return new FilterBuilder(helper);
     }
 
-    BooleanExpression build(Filter filter, SpatialReference filterSrs, Select select, SqlContext context) throws QueryBuildException {
+    void build(Filter filter, SpatialReference filterSrs, Select select, SqlContext context) throws QueryBuildException {
         helper.getContextBuilder().useLeftJoins(requiresLeftJoins(filter));
         spatialPredicateBuilder.setFilterSrs(filterSrs);
-        return build(filter.getExpression(), select, context);
+        select.where(build(filter.getExpression(), select, context));
     }
 
     BooleanExpression build(org.citydb.query.filter.operation.BooleanExpression expression, Select select, SqlContext context) throws QueryBuildException {

@@ -202,7 +202,7 @@ public class ComparisonPredicateBuilder {
 
                 if (subQueryContext.getSchemaObject() instanceof FeatureType featureType
                         && helper.matches(Table.FEATURE, subQueryContext.getTable())) {
-                    subQuery.where(helper.getFeatureTypesBuilder().build(featureType, subQueryContext));
+                    helper.getFeatureTypesBuilder().build(featureType, subQuery, subQueryContext);
                 }
 
                 SqlContext propertyContext = helper.getContextBuilder().build(

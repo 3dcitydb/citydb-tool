@@ -27,6 +27,7 @@ import org.citydb.sqlbuilder.literal.IntegerLiteral;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.In;
 import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
 import java.util.Set;
@@ -42,16 +43,16 @@ public class FeatureTypesBuilder {
         return new FeatureTypesBuilder(helper);
     }
 
+    void build(Set<FeatureType> featureTypes, Select select, SqlContext context) throws QueryBuildException {
+        select.where(build(featureTypes, context.getTable()));
+    }
+
+    void build(FeatureType featureType, Select select, SqlContext context) throws QueryBuildException {
+        build(Set.of(featureType), select, context);
+    }
+
     BooleanExpression build(Set<FeatureType> featureTypes, Table table) throws QueryBuildException {
         return build(helper.getSchemaMapping().getObjectClassIds(featureTypes), table.column("objectclass_id"));
-    }
-
-    BooleanExpression build(Set<FeatureType> featureTypes, SqlContext context) throws QueryBuildException {
-        return build(featureTypes, context.getTable());
-    }
-
-    BooleanExpression build(FeatureType featureType, SqlContext context) throws QueryBuildException {
-        return build(Set.of(featureType), context);
     }
 
     BooleanExpression build(FeatureType featureType, Table table) throws QueryBuildException {

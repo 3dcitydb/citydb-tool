@@ -49,13 +49,14 @@ public class SqlQueryBuilder {
         SqlContext context = SqlContext.of(featureType, helper);
         Select select = Select.newInstance()
                 .select(context.getTable().columns("id", "objectclass_id"))
-                .from(context.getTable())
-                .where(helper.getFeatureTypesBuilder().build(featureTypes, context));
+                .from(context.getTable());
+
+        helper.getFeatureTypesBuilder().build(featureTypes, select, context);
 
         Filter filter = query.getFilter().orElse(null);
         if (filter != null) {
             SpatialReference filterSrs = helper.getSpatialReference(query.getFilterSrs().orElse(null));
-            select.where(helper.getFilterBuilder().build(filter, filterSrs, select, context));
+            helper.getFilterBuilder().build(filter, filterSrs, select, context);
         }
 
         if (!select.getJoins().isEmpty()) {
