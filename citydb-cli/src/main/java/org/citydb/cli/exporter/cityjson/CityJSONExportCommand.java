@@ -31,7 +31,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.writer.CityJSONFormatOptions;
-import org.citydb.io.writer.option.OutputFormatOptions;
+import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.Exporter;
 import org.citygml4j.cityjson.adapter.appearance.serializer.AppearanceSerializer;

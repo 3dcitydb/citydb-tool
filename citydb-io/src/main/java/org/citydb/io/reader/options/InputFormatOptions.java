@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.io.reader.option;
+package org.citydb.io.reader.options;
 
 public interface InputFormatOptions {
 }

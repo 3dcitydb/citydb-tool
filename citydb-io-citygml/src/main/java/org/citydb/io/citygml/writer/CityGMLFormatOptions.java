@@ -25,7 +25,7 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.citygml.writer.options.AddressMode;
-import org.citydb.io.writer.option.OutputFormatOptions;
+import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 
 @SerializableConfig(name = "CityGML")
