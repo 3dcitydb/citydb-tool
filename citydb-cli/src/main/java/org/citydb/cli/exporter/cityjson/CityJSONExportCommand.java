@@ -22,7 +22,7 @@
 package org.citydb.cli.exporter.cityjson;
 
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.command.Command;
+import org.citydb.cli.common.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;

@@ -21,7 +21,7 @@
 
 package org.citydb.cli.exporter;
 
-import org.citydb.cli.command.Command;
+import org.citydb.cli.common.Command;
 import org.citydb.cli.exporter.citygml.CityGMLExportCommand;
 import org.citydb.cli.exporter.cityjson.CityJSONExportCommand;
 import org.citydb.cli.extension.ExportFormatCommand;

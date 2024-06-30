@@ -21,7 +21,7 @@
 
 package org.citydb.cli.importer;
 
-import org.citydb.cli.command.Command;
+import org.citydb.cli.common.Command;
 import org.citydb.cli.extension.ImportFormatCommand;
 import org.citydb.cli.importer.citygml.CityGMLImportCommand;
 import org.citydb.cli.importer.cityjson.CityJSONImportCommand;

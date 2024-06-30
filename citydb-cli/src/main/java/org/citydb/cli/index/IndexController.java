@@ -21,9 +21,9 @@
 
 package org.citydb.cli.index;
 
-import org.citydb.cli.command.Command;
-import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.ConnectionOptions;
+import org.citydb.cli.common.Command;
+import org.citydb.cli.common.ConfigOption;
+import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import picocli.CommandLine;

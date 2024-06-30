@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.option;
+package org.citydb.cli.common;
 
 import org.citydb.query.Query;
 import org.citydb.query.filter.encoding.FilterParseException;

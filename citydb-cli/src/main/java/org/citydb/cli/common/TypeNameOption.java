@@ -19,19 +19,22 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.option;
+package org.citydb.cli.common;
 
+import org.citydb.model.common.PrefixedName;
 import picocli.CommandLine;
 
-public class IndexOption implements Option {
-    public enum Mode {keep, drop, drop_create}
+import java.util.Arrays;
+import java.util.List;
 
-    @CommandLine.Option(names = "--index-mode", defaultValue = "keep",
-            description = "Index mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). Consider dropping " +
-                    "indexes when processing large quantities of data.")
-    protected Mode mode;
+public class TypeNameOption implements Option {
+    @CommandLine.Option(names = {"-t", "--type-name"}, split = ",", paramLabel = "<[prefix:]name>", required = true,
+            description = "Names of the features to process.")
+    private String[] typeNames;
 
-    public Mode getMode() {
-        return mode;
+    public List<PrefixedName> getTypeNames() {
+        return Arrays.stream(typeNames)
+                .map(PrefixedName::of)
+                .toList();
     }
 }

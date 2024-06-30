@@ -23,14 +23,14 @@ package org.citydb.cli;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.citydb.cli.command.Command;
+import org.citydb.cli.common.Command;
+import org.citydb.cli.common.ConfigOption;
+import org.citydb.cli.common.Option;
 import org.citydb.cli.deleter.DeleteCommand;
 import org.citydb.cli.exporter.ExportCommand;
 import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
-import org.citydb.cli.option.ConfigOption;
-import org.citydb.cli.option.Option;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;

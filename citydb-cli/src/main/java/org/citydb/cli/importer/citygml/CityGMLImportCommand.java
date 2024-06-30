@@ -22,8 +22,8 @@
 package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.common.UpgradeOptions;
 import org.citydb.cli.importer.ImportController;
-import org.citydb.cli.option.UpgradeOptions;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.io.IOAdapter;
