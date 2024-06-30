@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.io.writer.option;
+package org.citydb.io.writer.options;
 
 public interface OutputFormatOptions {
 }

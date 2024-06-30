@@ -22,7 +22,7 @@
 package org.citydb.io.citygml.reader;
 
 import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.option.InputFormatOptions;
+import org.citydb.io.reader.options.InputFormatOptions;
 
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements InputFormatOptions {

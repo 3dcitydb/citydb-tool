@@ -30,7 +30,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.reader.CityJSONFormatOptions;
-import org.citydb.io.reader.option.InputFormatOptions;
+import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
 @CommandLine.Command(

@@ -37,7 +37,7 @@ import org.citydb.io.IOAdapterManager;
 import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
-import org.citydb.io.reader.option.InputFormatOptions;
+import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.importer.ImportOptions;
