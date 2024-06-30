@@ -21,7 +21,7 @@
 
 package org.citydb.cli.index;
 
-import org.citydb.cli.command.Command;
+import org.citydb.cli.common.Command;
 import picocli.CommandLine;
 
 @CommandLine.Command(

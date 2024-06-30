@@ -19,26 +19,19 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.option;
+package org.citydb.cli.common;
 
 import picocli.CommandLine;
 
-import java.nio.file.Path;
+public class IndexOption implements Option {
+    public enum Mode {keep, drop, drop_create}
 
-public class OutputFileOptions implements Option {
-    @CommandLine.Option(names = {"-o", "--output"}, required = true,
-            description = "Name of the output file.")
-    private Path file;
+    @CommandLine.Option(names = "--index-mode", defaultValue = "keep",
+            description = "Index mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). Consider dropping " +
+                    "indexes when processing large quantities of data.")
+    protected Mode mode;
 
-    @CommandLine.Option(names = "--output-encoding",
-            description = "Encoding to use for output file.")
-    private String encoding;
-
-    public Path getFile() {
-        return file;
-    }
-
-    public String getEncoding() {
-        return encoding;
+    public Mode getMode() {
+        return mode;
     }
 }

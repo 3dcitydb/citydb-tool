@@ -24,7 +24,7 @@ package org.citydb.cli.util;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.option.ConnectionOptions;
+import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseException;

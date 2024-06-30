@@ -10,7 +10,7 @@ module org.citydb.cli {
     requires transitive info.picocli;
 
     exports org.citydb.cli;
-    exports org.citydb.cli.command;
+    exports org.citydb.cli.common;
     exports org.citydb.cli.deleter;
     exports org.citydb.cli.exporter;
     exports org.citydb.cli.exporter.citygml;
@@ -19,10 +19,10 @@ module org.citydb.cli {
     exports org.citydb.cli.importer;
     exports org.citydb.cli.importer.citygml;
     exports org.citydb.cli.importer.cityjson;
-    exports org.citydb.cli.option;
     exports org.citydb.cli.util;
 
     opens org.citydb.cli to info.picocli;
+    opens org.citydb.cli.common to info.picocli;
     opens org.citydb.cli.deleter to info.picocli;
     opens org.citydb.cli.exporter to info.picocli;
     opens org.citydb.cli.exporter.citygml to info.picocli;
@@ -31,5 +31,4 @@ module org.citydb.cli {
     opens org.citydb.cli.importer.citygml to info.picocli;
     opens org.citydb.cli.importer.cityjson to info.picocli;
     opens org.citydb.cli.index to info.picocli;
-    opens org.citydb.cli.option to info.picocli;
 }

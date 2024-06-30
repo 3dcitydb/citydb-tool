@@ -19,19 +19,24 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.option;
+package org.citydb.cli.common;
 
 import picocli.CommandLine;
 
-public class IndexOption implements Option {
-    public enum Mode {keep, drop, drop_create}
+public class ThreadsOption implements Option {
+    @CommandLine.Option(names = "--threads",
+            description = "Number of threads to use for parallel processing.")
+    private Integer threads;
 
-    @CommandLine.Option(names = "--index-mode", defaultValue = "keep",
-            description = "Index mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). Consider dropping " +
-                    "indexes when processing large quantities of data.")
-    protected Mode mode;
+    public Integer getNumberOfThreads() {
+        return threads;
+    }
 
-    public Mode getMode() {
-        return mode;
+    @Override
+    public void preprocess(CommandLine commandLine) {
+        if (threads != null && threads <= 0) {
+            throw new CommandLine.ParameterException(commandLine,
+                    "Error: Number of threads must be a positive integer but was '" + threads + "'");
+        }
     }
 }

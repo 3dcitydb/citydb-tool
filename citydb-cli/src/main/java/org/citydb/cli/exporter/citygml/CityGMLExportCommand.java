@@ -22,9 +22,9 @@
 package org.citydb.cli.exporter.citygml;
 
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.command.Command;
+import org.citydb.cli.common.Command;
+import org.citydb.cli.common.UpgradeOptions;
 import org.citydb.cli.exporter.ExportController;
-import org.citydb.cli.option.UpgradeOptions;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.io.IOAdapter;

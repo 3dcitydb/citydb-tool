@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.option;
+package org.citydb.cli.common;
 
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;

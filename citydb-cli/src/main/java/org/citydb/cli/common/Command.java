@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.command;
+package org.citydb.cli.common;
 
 import org.citydb.cli.ExecutionException;
 import org.citydb.plugin.PluginManager;

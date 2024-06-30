@@ -19,24 +19,12 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.option;
+package org.citydb.cli.common;
 
-import picocli.CommandLine;
+import java.lang.annotation.*;
 
-public class ThreadsOption implements Option {
-    @CommandLine.Option(names = "--threads",
-            description = "Number of threads to use for parallel processing.")
-    private Integer threads;
-
-    public Integer getNumberOfThreads() {
-        return threads;
-    }
-
-    @Override
-    public void preprocess(CommandLine commandLine) {
-        if (threads != null && threads <= 0) {
-            throw new CommandLine.ParameterException(commandLine,
-                    "Error: Number of threads must be a positive integer but was '" + threads + "'");
-        }
-    }
+@Documented
+@Target(value = ElementType.FIELD)
+@Retention(value = RetentionPolicy.RUNTIME)
+public @interface ConfigOption {
 }

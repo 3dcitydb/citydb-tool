@@ -21,7 +21,7 @@
 
 package org.citydb.cli.exporter.cityjson;
 
-import org.citydb.cli.option.Option;
+import org.citydb.cli.common.Option;
 import picocli.CommandLine;
 
 public class UpgradeOptions implements Option {
