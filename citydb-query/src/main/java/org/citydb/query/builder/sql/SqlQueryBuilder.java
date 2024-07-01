@@ -27,6 +27,7 @@ import org.citydb.database.schema.FeatureType;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.Filter;
+import org.citydb.query.limit.CountLimit;
 import org.citydb.sqlbuilder.query.Select;
 
 import java.util.Set;
@@ -57,6 +58,11 @@ public class SqlQueryBuilder {
         if (filter != null) {
             SpatialReference filterSrs = helper.getSpatialReference(query.getFilterSrs().orElse(null));
             helper.getFilterBuilder().build(filter, filterSrs, select, context);
+        }
+
+        CountLimit countLimit = query.getCountLimit().orElse(null);
+        if (countLimit != null) {
+            CountLimitBuilder.newInstance().build(countLimit, select, context);
         }
 
         if (!select.getJoins().isEmpty()) {
