@@ -136,7 +136,7 @@ public class BuilderHelper {
                         && name.getPrefix().isEmpty()
                         && name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
                     featureType = getSchemaMapping().getFeatureTypes().stream()
-                            .filter(candidate -> candidate.getName().getLocalName().equals(name.getLocalName()))
+                            .filter(type -> type.getName().getLocalName().equalsIgnoreCase(name.getLocalName()))
                             .findFirst().orElse(FeatureType.UNDEFINED);
                 }
 

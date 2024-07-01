@@ -207,7 +207,7 @@ public class SchemaPathBuilder {
         Property property = properties.get(name);
         if (property == null && name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
             property = properties.values().stream()
-                    .filter(candidate -> candidate.getName().getLocalName().equals(name.getLocalName()))
+                    .filter(candidate -> candidate.getName().getLocalName().equalsIgnoreCase(name.getLocalName()))
                     .findFirst().orElse(null);
         }
 
