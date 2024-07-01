@@ -35,6 +35,8 @@ import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.sqlbuilder.schema.WildcardColumn;
 
 import java.sql.*;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class SqlHelper {
@@ -118,9 +120,12 @@ public class SqlHelper {
             if (value instanceof Boolean booleanValue) {
                 return booleanValue ? "1" : "0";
             } else if (value instanceof String
-                    || value instanceof Date
-                    || value instanceof Timestamp) {
+                    || value instanceof Date) {
                 return "'" + value + "'";
+            } else if (value instanceof Timestamp timestamp) {
+                return "'" + timestamp.toInstant()
+                        .atOffset(ZoneOffset.UTC)
+                        .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)+ "'";
             } else if (value instanceof Geometry<?> geometry) {
                 return toSql(geometry);
             } else if (value instanceof Envelope envelope) {
