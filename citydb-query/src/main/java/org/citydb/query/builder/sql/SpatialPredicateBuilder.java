@@ -186,8 +186,6 @@ public class SpatialPredicateBuilder {
             return switch (operator) {
                 case INTERSECTS -> SpatialOperator.DISJOINT;
                 case DISJOINT -> SpatialOperator.INTERSECTS;
-                case CONTAINS -> SpatialOperator.WITHIN;
-                case WITHIN -> SpatialOperator.CONTAINS;
                 default -> operator;
             };
         } else {

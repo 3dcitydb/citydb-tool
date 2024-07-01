@@ -70,14 +70,6 @@ public class BinarySpatialPredicate implements SpatialPredicate {
                 operator = SpatialOperator.INTERSECTS;
                 yield this;
             }
-            case CONTAINS -> {
-                operator = SpatialOperator.WITHIN;
-                yield this;
-            }
-            case WITHIN -> {
-                operator = SpatialOperator.CONTAINS;
-                yield this;
-            }
             default -> Not.of(this);
         };
     }
