@@ -25,7 +25,6 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.operation.deleter.options.DeleteMode;
-import org.citydb.query.Query;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -39,7 +38,6 @@ public class DeleteOptions {
     private String reasonForUpdate;
     private String lineage;
     private OffsetDateTime terminationDate;
-    private Query query;
 
     public int getNumberOfThreads() {
         return numberOfThreads;
@@ -92,15 +90,6 @@ public class DeleteOptions {
 
     public DeleteOptions setTerminationDate(OffsetDateTime terminationDate) {
         this.terminationDate = terminationDate;
-        return this;
-    }
-
-    public Optional<Query> getQuery() {
-        return Optional.ofNullable(query);
-    }
-
-    public DeleteOptions setQuery(Query query) {
-        this.query = query;
         return this;
     }
 }
