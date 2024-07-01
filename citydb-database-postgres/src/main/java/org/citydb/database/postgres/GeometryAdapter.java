@@ -28,7 +28,7 @@ import org.citydb.database.geometry.WKBWriter;
 import org.citydb.database.geometry.WKTWriter;
 import org.citydb.model.geometry.Geometry;
 
-import java.sql.Types;
+import java.sql.*;
 
 public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter {
     private final WKBParser parser = new WKBParser();
@@ -63,6 +63,15 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     @Override
     public String getAsText(Geometry<?> geometry) throws GeometryException {
         return textWriter.write(geometry);
+    }
+
+    @Override
+    public boolean hasImplicitGeometries(Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("select 1 from " + adapter.getConnectionDetails().getSchema() +
+                     ".implicit_geometry limit 1")) {
+            return rs.next();
+        }
     }
 
     @Override

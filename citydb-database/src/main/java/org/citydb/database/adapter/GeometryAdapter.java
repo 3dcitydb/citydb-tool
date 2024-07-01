@@ -50,6 +50,7 @@ public abstract class GeometryAdapter {
 
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;
     public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
+    public abstract boolean hasImplicitGeometries(Connection connection) throws SQLException;
     public abstract SpatialOperationHelper getSpatialOperationHelper();
 
     public Object getGeometry(Geometry<?> geometry) throws GeometryException {
@@ -64,6 +65,12 @@ public abstract class GeometryAdapter {
 
     public JSONObject buildGeometryProperties(Geometry<?> geometry) {
         return propertiesBuilder.buildProperties(geometry);
+    }
+
+    public boolean hasImplicitGeometries() throws SQLException {
+        try (Connection connection = adapter.getPool().getConnection()) {
+            return hasImplicitGeometries(connection);
+        }
     }
 
     public SpatialReference getSpatialReference(int srid) throws SQLException {

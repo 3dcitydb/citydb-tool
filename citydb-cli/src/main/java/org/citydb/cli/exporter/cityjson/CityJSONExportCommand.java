@@ -182,43 +182,45 @@ public class CityJSONExportCommand extends ExportController {
     @Override
     protected void initialize(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
         try {
-            logger.info("Retrieving global template geometries...");
-            Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
-            Exporter exporter = Exporter.newInstance();
-            SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
+            if (databaseManager.getAdapter().getGeometryAdapter().hasImplicitGeometries()) {
+                logger.info("Retrieving global template geometries...");
+                Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
+                Exporter exporter = Exporter.newInstance();
+                SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
 
-            Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
-                    .build(getQuery());
-            SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
-                    .getRecursiveImplicitGeometryQuery(featureQuery);
+                Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
+                        .build(getQuery());
+                SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
+                        .getRecursiveImplicitGeometryQuery(featureQuery);
 
-            try (Connection connection = databaseManager.getAdapter().getPool().getConnection();
-                 PreparedStatement stmt = helper.prepareStatement(query, connection);
-                 ResultSet rs = stmt.executeQuery()) {
-                exporter.startSession(databaseManager.getAdapter(), exportOptions);
-                while (shouldRun && rs.next()) {
-                    long id = rs.getLong("id");
-                    String lod = rs.getString("lod");
+                try (Connection connection = databaseManager.getAdapter().getPool().getConnection();
+                     PreparedStatement stmt = helper.prepareStatement(query, connection);
+                     ResultSet rs = stmt.executeQuery()) {
+                    exporter.startSession(databaseManager.getAdapter(), exportOptions);
+                    while (shouldRun && rs.next()) {
+                        long id = rs.getLong("id");
+                        String lod = rs.getString("lod");
 
-                    exporter.exportImplicitGeometry(id).whenComplete((implicitGeometry, e) -> {
-                        if (implicitGeometry != null) {
-                            globalTemplates.put(implicitGeometry, lod);
-                        } else {
-                            shouldRun = false;
-                            exception = e;
-                        }
-                    });
+                        exporter.exportImplicitGeometry(id).whenComplete((implicitGeometry, e) -> {
+                            if (implicitGeometry != null) {
+                                globalTemplates.put(implicitGeometry, lod);
+                            } else {
+                                shouldRun = false;
+                                exception = e;
+                            }
+                        });
+                    }
+                } finally {
+                    exporter.closeSession();
                 }
-            } finally {
-                exporter.closeSession();
-            }
 
-            if (exception != null) {
-                throw exception;
-            } else if (!globalTemplates.isEmpty()) {
-                CityJSONFormatOptions options = writeOptions.getFormatOptions()
-                        .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
-                globalTemplates.forEach(options::addGlobalTemplate);
+                if (exception != null) {
+                    throw exception;
+                } else if (!globalTemplates.isEmpty()) {
+                    CityJSONFormatOptions options = writeOptions.getFormatOptions()
+                            .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
+                    globalTemplates.forEach(options::addGlobalTemplate);
+                }
             }
         } catch (Throwable e) {
             throw new ExecutionException("Failed to process global template geometries.", e);
