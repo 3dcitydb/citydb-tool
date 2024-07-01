@@ -37,6 +37,7 @@ public enum NodeType {
     SPATIAL_PREDICATE,
     TEMPORAL_PREDICATE,
     ARRAY_PREDICATE,
+    SQL_PREDICATE,
     FUNCTION,
     ARRAY,
     SYNTAX,

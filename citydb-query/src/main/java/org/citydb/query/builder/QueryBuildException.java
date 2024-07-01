@@ -19,30 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.util;
+package org.citydb.query.builder;
 
-import org.citydb.database.adapter.DatabaseAdapter;
+public class QueryBuildException extends Exception {
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-
-public class QueryExecutor {
-    private final DatabaseAdapter adapter;
-
-    private QueryExecutor(DatabaseAdapter adapter) {
-        this.adapter = adapter;
+    public QueryBuildException() {
+        super();
     }
 
-    public static QueryExecutor of(DatabaseAdapter adapter) {
-        return new QueryExecutor(adapter);
+    public QueryBuildException(String message) {
+        super(message);
     }
 
-    public QueryResult executeQuery(String query) throws SQLException {
-        Connection connection = adapter.getPool().getConnection();
-        Statement stmt = connection.createStatement();
-        ResultSet rs = stmt.executeQuery(query);
-        return new QueryResult(connection, stmt, rs);
+    public QueryBuildException(Throwable cause) {
+        super(cause);
+    }
+
+    public QueryBuildException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

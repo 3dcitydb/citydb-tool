@@ -96,19 +96,26 @@ public class Join {
         return conditions != null ? conditions.values() : Collections.emptyList();
     }
 
-    Join postprocess(Joinable joinable, SchemaMapping schemaMapping) {
-        if (table == Table.PROPERTY) {
-            if (conditions == null) {
-                conditions = new LinkedHashMap<>();
-            }
+    boolean hasConditionOn(String column) {
+        return conditions != null && conditions.containsKey(column);
+    }
 
-            if (!conditions.containsKey("name")
-                    && !conditions.containsKey("namespace_id")) {
-                conditions.put("name", new Condition(new Column("name", SimpleType.STRING),
-                        joinable.getName().getLocalName()));
-                conditions.put("namespace_id", new Condition(new Column("namespace_id", SimpleType.INTEGER),
-                        String.valueOf(schemaMapping.getNamespace(joinable.getName()).getId())));
-            }
+    void addCondition(Condition condition) {
+        if (conditions == null) {
+            conditions = new LinkedHashMap<>();
+        }
+
+        conditions.put(condition.getColumn().getName(), condition);
+    }
+
+    Join postprocess(Joinable joinable, SchemaMapping schemaMapping) {
+        if (table == Table.PROPERTY
+                && !hasConditionOn("name")
+                && !hasConditionOn("namespace_id")) {
+            addCondition(new Condition(new Column("name", SimpleType.STRING),
+                    joinable.getName().getLocalName()));
+            addCondition(new Condition(new Column("namespace_id", SimpleType.INTEGER),
+                    String.valueOf(schemaMapping.getNamespace(joinable.getName()).getId())));
         }
 
         return this;

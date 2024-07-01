@@ -55,6 +55,7 @@ public class FilterTextBuilder {
             case SPATIAL_PREDICATE -> buildSpatialPredicate(node);
             case TEMPORAL_PREDICATE -> buildTemporalPredicate(node);
             case ARRAY_PREDICATE -> buildArrayPredicate(node);
+            case SQL_PREDICATE -> buildSqlPredicate(node);
             case COMPARISON_PREDICATE -> buildComparisonPredicate(node);
             case ARITHMETIC_EXPRESSION -> buildArithmeticExpression(node);
             case FUNCTION -> buildFunction(node);
@@ -117,7 +118,7 @@ public class FilterTextBuilder {
         if (node.getChildren().size() == 1) {
             return Not.of(buildExpression(node.getChildren().get(0), BooleanExpression.class));
         } else {
-            throw new FilterParseException("A NOT predicate must only have one operand.");
+            throw new FilterParseException("A NOT predicate requires one operand.");
         }
     }
 
@@ -178,6 +179,14 @@ public class FilterTextBuilder {
 
     private Expression buildArrayPredicate(Node node) throws FilterParseException {
         throw new FilterParseException("Array predicates are not supported.");
+    }
+
+    private SqlExpression buildSqlPredicate(Node node) throws FilterParseException {
+        if (node.getChildren().size() == 1) {
+            return SqlExpression.of(buildExpression(node.getChildren().get(0), StringLiteral.class));
+        } else {
+            throw new FilterParseException("An SQL expression requires one operand.");
+        }
     }
 
     private ComparisonPredicate buildComparisonPredicate(Node node) throws FilterParseException {

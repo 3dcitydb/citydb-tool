@@ -71,6 +71,18 @@ public class FilterTextWriter {
         }
 
         @Override
+        public void visit(ArithmeticExpression expression) {
+            buildSign(expression);
+            builder.append("(");
+            expression.getLeftOperand().accept(this);
+            builder.append(" ")
+                    .append(expression.getOperator().getTextToken())
+                    .append(" ");
+            expression.getRightOperand().accept(this);
+            builder.append(")");
+        }
+
+        @Override
         public void visit(BBoxLiteral literal) {
             Coordinate lowerCorner = literal.getValue().getLowerCorner();
             Coordinate upperCorner = literal.getValue().getUpperCorner();
@@ -84,101 +96,6 @@ public class FilterTextWriter {
                     .append("(")
                     .append(coordinates.stream().map(String::valueOf).collect(Collectors.joining(", ")))
                     .append(")");
-        }
-
-        @Override
-        public void visit(BooleanLiteral literal) {
-            builder.append(literal == BooleanLiteral.TRUE ?
-                    TextToken.TRUE :
-                    TextToken.FALSE);
-        }
-
-        @Override
-        public void visit(DateLiteral literal) {
-            builder.append(TextToken.DATE)
-                    .append("('")
-                    .append(DateTimeFormatter.ISO_LOCAL_DATE.format(literal.getValue()))
-                    .append("')");
-        }
-
-        @Override
-        public void visit(GeometryLiteral literal) {
-            try {
-                builder.append(wktWriter.write(literal.getValue()));
-            } catch (GeometryException e) {
-                throw new RuntimeException("Failed to write geometry as WKT.", e);
-            }
-        }
-
-        @Override
-        public void visit(NumericLiteral literal) {
-            if (literal.isInteger()) {
-                builder.append(literal.intValue());
-            } else {
-                builder.append(literal.doubleValue());
-            }
-        }
-
-        @Override
-        public void visit(StringLiteral literal) {
-            builder.append("'")
-                    .append(literal.getValue().replaceAll("'", "''"))
-                    .append("'");
-        }
-
-        @Override
-        public void visit(TimestampLiteral literal) {
-            builder.append(TextToken.TIMESTAMP)
-                    .append("('")
-                    .append(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(literal.getValue()))
-                    .append("')");
-        }
-
-        @Override
-        public void visit(PropertyRef propertyRef) {
-            buildSign(propertyRef);
-
-            String name = propertyRef.getName().getPrefix()
-                    .map(prefix -> prefix + ":" + propertyRef.getName().getLocalName())
-                    .orElse(propertyRef.getName().getLocalName());
-            if (TextToken.of(name) != TextToken.UNDEFINED) {
-                name = '"' + name + '"';
-            }
-
-            builder.append(name);
-            propertyRef.getFilter().ifPresent(filter -> {
-                builder.append("[");
-                buildStepPredicate(filter);
-                builder.append("]");
-            });
-
-            propertyRef.getChild().ifPresent(child -> {
-                builder.append(".");
-                child.accept(this);
-            });
-        }
-
-        @Override
-        public void visit(Function function) {
-            buildSign(function);
-            builder.append(function.getName())
-                    .append("(")
-                    .append(function.getArguments().stream()
-                            .map(FilterTextWriter.this::write)
-                            .collect(Collectors.joining(", ")))
-                    .append(")");
-        }
-
-        @Override
-        public void visit(ArithmeticExpression expression) {
-            buildSign(expression);
-            builder.append("(");
-            expression.getLeftOperand().accept(this);
-            builder.append(" ")
-                    .append(expression.getOperator().getTextToken())
-                    .append(" ");
-            expression.getRightOperand().accept(this);
-            builder.append(")");
         }
 
         @Override
@@ -213,6 +130,68 @@ public class FilterTextWriter {
         }
 
         @Override
+        public void visit(BinarySpatialPredicate predicate) {
+            builder.append(predicate.getOperator().getTextToken());
+            builder.append("(");
+            predicate.getLeftOperand().accept(this);
+            builder.append(", ");
+            predicate.getRightOperand().accept(this);
+            builder.append(")");
+        }
+
+        @Override
+        public void visit(BooleanLiteral literal) {
+            builder.append(literal == BooleanLiteral.TRUE ?
+                    TextToken.TRUE :
+                    TextToken.FALSE);
+        }
+
+        @Override
+        public void visit(DateLiteral literal) {
+            builder.append(TextToken.DATE)
+                    .append("('")
+                    .append(DateTimeFormatter.ISO_LOCAL_DATE.format(literal.getValue()))
+                    .append("')");
+        }
+
+        @Override
+        public void visit(DWithin dWithin) {
+            builder.append(dWithin.getOperator().getTextToken());
+            builder.append("(");
+            dWithin.getLeftOperand().accept(this);
+            builder.append(", ");
+            dWithin.getRightOperand().accept(this);
+            if (dWithin.getDistance().getValue() != 0) {
+                builder.append(", ")
+                        .append(dWithin.getDistance().getValue());
+                dWithin.getDistance().getUnit().ifPresent(unit -> builder.append(", '")
+                        .append(unit)
+                        .append("'"));
+            }
+            builder.append(")");
+        }
+
+        @Override
+        public void visit(Function function) {
+            buildSign(function);
+            builder.append(function.getName().getTextToken())
+                    .append("(")
+                    .append(function.getArguments().stream()
+                            .map(FilterTextWriter.this::write)
+                            .collect(Collectors.joining(", ")))
+                    .append(")");
+        }
+
+        @Override
+        public void visit(GeometryLiteral literal) {
+            try {
+                builder.append(wktWriter.write(literal.getValue()));
+            } catch (GeometryException e) {
+                throw new RuntimeException("Failed to write geometry as WKT.", e);
+            }
+        }
+
+        @Override
         public void visit(In in) {
             in.getOperand().accept(this);
             builder.append(" ")
@@ -242,35 +221,72 @@ public class FilterTextWriter {
 
         @Override
         public void visit(Not not) {
-            builder.append(TextToken.NOT).append(" ");
+            builder.append(TextToken.NOT)
+                    .append(" ");
             not.getOperand().accept(this);
         }
 
         @Override
-        public void visit(BinarySpatialPredicate predicate) {
-            builder.append(predicate.getOperator().getTextToken());
-            builder.append("(");
-            predicate.getLeftOperand().accept(this);
-            builder.append(", ");
-            predicate.getRightOperand().accept(this);
-            builder.append(")");
+        public void visit(NumericLiteral literal) {
+            if (literal.isInteger()) {
+                builder.append(literal.intValue());
+            } else {
+                builder.append(literal.doubleValue());
+            }
         }
 
         @Override
-        public void visit(DWithin dWithin) {
-            builder.append(dWithin.getOperator().getTextToken());
-            builder.append("(");
-            dWithin.getLeftOperand().accept(this);
-            builder.append(", ");
-            dWithin.getRightOperand().accept(this);
-            if (dWithin.getDistance().getValue() != 0) {
-                builder.append(", ")
-                        .append(dWithin.getDistance().getValue());
-                dWithin.getDistance().getUnit().ifPresent(unit -> builder.append(", '")
-                        .append(unit)
-                        .append("'"));
+        public void visit(PropertyRef propertyRef) {
+            buildSign(propertyRef);
+
+            String name = propertyRef.getName().getPrefix()
+                    .map(prefix -> prefix + ":" + propertyRef.getName().getLocalName())
+                    .orElse(propertyRef.getName().getLocalName());
+            if (TextToken.of(name) == TextToken.UNDEFINED) {
+                builder.append(name);
+            } else {
+                builder.append('"')
+                        .append(name)
+                        .append('"');
             }
-            builder.append(")");
+
+            propertyRef.getTypeCast().ifPresent(typeCast ->
+                    builder.append("::")
+                            .append(typeCast));
+
+            propertyRef.getFilter().ifPresent(filter -> {
+                builder.append("[");
+                buildStepPredicate(filter);
+                builder.append("]");
+            });
+
+            propertyRef.getChild().ifPresent(child -> {
+                builder.append(".");
+                child.accept(this);
+            });
+        }
+
+        @Override
+        public void visit(StringLiteral literal) {
+            builder.append("'")
+                    .append(literal.getValue().replaceAll("'", "''"))
+                    .append("'");
+        }
+
+        @Override
+        public void visit(SqlExpression expression) {
+            builder.append(TextToken.SQL)
+                    .append(TextToken.L_PAREN);
+            expression.getQueryExpression().accept(this);
+            builder.append(TextToken.R_PAREN);
+        }
+
+        @Override
+        public void visit(TimestampLiteral literal) {
+            builder.append(TextToken.TIMESTAMP)
+                    .append("('")
+                    .append(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(literal.getValue()))
+                    .append("')");
         }
 
         private void buildSign(NumericExpression expression) {

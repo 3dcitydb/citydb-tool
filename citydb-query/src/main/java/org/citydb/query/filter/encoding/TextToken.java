@@ -100,6 +100,7 @@ public enum TextToken {
     T_OVERLAPS("T_OVERLAPS"),
     T_STARTEDBY("T_STARTEDBY"),
     T_STARTS("T_STARTS"),
+    SQL("SQL"),
     IDENTIFIER(""),
     EOF(""),
     UNDEFINED("");

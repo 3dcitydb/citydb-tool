@@ -19,23 +19,22 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.util;
+package org.citydb.query.executor;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Objects;
 
 public class QueryResult implements AutoCloseable {
     private final Connection connection;
-    private final Statement stmt;
+    private final PreparedStatement stmt;
     private final ResultSet rs;
 
-    QueryResult(Connection connection, Statement stmt, ResultSet rs) {
-        this.connection = Objects.requireNonNull(connection, "The connection must not be null.");
-        this.stmt = Objects.requireNonNull(stmt, "The statement must not be null.");
-        this.rs = Objects.requireNonNull(rs, "The result set must not be null.");
+    QueryResult(Connection connection, PreparedStatement stmt, ResultSet rs) {
+        this.connection = connection;
+        this.stmt = stmt;
+        this.rs = rs;
     }
 
     public boolean hasNext() throws SQLException {
@@ -48,10 +47,6 @@ public class QueryResult implements AutoCloseable {
 
     public int getObjectClassId() throws SQLException {
         return rs.getInt("objectclass_id");
-    }
-
-    public String getObjectId() throws SQLException {
-        return rs.getString("objectid");
     }
 
     @Override

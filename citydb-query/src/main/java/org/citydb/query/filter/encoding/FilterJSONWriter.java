@@ -32,7 +32,6 @@ import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
 
 import java.util.List;
-import java.util.Locale;
 
 public class FilterJSONWriter {
 
@@ -60,6 +59,19 @@ public class FilterJSONWriter {
         }
 
         @Override
+        public void visit(ArithmeticExpression expression) {
+            if (expression.getSign() == Sign.MINUS) {
+                negate(expression);
+            } else {
+                startOp(expression.getOperator().getJSONToken().value());
+                expression.getLeftOperand().accept(this);
+                jsonWriter.writeComma();
+                expression.getRightOperand().accept(this);
+                endOp();
+            }
+        }
+
+        @Override
         public void visit(BBoxLiteral literal) {
             Coordinate lowerCorner = literal.getValue().getLowerCorner();
             Coordinate upperCorner = literal.getValue().getUpperCorner();
@@ -72,85 +84,6 @@ public class FilterJSONWriter {
                     List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
                             upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
             jsonWriter.endObject();
-        }
-
-        @Override
-        public void visit(BooleanLiteral literal) {
-            jsonWriter.writeBool(literal.getValue());
-        }
-
-        @Override
-        public void visit(DateLiteral literal) {
-            jsonWriter.startObject();
-            jsonWriter.writeName(JSONToken.DATE.value());
-            jsonWriter.writeColon();
-            jsonWriter.writeLocalDate(literal.getValue());
-            jsonWriter.endObject();
-        }
-
-        @Override
-        public void visit(GeometryLiteral literal) {
-            geometryWriter.write(literal.getValue());
-        }
-
-        @Override
-        public void visit(NumericLiteral literal) {
-            if (literal.isInteger()) {
-                jsonWriter.writeInt64(literal.intValue());
-            } else {
-                jsonWriter.writeDouble(literal.doubleValue());
-            }
-        }
-
-        @Override
-        public void visit(StringLiteral literal) {
-            jsonWriter.writeString(literal.getValue());
-        }
-
-        @Override
-        public void visit(TimestampLiteral literal) {
-            jsonWriter.startObject();
-            jsonWriter.writeName(JSONToken.TIMESTAMP.value());
-            jsonWriter.writeColon();
-            jsonWriter.writeOffsetDateTime(literal.getValue());
-            jsonWriter.endObject();
-        }
-
-        @Override
-        public void visit(PropertyRef propertyRef) {
-            if (propertyRef.getSign() == Sign.MINUS) {
-                negate(propertyRef);
-            } else {
-                jsonWriter.startObject();
-                jsonWriter.writeName(JSONToken.PROPERTY.value());
-                jsonWriter.writeColon();
-                jsonWriter.writeString(textWriter.write(propertyRef));
-                jsonWriter.endObject();
-            }
-        }
-
-        @Override
-        public void visit(Function function) {
-            if (function.getSign() == Sign.MINUS) {
-                negate(function);
-            } else {
-                startOp(function.getName().getIdentifier().toLowerCase(Locale.ROOT));
-                writeList(function.getArguments(), jsonWriter::writeComma);
-                endOp();
-            }
-        }
-
-        @Override
-        public void visit(ArithmeticExpression expression) {
-            if (expression.getSign() == Sign.MINUS) {
-                negate(expression);
-            } else {
-                startOp(expression.getOperator().getJSONToken().value());
-                expression.getLeftOperand().accept(this);
-                jsonWriter.writeComma();
-                expression.getRightOperand().accept(this);
-                endOp();
-            }
         }
 
         @Override
@@ -182,6 +115,62 @@ public class FilterJSONWriter {
             jsonWriter.writeComma();
             predicate.getRightOperand().accept(this);
             endOp();
+        }
+
+        @Override
+        public void visit(BinarySpatialPredicate predicate) {
+            startOp(predicate.getOperator().getJSONToken().value());
+            predicate.getLeftOperand().accept(this);
+            jsonWriter.writeComma();
+            predicate.getRightOperand().accept(this);
+            endOp();
+        }
+
+        @Override
+        public void visit(BooleanLiteral literal) {
+            jsonWriter.writeBool(literal.getValue());
+        }
+
+        @Override
+        public void visit(DateLiteral literal) {
+            jsonWriter.startObject();
+            jsonWriter.writeName(JSONToken.DATE.value());
+            jsonWriter.writeColon();
+            jsonWriter.writeLocalDate(literal.getValue());
+            jsonWriter.endObject();
+        }
+
+        @Override
+        public void visit(DWithin dWithin) {
+            startOp(dWithin.getOperator().getJSONToken().value());
+            dWithin.getLeftOperand().accept(this);
+            jsonWriter.writeComma();
+            dWithin.getRightOperand().accept(this);
+            if (dWithin.getDistance().getValue() != 0) {
+                jsonWriter.writeComma();
+                jsonWriter.writeDouble(dWithin.getDistance().getValue());
+                dWithin.getDistance().getUnit().ifPresent(unit -> {
+                    jsonWriter.writeComma();
+                    jsonWriter.writeString(unit.toString());
+                });
+            }
+            endOp();
+        }
+
+        @Override
+        public void visit(Function function) {
+            if (function.getSign() == Sign.MINUS) {
+                negate(function);
+            } else {
+                startOp(function.getName().getJsonToken());
+                writeList(function.getArguments(), jsonWriter::writeComma);
+                endOp();
+            }
+        }
+
+        @Override
+        public void visit(GeometryLiteral literal) {
+            geometryWriter.write(literal.getValue());
         }
 
         @Override
@@ -231,29 +220,46 @@ public class FilterJSONWriter {
         }
 
         @Override
-        public void visit(BinarySpatialPredicate predicate) {
-            startOp(predicate.getOperator().getJSONToken().value());
-            predicate.getLeftOperand().accept(this);
-            jsonWriter.writeComma();
-            predicate.getRightOperand().accept(this);
+        public void visit(NumericLiteral literal) {
+            if (literal.isInteger()) {
+                jsonWriter.writeInt64(literal.intValue());
+            } else {
+                jsonWriter.writeDouble(literal.doubleValue());
+            }
+        }
+
+        @Override
+        public void visit(PropertyRef propertyRef) {
+            if (propertyRef.getSign() == Sign.MINUS) {
+                negate(propertyRef);
+            } else {
+                jsonWriter.startObject();
+                jsonWriter.writeName(JSONToken.PROPERTY.value());
+                jsonWriter.writeColon();
+                jsonWriter.writeString(textWriter.write(propertyRef));
+                jsonWriter.endObject();
+            }
+        }
+
+        @Override
+        public void visit(StringLiteral literal) {
+            jsonWriter.writeString(literal.getValue());
+        }
+
+        @Override
+        public void visit(SqlExpression expression) {
+            startOp(JSONToken.SQL.value());
+            expression.getQueryExpression().accept(this);
             endOp();
         }
 
         @Override
-        public void visit(DWithin dWithin) {
-            startOp(dWithin.getOperator().getJSONToken().value());
-            dWithin.getLeftOperand().accept(this);
-            jsonWriter.writeComma();
-            dWithin.getRightOperand().accept(this);
-            if (dWithin.getDistance().getValue() != 0) {
-                jsonWriter.writeComma();
-                jsonWriter.writeDouble(dWithin.getDistance().getValue());
-                dWithin.getDistance().getUnit().ifPresent(unit -> {
-                    jsonWriter.writeComma();
-                    jsonWriter.writeString(unit.toString());
-                });
-            }
-            endOp();
+        public void visit(TimestampLiteral literal) {
+            jsonWriter.startObject();
+            jsonWriter.writeName(JSONToken.TIMESTAMP.value());
+            jsonWriter.writeColon();
+            jsonWriter.writeOffsetDateTime(literal.getValue());
+            jsonWriter.endObject();
         }
 
         private void startOp(String operation) {

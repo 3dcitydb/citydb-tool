@@ -6,6 +6,7 @@ module org.citydb.cli {
     requires org.citydb.logging;
     requires org.citydb.database;
     requires org.citydb.operation;
+    requires org.citydb.query;
     requires transitive org.citydb.plugin;
     requires transitive info.picocli;
 

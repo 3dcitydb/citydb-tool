@@ -24,6 +24,7 @@ package org.citydb.database.adapter;
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.geometry.*;
 import org.citydb.database.metadata.SpatialReference;
+import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.model.geometry.Geometry;
 
 import java.sql.Connection;
@@ -48,6 +49,8 @@ public abstract class GeometryAdapter {
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
 
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;
+    public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
+    public abstract SpatialOperationHelper getSpatialOperationHelper();
 
     public Object getGeometry(Geometry<?> geometry) throws GeometryException {
         return getGeometry(geometry, true);

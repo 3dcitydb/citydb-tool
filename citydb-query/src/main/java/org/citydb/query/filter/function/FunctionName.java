@@ -24,31 +24,32 @@ package org.citydb.query.filter.function;
 import java.util.*;
 
 public enum FunctionName {
-    ACCENTI("ACCENTI"),
-    CASEI("CASEI"),
-    INDEX("INDEX");
+    ACCENTI("accenti", "ACCENTI"),
+    CASEI("casei", "CASEI"),
+    INDEX("index", "INDEX");
 
     private final static Map<String, FunctionName> identifiers = new HashMap<>();
-    private String identifier;
+    private final String jsonToken;
+    private final String textToken;
 
-    FunctionName(String identifier) {
-        this.identifier = identifier;
+    FunctionName(String jsonToken, String textToken) {
+        this.jsonToken = jsonToken;
+        this.textToken = textToken;
     }
 
     static {
-        Arrays.stream(values()).forEach(name -> identifiers.put(name.identifier, name));
+        Arrays.stream(values()).forEach(name -> identifiers.put(name.jsonToken.toLowerCase(Locale.ROOT), name));
     }
 
     public static Optional<FunctionName> of(String token) {
-        return Optional.ofNullable(identifiers.get(token.toUpperCase(Locale.ROOT)));
+        return Optional.ofNullable(identifiers.get(token.toLowerCase(Locale.ROOT)));
     }
 
-    public String getIdentifier() {
-        return identifier;
+    public String getJsonToken() {
+        return jsonToken;
     }
 
-    @Override
-    public String toString() {
-        return identifier;
+    public String getTextToken() {
+        return textToken;
     }
 }

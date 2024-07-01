@@ -143,6 +143,8 @@ public class FilterJSONParser {
             return readTemporalPredicate(token, args);
         } else if (JSONToken.ARRAY_OPERATORS.contains(token)) {
             return readArrayPredicate(token, args);
+        } else if (token == JSONToken.SQL) {
+            return readSqlPredicate(args);
         } else if (JSONToken.BINARY_COMPARISON_OPERATORS.contains(token)) {
             return readBinaryComparisonPredicate(token, args);
         } else if (token == JSONToken.LIKE) {
@@ -187,7 +189,7 @@ public class FilterJSONParser {
                     predicate.negate() :
                     Not.of(booleanExpression);
         } else {
-            throw new FilterParseException("A NOT predicate must only have one operand.");
+            throw new FilterParseException("A NOT predicate requires one operand.");
         }
     }
 
@@ -236,6 +238,14 @@ public class FilterJSONParser {
 
     private Expression readArrayPredicate(JSONToken op, JSONArray args) throws FilterParseException {
         throw new FilterParseException("Array predicates are not supported.");
+    }
+    
+    private SqlExpression readSqlPredicate(JSONArray args) throws FilterParseException {
+        if (args.size() == 1) {
+            return SqlExpression.of(readExpression(args.get(0), StringLiteral.class));
+        } else {
+            throw new FilterParseException("An SQL expression requires one operand.");
+        }
     }
 
     private BinaryComparisonPredicate readBinaryComparisonPredicate(JSONToken op, JSONArray args) throws FilterParseException {

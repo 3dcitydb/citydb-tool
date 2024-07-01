@@ -12,8 +12,9 @@ dependencies {
     implementation project(':citydb-io-citygml')
     implementation project(':citydb-logging')
     implementation project(':citydb-database')
-    implementation project(':citydb-operation')
     implementation project(':citydb-database-postgres')
+    implementation project(':citydb-operation')
+    implementation project(':citydb-query')
 }
 
 processResources {

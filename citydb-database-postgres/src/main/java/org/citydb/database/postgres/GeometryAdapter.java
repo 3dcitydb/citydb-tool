@@ -25,6 +25,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.WKBParser;
 import org.citydb.database.geometry.WKBWriter;
+import org.citydb.database.geometry.WKTWriter;
 import org.citydb.model.geometry.Geometry;
 
 import java.sql.Types;
@@ -32,6 +33,8 @@ import java.sql.Types;
 public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter {
     private final WKBParser parser = new WKBParser();
     private final WKBWriter writer = new WKBWriter().includeSRID(true);
+    private final WKTWriter textWriter = new WKTWriter().includeSRID(true);
+    private final SpatialOperationHelper spatialOperationHelper = new SpatialOperationHelper();
 
     GeometryAdapter(DatabaseAdapter adapter) {
         super(adapter);
@@ -55,5 +58,15 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     @Override
     public Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException {
         return writer.write(geometry, force3D);
+    }
+
+    @Override
+    public String getAsText(Geometry<?> geometry) throws GeometryException {
+        return textWriter.write(geometry);
+    }
+
+    @Override
+    public SpatialOperationHelper getSpatialOperationHelper() {
+        return spatialOperationHelper;
     }
 }

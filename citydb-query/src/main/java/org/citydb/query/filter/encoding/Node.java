@@ -73,6 +73,8 @@ public class Node {
             return new Node(NodeType.TEMPORAL_PREDICATE, token);
         } else if (TextToken.ARRAY_OPERATORS.contains(token.getType())) {
             return new Node(NodeType.ARRAY_PREDICATE, token);
+        } else if (token.getType() == TextToken.SQL) {
+            return new Node(NodeType.SQL_PREDICATE, token);
         } else if (TextToken.SYNTAX_CHARS.contains(token.getType())) {
             return new Node(NodeType.SYNTAX, token);
         } else if (token == Token.EOF) {
