@@ -29,8 +29,11 @@ import org.citydb.query.filter.common.*;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.filter.operation.NumericExpression;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 public class PropertyRef implements GeometryExpression, NumericExpression, CharacterExpression {
     private final PrefixedName name;
@@ -144,6 +147,24 @@ public class PropertyRef implements GeometryExpression, NumericExpression, Chara
         }
 
         return last;
+    }
+
+    public Stream<PropertyRef> upStream() {
+        return stream(true);
+    }
+
+    public Stream<PropertyRef> downStream() {
+        return stream(false);
+    }
+
+    private Stream<PropertyRef> stream(boolean traverseUp) {
+        List<PropertyRef> path = new ArrayList<>();
+        PropertyRef propertyRef = this;
+        do {
+            path.add(propertyRef);
+        } while ((propertyRef = traverseUp ? propertyRef.parent : propertyRef.child) != null);
+
+        return path.stream();
     }
 
     @Override
