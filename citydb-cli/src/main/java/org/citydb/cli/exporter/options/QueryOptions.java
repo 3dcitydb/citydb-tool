@@ -19,8 +19,11 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.common;
+package org.citydb.cli.exporter.options;
 
+import org.citydb.cli.common.FilterOptions;
+import org.citydb.cli.common.Option;
+import org.citydb.cli.common.TypeNameOption;
 import org.citydb.query.Query;
 import org.citydb.query.filter.encoding.FilterParseException;
 import picocli.CommandLine;
