@@ -44,6 +44,8 @@ import org.citydb.sqlbuilder.query.Select;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class ComparisonPredicateBuilder {
     private final FilterBuilder filterBuilder;
@@ -146,12 +148,15 @@ public class ComparisonPredicateBuilder {
                     "' cannot be used as value of an in predicate.");
         }
 
-        if (values.size() > 1 && values.stream()
-                .map(BuildResult::getType)
-                .anyMatch(type -> !Type.NUMERIC_TYPES.contains(type))) {
-            throw new QueryBuildException("The values of an in predicate use incompatible types.");
-        } else if (operand.getType() != values.get(0).getType()) {
+        if (operand.getType() != values.get(0).getType()) {
             throw new QueryBuildException("Type mismatch between the operand and values of an in predicate.");
+        } else if (values.size() > 1) {
+            Set<Type> types = values.stream()
+                    .map(BuildResult::getType)
+                    .collect(Collectors.toSet());
+            if (types.size() > 1 && types.stream().anyMatch(type -> !Type.NUMERIC_TYPES.contains(type))) {
+                throw new QueryBuildException("The values of an in predicate use incompatible types.");
+            }
         }
 
         List<ScalarExpression> valueExpressions = values.stream()
