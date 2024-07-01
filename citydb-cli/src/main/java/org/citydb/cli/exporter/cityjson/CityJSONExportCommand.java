@@ -188,7 +188,7 @@ public class CityJSONExportCommand extends ExportController {
             SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
 
             Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
-                    .build(getQuery(exportOptions));
+                    .build(getQuery());
             SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
                     .getRecursiveImplicitGeometryQuery(featureQuery);
 

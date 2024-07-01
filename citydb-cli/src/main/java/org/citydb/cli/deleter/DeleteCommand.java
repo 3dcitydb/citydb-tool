@@ -91,7 +91,7 @@ public class DeleteCommand implements Command {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         Deleter deleter = Deleter.newInstance();
         DeleteOptions deleteOptions = getDeleteOptions();
-        QueryExecutor executor = helper.getQueryExecutor(getQuery(deleteOptions), databaseManager.getAdapter());
+        QueryExecutor executor = helper.getQueryExecutor(getQuery(), databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
@@ -162,11 +162,13 @@ public class DeleteCommand implements Command {
                 CommandLine.ExitCode.SOFTWARE;
     }
 
-    private Query getQuery(DeleteOptions deleteOptions) throws ExecutionException {
+    private Query getQuery() throws ExecutionException {
         try {
             Query query = queryOptions != null ?
                     queryOptions.getQuery() :
-                    deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
+                    config.getOrElse(org.citydb.query.QueryOptions.class, org.citydb.query.QueryOptions::new)
+                            .getQuery(org.citydb.query.QueryOptions.DELETE_QUERY)
+                            .orElseGet(QueryHelper::getAllTopLevelFeatures);
 
             if (mode == Mode.terminate) {
                 BooleanExpression nonTerminated = QueryHelper.terminationDateIsNull();
@@ -177,6 +179,8 @@ public class DeleteCommand implements Command {
             }
 
             return query;
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get query options from config.", e);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }

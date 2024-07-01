@@ -106,7 +106,7 @@ public abstract class ExportController implements Command {
         ExportOptions exportOptions = getExportOptions();
         WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
-        QueryExecutor executor = helper.getQueryExecutor(getQuery(exportOptions), databaseManager.getAdapter());
+        QueryExecutor executor = helper.getQueryExecutor(getQuery(), databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
@@ -171,11 +171,15 @@ public abstract class ExportController implements Command {
         return shouldRun;
     }
 
-    protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
+    protected Query getQuery() throws ExecutionException {
         try {
             return queryOptions != null ?
                     queryOptions.getQuery() :
-                    exportOptions.getQuery().orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
+                    config.getOrElse(org.citydb.query.QueryOptions.class, org.citydb.query.QueryOptions::new)
+                            .getQuery(org.citydb.query.QueryOptions.EXPORT_QUERY)
+                            .orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
+        } catch (ConfigException e) {
+            throw new ExecutionException("Failed to get query options from config.", e);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
