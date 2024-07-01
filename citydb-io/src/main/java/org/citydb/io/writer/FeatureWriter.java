@@ -25,11 +25,16 @@ import org.citydb.core.file.OutputFile;
 import org.citydb.model.feature.Feature;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 public interface FeatureWriter extends AutoCloseable {
     void initialize(OutputFile file, WriteOptions options) throws WriteException;
 
     CompletableFuture<Boolean> write(Feature feature) throws WriteException;
+
+    default void write(Feature feature, BiConsumer<Boolean, Throwable> onCompletion) throws WriteException {
+        write(feature).whenComplete(onCompletion);
+    }
 
     void cancel();
 

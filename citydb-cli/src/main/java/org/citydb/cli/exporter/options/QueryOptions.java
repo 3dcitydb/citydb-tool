@@ -37,6 +37,9 @@ public class QueryOptions implements Option {
     private FilterOptions filterOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
+    private SortingOption sortingOption;
+
+    @CommandLine.ArgGroup(exclusive = false)
     private CountLimitOptions countLimitOptions;
 
     public Query getQuery() throws FilterParseException {
@@ -48,6 +51,10 @@ public class QueryOptions implements Option {
         if (filterOptions != null) {
             query.setFilter(filterOptions.getFilter());
             query.setFilterSrs(filterOptions.getFilterCrs());
+        }
+
+        if (sortingOption != null) {
+            query.setSorting(sortingOption.getSorting());
         }
 
         if (countLimitOptions != null) {

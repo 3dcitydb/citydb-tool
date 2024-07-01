@@ -18,6 +18,7 @@ module org.citydb.cli {
     exports org.citydb.cli.exporter.citygml;
     exports org.citydb.cli.exporter.cityjson;
     exports org.citydb.cli.exporter.options;
+    exports org.citydb.cli.exporter.util;
     exports org.citydb.cli.extension;
     exports org.citydb.cli.importer;
     exports org.citydb.cli.importer.citygml;

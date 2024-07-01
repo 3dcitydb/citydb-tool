@@ -19,33 +19,33 @@
  * limitations under the License.
  */
 
-package org.citydb.model.feature;
+package org.citydb.query.sorting;
 
-import org.citydb.model.common.DatabaseDescriptor;
+public enum SortOrder {
+    ASC("asc"),
+    DESC("desc");
 
-public class FeatureDescriptor extends DatabaseDescriptor {
-    private final int objectClassId;
-    private long sequenceId;
+    private final String value;
 
-    private FeatureDescriptor(long id, int objectClassId) {
-        super(id);
-        this.objectClassId = objectClassId;
+    SortOrder(String value) {
+        this.value = value;
     }
 
-    public static FeatureDescriptor of(long id, int objectClassId) {
-        return new FeatureDescriptor(id, objectClassId);
+    public String toValue() {
+        return value;
     }
 
-    public int getObjectClassId() {
-        return objectClassId;
+    public static SortOrder fromValue(String value) {
+        for (SortOrder v : SortOrder.values()) {
+            if (v.value.equals(value))
+                return v;
+        }
+
+        return null;
     }
 
-    public long getSequenceId() {
-        return sequenceId;
-    }
-
-    public FeatureDescriptor setSequenceId(long sequenceId) {
-        this.sequenceId = sequenceId;
-        return this;
+    @Override
+    public String toString() {
+        return value;
     }
 }

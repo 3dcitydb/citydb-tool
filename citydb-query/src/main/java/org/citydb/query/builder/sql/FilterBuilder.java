@@ -69,8 +69,12 @@ public class FilterBuilder {
         try {
             return build(expression, select, context, false).build();
         } catch (Exception e) {
-            throw new QueryBuildException("Failed to map the query filter to an SQL condition.", e);
+            throw new QueryBuildException("Failed to map the filter expression to an SQL condition.", e);
         }
+    }
+
+    BuildResult build(Expression expression, Select select, SqlContext context) throws QueryBuildException {
+        return build(expression, select, context, false);
     }
 
     BuildResult build(Expression expression, Select select, SqlContext context, boolean negate) throws QueryBuildException {

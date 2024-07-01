@@ -38,7 +38,7 @@ public class FilterOptions {
             description = "SRID or identifier of the CRS to use for geometries in the filter expression.")
     private String filterCrs;
 
-    @CommandLine.Option(names = {"-s", "--sql-filter"}, paramLabel = "<sql>",
+    @CommandLine.Option(names = {"--sql-filter"}, paramLabel = "<sql>",
             description = "SQL query expression to use as filter.")
     private String sqlFilter;
 

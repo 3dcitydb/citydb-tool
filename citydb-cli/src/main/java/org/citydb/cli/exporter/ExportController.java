@@ -26,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.exporter.options.QueryOptions;
+import org.citydb.cli.exporter.util.SequentialWriter;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
@@ -38,6 +39,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.writer.FeatureWriter;
+import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.logging.LoggerManager;
@@ -107,14 +109,16 @@ public abstract class ExportController implements Command {
         ExportOptions exportOptions = getExportOptions();
         WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
-        QueryExecutor executor = helper.getQueryExecutor(getQuery(), databaseManager.getAdapter());
+
+        Query query = getQuery();
+        QueryExecutor executor = helper.getQueryExecutor(query, databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         initialize(exportOptions, writeOptions, databaseManager);
 
         try (OutputFile outputFile = builder.newOutputFile(outputFileOptions.getFile());
-             FeatureWriter writer = ioAdapter.createWriter()) {
+             FeatureWriter writer = createWriter(query, ioAdapter)) {
             Exporter exporter = Exporter.newInstance();
             exportOptions.setOutputFile(outputFile);
 
@@ -127,14 +131,15 @@ public abstract class ExportController implements Command {
             logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
                     databaseManager.getAdapter()));
 
+            long sequenceId = 1;
             try (QueryResult result = executor.executeQuery()) {
                 exporter.startSession(databaseManager.getAdapter(), exportOptions);
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
-                    exporter.exportFeature(id).whenComplete((feature, t) -> {
+                    exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
                         if (feature != null) {
                             try {
-                                writer.write(feature).whenComplete((success, e) -> {
+                                writer.write(feature, (success, e) -> {
                                     if (success == Boolean.TRUE) {
                                         statistics.add(feature);
                                         long count = counter.incrementAndGet();
@@ -170,6 +175,13 @@ public abstract class ExportController implements Command {
         }
 
         return shouldRun;
+    }
+
+    private FeatureWriter createWriter(Query query, IOAdapter ioAdapter) throws WriteException {
+        FeatureWriter writer = ioAdapter.createWriter();
+        return query.getSorting().isPresent() ?
+                SequentialWriter.of(writer) :
+                writer;
     }
 
     protected Query getQuery() throws ExecutionException {

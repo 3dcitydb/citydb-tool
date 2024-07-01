@@ -239,7 +239,7 @@ public class FilterJSONParser {
     private Expression readArrayPredicate(JSONToken op, JSONArray args) throws FilterParseException {
         throw new FilterParseException("Array predicates are not supported.");
     }
-    
+
     private SqlExpression readSqlPredicate(JSONArray args) throws FilterParseException {
         if (args.size() == 1) {
             return SqlExpression.of(readExpression(args.get(0), StringLiteral.class));

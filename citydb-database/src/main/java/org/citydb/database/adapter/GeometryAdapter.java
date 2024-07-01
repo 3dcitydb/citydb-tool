@@ -49,8 +49,11 @@ public abstract class GeometryAdapter {
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
 
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;
+
     public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
+
     public abstract boolean hasImplicitGeometries(Connection connection) throws SQLException;
+
     public abstract SpatialOperationHelper getSpatialOperationHelper();
 
     public Object getGeometry(Geometry<?> geometry) throws GeometryException {
