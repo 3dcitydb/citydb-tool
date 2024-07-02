@@ -24,6 +24,8 @@ package org.citydb.model.feature;
 import org.citydb.model.common.*;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.property.*;
+import org.citydb.model.util.GeometryInfo;
+import org.citydb.model.walker.ModelWalker;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -302,6 +304,34 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
         } else if (property instanceof Attribute attribute) {
             addAttribute(attribute);
         }
+    }
+
+    public GeometryInfo getGeometryInfo() {
+        return getGeometryInfo(false);
+    }
+
+    public GeometryInfo getGeometryInfo(boolean includeNestedFeatures) {
+        GeometryInfo geometryInfo = new GeometryInfo();
+        accept(new ModelWalker() {
+            @Override
+            public void visit(GeometryProperty property) {
+                geometryInfo.add(property);
+            }
+
+            @Override
+            public void visit(ImplicitGeometryProperty property) {
+                geometryInfo.add(property);
+            }
+
+            @Override
+            public void visit(FeatureProperty property) {
+                if (includeNestedFeatures) {
+                    super.visit(property);
+                }
+            }
+        });
+
+        return geometryInfo;
     }
 
     @Override
