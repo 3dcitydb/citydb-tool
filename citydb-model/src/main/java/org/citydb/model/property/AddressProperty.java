@@ -30,8 +30,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class AddressProperty extends Property<AddressProperty> implements InlineOrByReferenceProperty<Address> {
-    private final Address address;
-    private final Reference reference;
+    private Address address;
+    private Reference reference;
 
     private AddressProperty(Name name, Address address) {
         super(name, DataType.ADDRESS_PROPERTY);
@@ -61,8 +61,28 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
     }
 
     @Override
+    public AddressProperty setObject(Address address) {
+        if (address != null) {
+            this.address = asChild(address);
+            reference = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public Optional<Reference> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    @Override
+    public AddressProperty setReference(Reference reference) {
+        if (reference != null) {
+            this.reference = asChild(reference);
+            address = null;
+        }
+
+        return this;
     }
 
     @Override

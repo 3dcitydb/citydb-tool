@@ -30,18 +30,16 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class TextureImageProperty implements InlineOrByReferenceProperty<ExternalFile>, Serializable {
-    private final ExternalFile textureImage;
-    private final Reference reference;
+    private ExternalFile textureImage;
+    private Reference reference;
 
     private TextureImageProperty(ExternalFile textureImage) {
-        Objects.requireNonNull(textureImage, "The texture image must not be null.");
-        this.textureImage = textureImage;
+        this.textureImage = Objects.requireNonNull(textureImage, "The texture image must not be null.");;
         reference = null;
     }
 
     private TextureImageProperty(Reference reference) {
-        Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = reference;
+        this.reference = Objects.requireNonNull(reference, "The reference must not be null.");;
         textureImage = null;
     }
 
@@ -59,7 +57,27 @@ public class TextureImageProperty implements InlineOrByReferenceProperty<Externa
     }
 
     @Override
+    public TextureImageProperty setObject(ExternalFile textureImage) {
+        if (textureImage != null) {
+            this.textureImage = textureImage;
+            reference = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public Optional<Reference> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    @Override
+    public TextureImageProperty setReference(Reference reference) {
+        if (reference != null) {
+            this.reference = reference;
+            textureImage = null;
+        }
+
+        return this;
     }
 }

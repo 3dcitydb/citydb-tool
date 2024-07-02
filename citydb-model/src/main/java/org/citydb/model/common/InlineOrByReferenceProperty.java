@@ -26,5 +26,9 @@ import java.util.Optional;
 public interface InlineOrByReferenceProperty<T extends Referencable> {
     Optional<T> getObject();
 
+    InlineOrByReferenceProperty<T> setObject(T object);
+
     Optional<Reference> getReference();
+
+    InlineOrByReferenceProperty<T> setReference(Reference reference);
 }

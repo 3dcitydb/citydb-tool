@@ -31,8 +31,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class FeatureProperty extends Property<FeatureProperty> implements InlineOrByReferenceProperty<Feature> {
-    private final Feature feature;
-    private final Reference reference;
+    private Feature feature;
+    private Reference reference;
     private RelationType relationType;
 
     private FeatureProperty(Name name, Feature feature, RelationType relationType) {
@@ -79,8 +79,28 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     }
 
     @Override
+    public FeatureProperty setObject(Feature feature) {
+        if (feature != null) {
+            this.feature = asChild(feature);
+            reference = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public Optional<Reference> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    @Override
+    public FeatureProperty setReference(Reference reference) {
+        if (reference != null) {
+            this.reference = asChild(reference);
+            feature = null;
+        }
+
+        return this;
     }
 
     public RelationType getRelationType() {
