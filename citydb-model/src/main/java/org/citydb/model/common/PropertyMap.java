@@ -188,6 +188,12 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
     }
 
+    public boolean remove(T element) {
+        return elements.getOrDefault(element.getName().getNamespace(), Collections.emptyMap())
+                .getOrDefault(element.getName().getLocalName(), Collections.emptyList())
+                .remove(element);
+    }
+
     public List<T> remove(Name name) {
         return elements.getOrDefault(name.getNamespace(), Collections.emptyMap())
                 .remove(name.getLocalName());

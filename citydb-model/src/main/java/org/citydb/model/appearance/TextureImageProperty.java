@@ -34,12 +34,12 @@ public class TextureImageProperty implements InlineOrByReferenceProperty<Externa
     private Reference reference;
 
     private TextureImageProperty(ExternalFile textureImage) {
-        this.textureImage = Objects.requireNonNull(textureImage, "The texture image must not be null.");;
+        this.textureImage = Objects.requireNonNull(textureImage, "The texture image must not be null.");
         reference = null;
     }
 
     private TextureImageProperty(Reference reference) {
-        this.reference = Objects.requireNonNull(reference, "The reference must not be null.");;
+        this.reference = Objects.requireNonNull(reference, "The reference must not be null.");
         textureImage = null;
     }
 
