@@ -28,7 +28,7 @@ import org.citydb.model.common.Name;
 import java.util.Objects;
 
 public class AppearanceProperty extends Property<AppearanceProperty> implements InlineProperty<Appearance> {
-    private final Appearance appearance;
+    private Appearance appearance;
 
     private AppearanceProperty(Name name, Appearance appearance) {
         super(name, DataType.APPEARANCE_PROPERTY);
@@ -43,6 +43,15 @@ public class AppearanceProperty extends Property<AppearanceProperty> implements 
     @Override
     public Appearance getObject() {
         return appearance;
+    }
+
+    @Override
+    public AppearanceProperty setObject(Appearance appearance) {
+        if (appearance != null) {
+            this.appearance = asChild(appearance);
+        }
+
+        return this;
     }
 
     @Override

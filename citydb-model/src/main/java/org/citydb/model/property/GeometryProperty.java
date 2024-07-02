@@ -29,7 +29,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class GeometryProperty extends Property<GeometryProperty> implements InlineProperty<Geometry<?>> {
-    private final Geometry<?> geometry;
+    private Geometry<?> geometry;
     private String lod;
 
     private GeometryProperty(Name name, Geometry<?> geometry) {
@@ -45,6 +45,15 @@ public class GeometryProperty extends Property<GeometryProperty> implements Inli
     @Override
     public Geometry<?> getObject() {
         return geometry;
+    }
+
+    @Override
+    public GeometryProperty setObject(Geometry<?> geometry) {
+        if (geometry != null) {
+            this.geometry = asChild(geometry);
+        }
+
+        return this;
     }
 
     public Optional<String> getLod() {
