@@ -4,8 +4,6 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.util.CommandHelper;
-import org.citydb.cli.util.QueryExecutor;
-import org.citydb.cli.util.QueryResult;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -24,6 +22,9 @@ import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
+import org.citydb.query.executor.QueryExecutor;
+import org.citydb.query.executor.QueryResult;
+import org.citydb.query.util.QueryHelper;
 import org.citydb.web.config.Constants;
 import org.citydb.web.config.WebOptions;
 import org.citydb.web.exception.ServiceException;
@@ -105,14 +106,14 @@ public class FeatureService {
             throw new ServiceException(HttpStatus.NOT_FOUND, "Feature type '" + type + "' is not supported.");
         }
 
-        String query = "select id from " + adapter.getConnectionDetails().getSchema() + ".feature " +
-                "where objectclass_id = " + featureType.getId() + " and termination_date is null";
         Exporter exporter = Exporter.newInstance();
         AtomicBoolean shouldRun = new AtomicBoolean(true);
-        QueryExecutor executor = QueryExecutor.of(adapter);
         FeatureStatistics statistics = new FeatureStatistics(adapter);
         try {
-            try (QueryResult result = executor.executeQuery(query)) {
+            QueryExecutor executor = helper.getQueryExecutor(QueryHelper.getNonTerminatedTopLevelFeatures(),
+                    databaseManager.getAdapter());
+
+            try (QueryResult result = executor.executeQuery()) {
                 exporter.startSession(adapter, new ExportOptions());
                 while (shouldRun.get() && result.hasNext()) {
                     long id = result.getId();

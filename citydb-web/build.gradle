@@ -14,6 +14,7 @@ dependencies {
     implementation project(':citydb-operation')
     implementation project(':citydb-database-postgres')
     implementation project(':citydb-plugin')
+    implementation project(':citydb-query')
     implementation('org.springframework.boot:spring-boot-starter-web') {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'

@@ -8,6 +8,7 @@ module org.citydb.web {
     requires org.citydb.operation;
     requires org.citydb.cli;
     requires org.citydb.database.postgres;
+    requires org.citydb.query;
 
     requires spring.context;
     requires spring.beans;
