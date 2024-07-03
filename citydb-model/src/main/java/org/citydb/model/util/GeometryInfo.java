@@ -31,6 +31,12 @@ public class GeometryInfo {
     private final Map<String, List<GeometryProperty>> geometries = new HashMap<>();
     private final Map<String, List<ImplicitGeometryProperty>> implicitGeometries = new HashMap<>();
 
+    public enum Mode {
+        SKIP_NESTED_FEATURES,
+        INCLUDE_CONTAINED_FEATURES,
+        INCLUDE_ALL_NESTED_FEATURES
+    }
+
     public List<GeometryProperty> getGeometries() {
         return geometries.values().stream()
                 .flatMap(Collection::stream)

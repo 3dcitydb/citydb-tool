@@ -307,10 +307,10 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
     }
 
     public GeometryInfo getGeometryInfo() {
-        return getGeometryInfo(false);
+        return getGeometryInfo(GeometryInfo.Mode.SKIP_NESTED_FEATURES);
     }
 
-    public GeometryInfo getGeometryInfo(boolean includeNestedFeatures) {
+    public GeometryInfo getGeometryInfo(GeometryInfo.Mode mode) {
         GeometryInfo geometryInfo = new GeometryInfo();
         accept(new ModelWalker() {
             @Override
@@ -325,7 +325,11 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
 
             @Override
             public void visit(FeatureProperty property) {
-                if (includeNestedFeatures) {
+                if (mode != null && switch (mode) {
+                    case SKIP_NESTED_FEATURES -> false;
+                    case INCLUDE_CONTAINED_FEATURES -> property.getRelationType() == RelationType.CONTAINS;
+                    case INCLUDE_ALL_NESTED_FEATURES -> true;
+                }) {
                     super.visit(property);
                 }
             }
