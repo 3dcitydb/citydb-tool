@@ -79,9 +79,9 @@ public class SequentialWriter implements FeatureWriter {
 
                     CacheEntry entry;
                     while ((entry = cache.remove(currentId)) != null) {
+                        condition.signal();
                         writer.write(entry.feature).whenComplete(entry.onCompletion);
                         currentId++;
-                        condition.signal();
                     }
                 } else {
                     cache.put(sequenceId, new CacheEntry(feature, onCompletion));
