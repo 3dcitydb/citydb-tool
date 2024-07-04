@@ -173,9 +173,11 @@ public class ExportHelper {
     }
 
     public String getTransformOperator(String column) {
-        return adapter.getGeometryAdapter().getSpatialOperationHelper()
-                .transform(PlainText.of(column), getSRID())
-                .toString();
+        return adapter.getDatabaseMetadata().getSpatialReference().getSRID() == getSRID() ?
+                column :
+                adapter.getGeometryAdapter().getSpatialOperationHelper()
+                        .transform(PlainText.of(column), getSRID())
+                        .toString();
     }
 
     Feature exportFeature(long id, long sequenceId) throws ExportException {
