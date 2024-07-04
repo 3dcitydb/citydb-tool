@@ -19,33 +19,37 @@
  * limitations under the License.
  */
 
-package org.citydb.model.feature;
+package org.citydb.query.limit;
 
-import org.citydb.model.common.DatabaseDescriptor;
+import java.util.Optional;
 
-public class FeatureDescriptor extends DatabaseDescriptor {
-    private final int objectClassId;
-    private long sequenceId;
+public class CountLimit {
+    private Long limit;
+    private Long startIndex;
 
-    private FeatureDescriptor(long id, int objectClassId) {
-        super(id);
-        this.objectClassId = objectClassId;
+    public Optional<Long> getLimit() {
+        return Optional.ofNullable(limit);
     }
 
-    public static FeatureDescriptor of(long id, int objectClassId) {
-        return new FeatureDescriptor(id, objectClassId);
-    }
-
-    public int getObjectClassId() {
-        return objectClassId;
-    }
-
-    public long getSequenceId() {
-        return sequenceId;
-    }
-
-    public FeatureDescriptor setSequenceId(long sequenceId) {
-        this.sequenceId = sequenceId;
+    public CountLimit setLimit(Long limit) {
+        this.limit = limit != null && limit >= 0 ? limit : null;
         return this;
+    }
+
+    public CountLimit setLimit(int count) {
+        return setLimit((long) count);
+    }
+
+    public Optional<Long> getStartIndex() {
+        return Optional.ofNullable(startIndex);
+    }
+
+    public CountLimit setStartIndex(Long startIndex) {
+        this.startIndex = startIndex != null && startIndex >= 0 ? startIndex : null;
+        return this;
+    }
+
+    public CountLimit setStartIndex(int startIndex) {
+        return setStartIndex((long) startIndex);
     }
 }

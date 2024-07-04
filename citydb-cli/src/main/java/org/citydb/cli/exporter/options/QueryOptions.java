@@ -21,6 +21,7 @@
 
 package org.citydb.cli.exporter.options;
 
+import org.citydb.cli.common.CountLimitOptions;
 import org.citydb.cli.common.FilterOptions;
 import org.citydb.cli.common.Option;
 import org.citydb.cli.common.TypeNameOption;
@@ -35,6 +36,12 @@ public class QueryOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
     private FilterOptions filterOptions;
 
+    @CommandLine.ArgGroup(exclusive = false)
+    private SortingOption sortingOption;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private CountLimitOptions countLimitOptions;
+
     public Query getQuery() throws FilterParseException {
         Query query = new Query();
         if (typeNameOption != null) {
@@ -46,6 +53,21 @@ public class QueryOptions implements Option {
             query.setFilterSrs(filterOptions.getFilterCrs());
         }
 
+        if (sortingOption != null) {
+            query.setSorting(sortingOption.getSorting());
+        }
+
+        if (countLimitOptions != null) {
+            query.setCountLimit(countLimitOptions.getCountLimit());
+        }
+
         return query;
+    }
+
+    @Override
+    public void preprocess(CommandLine commandLine) throws Exception {
+        if (countLimitOptions != null) {
+            countLimitOptions.preprocess(commandLine);
+        }
     }
 }
