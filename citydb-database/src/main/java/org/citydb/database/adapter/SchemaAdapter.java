@@ -28,6 +28,7 @@ import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SqlHelper;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.util.PlainText;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
@@ -50,6 +51,8 @@ public abstract class SchemaAdapter {
     public abstract int getMaximumNumberOfItemsForInOperator();
 
     public abstract String getFeatureHierarchyQuery();
+
+    public abstract String getFeatureHierarchyQuery(int targetSRID);
 
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
 
@@ -83,5 +86,11 @@ public abstract class SchemaAdapter {
 
     public IndexHelper getIndexHelper() {
         return indexHelper;
+    }
+
+    public String getTransformOperator(String column, int targetSRID) {
+        return adapter.getGeometryAdapter().getSpatialOperationHelper()
+                .transform(PlainText.of(column), targetSRID)
+                .toString();
     }
 }

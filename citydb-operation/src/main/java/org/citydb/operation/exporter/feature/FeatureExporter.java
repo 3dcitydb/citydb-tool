@@ -28,7 +28,6 @@ import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;
 import org.citydb.operation.exporter.hierarchy.HierarchyBuilder;
-import org.citydb.sqlbuilder.util.PlainText;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -42,11 +41,9 @@ public class FeatureExporter extends DatabaseExporter {
     }
 
     private String getQuery() {
-        return PlainText.of(adapter.getSchemaAdapter().getFeatureHierarchyQuery(),
-                        PlainText.of(helper.getTransformOperator("F.ENVELOPE")),
-                        PlainText.of(helper.getTransformOperator("G.GEOMETRY")),
-                        PlainText.of(helper.getTransformOperator("A.MULTI_POINT"))
-                ).toString();
+        return adapter.getDatabaseMetadata().getSpatialReference().getSRID() == helper.getSRID() ?
+                adapter.getSchemaAdapter().getFeatureHierarchyQuery() :
+                adapter.getSchemaAdapter().getFeatureHierarchyQuery(helper.getSRID());
     }
 
     public Feature doExport(long id) throws ExportException, SQLException {
