@@ -31,6 +31,7 @@ import org.citydb.core.file.output.RegularOutputFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 @SerializableConfig(name = "exportOptions")
 public class ExportOptions {
@@ -84,8 +85,8 @@ public class ExportOptions {
         return this;
     }
 
-    public SrsReference getTargetSrs() {
-        return targetSrs;
+    public Optional<SrsReference> getTargetSrs() {
+        return Optional.ofNullable(targetSrs);
     }
 
     public ExportOptions setTargetSrs(SrsReference targetSrs) {

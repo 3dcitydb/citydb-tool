@@ -67,7 +67,7 @@ public class ExportHelper {
         postprocessor = new Postprocessor();
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
-        spatialReference = adapter.getGeometryAdapter().getSpatialReference(options.getTargetSrs());
+        spatialReference = adapter.getGeometryAdapter().getSpatialReference(options.getTargetSrs().orElse(null));
     }
 
     public DatabaseAdapter getAdapter() {
