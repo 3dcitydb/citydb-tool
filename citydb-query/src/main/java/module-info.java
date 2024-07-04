@@ -20,5 +20,7 @@ module org.citydb.query {
     exports org.citydb.query.filter.function;
     exports org.citydb.query.filter.literal;
     exports org.citydb.query.filter.operation;
+    exports org.citydb.query.limit;
+    exports org.citydb.query.sorting;
     exports org.citydb.query.util;
 }

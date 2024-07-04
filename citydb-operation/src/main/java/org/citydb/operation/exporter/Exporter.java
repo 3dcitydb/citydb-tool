@@ -99,7 +99,11 @@ public class Exporter {
     }
 
     public CompletableFuture<Feature> exportFeature(long id) {
-        return doExport(() -> contexts.get().exportFeature(id));
+        return exportFeature(id, 0);
+    }
+
+    public CompletableFuture<Feature> exportFeature(long id, long sequenceId) {
+        return doExport(() -> contexts.get().exportFeature(id, sequenceId));
     }
 
     public CompletableFuture<ImplicitGeometry> exportImplicitGeometry(long id) {

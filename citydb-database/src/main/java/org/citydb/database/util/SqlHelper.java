@@ -125,7 +125,7 @@ public class SqlHelper {
             } else if (value instanceof Timestamp timestamp) {
                 return "'" + timestamp.toInstant()
                         .atOffset(ZoneOffset.UTC)
-                        .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)+ "'";
+                        .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "'";
             } else if (value instanceof Geometry<?> geometry) {
                 return toSql(geometry);
             } else if (value instanceof Envelope envelope) {

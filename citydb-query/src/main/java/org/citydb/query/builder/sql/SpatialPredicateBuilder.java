@@ -153,8 +153,8 @@ public class SpatialPredicateBuilder {
 
             Placeholder distance = Placeholder.of(getDistance(dWithin.getDistance()));
             return BuildResult.of(negate ?
-                    helper.getSpatialOperationHelper().beyond(leftExpression, rightExpression, distance) :
-                    helper.getSpatialOperationHelper().dWithin(leftExpression, rightExpression, distance),
+                            helper.getSpatialOperationHelper().beyond(leftExpression, rightExpression, distance) :
+                            helper.getSpatialOperationHelper().dWithin(leftExpression, rightExpression, distance),
                     leftOperand, rightOperand);
         } else {
             throw new QueryBuildException("Failed to build spatial distance predicate.");

@@ -171,9 +171,10 @@ public class ExportHelper {
         return builder.toString();
     }
 
-    Feature exportFeature(long id) throws ExportException {
+    Feature exportFeature(long id, long sequenceId) throws ExportException {
         try {
             Feature feature = tableHelper.getOrCreateExporter(FeatureExporter.class).doExport(id);
+            feature.getDescriptor().ifPresent(descriptor -> descriptor.setSequenceId(sequenceId));
             postprocessor.process(feature);
             return feature;
         } catch (Exception e) {
