@@ -22,6 +22,7 @@
 package org.citydb.database.adapter;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.config.common.SrsReference;
 import org.citydb.database.geometry.*;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.util.SpatialOperationHelper;
@@ -106,5 +107,17 @@ public abstract class GeometryAdapter {
 
             throw new SQLException("The SRID " + srid + " is not supported by the database.");
         }
+    }
+
+    public SpatialReference getSpatialReference(SrsReference reference) throws SrsParseException, SQLException {
+        if (reference != null) {
+            if (reference.getSRID().isPresent()) {
+                return getSpatialReference(reference.getSRID().get(), reference.getIdentifier().orElse(null));
+            } else if (reference.getIdentifier().isPresent()) {
+                return getSpatialReference(reference.getIdentifier().get());
+            }
+        }
+
+        return adapter.getDatabaseMetadata().getSpatialReference();
     }
 }

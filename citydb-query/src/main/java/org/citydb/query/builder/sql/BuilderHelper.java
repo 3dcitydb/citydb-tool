@@ -162,21 +162,8 @@ public class BuilderHelper {
         return getSchemaMapping().getNamespaceByURI(namespace).getId();
     }
 
-    SpatialReference getSpatialReference(SrsReference reference) throws QueryBuildException {
-        if (reference != null) {
-            try {
-                if (reference.getSRID().isPresent()) {
-                    return adapter.getGeometryAdapter().getSpatialReference(
-                            reference.getSRID().get(), reference.getIdentifier().orElse(null));
-                } else if (reference.getIdentifier().isPresent()) {
-                    return adapter.getGeometryAdapter().getSpatialReference(reference.getIdentifier().get());
-                }
-            } catch (SrsParseException | SQLException e) {
-                throw new QueryBuildException("The requested filter SRS is not supported.", e);
-            }
-        }
-
-        return adapter.getDatabaseMetadata().getSpatialReference();
+    SpatialReference getSpatialReference(SrsReference reference) throws SrsParseException, SQLException {
+        return adapter.getGeometryAdapter().getSpatialReference(reference);
     }
 
     SpatialObject getSpatialLiteral(GeometryExpression expression) {

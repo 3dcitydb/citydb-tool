@@ -22,6 +22,7 @@
 package org.citydb.query.builder.sql;
 
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.geometry.SrsParseException;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.query.Query;
@@ -29,6 +30,7 @@ import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.Filter;
 import org.citydb.sqlbuilder.query.Select;
 
+import java.sql.SQLException;
 import java.util.Set;
 
 public class SqlQueryBuilder {
@@ -55,8 +57,12 @@ public class SqlQueryBuilder {
 
         Filter filter = query.getFilter().orElse(null);
         if (filter != null) {
-            SpatialReference filterSrs = helper.getSpatialReference(query.getFilterSrs().orElse(null));
-            helper.getFilterBuilder().build(filter, filterSrs, select, context);
+            try {
+                SpatialReference filterSrs = helper.getSpatialReference(query.getFilterSrs().orElse(null));
+                helper.getFilterBuilder().build(filter, filterSrs, select, context);
+            } catch (SrsParseException | SQLException e) {
+                throw new QueryBuildException("The requested filter SRS is not supported.", e);
+            }
         }
 
         if (!select.getJoins().isEmpty()) {
