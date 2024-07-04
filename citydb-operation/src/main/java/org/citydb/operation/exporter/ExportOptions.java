@@ -23,6 +23,7 @@ package org.citydb.operation.exporter;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.common.SrsReference;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
@@ -41,6 +42,7 @@ public class ExportOptions {
     private OutputFile outputFile;
     private int numberOfThreads;
     private int numberOfTextureBuckets;
+    private SrsReference targetSrs;
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -79,6 +81,15 @@ public class ExportOptions {
 
     public ExportOptions setNumberOfTextureBuckets(int numberOfTextureBuckets) {
         this.numberOfTextureBuckets = numberOfTextureBuckets;
+        return this;
+    }
+
+    public SrsReference getTargetSrs() {
+        return targetSrs;
+    }
+
+    public ExportOptions setTargetSrs(SrsReference targetSrs) {
+        this.targetSrs = targetSrs;
         return this;
     }
 }

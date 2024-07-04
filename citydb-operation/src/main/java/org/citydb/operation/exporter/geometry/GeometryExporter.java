@@ -37,8 +37,8 @@ public class GeometryExporter extends DatabaseExporter {
 
     public GeometryExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        stmt = helper.getConnection().prepareStatement("select geometry, implicit_geometry, " +
-                "geometry_properties, feature_id as geometry_feature_id " +
+        stmt = helper.getConnection().prepareStatement("select " + helper.getTransformOperator("geometry") +
+                ", implicit_geometry, geometry_properties, feature_id as geometry_feature_id " +
                 "from " + tableHelper.getPrefixedTableName(Table.GEOMETRY_DATA) +
                 " where id = ?");
     }

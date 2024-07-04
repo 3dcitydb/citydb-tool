@@ -42,6 +42,9 @@ public class FeatureExporter extends DatabaseExporter {
 
     public Feature doExport(long id) throws ExportException, SQLException {
         stmt.setLong(1, id);
+        stmt.setInt(2, helper.getSRID());
+        stmt.setInt(3, helper.getSRID());
+        stmt.setInt(4, helper.getSRID());
         try (ResultSet rs = stmt.executeQuery()) {
             return HierarchyBuilder.newInstance(id, helper)
                     .initialize(rs)
