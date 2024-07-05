@@ -44,60 +44,87 @@ public class FeatureService {
     private final DatabaseManager databaseManager = DatabaseController.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();
 
+    public Object getFeatureCollection(Query query, ExportOptions exportOptions, String contentType) throws ServiceException {
+        Object result;
 
-    public Path getFeatureCollectionCityGML(Query query, ExportOptions exportOptions, String contentType) throws ServiceException {
+        if (Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE)) {
+            result = getCityGML(query, exportOptions, false);
+        } else if (Objects.equals(contentType, Constants.CITYJSON_MEDIA_TYPE)) {
+            result = getCityGML(query, exportOptions, true);
+        } else {
+            result = getGeoJSON(query, exportOptions);
+        }
+
+        return result;
+    }
+
+    public Path getCityGML(Query query, ExportOptions exportOptions, boolean cityJson) throws ServiceException {
         try {
             IOAdapterManager ioManager = helper.createIOAdapterManager();
-            if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
-                ioManager.register(new CityGMLAdapter());
-            }
-            if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
-                ioManager.register(new CityJSONAdapter());
-            }
-            IOAdapter ioAdapter = Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE) ?
-                    ioManager.getAdapter(CityGMLAdapter.class) :
-                    ioManager.getAdapter(CityJSONAdapter.class);
+            IOAdapter ioAdapter;
 
-            String fileExtension = Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE) ? ".gml" : ".json";
+            if (cityJson) {
+                if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
+                    ioManager.register(new CityJSONAdapter());
+                }
+                ioAdapter = ioManager.getAdapter(CityJSONAdapter.class);
+            } else {
+                if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
+                    ioManager.register(new CityJSONAdapter());
+                }
+                ioAdapter = ioManager.getAdapter(CityGMLAdapter.class);
+            }
+
             OutputFileBuilder builder = OutputFileBuilder.newInstance()
                     .defaultFileExtension(ioManager.getFileExtensions(ioAdapter).stream()
                             .findFirst()
                             .orElse(null));
-            Path dataPath = Files.createTempDirectory("citydb-").resolve("data" + fileExtension);
+
+            FeatureStatistics statistics = null;
             try (FeatureWriter writer = ioAdapter.createWriter();
-                 OutputFile outputFile = builder.newOutputFile(dataPath)) {
+                 OutputFile outputFile = builder.newOutputFile(Files.createTempDirectory("citydb-").resolve("data"))) {
                 logger.info("Exporting to " + ioManager.getFileFormat(ioAdapter) + " file " + outputFile.getFile() + ".");
                 writer.initialize(outputFile, new WriteOptions());
-                doExport(query, exportOptions, writer);
+                statistics = doExport(query, exportOptions, writer);
+                return outputFile.getFile();
+            } finally {
+                if (statistics != null && !statistics.isEmpty()) {
+                    logger.info("Export summary:");
+                    statistics.logFeatureSummary(Level.INFO);
+                } else {
+                    logger.info("No features exported.");
+                }
             }
-
-            return dataPath;
         } catch (IOException | WriteException | ExecutionException | IOAdapterException e) {
             throw new ServiceException("Failed to write CityGML data to file.", e);
         }
     }
 
-    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(Query query, ExportOptions exportOptions) throws ServiceException {
+    public FeatureCollectionGeoJSON getGeoJSON(Query query, ExportOptions exportOptions) throws ServiceException {
         GeoJSONWriter geoJSONWriter = new GeoJSONWriter();
         doExport(query, exportOptions, geoJSONWriter);
         return geoJSONWriter.getFeatureCollectionGeoJSON();
     }
 
-    private void doExport(Query query, ExportOptions exportOptions, FeatureWriter writer) throws ServiceException {
+    private FeatureStatistics doExport(Query query, ExportOptions exportOptions, FeatureWriter writer) throws ServiceException {
         DatabaseAdapter adapter = databaseManager.getAdapter();
         Exporter exporter = Exporter.newInstance();
         AtomicBoolean shouldRun = new AtomicBoolean(true);
         FeatureStatistics statistics = new FeatureStatistics(adapter);
+
         try {
             QueryExecutor executor = helper.getQueryExecutor(query, databaseManager.getAdapter());
+            logger.info("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
+                    databaseManager.getAdapter()));
+            long sequenceId = 1;
             try (QueryResult result = executor.executeQuery()) {
                 exporter.startSession(adapter, exportOptions);
                 while (shouldRun.get() && result.hasNext()) {
                     long id = result.getId();
-                    exporter.exportFeature(id).whenComplete((feature, t) -> {
+                    exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
                         if (feature != null) {
                             try {
-                                writer.write(feature).whenComplete((success, e) -> {
+                                writer.write(feature, (success, e) -> {
                                     if (success == Boolean.TRUE) {
                                         statistics.add(feature);
                                     } else {
@@ -114,18 +141,14 @@ public class FeatureService {
                 }
             } finally {
                 exporter.closeSession();
-                if (!statistics.isEmpty()) {
-                    logger.info("Export summary:");
-                    statistics.logFeatureSummary(Level.INFO);
-                } else {
-                    logger.info("No features exported.");
-                }
             }
         } catch (SQLException | ExportException e) {
             throw new ServiceException("Failed to export feature collection from database", e);
         } catch (Throwable e) {
             throw new ServiceException("A fatal error has occurred during while creating the feature collection", e);
         }
+
+        return statistics;
     }
 
     private void abort(AtomicBoolean shouldRun, long id, Throwable e) {

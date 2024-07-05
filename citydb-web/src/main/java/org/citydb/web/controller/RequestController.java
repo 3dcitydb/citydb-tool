@@ -22,17 +22,13 @@ import org.citydb.web.service.CollectionService;
 import org.citydb.web.service.FeatureService;
 import org.citydb.web.service.PageService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
 
 @RestController
 @RequestMapping(value = Constants.SERVICE_CONTEXT_PATH)
@@ -134,22 +130,15 @@ public class RequestController {
             }
 
             String contentType = request.getHeader("accept");
-            if (Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE)
-                    || Objects.equals(contentType, Constants.CITYJSON_MEDIA_TYPE)) {
-                Path filePath = featureService.getFeatureCollectionCityGML(query, exportOptions, contentType);
-                File file = filePath.toFile();
-                FileInputStream fileInputStream = new FileInputStream(file);
-                return ResponseEntity.ok()
-                        .contentLength(file.length())
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                        .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
-                        .body(new InputStreamResource(fileInputStream));
-            } else {
-                return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(query, exportOptions), HttpStatus.OK);
+            Object result = featureService.getFeatureCollection(query, exportOptions, contentType);
+            if (result instanceof Path path) {
+                result = Files.readString(path);
             }
+
+            return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (ServiceException e) {
             return new ResponseEntity<>(Exception.of(e), e.getHttpStatus());
-        } catch (FileNotFoundException | FilterParseException e) {
+        } catch (FilterParseException | IOException e) {
             return new ResponseEntity<>(Exception.of(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
