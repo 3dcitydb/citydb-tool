@@ -9,9 +9,17 @@ import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.query.Query;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
+import org.citydb.query.filter.operation.SqlExpression;
 import org.citydb.query.limit.CountLimit;
+import org.citydb.sqlbuilder.join.Join;
+import org.citydb.sqlbuilder.join.Joins;
+import org.citydb.sqlbuilder.literal.StringLiteral;
+import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.web.config.Constants;
 import org.citydb.web.config.WebOptions;
+import org.citydb.web.config.feature.FeatureType;
 import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
@@ -121,10 +129,36 @@ public class RequestController {
             }
 
             Query query = new Query();
-            query.addFeatureType(webOptions.getFeatureTypes().get(collectionId).getName());
-            if (filter != null) {
-                query.setFilter(Filter.ofText(filter));
+
+            FeatureType featureType = webOptions.getFeatureTypes().get(collectionId);
+            if (featureType != null) {
+                query.addFeatureType(featureType.getName(), featureType.getNamespace());
+                if (filter != null) {
+                    query.setFilter(Filter.ofText(filter));
+                }
+            } else {
+                Table featureTable = Table.of("feature");
+                Table propertyTable = Table.of("property");
+                Table parentFeatureTable = Table.of("feature");
+                Select select = Select.newInstance()
+                        .select(featureTable.columns("id"))
+                        .from(featureTable)
+                        .join(Join.of(Joins.INNER_JOIN,
+                                propertyTable,
+                                "val_feature_id",
+                                Operators.EQUAL_TO,
+                                featureTable.column("id")))
+                        .join(Join.of(Joins.INNER_JOIN,
+                                parentFeatureTable,
+                                "id",
+                                Operators.EQUAL_TO,
+                                propertyTable.column("feature_id")))
+                        .where(Operators.eq(
+                                parentFeatureTable.column("objectid"),
+                                StringLiteral.of(collectionId)));
+                query.setFilter(Filter.of(SqlExpression.of(select.toSql())));
             }
+
             if (limit != null) {
                 query.setCountLimit(new CountLimit().setLimit(limit));
             }
