@@ -4,7 +4,14 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import org.citydb.config.common.SrsReference;
+import org.citydb.operation.exporter.ExportOptions;
+import org.citydb.query.Query;
+import org.citydb.query.filter.Filter;
+import org.citydb.query.filter.encoding.FilterParseException;
+import org.citydb.query.limit.CountLimit;
 import org.citydb.web.config.Constants;
+import org.citydb.web.config.WebOptions;
 import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.Collection;
 import org.citydb.web.schema.Collections;
@@ -19,10 +26,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,6 +40,7 @@ public class RequestController {
     private PageService pageService;
     private FeatureService featureService;
     private CollectionService collectionService;
+    private WebOptions webOptions;
 
     @Autowired
     public void setPageService(PageService service) {
@@ -51,6 +56,12 @@ public class RequestController {
     public void setCollectionService(CollectionService service) {
         this.collectionService = service;
     }
+
+    @Autowired
+    public void setWebOptions(WebOptions webOptions) {
+        this.webOptions = webOptions;
+    }
+
 
     @GetMapping("")
     @ApiResponse(responseCode = "200", description = "${api.response.landingPage.200.description}",
@@ -101,12 +112,31 @@ public class RequestController {
     @ApiResponse(responseCode = "500", description = "Internal Server Error",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Exception.class)))
     @GetMapping("/collections/{collectionId}/items")
-    public ResponseEntity<Object> getCollectionFeatures(HttpServletRequest request, @PathVariable("collectionId") String collectionId) {
+    public ResponseEntity<Object> getCollectionFeatures(
+            HttpServletRequest request,
+            @PathVariable("collectionId") String collectionId,
+            @RequestParam(value = "crs", required = false) String crs,
+            @RequestParam(value = "filter", required = false) String filter,
+            @RequestParam(value = "limit", required = false) Integer limit) {
         try {
+            ExportOptions exportOptions = new ExportOptions();
+            if (crs != null) {
+                exportOptions.setTargetSrs(new SrsReference().setIdentifier(crs));
+            }
+
+            Query query = new Query();
+            query.addFeatureType(webOptions.getFeatureTypes().get(collectionId).getName());
+            if (filter != null) {
+                query.setFilter(Filter.ofText(filter));
+            }
+            if (limit != null) {
+                query.setCountLimit(new CountLimit().setLimit(limit));
+            }
+
             String contentType = request.getHeader("accept");
             if (Objects.equals(contentType, Constants.CITYGML_MEDIA_TYPE)
                     || Objects.equals(contentType, Constants.CITYJSON_MEDIA_TYPE)) {
-                Path filePath = featureService.getFeatureCollectionCityGML(collectionId, contentType);
+                Path filePath = featureService.getFeatureCollectionCityGML(query, exportOptions, contentType);
                 File file = filePath.toFile();
                 FileInputStream fileInputStream = new FileInputStream(file);
                 return ResponseEntity.ok()
@@ -115,11 +145,11 @@ public class RequestController {
                         .header("Content-Disposition", "attachment; filename=\"" + file.getName() + "\"")
                         .body(new InputStreamResource(fileInputStream));
             } else {
-                return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(collectionId), HttpStatus.OK);
+                return new ResponseEntity<>(featureService.getFeatureCollectionGeoJSON(query, exportOptions), HttpStatus.OK);
             }
         } catch (ServiceException e) {
             return new ResponseEntity<>(Exception.of(e), e.getHttpStatus());
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException | FilterParseException e) {
             return new ResponseEntity<>(Exception.of(e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

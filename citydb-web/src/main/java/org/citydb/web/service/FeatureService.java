@@ -7,7 +7,6 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.schema.FeatureType;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
@@ -22,17 +21,14 @@ import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
+import org.citydb.query.Query;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
-import org.citydb.query.util.QueryHelper;
 import org.citydb.web.config.Constants;
-import org.citydb.web.config.WebOptions;
 import org.citydb.web.exception.ServiceException;
 import org.citydb.web.schema.geojson.FeatureCollectionGeoJSON;
 import org.citydb.web.util.DatabaseController;
 import org.citydb.web.util.GeoJSONWriter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -47,14 +43,9 @@ public class FeatureService {
     private final Logger logger = LoggerManager.getInstance().getLogger(FeatureService.class);
     private final DatabaseManager databaseManager = DatabaseController.getInstance().getDatabaseManager();
     private final CommandHelper helper = CommandHelper.newInstance();
-    private final WebOptions webOptions;
 
-    @Autowired
-    public FeatureService(WebOptions webOptions) {
-        this.webOptions = webOptions;
-    }
 
-    public Path getFeatureCollectionCityGML(String id, String contentType) throws ServiceException {
+    public Path getFeatureCollectionCityGML(Query query, ExportOptions exportOptions, String contentType) throws ServiceException {
         try {
             IOAdapterManager ioManager = helper.createIOAdapterManager();
             if (ioManager.getAdapter(CityGMLAdapter.class) == null) {
@@ -77,7 +68,7 @@ public class FeatureService {
                  OutputFile outputFile = builder.newOutputFile(dataPath)) {
                 logger.info("Exporting to " + ioManager.getFileFormat(ioAdapter) + " file " + outputFile.getFile() + ".");
                 writer.initialize(outputFile, new WriteOptions());
-                doExport(id, writer);
+                doExport(query, exportOptions, writer);
             }
 
             return dataPath;
@@ -86,35 +77,21 @@ public class FeatureService {
         }
     }
 
-    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(String id) throws ServiceException {
+    public FeatureCollectionGeoJSON getFeatureCollectionGeoJSON(Query query, ExportOptions exportOptions) throws ServiceException {
         GeoJSONWriter geoJSONWriter = new GeoJSONWriter();
-        doExport(id, geoJSONWriter);
+        doExport(query, exportOptions, geoJSONWriter);
         return geoJSONWriter.getFeatureCollectionGeoJSON();
     }
 
-    private void doExport(String type, FeatureWriter writer) throws ServiceException {
-        org.citydb.web.config.feature.FeatureType configFeatureType = webOptions.getFeatureTypes().get(type);
-        if (configFeatureType == null) {
-            throw new ServiceException(HttpStatus.NOT_FOUND, "Feature type '" + type + "' is not advertised.");
-        }
-
+    private void doExport(Query query, ExportOptions exportOptions, FeatureWriter writer) throws ServiceException {
         DatabaseAdapter adapter = databaseManager.getAdapter();
-
-        FeatureType featureType = adapter.getSchemaAdapter().getSchemaMapping()
-                .getFeatureType(configFeatureType.getName(), configFeatureType.getNamespace());
-        if (featureType == null) {
-            throw new ServiceException(HttpStatus.NOT_FOUND, "Feature type '" + type + "' is not supported.");
-        }
-
         Exporter exporter = Exporter.newInstance();
         AtomicBoolean shouldRun = new AtomicBoolean(true);
         FeatureStatistics statistics = new FeatureStatistics(adapter);
         try {
-            QueryExecutor executor = helper.getQueryExecutor(QueryHelper.getNonTerminatedTopLevelFeatures(),
-                    databaseManager.getAdapter());
-
+            QueryExecutor executor = helper.getQueryExecutor(query, databaseManager.getAdapter());
             try (QueryResult result = executor.executeQuery()) {
-                exporter.startSession(adapter, new ExportOptions());
+                exporter.startSession(adapter, exportOptions);
                 while (shouldRun.get() && result.hasNext()) {
                     long id = result.getId();
                     exporter.exportFeature(id).whenComplete((feature, t) -> {
