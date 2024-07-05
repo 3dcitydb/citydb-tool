@@ -5,6 +5,6 @@ dependencies {
     api "org.citygml4j:citygml4j-xml:$citygml4j_version"
     api "org.citygml4j:citygml4j-cityjson:$citygml4j_version"
     implementation project(':citydb-io')
-    runtimeOnly 'com.fasterxml.woodstox:woodstox-core:6.6.2'
+    runtimeOnly 'com.fasterxml.woodstox:woodstox-core:7.0.0'
     annotationProcessor "org.citygml4j:citygml4j-xml:$citygml4j_version"
 }

@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     api project(':citydb-plugin')
-    api 'info.picocli:picocli:4.7.5'
+    api 'info.picocli:picocli:4.7.6'
     implementation project(':citydb-config')
     implementation project(':citydb-io')
     implementation project(':citydb-io-citygml')
