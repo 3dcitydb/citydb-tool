@@ -37,7 +37,13 @@ public class FeatureExporter extends DatabaseExporter {
 
     public FeatureExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        stmt = helper.getConnection().prepareStatement(adapter.getSchemaAdapter().getFeatureHierarchyQuery());
+        stmt = helper.getConnection().prepareStatement(getQuery());
+    }
+
+    private String getQuery() {
+        return adapter.getDatabaseMetadata().getSpatialReference().getSRID() == helper.getSRID() ?
+                adapter.getSchemaAdapter().getFeatureHierarchyQuery() :
+                adapter.getSchemaAdapter().getFeatureHierarchyQuery(helper.getSRID());
     }
 
     public Feature doExport(long id) throws ExportException, SQLException {

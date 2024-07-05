@@ -73,7 +73,22 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public String getFeatureHierarchyQuery() {
         try {
-            return featureHierarchyQuery.get();
+            return PlainText.of(featureHierarchyQuery.get(),
+                    "F.ENVELOPE",
+                    "G.GEOMETRY",
+                    "A.MULTI_POINT").toString();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to create feature hierarchy query.", e);
+        }
+    }
+
+    @Override
+    public String getFeatureHierarchyQuery(int targetSRID) {
+        try {
+            return PlainText.of(featureHierarchyQuery.get(),
+                    "st_transform(F.ENVELOPE, " + targetSRID + ")",
+                    "st_transform(G.GEOMETRY, " + targetSRID + ")",
+                    "st_transform(A.MULTI_POINT, " + targetSRID + ")").toString();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create feature hierarchy query.", e);
         }
@@ -155,7 +170,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         }
     }
 
-    public String readRecursiveImplicitGeometryQuery() throws IOException {
+    private String readRecursiveImplicitGeometryQuery() throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
                 SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_recursive_implicit_geometry.sql"))))) {
             return reader.lines()

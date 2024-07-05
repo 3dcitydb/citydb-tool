@@ -22,6 +22,8 @@
 package org.citydb.operation.exporter;
 
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.geometry.SrsParseException;
+import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
@@ -34,6 +36,7 @@ import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.util.Postprocessor;
 import org.citydb.operation.exporter.util.SurfaceDataMapper;
 import org.citydb.operation.exporter.util.TableHelper;
+import org.citydb.sqlbuilder.util.PlainText;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -49,15 +52,14 @@ public class ExportHelper {
     private final Postprocessor postprocessor;
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
-    private final int srid;
-    private final String srsIdentifier;
+    private final SpatialReference spatialReference;
     private final Set<String> featureIdCache = new HashSet<>();
     private final Set<String> surfaceDataIdCache = new HashSet<>();
     private final Set<String> implicitGeometryIdCache = new HashSet<>();
     private final Set<String> addressIdCache = new HashSet<>();
     private final Set<String> externalFileIdCache = new HashSet<>();
 
-    ExportHelper(DatabaseAdapter adapter, ExportOptions options) throws SQLException {
+    ExportHelper(DatabaseAdapter adapter, ExportOptions options) throws SQLException, SrsParseException {
         this.adapter = adapter;
         this.options = options;
 
@@ -65,8 +67,7 @@ public class ExportHelper {
         postprocessor = new Postprocessor();
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
-        srid = adapter.getDatabaseMetadata().getSpatialReference().getSRID();
-        srsIdentifier = adapter.getDatabaseMetadata().getSpatialReference().getIdentifier();
+        spatialReference = adapter.getGeometryAdapter().getSpatialReference(options.getTargetSrs().orElse(null));
     }
 
     public DatabaseAdapter getAdapter() {
@@ -94,11 +95,11 @@ public class ExportHelper {
     }
 
     public int getSRID() {
-        return srid;
+        return spatialReference.getSRID();
     }
 
     public String getSrsIdentifier() {
-        return srsIdentifier;
+        return spatialReference.getIdentifier();
     }
 
     public String createId() {
@@ -169,6 +170,14 @@ public class ExportHelper {
         }
 
         return builder.toString();
+    }
+
+    public String getTransformOperator(String column) {
+        return adapter.getDatabaseMetadata().getSpatialReference().getSRID() == getSRID() ?
+                column :
+                adapter.getGeometryAdapter().getSpatialOperationHelper()
+                        .transform(PlainText.of(column), getSRID())
+                        .toString();
     }
 
     Feature exportFeature(long id, long sequenceId) throws ExportException {

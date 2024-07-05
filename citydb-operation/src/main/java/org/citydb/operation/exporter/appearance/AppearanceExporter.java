@@ -57,7 +57,7 @@ public class AppearanceExporter extends DatabaseExporter {
                 "sd.x3d_shininess, sd.x3d_transparency, sd.x3d_ambient_intensity, sd.x3d_specular_color, " +
                 "sd.x3d_diffuse_color, sd.x3d_emissive_color, sd.x3d_is_smooth, sd.tex_image_id, " +
                 "sd.tex_texture_type, sd.tex_wrap_mode, sd.tex_border_color, sd.gt_orientation, " +
-                "sd.gt_reference_point, ti.image_uri, ti.mime_type, ti.mime_type_codespace, " +
+                helper.getTransformOperator("sd.gt_reference_point") + ", ti.image_uri, ti.mime_type, ti.mime_type_codespace, " +
                 "sdm.geometry_data_id, sdm.material_mapping, sdm.texture_mapping, sdm.world_to_texture_mapping, " +
                 "sdm.georeferenced_texture_mapping " +
                 "from " + tableHelper.getPrefixedTableName(Table.APPEARANCE) + " a " +
