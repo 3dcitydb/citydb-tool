@@ -28,7 +28,6 @@ import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Surface;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ParameterizedTexture extends Texture<ParameterizedTexture> {
     private Map<LinearRing, List<TextureCoordinate>> textureCoordinates;
@@ -105,7 +104,7 @@ public class ParameterizedTexture extends Texture<ParameterizedTexture> {
                     .map(linearRing -> linearRing.getParent().orElse(null))
                     .filter(Objects::nonNull)
                     .map(surface -> (Surface<?>) surface)
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         if (hasWorldToTextureMappings()) {

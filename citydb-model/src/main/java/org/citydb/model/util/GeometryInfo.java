@@ -37,18 +37,18 @@ public class GeometryInfo {
         INCLUDE_ALL_NESTED_FEATURES
     }
 
+    public boolean hasGeometries() {
+        return !geometries.isEmpty();
+    }
+
     public List<GeometryProperty> getGeometries() {
         return geometries.values().stream()
                 .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<GeometryProperty> getGeometries(String lod) {
         return geometries.getOrDefault(lod, Collections.emptyList());
-    }
-
-    public List<GeometryProperty> getNonLodGeometries() {
-        return geometries.getOrDefault(null, Collections.emptyList());
     }
 
     public void add(GeometryProperty property) {
@@ -58,18 +58,18 @@ public class GeometryInfo {
         }
     }
 
+    public boolean hasImplicitGeometries() {
+        return !implicitGeometries.isEmpty();
+    }
+
     public List<ImplicitGeometryProperty> getImplicitGeometries() {
         return implicitGeometries.values().stream()
                 .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public List<ImplicitGeometryProperty> getImplicitGeometries(String lod) {
         return implicitGeometries.getOrDefault(lod, Collections.emptyList());
-    }
-
-    public List<ImplicitGeometryProperty> getNonLodImplicitGeometries() {
-        return implicitGeometries.getOrDefault(null, Collections.emptyList());
     }
 
     public void add(ImplicitGeometryProperty property) {

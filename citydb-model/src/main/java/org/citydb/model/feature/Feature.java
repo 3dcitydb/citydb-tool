@@ -338,6 +338,15 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
         return geometryInfo;
     }
 
+    public Feature getRootFeature() {
+        Feature root = this, parent = this;
+        while ((parent = parent.getParent(Feature.class)) != null) {
+            root = parent;
+        }
+
+        return root;
+    }
+
     @Override
     public Optional<FeatureDescriptor> getDescriptor() {
         return Optional.ofNullable(descriptor);
