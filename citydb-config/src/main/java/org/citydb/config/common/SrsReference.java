@@ -29,6 +29,16 @@ public class SrsReference {
     private Integer srid;
     private String identifier;
 
+    public static SrsReference of(String sridOrIdentifier) {
+        SrsReference reference = new SrsReference();
+        try {
+            return reference.setSRID(Integer.parseInt(sridOrIdentifier))
+                    .setIdentifier("http://www.opengis.net/def/crs/EPSG/0/" + sridOrIdentifier);
+        } catch (NumberFormatException e) {
+            return reference.setIdentifier(sridOrIdentifier);
+        }
+    }
+
     public Optional<Integer> getSRID() {
         return Optional.ofNullable(srid);
     }

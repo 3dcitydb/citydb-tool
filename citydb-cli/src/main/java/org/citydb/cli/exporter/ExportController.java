@@ -67,6 +67,9 @@ public abstract class ExportController implements Command {
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
 
+    @CommandLine.Mixin
+    protected CrsOptions crsOptions;
+
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
     private QueryOptions queryOptions;
@@ -210,6 +213,10 @@ public abstract class ExportController implements Command {
             exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }
 
+        if (crsOptions.getCrs() != null) {
+            exportOptions.setTargetSrs(SrsReference.of(crsOptions.getCrs()));
+        }
+
         return exportOptions;
     }
 
@@ -233,7 +240,12 @@ public abstract class ExportController implements Command {
             writeOptions.setEncoding(outputFileOptions.getEncoding());
         }
 
-        if (writeOptions.getSpatialReference().isEmpty()) {
+        if (crsOptions.getCrs() != null) {
+            SrsReference reference = SrsReference.of(crsOptions.getCrs());
+            writeOptions.setSpatialReference(crsOptions.getName() != null ?
+                    reference.setIdentifier(crsOptions.getName()) :
+                    reference);
+        } else if (writeOptions.getSpatialReference().isEmpty()) {
             writeOptions.setSpatialReference(new SrsReference()
                     .setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID())
                     .setIdentifier(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier()));

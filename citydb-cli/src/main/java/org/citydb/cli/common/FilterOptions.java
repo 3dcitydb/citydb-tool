@@ -59,15 +59,6 @@ public class FilterOptions {
     }
 
     public SrsReference getFilterCrs() {
-        if (filterCrs != null) {
-            SrsReference reference = new SrsReference();
-            try {
-                return reference.setSRID(Integer.parseInt(filterCrs));
-            } catch (NumberFormatException e) {
-                return reference.setIdentifier(filterCrs);
-            }
-        } else {
-            return null;
-        }
+        return filterCrs != null ? SrsReference.of(filterCrs) : null;
     }
 }
