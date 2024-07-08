@@ -240,15 +240,12 @@ public abstract class ExportController implements Command {
             writeOptions.setEncoding(outputFileOptions.getEncoding());
         }
 
-        if (crsOptions.getCrs() != null) {
-            SrsReference reference = SrsReference.of(crsOptions.getCrs());
-            writeOptions.setSpatialReference(crsOptions.getName() != null ?
-                    reference.setIdentifier(crsOptions.getName()) :
-                    reference);
-        } else if (writeOptions.getSpatialReference().isEmpty()) {
-            writeOptions.setSpatialReference(new SrsReference()
-                    .setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                    .setIdentifier(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier()));
+        if (crsOptions.getName() != null) {
+            writeOptions.setSrsName(crsOptions.getName());
+        } else if (crsOptions.getCrs() != null) {
+            SrsReference.of(crsOptions.getCrs()).getIdentifier().ifPresent(writeOptions::setSrsName);
+        } else if (writeOptions.getSrsName().isEmpty()) {
+            writeOptions.setSrsName(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier());
         }
 
         return writeOptions;
