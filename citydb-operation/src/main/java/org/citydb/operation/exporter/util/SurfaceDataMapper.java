@@ -133,7 +133,7 @@ public class SurfaceDataMapper {
         return geometryDataId + "#" + objectId;
     }
 
-    void clear() {
+    public void clear() {
         materialMappings.clear();
         textureMappings.clear();
         worldToTextureMappings.clear();

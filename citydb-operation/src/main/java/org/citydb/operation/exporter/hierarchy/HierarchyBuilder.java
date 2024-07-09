@@ -34,6 +34,7 @@ import org.citydb.operation.exporter.geometry.GeometryExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.property.PropertyExporter;
 import org.citydb.operation.exporter.property.PropertyStub;
+import org.citydb.operation.exporter.util.LodFilter;
 import org.citydb.operation.exporter.util.TableHelper;
 
 import java.sql.ResultSet;
@@ -43,6 +44,7 @@ import java.util.*;
 public class HierarchyBuilder {
     private final long rootId;
     private final ExportHelper helper;
+    private final LodFilter lodFilter;
     private final TableHelper tableHelper;
     private final PropertyBuilder propertyBuilder;
     private final Hierarchy hierarchy = new Hierarchy();
@@ -51,6 +53,7 @@ public class HierarchyBuilder {
     private HierarchyBuilder(long rootId, ExportHelper helper) {
         this.rootId = rootId;
         this.helper = helper;
+        lodFilter = helper.getLodFilter();
         tableHelper = helper.getTableHelper();
         propertyBuilder = new PropertyBuilder(helper);
     }
@@ -71,7 +74,9 @@ public class HierarchyBuilder {
             }
 
             long geometryId = rs.getLong("val_geometry_id");
-            if (!rs.wasNull() && hierarchy.getGeometry(geometryId) == null) {
+            if (!rs.wasNull()
+                    && hierarchy.getGeometry(geometryId) == null
+                    && lodFilter.filter(rs.getString("val_lod"))) {
                 hierarchy.addGeometry(geometryId, tableHelper.getOrCreateExporter(GeometryExporter.class)
                         .doExport(geometryId, false, rs));
             }
@@ -88,7 +93,7 @@ public class HierarchyBuilder {
             }
 
             long implicitGeometryId = rs.getLong("val_implicitgeom_id");
-            if (!rs.wasNull()) {
+            if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
                 implicitGeometryIds.add(implicitGeometryId);
             }
 
