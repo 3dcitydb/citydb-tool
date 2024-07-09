@@ -21,8 +21,10 @@
 
 package org.citydb.model.property;
 
+import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineProperty;
 import org.citydb.model.common.Name;
+import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 
 import java.util.Objects;
@@ -68,6 +70,18 @@ public class GeometryProperty extends Property<GeometryProperty> implements Inli
     public GeometryProperty setLod(int lod) {
         this.lod = String.valueOf(lod);
         return this;
+    }
+
+    @Override
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Feature feature) {
+            return feature.getGeometries().remove(this);
+        } else if (parent instanceof Attribute attribute) {
+            return attribute.getProperties().remove(this);
+        } else {
+            return false;
+        }
     }
 
     @Override

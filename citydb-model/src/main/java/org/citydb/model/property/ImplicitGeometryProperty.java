@@ -21,9 +21,11 @@
 
 package org.citydb.model.property;
 
+import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Reference;
+import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
 
@@ -124,6 +126,18 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     public ImplicitGeometryProperty setLod(int lod) {
         this.lod = String.valueOf(lod);
         return this;
+    }
+
+    @Override
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Feature feature) {
+            return feature.getImplicitGeometries().remove(this);
+        } else if (parent instanceof Attribute attribute) {
+            return attribute.getProperties().remove(this);
+        } else {
+            return false;
+        }
     }
 
     @Override

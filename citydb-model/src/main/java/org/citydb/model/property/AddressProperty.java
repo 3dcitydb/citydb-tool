@@ -22,9 +22,11 @@
 package org.citydb.model.property;
 
 import org.citydb.model.address.Address;
+import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Reference;
+import org.citydb.model.feature.Feature;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -83,6 +85,18 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
         }
 
         return this;
+    }
+
+    @Override
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Feature feature) {
+            return feature.getAddresses().remove(this);
+        } else if (parent instanceof Attribute attribute) {
+            return attribute.getProperties().remove(this);
+        } else {
+            return false;
+        }
     }
 
     @Override
