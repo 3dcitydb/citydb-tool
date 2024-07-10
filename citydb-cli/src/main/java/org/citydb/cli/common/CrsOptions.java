@@ -21,6 +21,7 @@
 
 package org.citydb.cli.common;
 
+import org.citydb.config.common.SrsReference;
 import picocli.CommandLine;
 
 public class CrsOptions implements Option {
@@ -33,8 +34,17 @@ public class CrsOptions implements Option {
             description = "Name of the CRS to use in the output file.")
     private String name;
 
-    public String getCrs() {
-        return crs;
+    public SrsReference getTargetSrs() {
+        if (crs != null) {
+            SrsReference reference = new SrsReference();
+            try {
+                return reference.setSRID(Integer.parseInt(crs));
+            } catch (NumberFormatException e) {
+                return reference.setIdentifier(crs);
+            }
+        } else {
+            return null;
+        }
     }
 
     public String getName() {
