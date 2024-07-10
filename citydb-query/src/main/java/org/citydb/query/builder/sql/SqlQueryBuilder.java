@@ -22,7 +22,7 @@
 package org.citydb.query.builder.sql;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.geometry.SrsParseException;
+import org.citydb.database.util.SrsParseException;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.query.Query;

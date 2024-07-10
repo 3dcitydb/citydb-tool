@@ -23,7 +23,6 @@ package org.citydb.io.citygml.writer;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.citydb.config.common.SrsReference;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.io.citygml.CityGMLAdapterContext;
 import org.citydb.io.citygml.adapter.address.AddressAdapter;
@@ -110,7 +109,7 @@ public class ModelSerializerHelper {
         failFast = options.isFailFast();
         version = formatOptions.getVersion();
         versionHelper = CityGMLVersionHelper.of(version);
-        srsName = options.getSpatialReference().flatMap(SrsReference::getIdentifier).orElse(null);
+        srsName = options.getSrsName().orElse(null);
         mapLod0RoofEdge = version == CityGMLVersion.v3_0 && formatOptions.isMapLod0RoofEdge();
         mapLod1MultiSurfaces = version == CityGMLVersion.v3_0 && formatOptions.isMapLod1MultiSurfaces();
         preprocessor.checkForDeprecatedLod4Geometry(version == CityGMLVersion.v3_0 && formatOptions.isUseLod4AsLod3());

@@ -19,13 +19,14 @@
  * limitations under the License.
  */
 
-package org.citydb.database.geometry;
+package org.citydb.database.util;
 
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SrsIdentifierParser {
+public class SrsHelper {
+    private static final SrsHelper instance = new SrsHelper();
     private final Pattern httpPattern = Pattern.compile(
             "https?://www.opengis.net/def/crs/([^/]+?)/[^/]+?/([^/]+?)(?:/.*)?", Pattern.CASE_INSENSITIVE);
     private final Pattern urnPattern = Pattern.compile(
@@ -33,11 +34,15 @@ public class SrsIdentifierParser {
     private final Pattern epsgPattern = Pattern.compile("EPSG:([0-9]+)", Pattern.CASE_INSENSITIVE);
     private final Matcher matcher = Pattern.compile("").matcher("");
 
-    private SrsIdentifierParser() {
+    private SrsHelper() {
     }
 
-    public static SrsIdentifierParser newInstance() {
-        return new SrsIdentifierParser();
+    public static SrsHelper getInstance() {
+        return instance;
+    }
+
+    public String getDefaultIdentifier(int srid) {
+        return "http://www.opengis.net/def/crs/EPSG/0/" + srid;
     }
 
     public int parse(String identifier) throws SrsParseException {

@@ -23,9 +23,13 @@ package org.citydb.database.adapter;
 
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.config.common.SrsReference;
-import org.citydb.database.geometry.*;
+import org.citydb.database.geometry.GeometryBuilder;
+import org.citydb.database.geometry.GeometryException;
+import org.citydb.database.geometry.PropertiesBuilder;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.util.SpatialOperationHelper;
+import org.citydb.database.util.SrsHelper;
+import org.citydb.database.util.SrsParseException;
 import org.citydb.model.geometry.Geometry;
 
 import java.sql.Connection;
@@ -37,7 +41,7 @@ public abstract class GeometryAdapter {
     protected final DatabaseAdapter adapter;
     private final GeometryBuilder geometryBuilder = new GeometryBuilder();
     private final PropertiesBuilder propertiesBuilder = new PropertiesBuilder();
-    private final SrsIdentifierParser parser = SrsIdentifierParser.newInstance();
+    private final SrsHelper srsHelper = SrsHelper.getInstance();
 
     protected GeometryAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
@@ -82,7 +86,7 @@ public abstract class GeometryAdapter {
     }
 
     public SpatialReference getSpatialReference(String identifier) throws SrsParseException, SQLException {
-        return getSpatialReference(parser.parse(identifier), identifier);
+        return getSpatialReference(srsHelper.parse(identifier), identifier);
     }
 
     public SpatialReference getSpatialReference(int srid, String identifier) throws SQLException {
