@@ -34,20 +34,25 @@ public class CrsOptions implements Option {
             description = "Name of the CRS to use in the output file.")
     private String name;
 
+    private SrsReference targetSrs;
+
     public SrsReference getTargetSrs() {
-        if (crs != null) {
-            SrsReference reference = new SrsReference();
-            try {
-                return reference.setSRID(Integer.parseInt(crs));
-            } catch (NumberFormatException e) {
-                return reference.setIdentifier(crs);
-            }
-        } else {
-            return null;
-        }
+        return targetSrs;
     }
 
     public String getName() {
         return name;
+    }
+
+    @Override
+    public void preprocess(CommandLine commandLine) throws Exception {
+        if (crs != null) {
+            targetSrs = new SrsReference();
+            try {
+                targetSrs.setSRID(Integer.parseInt(crs));
+            } catch (NumberFormatException e) {
+                targetSrs.setIdentifier(crs);
+            }
+        }
     }
 }

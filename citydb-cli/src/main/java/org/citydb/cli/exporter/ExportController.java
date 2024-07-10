@@ -214,7 +214,9 @@ public abstract class ExportController implements Command {
             exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }
 
-        exportOptions.setTargetSrs(crsOptions.getTargetSrs());
+        if (crsOptions.getTargetSrs() != null) {
+            exportOptions.setTargetSrs(crsOptions.getTargetSrs());
+        }
 
         return exportOptions;
     }
