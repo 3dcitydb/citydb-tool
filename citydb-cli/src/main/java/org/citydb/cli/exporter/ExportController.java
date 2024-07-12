@@ -35,6 +35,7 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.util.SrsHelper;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
@@ -66,6 +67,9 @@ public abstract class ExportController implements Command {
 
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
+
+    @CommandLine.Mixin
+    protected CrsOptions crsOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
@@ -107,7 +111,7 @@ public abstract class ExportController implements Command {
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         ExportOptions exportOptions = getExportOptions();
-        WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
+        WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
         Query query = getQuery();
@@ -210,10 +214,14 @@ public abstract class ExportController implements Command {
             exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }
 
+        if (crsOptions.getTargetSrs() != null) {
+            exportOptions.setTargetSrs(crsOptions.getTargetSrs());
+        }
+
         return exportOptions;
     }
 
-    protected WriteOptions getWriteOptions(DatabaseAdapter adapter) throws ExecutionException {
+    protected WriteOptions getWriteOptions(ExportOptions exportOptions, DatabaseAdapter adapter) throws ExecutionException {
         WriteOptions writeOptions;
         try {
             writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
@@ -233,10 +241,17 @@ public abstract class ExportController implements Command {
             writeOptions.setEncoding(outputFileOptions.getEncoding());
         }
 
-        if (writeOptions.getSpatialReference().isEmpty()) {
-            writeOptions.setSpatialReference(new SrsReference()
-                    .setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                    .setIdentifier(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier()));
+        if (crsOptions.getName() != null) {
+            writeOptions.setSrsName(crsOptions.getName());
+        } else if (writeOptions.getSrsName().isEmpty()) {
+            SrsReference targetSrs = exportOptions.getTargetSrs().orElse(null);
+            if (targetSrs != null && targetSrs.getIdentifier().isPresent()) {
+                writeOptions.setSrsName(targetSrs.getIdentifier().get());
+            } else if (targetSrs != null && targetSrs.getSRID().isPresent()) {
+                writeOptions.setSrsName(SrsHelper.getInstance().getDefaultIdentifier(targetSrs.getSRID().get()));
+            } else {
+                writeOptions.setSrsName(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier());
+            }
         }
 
         return writeOptions;

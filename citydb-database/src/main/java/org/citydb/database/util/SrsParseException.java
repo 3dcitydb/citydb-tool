@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.database.geometry;
+package org.citydb.database.util;
 
 public class SrsParseException extends Exception {
 
