@@ -38,8 +38,8 @@ public class AddressExporter extends DatabaseExporter {
         super(helper);
         stmt = helper.getConnection().prepareStatement("select id, objectid, identifier as address_identifier, " +
                 "identifier_codespace as address_identifier_codespace, street, house_number, po_box, " +
-                "zip_code, city, state, country, free_text, " + helper.getTransformOperator("multi_point") +
-                ", content, content_mime_type " +
+                "zip_code, city, state, country, free_text, " + helper.getTransformOperator("multi_point") + ", " +
+                "content, content_mime_type " +
                 "from " + tableHelper.getPrefixedTableName(Table.ADDRESS) +
                 " where id = ?");
     }
