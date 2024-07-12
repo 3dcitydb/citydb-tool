@@ -34,7 +34,7 @@ subprojects {
 
     repositories {
         maven {
-            url 'https://repo.osgeo.org/repository/release'
+            url 'https://repo.osgeo.org/repository/release/'
         }
         maven {
             url 'https://oss.sonatype.org/content/repositories/snapshots/'
