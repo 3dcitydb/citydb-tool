@@ -117,11 +117,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         int exitCode = CommandLine.ExitCode.SOFTWARE;
 
         System.setProperty("picocli.disable.closures", "true");
-        CommandLine cmd = new CommandLine(this)
-                .setCaseInsensitiveEnumValuesAllowed(true)
-                .setAbbreviatedOptionsAllowed(true)
-                .setAbbreviatedSubcommandsAllowed(true)
-                .setExecutionStrategy(new CommandLine.RunAll());
+        CommandLine cmd = new CommandLine(this);
 
         pluginManager.load(parsePluginsDirectory(args));
         Command.addSubcommand(new ImportCommand(), cmd, pluginManager);
@@ -133,7 +129,11 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
 
         try {
-            CommandLine.ParseResult parseResult = cmd.parseArgs(args);
+            CommandLine.ParseResult parseResult = cmd.setCaseInsensitiveEnumValuesAllowed(true)
+                    .setAbbreviatedOptionsAllowed(true)
+                    .setAbbreviatedSubcommandsAllowed(true)
+                    .setExecutionStrategy(new CommandLine.RunAll())
+                    .parseArgs(args);
             List<CommandLine> commandLines = parseResult.asCommandLineList();
 
             for (CommandLine commandLine : commandLines) {
