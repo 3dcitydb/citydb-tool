@@ -34,6 +34,7 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterConfigReader;
 import org.citydb.query.filter.encoding.FilterConfigWriter;
 import org.citydb.query.limit.CountLimit;
+import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
 
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ public class Query {
     @JSONField(serializeUsing = FilterConfigWriter.class, deserializeUsing = FilterConfigReader.class)
     private Filter filter;
     private SrsReference filterSrs;
+    private LodFilter lodFilter;
     private Sorting sorting;
     private CountLimit countLimit;
 
@@ -110,6 +112,15 @@ public class Query {
 
     public Query setFilterSrs(SrsReference filterSrs) {
         this.filterSrs = filterSrs;
+        return this;
+    }
+
+    public Optional<LodFilter> getLodFilter() {
+        return Optional.ofNullable(lodFilter);
+    }
+
+    public Query setLodFilter(LodFilter lodFilter) {
+        this.lodFilter = lodFilter;
         return this;
     }
 

@@ -23,12 +23,12 @@ package org.citydb.query.builder.sql;
 
 import org.citydb.config.common.SrsReference;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.SrsParseException;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SpatialOperationHelper;
+import org.citydb.database.util.SrsParseException;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.SpatialObject;

@@ -22,13 +22,14 @@
 package org.citydb.query.builder.sql;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.SrsParseException;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.FeatureType;
+import org.citydb.database.util.SrsParseException;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.limit.CountLimit;
+import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.function.WindowFunction;
@@ -73,6 +74,11 @@ public class SqlQueryBuilder {
             } catch (SrsParseException | SQLException e) {
                 throw new QueryBuildException("The requested filter SRS is not supported.", e);
             }
+        }
+
+        LodFilter lodFilter = query.getLodFilter().orElse(null);
+        if (lodFilter != null) {
+            LodFilterBuilder.of(helper).build(lodFilter, select, context);
         }
 
         Sorting sorting = query.getSorting().orElse(null);

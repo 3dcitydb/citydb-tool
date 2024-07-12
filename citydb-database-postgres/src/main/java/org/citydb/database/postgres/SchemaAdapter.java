@@ -26,8 +26,20 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
+import org.citydb.model.common.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
+import org.citydb.sqlbuilder.function.Function;
+import org.citydb.sqlbuilder.join.Joins;
+import org.citydb.sqlbuilder.literal.BooleanLiteral;
+import org.citydb.sqlbuilder.literal.IntegerLiteral;
+import org.citydb.sqlbuilder.literal.StringLiteral;
+import org.citydb.sqlbuilder.operation.Case;
+import org.citydb.sqlbuilder.operation.Not;
+import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
+import org.citydb.sqlbuilder.util.AliasGenerator;
 import org.citydb.sqlbuilder.util.PlainText;
 
 import java.io.BufferedReader;
@@ -35,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
@@ -101,6 +114,65 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create recursive implicit geometry query.", e);
         }
+    }
+
+    @Override
+    public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table, AliasGenerator generator) {
+        Table hierarchy = Table.of("hierarchy", generator);
+        Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
+                adapter.getConnectionDetails().getSchema(), generator);
+
+        Select featureQuery = Select.newInstance()
+                .select(PlainText.of("null::bigint").as("id"),
+                        table.column("id").as("feature_id"),
+                        table.column("id").as("val_feature_id"),
+                        IntegerLiteral.of(RelationType.CONTAINS.getDatabaseValue()).as("val_relation_type"),
+                        PlainText.of("null::text").as("val_lod"),
+                        BooleanLiteral.FALSE.as("is_cycle"),
+                        PlainText.of("array[]::bigint[]").as("path"));
+        Select propertyQuery = Select.newInstance()
+                .select(property.column("id"),
+                        property.column("feature_id"),
+                        property.column("val_feature_id"),
+                        property.column("val_relation_type"),
+                        property.column("val_lod"),
+                        property.column("id").eqAny(PlainText.of("(path)")),
+                        PlainText.of("path || {}", property.column("id")))
+                .from(property)
+                .join(Joins.inner(hierarchy, "val_feature_id", Operators.EQUAL_TO, property.column("feature_id"))
+                        .condition(hierarchy.column("val_relation_type").eq(RelationType.CONTAINS.getDatabaseValue())))
+                .where(Not.of(PlainText.of("is_cycle")));
+
+        if (searchDepth >= 0 && searchDepth != Integer.MAX_VALUE) {
+            featureQuery.select(IntegerLiteral.of(0).as("depth"));
+            propertyQuery.select(Case.newInstance()
+                            .when(property.column("namespace_id").eq(1).and(property.column("name").eq("boundary")))
+                            .then(PlainText.of("depth"))
+                            .orElse(PlainText.of("depth").plus(1)))
+                    .where(PlainText.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
+        }
+
+        Select select = Select.newInstance()
+                .withRecursive(CommonTableExpression.of(hierarchy.getName(), featureQuery.unionAll(propertyQuery)))
+                .select(IntegerLiteral.of(1))
+                .from(hierarchy);
+
+        if (!lods.isEmpty()) {
+            select.where(adapter.getSchemaAdapter().getOperationHelper()
+                    .in(hierarchy.column("val_lod"), lods.stream().map(StringLiteral::of).toList()));
+            if (requireAll) {
+                featureQuery.select(table.column("id").as("root_feature_id"));
+                propertyQuery.select(PlainText.of("root_feature_id"));
+                select.groupBy(hierarchy.column("root_feature_id"))
+                        .having(Function.of("count", hierarchy.column("val_lod"))
+                                .qualifier("distinct")
+                                .eq(lods.size()));
+            }
+        } else {
+            select.where(hierarchy.column("val_lod").isNotNull());
+        }
+
+        return select;
     }
 
     @Override

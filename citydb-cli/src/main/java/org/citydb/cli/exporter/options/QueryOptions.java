@@ -42,6 +42,9 @@ public class QueryOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
     private CountLimitOptions countLimitOptions;
 
+    @CommandLine.ArgGroup(exclusive = false)
+    private LodOptions lodOptions;
+
     public Query getQuery() throws FilterParseException {
         Query query = new Query();
         if (typeNameOption != null) {
@@ -61,13 +64,25 @@ public class QueryOptions implements Option {
             query.setCountLimit(countLimitOptions.getCountLimit());
         }
 
+        if (lodOptions != null) {
+            query.setLodFilter(lodOptions.getLodFilter());
+        }
+
         return query;
+    }
+
+    public LodOptions getLodOptions() {
+        return lodOptions;
     }
 
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (countLimitOptions != null) {
             countLimitOptions.preprocess(commandLine);
+        }
+
+        if (lodOptions != null) {
+            lodOptions.preprocess(commandLine);
         }
     }
 }
