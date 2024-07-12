@@ -33,7 +33,7 @@ public class LodOptions implements Option {
     private enum Mode {or, and, minimum, maximum}
 
     @CommandLine.Option(names = {"-l", "--lod"}, split = ",", paramLabel = "<lod>",
-            description = "Filter geometries with a matching LoD.")
+            description = "Export features with a matching LoD.")
     private String[] lods;
 
     @CommandLine.Option(names = "--lod-mode", defaultValue = "or",
