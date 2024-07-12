@@ -21,10 +21,7 @@
 
 package org.citydb.model.property;
 
-import org.citydb.model.common.InlineOrByReferenceProperty;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
-import org.citydb.model.common.RelationType;
+import org.citydb.model.common.*;
 import org.citydb.model.feature.Feature;
 
 import java.util.Objects;
@@ -110,6 +107,18 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     public FeatureProperty setRelationType(RelationType relationType) {
         this.relationType = relationType;
         return this;
+    }
+
+    @Override
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Feature feature) {
+            return feature.getFeatures().remove(this);
+        } else if (parent instanceof Attribute attribute) {
+            return attribute.getProperties().remove(this);
+        } else {
+            return false;
+        }
     }
 
     @Override

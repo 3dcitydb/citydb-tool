@@ -33,6 +33,8 @@ public abstract class Property<T extends Property<?>> extends Child implements D
     private Name dataType;
     private PropertyDescriptor descriptor;
 
+    public abstract boolean removeFromParent();
+
     abstract T self();
 
     Property(Name name, Name dataType) {

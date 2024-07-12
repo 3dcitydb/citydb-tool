@@ -42,6 +42,12 @@ public class Envelope extends Child implements SpatialObject {
         return new Envelope(lowerCorner, upperCorner);
     }
 
+    public static Envelope empty() {
+        return new Envelope(
+                Coordinate.of(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE),
+                Coordinate.of(-Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE));
+    }
+
     public Coordinate getLowerCorner() {
         return lowerCorner;
     }
@@ -193,6 +199,15 @@ public class Envelope extends Child implements SpatialObject {
 
     public Envelope include(Geometry<?> geometry) {
         return include(geometry.getEnvelope());
+    }
+
+    public boolean isEmpty() {
+        return lowerCorner.getX() == Double.MAX_VALUE
+                && lowerCorner.getY() == Double.MAX_VALUE
+                && lowerCorner.getZ() == Double.MAX_VALUE
+                && upperCorner.getX() == -Double.MAX_VALUE
+                && upperCorner.getY() == -Double.MAX_VALUE
+                && upperCorner.getZ() == -Double.MAX_VALUE;
     }
 
     public Polygon convertToPolygon() {

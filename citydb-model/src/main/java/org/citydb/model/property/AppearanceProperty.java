@@ -22,8 +22,11 @@
 package org.citydb.model.property;
 
 import org.citydb.model.appearance.Appearance;
+import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineProperty;
 import org.citydb.model.common.Name;
+import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.ImplicitGeometry;
 
 import java.util.Objects;
 
@@ -52,6 +55,20 @@ public class AppearanceProperty extends Property<AppearanceProperty> implements 
         }
 
         return this;
+    }
+
+    @Override
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Feature feature) {
+            return feature.getAppearances().remove(this);
+        } else if (parent instanceof ImplicitGeometry geometry) {
+            return geometry.getAppearances().remove(this);
+        } else if (parent instanceof Attribute attribute) {
+            return attribute.getProperties().remove(this);
+        } else {
+            return false;
+        }
     }
 
     @Override

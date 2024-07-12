@@ -72,6 +72,15 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
         return Optional.ofNullable(reference);
     }
 
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Appearance appearance) {
+            return appearance.getSurfaceData().remove(this);
+        } else {
+            return false;
+        }
+    }
+
     @Override
     public SurfaceDataProperty setReference(Reference reference) {
         if (reference != null) {

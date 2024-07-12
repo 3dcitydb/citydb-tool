@@ -33,6 +33,8 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.feature.FeatureExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
+import org.citydb.operation.exporter.options.LodOptions;
+import org.citydb.operation.exporter.util.LodFilter;
 import org.citydb.operation.exporter.util.Postprocessor;
 import org.citydb.operation.exporter.util.SurfaceDataMapper;
 import org.citydb.operation.exporter.util.TableHelper;
@@ -49,10 +51,12 @@ public class ExportHelper {
     private final DatabaseAdapter adapter;
     private final ExportOptions options;
     private final Connection connection;
-    private final Postprocessor postprocessor;
     private final SchemaMapping schemaMapping;
+    private final SpatialReference targetSrs;
+    private final LodFilter lodFilter;
+    private final Postprocessor postprocessor;
     private final TableHelper tableHelper;
-    private final SpatialReference spatialReference;
+    private final SurfaceDataMapper surfaceDataMapper = new SurfaceDataMapper();
     private final Set<String> featureIdCache = new HashSet<>();
     private final Set<String> surfaceDataIdCache = new HashSet<>();
     private final Set<String> implicitGeometryIdCache = new HashSet<>();
@@ -64,10 +68,11 @@ public class ExportHelper {
         this.options = options;
 
         connection = adapter.getPool().getConnection();
-        postprocessor = new Postprocessor();
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
+        targetSrs = adapter.getGeometryAdapter().getSpatialReference(options.getTargetSrs().orElse(null));
+        lodFilter = new LodFilter(options.getLodOptions().orElseGet(LodOptions::new));
+        postprocessor = new Postprocessor(this);
         tableHelper = new TableHelper(this);
-        spatialReference = adapter.getGeometryAdapter().getSpatialReference(options.getTargetSrs().orElse(null));
     }
 
     public DatabaseAdapter getAdapter() {
@@ -86,8 +91,12 @@ public class ExportHelper {
         return connection;
     }
 
+    public LodFilter getLodFilter() {
+        return lodFilter;
+    }
+
     public SurfaceDataMapper getSurfaceDataMapper() {
-        return postprocessor.getSurfaceDataMapper();
+        return surfaceDataMapper;
     }
 
     public TableHelper getTableHelper() {
@@ -95,11 +104,11 @@ public class ExportHelper {
     }
 
     public int getSRID() {
-        return spatialReference.getSRID();
+        return targetSrs.getSRID();
     }
 
     public String getSrsIdentifier() {
-        return spatialReference.getIdentifier();
+        return targetSrs.getIdentifier();
     }
 
     public String createId() {
@@ -207,6 +216,7 @@ public class ExportHelper {
     }
 
     private void clear() {
+        surfaceDataMapper.clear();
         featureIdCache.clear();
         surfaceDataIdCache.clear();
         implicitGeometryIdCache.clear();

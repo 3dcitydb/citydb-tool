@@ -21,135 +21,130 @@
 
 package org.citydb.operation.exporter.util;
 
-import org.citydb.model.appearance.GeoreferencedTexture;
-import org.citydb.model.appearance.ParameterizedTexture;
-import org.citydb.model.appearance.TextureCoordinate;
-import org.citydb.model.appearance.X3DMaterial;
+import org.citydb.model.appearance.Appearance;
+import org.citydb.model.appearance.SurfaceDataProperty;
 import org.citydb.model.common.DatabaseDescriptor;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
-import org.citydb.model.geometry.LinearRing;
-import org.citydb.model.geometry.Polygon;
-import org.citydb.model.geometry.Surface;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.Attribute;
+import org.citydb.model.property.FeatureProperty;
+import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.Property;
-import org.citydb.model.util.IdCreator;
 import org.citydb.model.walker.ModelWalker;
+import org.citydb.operation.exporter.ExportHelper;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
 public class Postprocessor {
-    private final SurfaceDataMapper surfaceDataMapper = new SurfaceDataMapper();
-    private final Map<String, Surface<?>> surfaces = new HashMap<>();
-    private final SurfaceCollector surfaceCollector = new SurfaceCollector();
-    private final Processor processor = new Processor();
+    private final ExportHelper helper;
+    private final EnvelopeHelper envelopeHelper;
+    private final AppearanceHelper appearanceHelper;
     private final Comparator<Property<?>> comparator = Comparator.comparingLong(
             property -> property.getDescriptor()
                     .map(DatabaseDescriptor::getId)
                     .orElse(0L));
 
-    public SurfaceDataMapper getSurfaceDataMapper() {
-        return surfaceDataMapper;
+    public Postprocessor(ExportHelper helper) {
+        this.helper = helper;
+        appearanceHelper = new AppearanceHelper(helper);
+        envelopeHelper = new EnvelopeHelper(helper);
+    }
+
+    public void process(Feature feature) {
+        Map<String, ImplicitGeometry> implicitGeometries = helper.getLodFilter().removeGeometries(feature);
+        appearanceHelper.assignSurfaceData(feature, helper.getSurfaceDataMapper());
+
+        if (helper.getLodFilter().hasRemovedGeometry()) {
+            Set<String> featureIds = helper.getLodFilter().removeEmptyFeatures(feature);
+            Set<String> surfaceDataIds = appearanceHelper.removeEmptySurfaceData(feature);
+
+            if (!featureIds.isEmpty()
+                    || !surfaceDataIds.isEmpty()
+                    || !implicitGeometries.isEmpty()) {
+                processReferences(feature, featureIds, surfaceDataIds, implicitGeometries);
+            }
+
+            if (!surfaceDataIds.isEmpty()) {
+                appearanceHelper.removeEmptyAppearances(feature);
+            }
+
+            envelopeHelper.updateEnvelope(feature);
+        }
+
+        sortAttributes(feature);
     }
 
     public void process(Visitable visitable) {
-        try {
-            visitable.accept(surfaceCollector);
-            visitable.accept(processor);
-        } finally {
-            surfaceDataMapper.clear();
-            surfaces.clear();
-        }
+        appearanceHelper.assignSurfaceData(visitable, helper.getSurfaceDataMapper());
+        sortAttributes(visitable);
     }
 
-    private class SurfaceCollector extends ModelWalker {
-        @Override
-        public void visit(Surface<?> surface) {
-            long geometryDataId = surface.getRootGeometry().getDescriptor()
-                    .map(DatabaseDescriptor::getId)
-                    .orElse(0L);
-            surface.getObjectId().ifPresent(objectId -> surfaces.put(geometryDataId + "#" + objectId, surface));
-            super.visit(surface);
-        }
-    }
-
-    private class Processor extends ModelWalker {
-        private final IdCreator idCreator = IdCreator.getInstance();
-
-        @Override
-        public void visit(Feature feature) {
-            super.visit(feature);
-
-            if (feature.hasAttributes()) {
-                feature.getAttributes().sortPropertiesWithIdenticalNames(comparator);
+    private void processReferences(Feature feature, Set<String> featureIds, Set<String> surfaceDataIds, Map<String, ImplicitGeometry> implicitGeometries) {
+        feature.accept(new ModelWalker() {
+            @Override
+            public void visit(FeatureProperty property) {
+                property.getReference()
+                        .filter(reference -> featureIds.contains(reference.getTarget()))
+                        .ifPresent(reference -> property.removeFromParent());
+                super.visit(property);
             }
 
-            if (feature.hasGeometries()) {
-                feature.getGeometries().sortPropertiesWithIdenticalNames(comparator);
-            }
-
-            if (feature.hasImplicitGeometries()) {
-                feature.getImplicitGeometries().sortPropertiesWithIdenticalNames(comparator);
-            }
-
-            if (feature.hasFeatures()) {
-                feature.getFeatures().sortPropertiesWithIdenticalNames(comparator);
-            }
-
-            if (feature.hasAppearances()) {
-                feature.getAppearances().sortPropertiesWithIdenticalNames(comparator);
-            }
-        }
-
-        @Override
-        public void visit(Attribute attribute) {
-            super.visit(attribute);
-            if (attribute.hasProperties()) {
-                attribute.getProperties().sortPropertiesWithIdenticalNames(comparator);
-            }
-        }
-
-        @Override
-        public void visit(X3DMaterial material) {
-            surfaceDataMapper.getMaterialMappings(material).stream()
-                    .map(surfaces::get)
-                    .filter(Objects::nonNull)
-                    .forEach(material::addTarget);
-        }
-
-        @Override
-        public void visit(ParameterizedTexture texture) {
-            for (Map.Entry<String, List<Double>> entry : surfaceDataMapper.getWorldToTextureMappings(texture).entrySet()) {
-                Surface<?> surface = surfaces.get(entry.getKey());
-                if (surface != null) {
-                    texture.addWorldToTextureMapping(surface, entry.getValue());
+            @Override
+            public void visit(Appearance appearance) {
+                Iterator<SurfaceDataProperty> iterator = appearance.getSurfaceData().iterator();
+                while (iterator.hasNext()) {
+                    iterator.next().getReference()
+                            .filter(reference -> surfaceDataIds.contains(reference.getTarget()))
+                            .ifPresent(reference -> iterator.remove());
                 }
             }
 
-            for (Map.Entry<String, List<List<TextureCoordinate>>> entry : surfaceDataMapper
-                    .getTextureMappings(texture).entrySet()) {
-                Surface<?> surface = surfaces.get(entry.getKey());
-                if (surface instanceof Polygon polygon) {
-                    List<LinearRing> rings = polygon.getRings();
-                    if (rings.size() == entry.getValue().size()) {
-                        for (int i = 0; i < rings.size(); i++) {
-                            List<TextureCoordinate> textureCoordinates = entry.getValue().get(i);
-                            if (textureCoordinates != null) {
-                                LinearRing ring = rings.get(i).setObjectId(idCreator.createId());
-                                texture.addTextureCoordinates(ring, textureCoordinates);
-                            }
-                        }
-                    }
+            @Override
+            public void visit(ImplicitGeometryProperty property) {
+                property.getReference()
+                        .map(reference -> implicitGeometries.remove(reference.getTarget()))
+                        .ifPresent(property::setObject);
+            }
+        });
+    }
+
+    private void sortAttributes(Visitable visitable) {
+        visitable.accept(new ModelWalker() {
+            @Override
+            public void visit(Feature feature) {
+                super.visit(feature);
+                if (feature.hasAttributes()) {
+                    feature.getAttributes().sortPropertiesWithIdenticalNames(comparator);
+                }
+
+                if (feature.hasGeometries()) {
+                    feature.getGeometries().sortPropertiesWithIdenticalNames(comparator);
+                }
+
+                if (feature.hasImplicitGeometries()) {
+                    feature.getImplicitGeometries().sortPropertiesWithIdenticalNames(comparator);
+                }
+
+                if (feature.hasFeatures()) {
+                    feature.getFeatures().sortPropertiesWithIdenticalNames(comparator);
+                }
+
+                if (feature.hasAppearances()) {
+                    feature.getAppearances().sortPropertiesWithIdenticalNames(comparator);
                 }
             }
-        }
 
-        @Override
-        public void visit(GeoreferencedTexture texture) {
-            surfaceDataMapper.getGeoreferencedTextureMappings(texture).stream()
-                    .map(surfaces::get)
-                    .filter(Objects::nonNull)
-                    .forEach(texture::addTarget);
-        }
+            @Override
+            public void visit(Attribute attribute) {
+                super.visit(attribute);
+                if (attribute.hasProperties()) {
+                    attribute.getProperties().sortPropertiesWithIdenticalNames(comparator);
+                }
+            }
+        });
     }
 }

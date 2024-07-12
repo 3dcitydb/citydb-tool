@@ -14,6 +14,7 @@ module org.citydb.operation {
     exports org.citydb.operation.exporter.feature;
     exports org.citydb.operation.exporter.geometry;
     exports org.citydb.operation.exporter.hierarchy;
+    exports org.citydb.operation.exporter.options;
     exports org.citydb.operation.exporter.property;
     exports org.citydb.operation.exporter.util;
     exports org.citydb.operation.importer;

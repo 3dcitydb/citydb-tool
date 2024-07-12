@@ -21,8 +21,10 @@
 
 package org.citydb.model.property;
 
+import org.citydb.model.common.Child;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.PropertyMap;
+import org.citydb.model.feature.Feature;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -201,6 +203,18 @@ public class Attribute extends Property<Attribute> {
         }
 
         return this;
+    }
+
+    @Override
+    public boolean removeFromParent() {
+        Child parent = getParent().orElse(null);
+        if (parent instanceof Feature feature) {
+            return feature.getAttributes().remove(this);
+        } else if (parent instanceof Attribute attribute) {
+            return attribute.getProperties().remove(this);
+        } else {
+            return false;
+        }
     }
 
     @Override

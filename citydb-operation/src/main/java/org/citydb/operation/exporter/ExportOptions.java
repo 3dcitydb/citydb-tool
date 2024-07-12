@@ -27,6 +27,7 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
+import org.citydb.operation.exporter.options.LodOptions;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -44,6 +45,7 @@ public class ExportOptions {
     private int numberOfThreads;
     private int numberOfTextureBuckets;
     private SrsReference targetSrs;
+    private LodOptions lodOptions;
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -91,6 +93,15 @@ public class ExportOptions {
 
     public ExportOptions setTargetSrs(SrsReference targetSrs) {
         this.targetSrs = targetSrs;
+        return this;
+    }
+
+    public Optional<LodOptions> getLodOptions() {
+        return Optional.ofNullable(lodOptions);
+    }
+
+    public ExportOptions setLodOptions(LodOptions lodOptions) {
+        this.lodOptions = lodOptions;
         return this;
     }
 }
