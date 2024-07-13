@@ -25,6 +25,7 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 
@@ -36,7 +37,7 @@ public class LodFilter {
 
     public Set<String> getLods() {
         if (lods == null) {
-            lods = new HashSet<>();
+            lods = new LinkedHashSet<>();
         }
 
         return lods;

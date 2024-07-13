@@ -127,21 +127,16 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                         table.column("id").as("feature_id"),
                         table.column("id").as("val_feature_id"),
                         IntegerLiteral.of(RelationType.CONTAINS.getDatabaseValue()).as("val_relation_type"),
-                        PlainText.of("null::text").as("val_lod"),
-                        BooleanLiteral.FALSE.as("is_cycle"),
-                        PlainText.of("array[]::bigint[]").as("path"));
+                        PlainText.of("null::text").as("val_lod"));
         Select propertyQuery = Select.newInstance()
                 .select(property.column("id"),
                         property.column("feature_id"),
                         property.column("val_feature_id"),
                         property.column("val_relation_type"),
-                        property.column("val_lod"),
-                        property.column("id").eqAny(PlainText.of("(path)")),
-                        PlainText.of("path || {}", property.column("id")))
+                        property.column("val_lod"))
                 .from(property)
                 .join(Joins.inner(hierarchy, "val_feature_id", Operators.EQUAL_TO, property.column("feature_id"))
-                        .condition(hierarchy.column("val_relation_type").eq(RelationType.CONTAINS.getDatabaseValue())))
-                .where(Not.of(PlainText.of("is_cycle")));
+                        .condition(hierarchy.column("val_relation_type").eq(RelationType.CONTAINS.getDatabaseValue())));
 
         if (searchDepth >= 0 && searchDepth != Integer.MAX_VALUE) {
             featureQuery.select(IntegerLiteral.of(0).as("depth"));
@@ -150,6 +145,12 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                             .then(PlainText.of("depth"))
                             .orElse(PlainText.of("depth").plus(1)))
                     .where(PlainText.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
+        } else {
+            featureQuery.select(BooleanLiteral.FALSE.as("is_cycle"),
+                    PlainText.of("array[]::bigint[]").as("path"));
+            propertyQuery.select(property.column("id").eqAny(PlainText.of("(path)")),
+                            PlainText.of("path || {}", property.column("id")))
+                    .where(Not.of(PlainText.of("is_cycle")));
         }
 
         Select select = Select.newInstance()
@@ -161,12 +162,8 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
             select.where(adapter.getSchemaAdapter().getOperationHelper()
                     .in(hierarchy.column("val_lod"), lods.stream().map(StringLiteral::of).toList()));
             if (requireAll) {
-                featureQuery.select(table.column("id").as("root_feature_id"));
-                propertyQuery.select(PlainText.of("root_feature_id"));
-                select.groupBy(hierarchy.column("root_feature_id"))
-                        .having(Function.of("count", hierarchy.column("val_lod"))
-                                .qualifier("distinct")
-                                .eq(lods.size()));
+                select.having(Function.of("count", hierarchy.column("val_lod")).qualifier("distinct")
+                        .eq(lods.size()));
             }
         } else {
             select.where(hierarchy.column("val_lod").isNotNull());
