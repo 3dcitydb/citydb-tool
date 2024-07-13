@@ -27,7 +27,8 @@ import org.citydb.query.lod.LodFilter;
 import org.citydb.query.lod.LodFilterMode;
 import picocli.CommandLine;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 
 public class LodOptions implements Option {
     private enum Mode {or, and, minimum, maximum}
@@ -48,14 +49,14 @@ public class LodOptions implements Option {
 
     public LodFilter getLodFilter() {
         return new LodFilter()
-                .setLods(lods != null ? Set.of(lods) : null)
+                .setLods(lods != null ? new LinkedHashSet<>(Arrays.asList(lods)) : null)
                 .setSearchDepth(searchDepth)
                 .setMode(mode == Mode.and ? LodFilterMode.AND : LodFilterMode.OR);
     }
 
     public org.citydb.operation.exporter.options.LodOptions getLodExportOptions() {
         return new org.citydb.operation.exporter.options.LodOptions()
-                .setLods(lods != null ? Set.of(lods) : null)
+                .setLods(lods != null ? new LinkedHashSet<>(Arrays.asList(lods)) : null)
                 .setMode(switch (mode) {
                     case and, or -> LodMode.KEEP;
                     case minimum -> LodMode.MINIMUM;
