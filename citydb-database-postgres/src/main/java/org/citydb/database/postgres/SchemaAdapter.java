@@ -161,7 +161,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         if (!lods.isEmpty()) {
             select.where(adapter.getSchemaAdapter().getOperationHelper()
                     .in(hierarchy.column("val_lod"), lods.stream().map(StringLiteral::of).toList()));
-            if (requireAll) {
+            if (requireAll && lods.size() > 1) {
                 select.having(Function.of("count", hierarchy.column("val_lod")).qualifier("distinct")
                         .eq(lods.size()));
             }
