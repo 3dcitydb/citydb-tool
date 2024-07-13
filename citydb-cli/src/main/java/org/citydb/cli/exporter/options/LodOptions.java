@@ -66,6 +66,11 @@ public class LodOptions implements Option {
 
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
+        if (lods == null && (mode == Mode.or || mode == Mode.and)) {
+            throw new CommandLine.ParameterException(commandLine,
+                    "Error: Missing required option --lod for LoD filter mode '" + mode + "'.");
+        }
+
         if (depth != null && !depth.equalsIgnoreCase("all")) {
             try {
                 searchDepth = Integer.parseInt(depth);
