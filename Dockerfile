@@ -27,7 +27,7 @@ ARG CITYDB_TOOL_VERSION
 ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 
 # Copy from builder
-COPY --from=builder /build/citydb-cli/build/install/3DCityDB-Command-Line-Tool /opt/citydb-tool
+COPY --from=builder /build/citydb-cli/build/install/citydb-tool /opt/citydb-tool
 
 # Run as non-root user, put start script in path and set permissions
 RUN groupadd --gid 1000 -r citydb-tool && \
