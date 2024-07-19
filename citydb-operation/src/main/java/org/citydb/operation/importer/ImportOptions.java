@@ -22,13 +22,26 @@
 package org.citydb.operation.importer;
 
 import org.citydb.config.SerializableConfig;
+import org.citydb.core.CoreConstants;
+
+import java.nio.file.Path;
 
 @SerializableConfig(name = "importOptions")
 public class ImportOptions {
     public static final int DEFAULT_BATCH_SIZE = 20;
 
+    private String tempDirectory;
     private int numberOfThreads;
     private int batchSize = DEFAULT_BATCH_SIZE;
+
+    public Path getTempDirectory() {
+        return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
+    }
+
+    public ImportOptions setTempDirectory(String tempDirectory) {
+        this.tempDirectory = tempDirectory;
+        return this;
+    }
 
     public int getNumberOfThreads() {
         return numberOfThreads;

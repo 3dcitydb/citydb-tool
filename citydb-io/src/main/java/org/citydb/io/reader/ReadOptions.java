@@ -23,13 +23,16 @@ package org.citydb.io.reader;
 
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
+import org.citydb.core.CoreConstants;
 import org.citydb.io.reader.options.InputFormatOptions;
 
+import java.nio.file.Path;
 import java.util.Optional;
 
 @SerializableConfig(name = "readOptions")
 public class ReadOptions {
     private boolean failFast;
+    private String tempDirectory;
     private int numberOfThreads;
     private String encoding;
     private boolean computeEnvelopes;
@@ -41,6 +44,15 @@ public class ReadOptions {
 
     public ReadOptions setFailFast(boolean failFast) {
         this.failFast = failFast;
+        return this;
+    }
+
+    public Path getTempDirectory() {
+        return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
+    }
+
+    public ReadOptions setTempDirectory(String tempDirectory) {
+        this.tempDirectory = tempDirectory;
         return this;
     }
 

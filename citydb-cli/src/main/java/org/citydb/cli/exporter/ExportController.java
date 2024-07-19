@@ -55,6 +55,7 @@ import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ExportController implements Command {
@@ -64,6 +65,10 @@ public abstract class ExportController implements Command {
     @CommandLine.Option(names = "--fail-fast",
             description = "Fail fast on errors.")
     protected Boolean failFast;
+
+    @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
+            description = "Store temporary files in this directory.")
+    protected Path tempDirectory;
 
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
@@ -105,6 +110,7 @@ public abstract class ExportController implements Command {
         IOAdapterManager ioManager = helper.createIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
         OutputFileBuilder builder = OutputFileBuilder.newInstance()
+                .tempDirectory(helper.resolveDirectory(tempDirectory))
                 .defaultFileExtension(ioManager.getFileExtensions(ioAdapter).stream()
                         .findFirst()
                         .orElse(null));
@@ -231,6 +237,10 @@ public abstract class ExportController implements Command {
 
         if (failFast != null) {
             writeOptions.setFailFast(failFast);
+        }
+
+        if (tempDirectory != null) {
+            writeOptions.setTempDirectory(tempDirectory.toString());
         }
 
         if (threadsOption.getNumberOfThreads() != null) {

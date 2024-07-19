@@ -134,8 +134,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     .setAbbreviatedSubcommandsAllowed(true)
                     .setExecutionStrategy(new CommandLine.RunAll())
                     .parseArgs(args);
-            List<CommandLine> commandLines = parseResult.asCommandLineList();
 
+            List<CommandLine> commandLines = parseResult.asCommandLineList();
             for (CommandLine commandLine : commandLines) {
                 if (commandLine.isUsageHelpRequested() || commandLine.isVersionHelpRequested()) {
                     return CommandLine.executeHelpRequest(parseResult);
