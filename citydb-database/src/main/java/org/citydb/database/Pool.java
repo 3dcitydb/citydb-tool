@@ -46,6 +46,6 @@ public class Pool {
     }
 
     public Connection getConnection() throws SQLException {
-        return getConnection(true);
+        return getConnection(false);
     }
 }
