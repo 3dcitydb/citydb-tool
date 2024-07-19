@@ -83,7 +83,8 @@ public class DatabaseManager {
                 connection.getDatabase()));
 
         properties.setInitialSize(0);
-        properties.setDefaultAutoCommit(true);
+        properties.setDefaultAutoCommit(false);
+        properties.setRollbackOnReturn(true);
 
         dataSource = new DataSource(properties);
         dataSource.setLoginTimeout(connection.getPoolOptions()

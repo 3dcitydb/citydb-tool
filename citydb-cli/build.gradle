@@ -50,7 +50,7 @@ application {
 
 distributions {
     main {
-        distributionBaseName = project.appDistName
+        distributionBaseName = project.appName
         contents {
             into('license') {
                 from "$rootDir/resources/license/APACHE-2.0.txt"
@@ -71,7 +71,7 @@ distributions {
 
 tasks.register('buildBundle', Zip) {
     dependsOn installDist
-    from "$projectDir/build/install/$project.appDistName"
+    from "$projectDir/build/install/$project.appName"
     destinationDirectory = distZip.destinationDirectory.get()
-    archiveFileName = project.appDistName + '-' + project.version + '.zip'
+    archiveFileName = project.appName + '-' + project.version + '.zip'
 }
