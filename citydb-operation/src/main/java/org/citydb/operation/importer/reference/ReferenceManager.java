@@ -60,7 +60,9 @@ public class ReferenceManager {
     }
 
     private ReferenceManager initialize(ImportOptions options) throws IOException {
-        store = PersistentMapStore.newInstance();
+        store = PersistentMapStore.builder()
+                .tempDirectory(options.getTempDirectory())
+                .build();
         service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
                 options.getNumberOfThreads() :
                 Math.max(2, Runtime.getRuntime().availableProcessors()));

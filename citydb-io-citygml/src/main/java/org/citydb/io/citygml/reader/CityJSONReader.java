@@ -69,7 +69,9 @@ public class CityJSONReader implements FeatureReader {
         this.options = Objects.requireNonNull(options, "The reader options must not be null.");
 
         try {
-            store = PersistentMapStore.newInstance();
+            store = PersistentMapStore.builder()
+                    .tempDirectory(options.getTempDirectory())
+                    .build();
             logger.debug("Initialized local cache at {}.", store.getBackingFile());
         } catch (IOException e) {
             throw new ReadException("Failed to initialize local cache.", e);

@@ -27,6 +27,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
+import org.citydb.core.CoreConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -44,6 +45,7 @@ import org.citydb.query.executor.QueryExecutor;
 import org.citydb.sqlbuilder.SqlBuildOptions;
 import org.citydb.sqlbuilder.common.SqlObject;
 
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -172,6 +174,10 @@ public class CommandHelper {
         } catch (SQLException e) {
             throw new ExecutionException("Failed to query status of database indexes.", e);
         }
+    }
+
+    public Path resolveDirectory(Path path) {
+        return path != null ? CoreConstants.WORKING_DIR.resolve(path) : null;
     }
 
     public synchronized void logException(String message, Throwable e) {
