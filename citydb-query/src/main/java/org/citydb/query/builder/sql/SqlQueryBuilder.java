@@ -100,7 +100,7 @@ public class SqlQueryBuilder {
 
     private Select buildDistinct(Query query, Select select, SqlContext context) {
         if (query.getSorting().isPresent()) {
-            Table table = Table.of(select, helper.getAliasGenerator());
+            Table table = Table.of(select);
             Select outerQuery = Select.newInstance().from(table);
 
             select.getSelect().stream()

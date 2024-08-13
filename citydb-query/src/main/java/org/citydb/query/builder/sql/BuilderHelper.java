@@ -41,8 +41,6 @@ import org.citydb.query.filter.literal.BBoxLiteral;
 import org.citydb.query.filter.literal.GeometryLiteral;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.AliasGenerator;
-import org.citydb.sqlbuilder.util.DefaultAliasGenerator;
 
 import java.sql.SQLException;
 import java.util.HashSet;
@@ -57,7 +55,6 @@ public class BuilderHelper {
     private final FeatureTypesBuilder featureTypesBuilder;
     private final FilterBuilder filterBuilder;
     private final SqlContextBuilder contextBuilder;
-    private final AliasGenerator aliasGenerator = DefaultAliasGenerator.newInstance();
 
     private BuilderHelper(DatabaseAdapter adapter) {
         this.adapter = Objects.requireNonNull(adapter, "The database adapter must not be null.");
@@ -103,16 +100,12 @@ public class BuilderHelper {
         return adapter.getSchemaAdapter().getSchemaMapping();
     }
 
-    public AliasGenerator getAliasGenerator() {
-        return aliasGenerator;
-    }
-
     Table getTable(org.citydb.database.schema.Table table) {
         return getTable(table.getName());
     }
 
     Table getTable(String tableName) {
-        return Table.of(tableName, adapter.getConnectionDetails().getSchema(), aliasGenerator);
+        return Table.of(tableName, adapter.getConnectionDetails().getSchema());
     }
 
     boolean matches(org.citydb.database.schema.Table schemaTable, Table table) throws QueryBuildException {

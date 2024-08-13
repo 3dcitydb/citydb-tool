@@ -29,7 +29,6 @@ import org.citydb.database.util.SqlHelper;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.AliasGenerator;
 
 import java.util.Set;
 
@@ -59,7 +58,7 @@ public abstract class SchemaAdapter {
 
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
 
-    public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table, AliasGenerator generator);
+    public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table);
 
     public abstract String getCreateIndex(Index index);
 

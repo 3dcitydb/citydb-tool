@@ -44,7 +44,6 @@ public class LodFilterBuilder {
                         lodFilter.getLods(),
                         lodFilter.getMode() == LodFilterMode.AND,
                         lodFilter.getSearchDepth().orElse(Integer.MAX_VALUE),
-                        context.getTable(),
-                        helper.getAliasGenerator())));
+                        context.getTable())));
     }
 }

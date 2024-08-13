@@ -37,7 +37,6 @@ import org.citydb.sqlbuilder.operation.Not;
 import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.AliasGenerator;
 import org.citydb.sqlbuilder.util.PlainText;
 
 import java.io.BufferedReader;
@@ -115,10 +114,10 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table, AliasGenerator generator) {
-        Table hierarchy = Table.of("hierarchy", generator);
+    public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table) {
+        Table hierarchy = Table.of("hierarchy");
         Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
-                adapter.getConnectionDetails().getSchema(), generator);
+                adapter.getConnectionDetails().getSchema());
 
         Select featureQuery = Select.newInstance()
                 .select(table.column("id").as("feature_id"),
@@ -153,9 +152,9 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                     .where(Not.of(PlainText.of("is_cycle")));
         }
 
-        hierarchy = Table.of(hierarchyQuery, generator);
+        hierarchy = Table.of(hierarchyQuery);
         property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
-                adapter.getConnectionDetails().getSchema(), generator);
+                adapter.getConnectionDetails().getSchema());
 
         Select select = Select.newInstance()
                 .select(IntegerLiteral.of(1))
