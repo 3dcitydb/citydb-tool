@@ -224,6 +224,10 @@ public abstract class ExportController implements Command {
             exportOptions.setTargetSrs(crsOptions.getTargetSrs());
         }
 
+        if (queryOptions != null && queryOptions.getLodOptions() != null) {
+            exportOptions.setLodOptions(queryOptions.getLodOptions().getLodExportOptions());
+        }
+
         return exportOptions;
     }
 
