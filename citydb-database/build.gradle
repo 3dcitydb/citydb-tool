@@ -5,7 +5,7 @@ dependencies {
     api project(':citydb-config')
     api project(':citydb-logging')
     api project(':citydb-model')
-    api 'org.citydb:sqlbuilder:3.0.0'
+    api 'org.citydb:sqlbuilder:3.0.1-SNAPSHOT'
     api "org.geotools:gt-referencing:$geotools_version"
     implementation 'org.apache.tomcat:tomcat-jdbc:10.1.25'
     implementation "org.geotools:gt-epsg-wkt:$geotools_version"
