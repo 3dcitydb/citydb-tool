@@ -24,6 +24,7 @@ package org.citydb.cli.exporter.cityjson;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.exporter.ExportController;
+import org.citydb.cli.exporter.ExportOptions;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.database.DatabaseManager;
@@ -35,7 +36,6 @@ import org.citydb.io.citygml.writer.CityJSONFormatOptions;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
-import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
@@ -190,7 +190,7 @@ public class CityJSONExportCommand extends ExportController {
                 SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
 
                 Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
-                        .build(getQuery(), SqlBuildOptions.defaults().omitDistinct(true));
+                        .build(getQuery(exportOptions), SqlBuildOptions.defaults().omitDistinct(true));
                 SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
                         .getRecursiveImplicitGeometryQuery(featureQuery);
 

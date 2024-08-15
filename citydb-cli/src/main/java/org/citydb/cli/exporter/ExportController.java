@@ -45,7 +45,6 @@ import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
-import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
@@ -121,7 +120,7 @@ public abstract class ExportController implements Command {
         WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
-        Query query = getQuery();
+        Query query = getQuery(exportOptions);
         QueryExecutor executor = helper.getQueryExecutor(query,
                 SqlBuildOptions.defaults().omitDistinct(true),
                 tempDirectory,
@@ -198,15 +197,11 @@ public abstract class ExportController implements Command {
                 writer;
     }
 
-    protected Query getQuery() throws ExecutionException {
+    protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
         try {
             return queryOptions != null ?
                     queryOptions.getQuery() :
-                    config.getOrElse(org.citydb.query.QueryOptions.class, org.citydb.query.QueryOptions::new)
-                            .getQuery(org.citydb.query.QueryOptions.EXPORT_QUERY)
-                            .orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
-        } catch (ConfigException e) {
-            throw new ExecutionException("Failed to get query options from config.", e);
+                    exportOptions.getQuery().orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }

@@ -31,7 +31,6 @@ import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.logging.LoggerManager;
-import org.citydb.operation.deleter.DeleteOptions;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.operation.util.FeatureStatistics;
@@ -98,7 +97,9 @@ public class DeleteCommand implements Command {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         Deleter deleter = Deleter.newInstance();
         DeleteOptions deleteOptions = getDeleteOptions();
-        QueryExecutor executor = helper.getQueryExecutor(getQuery(),
+
+        Query query = getQuery(deleteOptions);
+        QueryExecutor executor = helper.getQueryExecutor(query,
                 SqlBuildOptions.defaults().omitDistinct(true),
                 tempDirectory,
                 databaseManager.getAdapter());
@@ -172,13 +173,11 @@ public class DeleteCommand implements Command {
                 CommandLine.ExitCode.SOFTWARE;
     }
 
-    private Query getQuery() throws ExecutionException {
+    private Query getQuery(DeleteOptions deleteOptions) throws ExecutionException {
         try {
             Query query = queryOptions != null ?
                     queryOptions.getQuery() :
-                    config.getOrElse(org.citydb.query.QueryOptions.class, org.citydb.query.QueryOptions::new)
-                            .getQuery(org.citydb.query.QueryOptions.DELETE_QUERY)
-                            .orElseGet(QueryHelper::getAllTopLevelFeatures);
+                    deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
 
             if (mode == Mode.terminate) {
                 BooleanExpression nonTerminated = QueryHelper.terminationDateIsNull();
@@ -189,8 +188,6 @@ public class DeleteCommand implements Command {
             }
 
             return query;
-        } catch (ConfigException e) {
-            throw new ExecutionException("Failed to get query options from config.", e);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -209,8 +206,8 @@ public class DeleteCommand implements Command {
                 deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
             }
         } else {
-            deleteOptions = new DeleteOptions()
-                    .setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
+            deleteOptions = new DeleteOptions();
+            deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
         }
 
         if (metadataOptions != null) {
