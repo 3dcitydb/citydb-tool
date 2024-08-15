@@ -15,8 +15,9 @@ FROM eclipse-temurin:${BUILDER_IMAGE_TAG} AS builder
 WORKDIR /build
 COPY . /build
 
-# Build
-RUN chmod u+x ./gradlew && ./gradlew installDist
+# Install git and build
+RUN apt-get update && apt-get install git -y && \
+    chmod u+x ./gradlew && ./gradlew installDist
 
 # Runtime stage ###############################################################
 # Base image
