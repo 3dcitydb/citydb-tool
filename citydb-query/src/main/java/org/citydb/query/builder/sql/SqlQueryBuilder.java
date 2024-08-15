@@ -56,6 +56,10 @@ public class SqlQueryBuilder {
     }
 
     public Select build(Query query) throws QueryBuildException {
+        return build(query, SqlBuildOptions.defaults());
+    }
+
+    public Select build(Query query, SqlBuildOptions options) throws QueryBuildException {
         Set<FeatureType> featureTypes = helper.getFeatureTypes(query);
 
         FeatureType featureType = helper.getSchemaMapping().getSuperType(featureTypes);
@@ -91,7 +95,7 @@ public class SqlQueryBuilder {
             CountLimitBuilder.newInstance().build(countLimit, select, context);
         }
 
-        if (!select.getJoins().isEmpty()) {
+        if (!options.isOmitDistinct() && !select.getJoins().isEmpty()) {
             select = buildDistinct(query, select, context);
         }
 

@@ -36,6 +36,7 @@ import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.Filter;
@@ -45,6 +46,7 @@ import org.citydb.query.filter.operation.Operators;
 import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 
 @CommandLine.Command(
@@ -52,6 +54,10 @@ import java.util.concurrent.atomic.AtomicLong;
         description = "Delete features from the database.")
 public class DeleteCommand implements Command {
     enum Mode {delete, terminate}
+
+    @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
+            description = "Store temporary files in this directory.")
+    protected Path tempDirectory;
 
     @CommandLine.Option(names = {"-m", "--delete-mode"}, paramLabel = "<mode>", defaultValue = "terminate",
             description = "Delete mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
@@ -92,7 +98,10 @@ public class DeleteCommand implements Command {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         Deleter deleter = Deleter.newInstance();
         DeleteOptions deleteOptions = getDeleteOptions();
-        QueryExecutor executor = helper.getQueryExecutor(getQuery(), databaseManager.getAdapter());
+        QueryExecutor executor = helper.getQueryExecutor(getQuery(),
+                SqlBuildOptions.defaults().omitDistinct(true),
+                tempDirectory,
+                databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
