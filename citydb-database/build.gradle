@@ -10,11 +10,4 @@ dependencies {
     implementation 'org.apache.tomcat:tomcat-jdbc:10.1.25'
     implementation "org.geotools:gt-epsg-wkt:$geotools_version"
     implementation "org.geotools:gt-epsg-extension:$geotools_version"
-    implementation 'javax.annotation:javax.annotation-api:1.3.2'
-
-    modules {
-        module('jakarta.annotation:jakarta.annotation-api') {
-            replacedBy('javax.annotation:javax.annotation-api')
-        }
-    }
 }
