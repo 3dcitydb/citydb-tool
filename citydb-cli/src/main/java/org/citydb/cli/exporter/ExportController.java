@@ -48,6 +48,7 @@ import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
@@ -120,7 +121,10 @@ public abstract class ExportController implements Command {
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
         Query query = getQuery(exportOptions);
-        QueryExecutor executor = helper.getQueryExecutor(query, databaseManager.getAdapter());
+        QueryExecutor executor = helper.getQueryExecutor(query,
+                SqlBuildOptions.defaults().omitDistinct(true),
+                tempDirectory,
+                databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());

@@ -37,6 +37,7 @@ import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.Exporter;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
@@ -189,7 +190,7 @@ public class CityJSONExportCommand extends ExportController {
                 SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
 
                 Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
-                        .build(getQuery(exportOptions));
+                        .build(getQuery(exportOptions), SqlBuildOptions.defaults().omitDistinct(true));
                 SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
                         .getRecursiveImplicitGeometryQuery(featureQuery);
 

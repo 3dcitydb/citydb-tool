@@ -72,7 +72,7 @@ public class CityJSONReader implements FeatureReader {
             store = PersistentMapStore.builder()
                     .tempDirectory(options.getTempDirectory())
                     .build();
-            logger.debug("Initialized local cache at {}.", store.getBackingFile());
+            logger.debug("Initialized CityJSON reader cache at {}.", store.getBackingFile());
         } catch (IOException e) {
             throw new ReadException("Failed to initialize local cache.", e);
         }
