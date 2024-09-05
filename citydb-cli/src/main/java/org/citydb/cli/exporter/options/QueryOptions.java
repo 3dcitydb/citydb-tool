@@ -26,7 +26,9 @@ import org.citydb.cli.common.FilterOptions;
 import org.citydb.cli.common.Option;
 import org.citydb.cli.common.TypeNameOption;
 import org.citydb.query.Query;
+import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
+import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
 public class QueryOptions implements Option {
@@ -42,6 +44,9 @@ public class QueryOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
     private CountLimitOptions countLimitOptions;
 
+    @CommandLine.ArgGroup(exclusive = false)
+    private LodOptions lodOptions;
+
     public Query getQuery() throws FilterParseException {
         Query query = new Query();
         if (typeNameOption != null) {
@@ -51,6 +56,8 @@ public class QueryOptions implements Option {
         if (filterOptions != null) {
             query.setFilter(filterOptions.getFilter());
             query.setFilterSrs(filterOptions.getFilterCrs());
+        } else {
+            query.setFilter(Filter.of(QueryHelper.terminationDateIsNull()));
         }
 
         if (sortingOption != null) {
@@ -61,13 +68,25 @@ public class QueryOptions implements Option {
             query.setCountLimit(countLimitOptions.getCountLimit());
         }
 
+        if (lodOptions != null) {
+            query.setLodFilter(lodOptions.getLodFilter());
+        }
+
         return query;
+    }
+
+    public LodOptions getLodOptions() {
+        return lodOptions;
     }
 
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (countLimitOptions != null) {
             countLimitOptions.preprocess(commandLine);
+        }
+
+        if (lodOptions != null) {
+            lodOptions.preprocess(commandLine);
         }
     }
 }

@@ -23,13 +23,16 @@ package org.citydb.io.writer;
 
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
+import org.citydb.core.CoreConstants;
 import org.citydb.io.writer.options.OutputFormatOptions;
 
+import java.nio.file.Path;
 import java.util.Optional;
 
 @SerializableConfig(name = "writeOptions")
 public class WriteOptions {
     private boolean failFast;
+    private String tempDirectory;
     private int numberOfThreads;
     private String encoding;
     private String srsName;
@@ -41,6 +44,15 @@ public class WriteOptions {
 
     public WriteOptions setFailFast(boolean failFast) {
         this.failFast = failFast;
+        return this;
+    }
+
+    public Path getTempDirectory() {
+        return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
+    }
+
+    public WriteOptions setTempDirectory(String tempDirectory) {
+        this.tempDirectory = tempDirectory;
         return this;
     }
 

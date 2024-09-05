@@ -1,14 +1,14 @@
 name: Build citydb-tool
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
   gradle:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        java: [17]
-        distribution: [temurin]
+        os: [ ubuntu-latest, windows-latest ]
+        java: [ 17 ]
+        distribution: [ temurin ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -18,11 +18,10 @@ jobs:
         with:
           distribution: ${{ matrix.distribution }}
           java-version: ${{ matrix.java }}
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v2
-        with:
-          cache-disabled: true
       - name: Grant execute permission to Gradle
         run: chmod +x ./gradlew
       - name: Execute Gradle build
-        run: ./gradlew build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build
+          cache-disabled: true

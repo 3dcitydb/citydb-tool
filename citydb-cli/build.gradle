@@ -41,16 +41,15 @@ application {
             def windows = getWindowsScript()
             def unix = getUnixScript()
             windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
-                    .replaceFirst(' -classpath "%CLASSPATH%" ', '')
-            unix.text = unix.text.replaceFirst('\nAPP_HOME=.*', '$0\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
-                    .replaceFirst('-classpath "\\$CLASSPATH"', '')
+            unix.text = unix.text.replaceFirst('\nMODULE_PATH=.*',
+                    '$0\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
         }
     }
 }
 
 distributions {
     main {
-        distributionBaseName = project.appDistName
+        distributionBaseName = project.appName
         contents {
             into('license') {
                 from "$rootDir/resources/license/APACHE-2.0.txt"
@@ -71,7 +70,7 @@ distributions {
 
 tasks.register('buildBundle', Zip) {
     dependsOn installDist
-    from "$projectDir/build/install/$project.appDistName"
+    from "$projectDir/build/install/$project.appName"
     destinationDirectory = distZip.destinationDirectory.get()
-    archiveFileName = project.appDistName + '-' + project.version + '.zip'
+    archiveFileName = project.appName + '-' + project.version + '.zip'
 }

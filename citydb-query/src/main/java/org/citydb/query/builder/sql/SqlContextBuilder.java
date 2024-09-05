@@ -285,7 +285,7 @@ public class SqlContextBuilder {
                         toTable.column(toColumn),
                         fromTable.column(fromColumn)));
 
-        return Table.lateral(select, helper.getAliasGenerator());
+        return Table.lateral(select);
     }
 
     private Optional<Select> getLateralQuery(Table table) {

@@ -31,11 +31,11 @@ import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.logging.LoggerManager;
-import org.citydb.operation.deleter.DeleteOptions;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.Filter;
@@ -45,6 +45,7 @@ import org.citydb.query.filter.operation.Operators;
 import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 
 @CommandLine.Command(
@@ -52,6 +53,10 @@ import java.util.concurrent.atomic.AtomicLong;
         description = "Delete features from the database.")
 public class DeleteCommand implements Command {
     enum Mode {delete, terminate}
+
+    @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
+            description = "Store temporary files in this directory.")
+    protected Path tempDirectory;
 
     @CommandLine.Option(names = {"-m", "--delete-mode"}, paramLabel = "<mode>", defaultValue = "terminate",
             description = "Delete mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
@@ -92,7 +97,12 @@ public class DeleteCommand implements Command {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         Deleter deleter = Deleter.newInstance();
         DeleteOptions deleteOptions = getDeleteOptions();
-        QueryExecutor executor = helper.getQueryExecutor(getQuery(), databaseManager.getAdapter());
+
+        Query query = getQuery(deleteOptions);
+        QueryExecutor executor = helper.getQueryExecutor(query,
+                SqlBuildOptions.defaults().omitDistinct(true),
+                tempDirectory,
+                databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
@@ -163,13 +173,11 @@ public class DeleteCommand implements Command {
                 CommandLine.ExitCode.SOFTWARE;
     }
 
-    private Query getQuery() throws ExecutionException {
+    private Query getQuery(DeleteOptions deleteOptions) throws ExecutionException {
         try {
             Query query = queryOptions != null ?
                     queryOptions.getQuery() :
-                    config.getOrElse(org.citydb.query.QueryOptions.class, org.citydb.query.QueryOptions::new)
-                            .getQuery(org.citydb.query.QueryOptions.DELETE_QUERY)
-                            .orElseGet(QueryHelper::getAllTopLevelFeatures);
+                    deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
 
             if (mode == Mode.terminate) {
                 BooleanExpression nonTerminated = QueryHelper.terminationDateIsNull();
@@ -180,8 +188,6 @@ public class DeleteCommand implements Command {
             }
 
             return query;
-        } catch (ConfigException e) {
-            throw new ExecutionException("Failed to get query options from config.", e);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -200,8 +206,8 @@ public class DeleteCommand implements Command {
                 deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
             }
         } else {
-            deleteOptions = new DeleteOptions()
-                    .setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
+            deleteOptions = new DeleteOptions();
+            deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
         }
 
         if (metadataOptions != null) {

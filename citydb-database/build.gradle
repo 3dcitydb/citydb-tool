@@ -1,20 +1,13 @@
-def geotools_version = '31.2'
+def geotools_version = '31.3'
 
 dependencies {
     api project(':citydb-core')
     api project(':citydb-config')
     api project(':citydb-logging')
     api project(':citydb-model')
-    api 'org.citydb:sqlbuilder:3.0.0-SNAPSHOT'
+    api 'org.citydb:sqlbuilder:3.0.1'
     api "org.geotools:gt-referencing:$geotools_version"
-    implementation 'org.apache.tomcat:tomcat-jdbc:10.1.25'
+    implementation 'org.apache.tomcat:tomcat-jdbc:10.1.28'
     implementation "org.geotools:gt-epsg-wkt:$geotools_version"
     implementation "org.geotools:gt-epsg-extension:$geotools_version"
-    implementation 'javax.annotation:javax.annotation-api:1.3.2'
-
-    modules {
-        module('jakarta.annotation:jakarta.annotation-api') {
-            replacedBy('javax.annotation:javax.annotation-api')
-        }
-    }
 }

@@ -6,7 +6,7 @@ plugins {
 
 apply from: 'properties.gradle'
 
-version '0.7.1-beta'
+version '0.8.0-beta'
 
 allprojects {
     group 'org.citydb'
@@ -34,7 +34,7 @@ subprojects {
 
     repositories {
         maven {
-            url 'https://repo.osgeo.org/repository/release'
+            url 'https://repo.osgeo.org/repository/release/'
         }
         maven {
             url 'https://oss.sonatype.org/content/repositories/snapshots/'
@@ -56,7 +56,7 @@ subprojects {
 
     extraJavaModuleInfo {
         failOnMissingModuleInfo.set(false)
-        module('tomcat-jdbc-10.1.25.jar', 'org.apache.tomcat.jdbc', '10.1.25') {
+        module('tomcat-jdbc-10.1.28.jar', 'org.apache.tomcat.jdbc', '10.1.28') {
             requires('java.sql')
             requires('java.management')
             requires('org.apache.tomcat.juli')

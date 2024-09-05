@@ -14,80 +14,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    -
-      name: Parse short sha
-      uses: benjlevesque/short-sha@v2.2
-      id: short-sha
-    -
-      name: set lower case owner name
-      run: |
-        echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
-      env:
-        OWNER: '${{ github.repository_owner }}'
-    -
-      name: Checkout repo
-      uses: actions/checkout@v4
-    -
-      name: Docker login Dockerhub
-      id: docker_login
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
-    -
-      name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    -
-      name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
-      with:
-        platforms: ${{ env.PLATFORMS }}
-    -
-      name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      with:
-        platforms: ${{ env.PLATFORMS }}
-    -
-      name: Extract metadata (tags, labels) for docker image
-      id: meta
-      uses: docker/metadata-action@v5
-      env:
-        DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
-      with:
-        images: |
-          ${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
-          ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
-        flavor: |
-          latest=false
-        tags: |
-          type=edge,branch=main
-        labels: |
-          maintainer=Bruno Willenborg
-          maintainer.email=b.willenborg(at)tum.de
-          maintainer.organization=Chair of Geoinformatics, Technical University of Munich (TUM)
-          org.opencontainers.image.authors=Bruno Willenborg
-          org.opencontainers.image.vendor=3DCityDB Steering Committee
-          org.opencontainers.image.title=3D City Database 5.0 CLI tool Docker image
-          org.opencontainers.image.description=3D City Database 5.0 CLI to import/export city model data and to run database operations
-          org.opencontainers.image.url=https://github.com/3dcitydb/
-          org.opencontainers.image.documentation=https://github.com/3dcitydb/citydb-tool#docker
-          org.opencontainers.image.source=https://github.com/3dcitydb/citydb-tool
-    -
-      name: Build and publish
-      uses: docker/build-push-action@v5
-      id: docker_build
-      with:
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        platforms: ${{ env.PLATFORMS }}
-        build-args: |
-          CITYDB_TOOL_VERSION=${{ steps.short-sha.outputs.sha }}
-        annotations: ${{ steps.meta.outputs.annotations }}
-    -
-      name: Image digest
-      run: echo ${{ steps.docker_build.outputs.digest }}
+      - name: Parse short sha
+        uses: benjlevesque/short-sha@v3.0
+        id: short-sha
+      - name: set lower case owner name
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Docker login Dockerhub
+        id: docker_login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: ${{ env.PLATFORMS }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: ${{ env.PLATFORMS }}
+      - name: Extract metadata (tags, labels) for docker image
+        id: meta
+        uses: docker/metadata-action@v5
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: |
+            ${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
+            ghcr.io/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
+          tags: |
+            type=edge,branch=main
+          labels: |
+            maintainer=Bruno Willenborg
+            maintainer.email=b.willenborg(at)tum.de
+            maintainer.organization=Chair of Geoinformatics, Technical University of Munich (TUM)
+            org.opencontainers.image.authors=Bruno Willenborg
+            org.opencontainers.image.vendor=3DCityDB Steering Committee
+            org.opencontainers.image.title=3D City Database 5.0 CLI tool Docker image
+            org.opencontainers.image.description=3D City Database 5.0 CLI to import/export city model data and to run database operations
+            org.opencontainers.image.url=https://github.com/3dcitydb/
+            org.opencontainers.image.documentation=https://github.com/3dcitydb/citydb-tool#docker
+            org.opencontainers.image.source=https://github.com/3dcitydb/citydb-tool
+      - name: Build and publish
+        uses: docker/build-push-action@v6
+        id: docker_build
+        with:
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ env.PLATFORMS }}
+          build-args: |
+            CITYDB_TOOL_VERSION=${{ steps.short-sha.outputs.sha }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}

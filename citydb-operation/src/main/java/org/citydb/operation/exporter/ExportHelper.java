@@ -22,9 +22,9 @@
 package org.citydb.operation.exporter;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.SrsParseException;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.SchemaMapping;
+import org.citydb.database.util.SrsParseException;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;

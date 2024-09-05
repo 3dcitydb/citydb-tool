@@ -22,13 +22,14 @@
 package org.citydb.query.builder.sql;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.SrsParseException;
 import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.FeatureType;
+import org.citydb.database.util.SrsParseException;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.limit.CountLimit;
+import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.function.WindowFunction;
@@ -55,6 +56,10 @@ public class SqlQueryBuilder {
     }
 
     public Select build(Query query) throws QueryBuildException {
+        return build(query, SqlBuildOptions.defaults());
+    }
+
+    public Select build(Query query, SqlBuildOptions options) throws QueryBuildException {
         Set<FeatureType> featureTypes = helper.getFeatureTypes(query);
 
         FeatureType featureType = helper.getSchemaMapping().getSuperType(featureTypes);
@@ -75,6 +80,11 @@ public class SqlQueryBuilder {
             }
         }
 
+        LodFilter lodFilter = query.getLodFilter().orElse(null);
+        if (lodFilter != null) {
+            LodFilterBuilder.of(helper).build(lodFilter, select, context);
+        }
+
         Sorting sorting = query.getSorting().orElse(null);
         if (sorting != null) {
             SortingBuilder.of(helper).build(sorting, select, context);
@@ -85,7 +95,7 @@ public class SqlQueryBuilder {
             CountLimitBuilder.newInstance().build(countLimit, select, context);
         }
 
-        if (!select.getJoins().isEmpty()) {
+        if (!options.isOmitDistinct() && !select.getJoins().isEmpty()) {
             select = buildDistinct(query, select, context);
         }
 
@@ -94,7 +104,7 @@ public class SqlQueryBuilder {
 
     private Select buildDistinct(Query query, Select select, SqlContext context) {
         if (query.getSorting().isPresent()) {
-            Table table = Table.of(select, helper.getAliasGenerator());
+            Table table = Table.of(select);
             Select outerQuery = Select.newInstance().from(table);
 
             select.getSelect().stream()

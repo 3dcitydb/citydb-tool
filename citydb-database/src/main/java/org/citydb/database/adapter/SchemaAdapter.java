@@ -28,6 +28,9 @@ import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SqlHelper;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
+
+import java.util.Set;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
@@ -54,6 +57,8 @@ public abstract class SchemaAdapter {
     public abstract String getFeatureHierarchyQuery(int targetSRID);
 
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
+
+    public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table);
 
     public abstract String getCreateIndex(Index index);
 

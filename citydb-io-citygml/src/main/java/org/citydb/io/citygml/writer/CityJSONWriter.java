@@ -81,8 +81,10 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
                 .createWriter(file);
 
         try {
-            store = PersistentMapStore.newInstance();
-            logger.debug("Initialized local cache at {}.", store.getBackingFile());
+            store = PersistentMapStore.builder()
+                    .tempDirectory(options.getTempDirectory())
+                    .build();
+            logger.debug("Initialized CityJSON writer cache at {}.", store.getBackingFile());
         } catch (IOException e) {
             throw new WriteException("Failed to initialize local cache.", e);
         }

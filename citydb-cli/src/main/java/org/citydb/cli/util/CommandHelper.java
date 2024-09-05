@@ -27,6 +27,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
+import org.citydb.core.CoreConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -40,10 +41,12 @@ import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.PluginManager;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
-import org.citydb.sqlbuilder.SqlBuildOptions;
 import org.citydb.sqlbuilder.common.SqlObject;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
@@ -114,17 +117,21 @@ public class CommandHelper {
         return manager;
     }
 
-    public QueryExecutor getQueryExecutor(Query query, DatabaseAdapter adapter) throws ExecutionException {
+    public QueryExecutor getQueryExecutor(Query query, SqlBuildOptions options, Path tempDirectory, DatabaseAdapter adapter) throws ExecutionException {
         try {
-            return QueryExecutor.builder(adapter).build(query);
+            return QueryExecutor.builder(adapter)
+                    .tempDirectory(tempDirectory)
+                    .build(query, options);
         } catch (QueryBuildException e) {
             throw new ExecutionException("Failed to build database query.", e);
+        } catch (IOException e) {
+            throw new ExecutionException("Failed to build database query executor.", e);
         }
     }
 
     public String getFormattedSql(SqlObject object, DatabaseAdapter adapter) {
-        return adapter.getSchemaAdapter().getSqlHelper().toSql(object, SqlBuildOptions.defaults()
-                .setKeywordCase(SqlBuildOptions.KeywordCase.UPPERCASE)
+        return adapter.getSchemaAdapter().getSqlHelper().toSql(object, org.citydb.sqlbuilder.SqlBuildOptions.defaults()
+                .setKeywordCase(org.citydb.sqlbuilder.SqlBuildOptions.KeywordCase.UPPERCASE)
                 .setIndent("  "));
     }
 
@@ -172,6 +179,10 @@ public class CommandHelper {
         } catch (SQLException e) {
             throw new ExecutionException("Failed to query status of database indexes.", e);
         }
+    }
+
+    public Path resolveDirectory(Path path) {
+        return path != null ? CoreConstants.WORKING_DIR.resolve(path) : null;
     }
 
     public synchronized void logException(String message, Throwable e) {

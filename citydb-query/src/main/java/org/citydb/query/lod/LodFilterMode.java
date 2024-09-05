@@ -19,33 +19,33 @@
  * limitations under the License.
  */
 
-package org.citydb.database;
+package org.citydb.query.lod;
 
-import java.sql.Connection;
-import java.sql.SQLException;
+public enum LodFilterMode {
+    AND("and"),
+    OR("or");
 
-public class Pool {
-    private final DatabaseManager manager;
+    private final String value;
 
-    private Pool(DatabaseManager manager) {
-        this.manager = manager;
+    LodFilterMode(String value) {
+        this.value = value;
     }
 
-    static Pool newInstance(DatabaseManager manager) {
-        return new Pool(manager);
+    public String toValue() {
+        return value;
     }
 
-    public Connection getConnection(boolean autoCommit) throws SQLException {
-        if (manager.isConnected()) {
-            Connection connection = manager.getDataSource().getConnection();
-            connection.setAutoCommit(autoCommit);
-            return connection;
-        } else {
-            throw new SQLException("No database connection established.");
+    public static LodFilterMode fromValue(String value) {
+        for (LodFilterMode v : LodFilterMode.values()) {
+            if (v.value.equals(value))
+                return v;
         }
+
+        return null;
     }
 
-    public Connection getConnection() throws SQLException {
-        return getConnection(false);
+    @Override
+    public String toString() {
+        return value;
     }
 }

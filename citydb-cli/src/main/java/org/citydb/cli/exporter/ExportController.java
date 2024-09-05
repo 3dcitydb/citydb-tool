@@ -45,16 +45,17 @@ import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
-import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
+import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ExportController implements Command {
@@ -64,6 +65,10 @@ public abstract class ExportController implements Command {
     @CommandLine.Option(names = "--fail-fast",
             description = "Fail fast on errors.")
     protected Boolean failFast;
+
+    @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
+            description = "Store temporary files in this directory.")
+    protected Path tempDirectory;
 
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
@@ -105,6 +110,7 @@ public abstract class ExportController implements Command {
         IOAdapterManager ioManager = helper.createIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
         OutputFileBuilder builder = OutputFileBuilder.newInstance()
+                .tempDirectory(helper.resolveDirectory(tempDirectory))
                 .defaultFileExtension(ioManager.getFileExtensions(ioAdapter).stream()
                         .findFirst()
                         .orElse(null));
@@ -114,8 +120,11 @@ public abstract class ExportController implements Command {
         WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
-        Query query = getQuery();
-        QueryExecutor executor = helper.getQueryExecutor(query, databaseManager.getAdapter());
+        Query query = getQuery(exportOptions);
+        QueryExecutor executor = helper.getQueryExecutor(query,
+                SqlBuildOptions.defaults().omitDistinct(true),
+                tempDirectory,
+                databaseManager.getAdapter());
 
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
@@ -188,15 +197,11 @@ public abstract class ExportController implements Command {
                 writer;
     }
 
-    protected Query getQuery() throws ExecutionException {
+    protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
         try {
             return queryOptions != null ?
                     queryOptions.getQuery() :
-                    config.getOrElse(org.citydb.query.QueryOptions.class, org.citydb.query.QueryOptions::new)
-                            .getQuery(org.citydb.query.QueryOptions.EXPORT_QUERY)
-                            .orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
-        } catch (ConfigException e) {
-            throw new ExecutionException("Failed to get query options from config.", e);
+                    exportOptions.getQuery().orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -218,6 +223,10 @@ public abstract class ExportController implements Command {
             exportOptions.setTargetSrs(crsOptions.getTargetSrs());
         }
 
+        if (queryOptions != null && queryOptions.getLodOptions() != null) {
+            exportOptions.setLodOptions(queryOptions.getLodOptions().getLodExportOptions());
+        }
+
         return exportOptions;
     }
 
@@ -231,6 +240,10 @@ public abstract class ExportController implements Command {
 
         if (failFast != null) {
             writeOptions.setFailFast(failFast);
+        }
+
+        if (tempDirectory != null) {
+            writeOptions.setTempDirectory(tempDirectory.toString());
         }
 
         if (threadsOption.getNumberOfThreads() != null) {

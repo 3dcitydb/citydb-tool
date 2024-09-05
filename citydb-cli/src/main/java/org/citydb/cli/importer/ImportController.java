@@ -39,13 +39,13 @@ import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
-import org.citydb.operation.importer.ImportOptions;
 import org.citydb.operation.importer.Importer;
 import org.citydb.operation.importer.util.StatisticsConsumer;
 import org.citydb.operation.util.FeatureStatistics;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -56,6 +56,10 @@ public abstract class ImportController implements Command {
     @CommandLine.Option(names = "--fail-fast",
             description = "Fail fast on errors.")
     protected Boolean failFast;
+
+    @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
+            description = "Store temporary files in this directory.")
+    protected Path tempDirectory;
 
     @CommandLine.Mixin
     protected ThreadsOption threadsOption;
@@ -213,6 +217,10 @@ public abstract class ImportController implements Command {
             readOptions.setFailFast(failFast);
         }
 
+        if (tempDirectory != null) {
+            readOptions.setTempDirectory(tempDirectory.toString());
+        }
+
         if (threadsOption.getNumberOfThreads() != null) {
             readOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
         }
@@ -234,6 +242,10 @@ public abstract class ImportController implements Command {
             importOptions = config.getOrElse(ImportOptions.class, ImportOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get import options from config.", e);
+        }
+
+        if (tempDirectory != null) {
+            importOptions.setTempDirectory(tempDirectory.toString());
         }
 
         if (threadsOption.getNumberOfThreads() != null) {
