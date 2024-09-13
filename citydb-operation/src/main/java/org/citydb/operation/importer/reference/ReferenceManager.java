@@ -133,7 +133,7 @@ public class ReferenceManager {
         countLatch.increment();
         service.execute(() -> {
             try {
-                try (Connection connection = adapter.getPool().getConnection();
+                try (Connection connection = adapter.getPool().getConnection(true);
                      PreparedStatement stmt = connection.prepareStatement("update " +
                              adapter.getConnectionDetails().getSchema() + "." + type.getTable() +
                              " set " + type.getColumn() + " = ? where id = ?")) {
