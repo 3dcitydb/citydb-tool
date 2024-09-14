@@ -182,8 +182,13 @@ public class ModelBuilderHelper {
     }
 
     public boolean lookupAndPut(ExternalFile file) {
+        return lookupAndPut(file, null);
+    }
+
+    public boolean lookupAndPut(ExternalFile file, String token) {
         String id = file != null ? file.getObjectId().orElse(null) : null;
-        return id != null && getOrCreatePersistentMap("external-files").putIfAbsent(id, Boolean.TRUE) != null;
+        return id != null && getOrCreatePersistentMap("external-files")
+                .putIfAbsent(token == null ? id : token + id, Boolean.TRUE) != null;
     }
 
     @SuppressWarnings("unchecked")

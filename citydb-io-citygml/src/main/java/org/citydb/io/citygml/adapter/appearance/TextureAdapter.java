@@ -31,6 +31,7 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Reference;
 import org.citygml4j.core.model.appearance.AbstractTexture;
 import org.citygml4j.core.model.appearance.ColorPlusOpacity;
+import org.citygml4j.core.model.core.ImplicitGeometry;
 
 import java.io.IOException;
 
@@ -41,37 +42,21 @@ public abstract class TextureAdapter<T extends Texture<?>, R extends AbstractTex
         super.build(source, target, helper);
 
         if (source.getTextureType() != null) {
-            switch (source.getTextureType()) {
-                case SPECIFIC:
-                    target.setTextureType(TextureType.SPECIFIC);
-                    break;
-                case TYPICAL:
-                    target.setTextureType(TextureType.TYPICAL);
-                    break;
-                case UNKNOWN:
-                    target.setTextureType(TextureType.UNKNOWN);
-                    break;
-            }
+            target.setTextureType(switch (source.getTextureType()) {
+                case SPECIFIC -> TextureType.SPECIFIC;
+                case TYPICAL -> TextureType.TYPICAL;
+                case UNKNOWN -> TextureType.UNKNOWN;
+            });
         }
 
         if (source.getWrapMode() != null) {
-            switch (source.getWrapMode()) {
-                case NONE:
-                    target.setWrapMode(WrapMode.NONE);
-                    break;
-                case WRAP:
-                    target.setWrapMode(WrapMode.WRAP);
-                    break;
-                case CLAMP:
-                    target.setWrapMode(WrapMode.CLAMP);
-                    break;
-                case BORDER:
-                    target.setWrapMode(WrapMode.BORDER);
-                    break;
-                case MIRROR:
-                    target.setWrapMode(WrapMode.MIRROR);
-                    break;
-            }
+            target.setWrapMode(switch (source.getWrapMode()) {
+                case NONE -> WrapMode.NONE;
+                case WRAP -> WrapMode.WRAP;
+                case CLAMP -> WrapMode.CLAMP;
+                case BORDER -> WrapMode.BORDER;
+                case MIRROR -> WrapMode.MIRROR;
+            });
         }
 
         if (source.getBorderColor() != null) {
@@ -84,7 +69,8 @@ public abstract class TextureAdapter<T extends Texture<?>, R extends AbstractTex
         if (source.getImageURI() != null) {
             try {
                 ExternalFile textureImage = helper.getExternalFile(source.getImageURI());
-                if (helper.lookupAndPut(textureImage)) {
+                String token = source.getParent(ImplicitGeometry.class) != null ? "[template]" : null;
+                if (helper.lookupAndPut(textureImage, token)) {
                     target.setTextureImageProperty(TextureImageProperty.of(Reference.of(
                             textureImage.getOrCreateObjectId())));
                 } else {
