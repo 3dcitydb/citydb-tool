@@ -62,15 +62,6 @@ subprojects {
             requires('org.apache.tomcat.juli')
             exports('org.apache.tomcat.jdbc.pool')
         }
-        automaticModule("javax.inject-1.jar", "javax.inject")
-        module('swagger-ui-5.13.0.jar', 'org.webjars', '5.13.0')
-        module("javax.servlet-api-3.1.0.jar", "javax.servlet", '3.1.0')
-        module("picocli-spring-boot-starter-4.7.5.jar", "picocli.spring", '4.7.5') {
-            requires('info.picocli')
-            requires('java.logging')
-            requires('spring.context')
-            exports('picocli.spring')
-        }
     }
 
     idea {

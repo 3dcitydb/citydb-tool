@@ -22,6 +22,7 @@ import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
+import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.web.config.Constants;
@@ -113,7 +114,10 @@ public class FeatureService {
         FeatureStatistics statistics = new FeatureStatistics(adapter);
 
         try {
-            QueryExecutor executor = helper.getQueryExecutor(query, databaseManager.getAdapter());
+            QueryExecutor executor = helper.getQueryExecutor(query,
+                    SqlBuildOptions.defaults().omitDistinct(true),
+                    null,
+                    databaseManager.getAdapter());
             logger.info("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
                     databaseManager.getAdapter()));
             long sequenceId = 1;
