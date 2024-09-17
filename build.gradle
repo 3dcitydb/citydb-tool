@@ -56,12 +56,13 @@ subprojects {
 
     extraJavaModuleInfo {
         failOnMissingModuleInfo.set(false)
-        module('tomcat-jdbc-10.1.29.jar', 'org.apache.tomcat.jdbc', '10.1.29') {
+        module('tomcat-jdbc-10.1.25.jar', 'org.apache.tomcat.jdbc', '10.1.25') {
             requires('java.sql')
             requires('java.management')
             requires('org.apache.tomcat.juli')
             exports('org.apache.tomcat.jdbc.pool')
         }
+        automaticModule("javax.inject-1.jar", "javax.inject")
     }
 
     idea {
