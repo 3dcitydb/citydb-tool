@@ -75,7 +75,7 @@ public class IndexHelper {
     }
 
     public void create(Index index) throws SQLException {
-        try (Connection connection = adapter.getPool().getConnection()) {
+        try (Connection connection = adapter.getPool().getConnection(true)) {
             if (!exists(index, connection)) {
                 try (Statement stmt = createStatement(connection)) {
                     stmt.executeUpdate(adapter.getSchemaAdapter().getCreateIndex(index));
@@ -95,7 +95,7 @@ public class IndexHelper {
     }
 
     public void drop(Index index) throws SQLException {
-        try (Connection connection = adapter.getPool().getConnection()) {
+        try (Connection connection = adapter.getPool().getConnection(true)) {
             if (exists(index, connection)) {
                 try (Statement stmt = createStatement(connection)) {
                     stmt.executeUpdate(adapter.getSchemaAdapter().getDropIndex(index));
