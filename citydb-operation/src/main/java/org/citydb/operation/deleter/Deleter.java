@@ -24,6 +24,7 @@ package org.citydb.operation.deleter;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.operation.deleter.util.DeleteLogger;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -38,6 +39,7 @@ public class Deleter {
     private Connection connection;
     private ThreadLocal<DeleteHelper> contexts;
     private Set<DeleteHelper> helpers;
+    private DeleteLogger logger;
     private CountLatch countLatch;
     private Throwable exception;
     private boolean autoCommit = false;
@@ -57,6 +59,15 @@ public class Deleter {
 
     public static Deleter newInstance() {
         return new Deleter();
+    }
+
+    public DeleteLogger getDeleteLogger() {
+        return logger;
+    }
+
+    public Deleter setDeleteLogger(DeleteLogger logger) {
+        this.logger = logger;
+        return this;
     }
 
     public boolean isAutoCommit() {
@@ -93,7 +104,7 @@ public class Deleter {
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
                 try {
-                    DeleteHelper helper = new DeleteHelper(adapter, connection, options, autoCommit);
+                    DeleteHelper helper = new DeleteHelper(adapter, connection, options, logger, autoCommit);
                     helpers.add(helper);
                     return helper;
                 } catch (Exception e) {
