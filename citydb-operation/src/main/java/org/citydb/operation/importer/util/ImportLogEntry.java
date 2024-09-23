@@ -28,6 +28,7 @@ public class ImportLogEntry {
     private final int objectClassId;
     private final String objectId;
     private final long databaseId;
+    private boolean committed;
 
     private ImportLogEntry(Feature feature, FeatureDescriptor descriptor) {
         objectClassId = descriptor.getObjectClassId();
@@ -49,5 +50,14 @@ public class ImportLogEntry {
 
     public long getDatabaseId() {
         return databaseId;
+    }
+
+    public boolean isCommitted() {
+        return committed;
+    }
+
+    public ImportLogEntry setCommitted(boolean committed) {
+        this.committed = committed;
+        return this;
     }
 }
