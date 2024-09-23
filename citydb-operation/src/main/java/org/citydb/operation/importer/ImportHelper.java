@@ -154,9 +154,9 @@ public class ImportHelper {
 
                 if (commit) {
                     connection.commit();
-                    updateImportLog();
                 }
 
+                updateImportLog(commit);
                 updateStatistics(commit);
             } catch (SQLException e) {
                 connection.rollback();
@@ -167,11 +167,11 @@ public class ImportHelper {
         }
     }
 
-    private void updateImportLog() throws ImportException {
+    private void updateImportLog(boolean commit) throws ImportException {
         if (logger != null && !logEntries.isEmpty()) {
             try {
                 for (ImportLogEntry logEntry : logEntries) {
-                    logger.log(logEntry);
+                    logger.log(logEntry.setCommitted(commit));
                 }
             } finally {
                 logEntries.clear();
