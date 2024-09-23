@@ -24,7 +24,6 @@ package org.citydb.operation.exporter.options;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 

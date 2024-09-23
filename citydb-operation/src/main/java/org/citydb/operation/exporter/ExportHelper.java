@@ -225,7 +225,10 @@ public class ExportHelper {
     }
 
     protected void close() throws ExportException, SQLException {
-        tableHelper.close();
-        connection.close();
+        try {
+            tableHelper.close();
+        } finally {
+            connection.close();
+        }
     }
 }
