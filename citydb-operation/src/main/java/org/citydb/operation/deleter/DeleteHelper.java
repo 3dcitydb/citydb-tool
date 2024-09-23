@@ -34,12 +34,20 @@ public class DeleteHelper {
     private final DeleteOptions options;
     private final Connection connection;
     private final TableHelper tableHelper;
+    private final int batchSize;
+    private final boolean autoCommit;
 
-    DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options) {
+    private int batchCounter;
+
+    DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options, boolean autoCommit) {
         this.adapter = adapter;
         this.options = options;
         this.connection = connection;
+        this.autoCommit = autoCommit;
         tableHelper = new TableHelper(this);
+        batchSize = options.getBatchSize() > 0 ?
+                Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
+                DeleteOptions.DEFAULT_BATCH_SIZE;
     }
 
     public DatabaseAdapter getAdapter() {
@@ -61,14 +69,30 @@ public class DeleteHelper {
     void deleteFeature(long id) throws DeleteException {
         try {
             tableHelper.getOrCreateDeleter(FeatureDeleter.class).deleteFeature(id);
+            executeBatch(false, autoCommit);
         } catch (Exception e) {
             throw new DeleteException("Failed to delete feature (ID: " + id + ").", e);
         }
     }
 
-    void executeBatch() throws DeleteException, SQLException {
-        for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
-            deleter.executeBatch();
+    void executeBatch(boolean force, boolean commit) throws DeleteException, SQLException {
+        if (force || ++batchCounter == batchSize) {
+            try {
+                if (batchCounter > 0) {
+                    for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
+                        deleter.executeBatch();
+                    }
+                }
+
+                if (commit) {
+                    connection.commit();
+                }
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                batchCounter = 0;
+            }
         }
     }
 

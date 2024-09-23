@@ -33,13 +33,11 @@ import java.util.Set;
 public abstract class DatabaseDeleter {
     protected final DeleteHelper helper;
     protected final PreparedStatement stmt;
-    private final int batchSize;
     private final Set<Long> batches = new HashSet<>();
 
     public DatabaseDeleter(DeleteHelper helper) throws SQLException {
         this.helper = helper;
         stmt = getDeleteStatement(helper.getConnection());
-        batchSize = Math.min(1000, helper.getAdapter().getSchemaAdapter().getMaximumBatchSize());
     }
 
     protected abstract PreparedStatement getDeleteStatement(Connection connection) throws SQLException;
@@ -48,7 +46,7 @@ public abstract class DatabaseDeleter {
 
     protected void addBatch(long id) throws DeleteException, SQLException {
         batches.add(id);
-        if (batches.size() == batchSize) {
+        if (batches.size() == helper.getAdapter().getSchemaAdapter().getMaximumBatchSize()) {
             executeBatch();
         }
     }

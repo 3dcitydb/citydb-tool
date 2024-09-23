@@ -31,13 +31,25 @@ import java.util.Optional;
 
 @SerializableConfig(name = "deleteOptions")
 public class DeleteOptions {
-    private int numberOfThreads;
+    public static final int DEFAULT_BATCH_SIZE = 1000;
+
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private DeleteMode mode = DeleteMode.DELETE;
+    private int numberOfThreads;
+    private int batchSize = DEFAULT_BATCH_SIZE;
     private String updatingPerson;
     private String reasonForUpdate;
     private String lineage;
     private OffsetDateTime terminationDate;
+
+    public DeleteMode getMode() {
+        return mode != null ? mode : DeleteMode.DELETE;
+    }
+
+    public DeleteOptions setMode(DeleteMode mode) {
+        this.mode = mode;
+        return this;
+    }
 
     public int getNumberOfThreads() {
         return numberOfThreads;
@@ -48,12 +60,12 @@ public class DeleteOptions {
         return this;
     }
 
-    public DeleteMode getMode() {
-        return mode != null ? mode : DeleteMode.DELETE;
+    public int getBatchSize() {
+        return batchSize;
     }
 
-    public DeleteOptions setMode(DeleteMode mode) {
-        this.mode = mode;
+    public DeleteOptions setBatchSize(int batchSize) {
+        this.batchSize = batchSize;
         return this;
     }
 

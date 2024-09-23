@@ -40,6 +40,7 @@ public class Deleter {
     private Set<DeleteHelper> helpers;
     private CountLatch countLatch;
     private Throwable exception;
+    private boolean autoCommit = false;
 
     private volatile State state = State.SESSION_NOT_STARTED;
     private volatile boolean shouldRun;
@@ -56,6 +57,15 @@ public class Deleter {
 
     public static Deleter newInstance() {
         return new Deleter();
+    }
+
+    public boolean isAutoCommit() {
+        return autoCommit;
+    }
+
+    public Deleter setAutoCommit(boolean autoCommit) {
+        this.autoCommit = autoCommit;
+        return this;
     }
 
     public State getState() {
@@ -83,7 +93,7 @@ public class Deleter {
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
                 try {
-                    DeleteHelper helper = new DeleteHelper(adapter, connection, options);
+                    DeleteHelper helper = new DeleteHelper(adapter, connection, options, autoCommit);
                     helpers.add(helper);
                     return helper;
                 } catch (Exception e) {
@@ -139,7 +149,7 @@ public class Deleter {
                 countLatch.increment();
                 service.execute(() -> {
                     try {
-                        helper.executeBatch();
+                        helper.executeBatch(true, true);
                         helper.close();
                     } catch (Throwable e) {
                         exception = e;
@@ -149,23 +159,16 @@ public class Deleter {
                 });
             }
 
-            try {
-                countLatch.await();
-                if (exception != null) {
-                    throw exception;
-                }
-
-                connection.commit();
-            } catch (SQLException e) {
-                connection.rollback();
-            } finally {
-                connection.close();
+            countLatch.await();
+            if (exception != null) {
+                throw exception;
             }
         } catch (Throwable e) {
             shouldRun = false;
             throw new DeleteException("Failed to commit delete session.", e);
         } finally {
             service.shutdown();
+            close();
         }
     }
 
@@ -183,13 +186,20 @@ public class Deleter {
             for (DeleteHelper helper : helpers) {
                 helper.close();
             }
-
-            connection.close();
         } catch (Exception e) {
             shouldRun = false;
             throw new DeleteException("Failed to abort delete session.", e);
         } finally {
             service.shutdown();
+            close();
+        }
+    }
+
+    private void close() {
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            //
         }
     }
 }
