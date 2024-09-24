@@ -69,6 +69,10 @@ public class DeleteCommand implements Command {
             description = "Run in preview mode. Features will not be deleted.")
     private boolean preview;
 
+    @CommandLine.Option(names = {"-c", "--commit"}, paramLabel = "<number>",
+            description = "Commit after deleting this number of features.")
+    private Integer commitAfter;
+
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Metadata options for terminate operations:%n")
     private MetadataOptions metadataOptions;
@@ -117,6 +121,10 @@ public class DeleteCommand implements Command {
 
         if (preview) {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
+        } else if (commitAfter != null) {
+            logger.info("Committing delete operation after {} feature(s).", commitAfter);
+            deleter.setAutoCommit(true);
+            deleteOptions.setBatchSize(commitAfter);
         }
 
         try {
@@ -225,6 +233,21 @@ public class DeleteCommand implements Command {
         }
 
         return deleteOptions;
+    }
+
+    @Override
+    public void preprocess(CommandLine commandLine) {
+        if (commitAfter != null) {
+            if (preview) {
+                throw new CommandLine.ParameterException(commandLine,
+                        "Error: --preview and --commit are mutually exclusive (specify only one)");
+            }
+
+            if (commitAfter <= 0) {
+                throw new CommandLine.ParameterException(commandLine,
+                        "Error: The number for --commit must be a positive integer but was '" + commitAfter + "'");
+            }
+        }
     }
 
     private void abort(long id, Throwable e) {
