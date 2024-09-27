@@ -22,36 +22,54 @@
 package org.citydb.operation.deleter;
 
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.schema.Table;
 import org.citydb.operation.deleter.common.DatabaseDeleter;
 import org.citydb.operation.deleter.feature.FeatureDeleter;
+import org.citydb.operation.deleter.util.DeleteLogEntry;
+import org.citydb.operation.deleter.util.DeleteLogger;
 import org.citydb.operation.deleter.util.TableHelper;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DeleteHelper {
     private final DatabaseAdapter adapter;
-    private final DeleteOptions options;
     private final Connection connection;
+    private final DeleteOptions options;
+    private final DeleteLogger logger;
     private final TableHelper tableHelper;
+    private final List<DeleteLogEntry> logEntries = new ArrayList<>();
+    private final int batchSize;
+    private final boolean autoCommit;
 
-    DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options) {
+    private int batchCounter;
+
+    DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options, DeleteLogger logger,
+                 boolean autoCommit) {
         this.adapter = adapter;
-        this.options = options;
         this.connection = connection;
+        this.options = options;
+        this.logger = logger;
+        this.autoCommit = autoCommit;
+
         tableHelper = new TableHelper(this);
+        batchSize = options.getBatchSize() > 0 ?
+                Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
+                DeleteOptions.DEFAULT_BATCH_SIZE;
     }
 
     public DatabaseAdapter getAdapter() {
         return adapter;
     }
 
-    public DeleteOptions getOptions() {
-        return options;
-    }
-
     public Connection getConnection() {
         return connection;
+    }
+
+    public DeleteOptions getOptions() {
+        return options;
     }
 
     public TableHelper getTableHelper() {
@@ -61,18 +79,54 @@ public class DeleteHelper {
     void deleteFeature(long id) throws DeleteException {
         try {
             tableHelper.getOrCreateDeleter(FeatureDeleter.class).deleteFeature(id);
+
+            if (logger != null) {
+                logEntries.add(DeleteLogEntry.of(Table.FEATURE, id));
+            }
+
+            executeBatch(false, autoCommit);
         } catch (Exception e) {
             throw new DeleteException("Failed to delete feature (ID: " + id + ").", e);
         }
     }
 
-    void executeBatch() throws DeleteException, SQLException {
-        for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
-            deleter.executeBatch();
+    void executeBatch(boolean force, boolean commit) throws DeleteException, SQLException {
+        if (force || ++batchCounter == batchSize) {
+            try {
+                if (batchCounter > 0) {
+                    for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
+                        deleter.executeBatch();
+                    }
+                }
+
+                if (commit) {
+                    connection.commit();
+                }
+
+                updateDeleteLog(commit);
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                batchCounter = 0;
+            }
         }
     }
 
-    void close() throws SQLException {
+    private void updateDeleteLog(boolean commit) throws DeleteException {
+        if (logger != null && !logEntries.isEmpty()) {
+            try {
+                for (DeleteLogEntry logEntry : logEntries) {
+                    logger.log(logEntry.setCommitted(commit));
+                }
+            } finally {
+                logEntries.clear();
+            }
+        }
+    }
+
+    void close() throws DeleteException, SQLException {
+        updateDeleteLog(false);
         for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
             deleter.close();
         }

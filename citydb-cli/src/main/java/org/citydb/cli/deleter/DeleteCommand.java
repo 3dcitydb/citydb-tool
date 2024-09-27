@@ -26,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.deleter.options.QueryOptions;
+import org.citydb.cli.deleter.util.DeleteLogger;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
@@ -33,7 +34,6 @@ import org.citydb.database.DatabaseManager;
 import org.citydb.logging.LoggerManager;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
-import org.citydb.operation.util.FeatureStatistics;
 import org.citydb.query.Query;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
@@ -69,6 +69,10 @@ public class DeleteCommand implements Command {
             description = "Run in preview mode. Features will not be deleted.")
     private boolean preview;
 
+    @CommandLine.Option(names = {"-c", "--commit"}, paramLabel = "<number>",
+            description = "Commit after deleting this number of features.")
+    private Integer commitAfter;
+
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Metadata options for terminate operations:%n")
     private MetadataOptions metadataOptions;
@@ -95,8 +99,12 @@ public class DeleteCommand implements Command {
     @Override
     public Integer call() throws ExecutionException {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
-        Deleter deleter = Deleter.newInstance();
+        boolean autoCommit = !preview && commitAfter != null;
+
+        DeleteLogger deleteLogger = new DeleteLogger(autoCommit, databaseManager.getAdapter());
         DeleteOptions deleteOptions = getDeleteOptions();
+        Deleter deleter = Deleter.newInstance()
+                .setDeleteLogger(deleteLogger);
 
         Query query = getQuery(deleteOptions);
         QueryExecutor executor = helper.getQueryExecutor(query,
@@ -104,7 +112,6 @@ public class DeleteCommand implements Command {
                 tempDirectory,
                 databaseManager.getAdapter());
 
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
         AtomicLong counter = new AtomicLong();
 
@@ -117,6 +124,10 @@ public class DeleteCommand implements Command {
 
         if (preview) {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
+        } else if (autoCommit) {
+            logger.info("Committing delete operation after {} feature(s).", commitAfter);
+            deleter.setAutoCommit(true);
+            deleteOptions.setBatchSize(commitAfter);
         }
 
         try {
@@ -128,11 +139,10 @@ public class DeleteCommand implements Command {
                 deleter.startSession(databaseManager.getAdapter(), deleteOptions);
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
-                    int objectClassId = result.getObjectClassId();
+                    deleteLogger.add(id, result.getObjectClassId());
 
                     deleter.deleteFeature(id).whenComplete((success, t) -> {
                         if (success == Boolean.TRUE) {
-                            statistics.add(objectClassId);
                             long count = counter.incrementAndGet();
                             if (count % 1000 == 0) {
                                 logger.info("{} features processed.", count);
@@ -159,10 +169,10 @@ public class DeleteCommand implements Command {
             throw new ExecutionException("A fatal error has occurred during delete.", e);
         } finally {
             databaseManager.disconnect();
-            if ((deleter.getState() == Deleter.State.SESSION_COMMITTED || preview)
-                    && !statistics.isEmpty()) {
+            if ((deleter.getState() == Deleter.State.SESSION_COMMITTED || autoCommit || preview)
+                    && !deleteLogger.getStatistics().isEmpty()) {
                 logger.info(!preview ? "Delete summary:" : "Preview of features to be deleted:");
-                statistics.logFeatureSummary(Level.INFO);
+                deleteLogger.getStatistics().logFeatureSummary(Level.INFO);
             } else {
                 logger.info("No features deleted.");
             }
@@ -225,6 +235,21 @@ public class DeleteCommand implements Command {
         }
 
         return deleteOptions;
+    }
+
+    @Override
+    public void preprocess(CommandLine commandLine) {
+        if (commitAfter != null) {
+            if (preview) {
+                throw new CommandLine.ParameterException(commandLine,
+                        "Error: --preview and --commit are mutually exclusive (specify only one)");
+            }
+
+            if (commitAfter <= 0) {
+                throw new CommandLine.ParameterException(commandLine,
+                        "Error: The number for --commit must be a positive integer but was '" + commitAfter + "'");
+            }
+        }
     }
 
     private void abort(long id, Throwable e) {
