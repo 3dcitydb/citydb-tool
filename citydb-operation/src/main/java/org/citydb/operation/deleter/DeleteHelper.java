@@ -125,7 +125,8 @@ public class DeleteHelper {
         }
     }
 
-    void close() throws SQLException {
+    void close() throws DeleteException, SQLException {
+        updateDeleteLog(false);
         for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
             deleter.close();
         }
