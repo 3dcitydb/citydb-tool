@@ -40,8 +40,6 @@ import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.importer.Importer;
-import org.citydb.operation.importer.util.StatisticsConsumer;
-import org.citydb.operation.util.FeatureStatistics;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -115,7 +113,7 @@ public abstract class ImportController implements Command {
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
         ImportOptions importOptions = getImportOptions();
 
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
+        ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
         IndexOption.Mode indexMode = indexOption.getMode();
 
         if (indexMode != IndexOption.Mode.keep) {
@@ -132,9 +130,7 @@ public abstract class ImportController implements Command {
         try {
             Importer importer = Importer.newInstance()
                     .setAutoCommit(!preview)
-                    .setFeatureStatisticsConsumer(StatisticsConsumer.of(statistics::merge, preview ?
-                            StatisticsConsumer.Mode.COUNT_ALL :
-                            StatisticsConsumer.Mode.COUNT_COMMITTED));
+                    .setImportLogger(importLogger);
 
             AtomicLong counter = new AtomicLong();
 
@@ -149,18 +145,20 @@ public abstract class ImportController implements Command {
                     logger.debug("Importing features from input file...");
                     importer.startSession(databaseManager.getAdapter(), importOptions);
 
-                    reader.read(feature -> importer.importFeature(feature)
-                            .whenComplete((descriptor, e) -> {
-                                if (descriptor != null) {
-                                    long count = counter.incrementAndGet();
-                                    if (count % 1000 == 0) {
-                                        logger.info("{} features processed.", count);
-                                    }
-                                } else {
-                                    reader.cancel();
-                                    abort(feature, e);
+                    reader.read(feature -> {
+                        importLogger.add(feature);
+                        importer.importFeature(feature).whenComplete((descriptor, e) -> {
+                            if (descriptor != null) {
+                                long count = counter.incrementAndGet();
+                                if (count % 1000 == 0) {
+                                    logger.info("{} features processed.", count);
                                 }
-                            }));
+                            } else {
+                                reader.cancel();
+                                abort(feature, e);
+                            }
+                        });
+                    });
                 } catch (Throwable e) {
                     shouldRun = false;
                     throw e;
@@ -182,9 +180,9 @@ public abstract class ImportController implements Command {
             throw new ExecutionException("A fatal error has occurred during import.", e);
         } finally {
             databaseManager.disconnect();
-            if (!statistics.isEmpty()) {
+            if (!importLogger.getStatistics().isEmpty()) {
                 logger.info(!preview ? "Import summary:" : "Preview of features to be imported:");
-                statistics.logFeatureSummary(Level.INFO);
+                importLogger.getStatistics().logFeatureSummary(Level.INFO);
             } else {
                 logger.info("No features imported.");
             }

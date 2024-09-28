@@ -29,6 +29,7 @@ import org.citydb.operation.deleter.util.DeleteLogger;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,8 +62,8 @@ public class Deleter {
         return new Deleter();
     }
 
-    public DeleteLogger getDeleteLogger() {
-        return logger;
+    public Optional<DeleteLogger> getDeleteLogger() {
+        return Optional.ofNullable(logger);
     }
 
     public Deleter setDeleteLogger(DeleteLogger logger) {

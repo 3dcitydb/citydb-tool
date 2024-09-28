@@ -35,7 +35,6 @@ import org.citydb.operation.importer.reference.CacheType;
 import org.citydb.operation.importer.reference.ReferenceCache;
 import org.citydb.operation.importer.reference.ReferenceManager;
 import org.citydb.operation.importer.util.*;
-import org.citydb.operation.util.FeatureStatistics;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -48,12 +47,10 @@ public class ImportHelper {
     private final DatabaseAdapter adapter;
     private final ReferenceManager referenceManager;
     private final ImportLogger logger;
-    private final StatisticsConsumer statisticsConsumer;
     private final Connection connection;
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
     private final SequenceHelper sequenceHelper;
-    private final FeatureStatistics statistics;
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
     private final int batchSize;
@@ -63,18 +60,16 @@ public class ImportHelper {
     private int batchCounter;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
-                 ImportLogger logger, StatisticsConsumer statisticsConsumer, boolean autoCommit) throws SQLException {
+                 ImportLogger logger, boolean autoCommit) throws SQLException {
         this.adapter = adapter;
         this.referenceManager = referenceManager;
         this.logger = logger;
-        this.statisticsConsumer = statisticsConsumer;
         this.autoCommit = autoCommit;
 
         connection = adapter.getPool().getConnection(false);
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
         sequenceHelper = new SequenceHelper(this);
-        statistics = new FeatureStatistics(schemaMapping);
         batchSize = options.getBatchSize() > 0 ?
                 Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
                 ImportOptions.DEFAULT_BATCH_SIZE;
@@ -118,10 +113,6 @@ public class ImportHelper {
             generateSequenceValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
-            if (statisticsConsumer != null) {
-                statistics.add(feature);
-            }
-
             if (logger != null) {
                 logEntries.add(ImportLogEntry.of(feature, descriptor));
             }
@@ -157,7 +148,6 @@ public class ImportHelper {
                 }
 
                 updateImportLog(commit);
-                updateStatistics(commit);
             } catch (SQLException e) {
                 connection.rollback();
                 throw e;
@@ -179,21 +169,8 @@ public class ImportHelper {
         }
     }
 
-    private void updateStatistics(boolean commit) {
-        if (statisticsConsumer != null && !statistics.isEmpty()) {
-            if ((commit && statisticsConsumer.getMode() == StatisticsConsumer.Mode.COUNT_COMMITTED)
-                    || statisticsConsumer.getMode() == StatisticsConsumer.Mode.COUNT_ALL) {
-                try {
-                    statisticsConsumer.accept(statistics);
-                } finally {
-                    statistics.clear();
-                }
-            }
-        }
-    }
-
-    void close() throws SQLException {
-        updateStatistics(false);
+    void close() throws ImportException, SQLException {
+        updateImportLog(false);
         logEntries.clear();
         sequenceHelper.close();
 

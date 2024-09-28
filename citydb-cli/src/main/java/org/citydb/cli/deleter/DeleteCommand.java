@@ -26,7 +26,6 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.deleter.options.QueryOptions;
-import org.citydb.cli.deleter.util.DeleteLogger;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;

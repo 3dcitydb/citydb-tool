@@ -26,5 +26,4 @@ module org.citydb.operation {
     exports org.citydb.operation.importer.property;
     exports org.citydb.operation.importer.reference;
     exports org.citydb.operation.importer.util;
-    exports org.citydb.operation.util;
 }

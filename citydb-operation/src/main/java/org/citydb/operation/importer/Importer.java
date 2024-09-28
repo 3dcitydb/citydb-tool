@@ -28,15 +28,13 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.operation.importer.reference.ReferenceManager;
 import org.citydb.operation.importer.util.ImportLogger;
-import org.citydb.operation.importer.util.StatisticsConsumer;
-import org.citydb.operation.util.FeatureStatistics;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Consumer;
 
 public class Importer {
     private ExecutorService service;
@@ -44,7 +42,6 @@ public class Importer {
     private ThreadLocal<ImportHelper> contexts;
     private Set<ImportHelper> helpers;
     private ImportLogger logger;
-    private StatisticsConsumer statisticsConsumer;
     private CountLatch countLatch;
     private Throwable exception;
     private boolean autoCommit = true;
@@ -66,21 +63,12 @@ public class Importer {
         return new Importer();
     }
 
-    public ImportLogger getImportLogger() {
-        return logger;
+    public Optional<ImportLogger> getImportLogger() {
+        return Optional.ofNullable(logger);
     }
 
     public Importer setImportLogger(ImportLogger logger) {
         this.logger = logger;
-        return this;
-    }
-
-    public Consumer<FeatureStatistics> getFeatureStatisticsConsumer() {
-        return statisticsConsumer;
-    }
-
-    public Importer setFeatureStatisticsConsumer(StatisticsConsumer statisticsConsumer) {
-        this.statisticsConsumer = statisticsConsumer;
         return this;
     }
 
@@ -119,8 +107,7 @@ public class Importer {
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
                 try {
-                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, logger,
-                            statisticsConsumer, autoCommit);
+                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, logger, autoCommit);
                     helpers.add(helper);
                     return helper;
                 } catch (Exception e) {

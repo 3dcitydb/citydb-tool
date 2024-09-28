@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.operation.util;
+package org.citydb.cli.util;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;

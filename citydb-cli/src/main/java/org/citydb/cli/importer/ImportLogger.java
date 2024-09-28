@@ -19,38 +19,42 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.deleter.util;
+package org.citydb.cli.importer;
 
+import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.operation.deleter.util.DeleteLogEntry;
-import org.citydb.operation.util.FeatureStatistics;
+import org.citydb.model.feature.Feature;
+import org.citydb.operation.importer.util.ImportLogEntry;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DeleteLogger implements org.citydb.operation.deleter.util.DeleteLogger {
-    private final boolean autoCommit;
+public class ImportLogger implements org.citydb.operation.importer.util.ImportLogger {
+    private final boolean preview;
+    private final DatabaseAdapter adapter;
     private final FeatureStatistics statistics;
-    private final Map<Long, Integer> features = new ConcurrentHashMap<>();
+    private final Map<String, FeatureStatistics> hierarchies = new ConcurrentHashMap<>();
 
-    public DeleteLogger(boolean autoCommit, DatabaseAdapter adapter) {
-        this.autoCommit = autoCommit;
+    ImportLogger(boolean preview, DatabaseAdapter adapter) {
+        this.preview = preview;
+        this.adapter = adapter;
         statistics = new FeatureStatistics(adapter);
     }
 
-    public FeatureStatistics getStatistics() {
+    FeatureStatistics getStatistics() {
         return statistics;
     }
 
     @Override
-    public void log(DeleteLogEntry logEntry) {
-        Integer objectClassId = features.remove(logEntry.getDatabaseId());
-        if (objectClassId != null && (!autoCommit || logEntry.isCommitted())) {
-            statistics.add(objectClassId);
+    public void log(ImportLogEntry logEntry) {
+        FeatureStatistics hierarchy = hierarchies.remove(logEntry.getObjectId());
+        if (hierarchy != null && (preview || logEntry.isCommitted())) {
+            statistics.merge(hierarchy);
         }
     }
 
-    public void add(long id, int objectClassId) {
-        features.put(id, objectClassId);
+    void add(Feature feature) {
+        hierarchies.computeIfAbsent(feature.getOrCreateObjectId(), k -> new FeatureStatistics(adapter))
+                .add(feature);
     }
 }
