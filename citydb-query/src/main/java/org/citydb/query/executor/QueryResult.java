@@ -67,6 +67,10 @@ public class QueryResult implements AutoCloseable {
         return rs.getInt("objectclass_id");
     }
 
+    public <R> R get(SqlFunction<R> getter) throws SQLException {
+        return getter.apply(rs);
+    }
+
     @Override
     public void close() throws SQLException {
         try {
