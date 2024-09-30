@@ -30,6 +30,7 @@ import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.database.util.SrsHelper;
 import org.citydb.database.util.SrsParseException;
+import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
 
 import java.sql.Connection;
@@ -52,6 +53,8 @@ public abstract class GeometryAdapter {
     public abstract String getGeometryTypeName();
 
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
+
+    public abstract Envelope getEnvelope(Object geometryObject) throws GeometryException;
 
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;
 

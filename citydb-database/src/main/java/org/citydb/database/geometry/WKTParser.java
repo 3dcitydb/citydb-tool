@@ -110,15 +110,11 @@ public class WKTParser {
 
         boolean nested = lookAheadWord(tokenizer).equals(L_PAREN);
         List<Point> points = new ArrayList<>();
-        points.add(nested ?
-                readPoint(tokenizer, is3D) :
-                Point.of(getCoordinate(tokenizer, is3D)));
-
-        while (nextCloserOrComma(tokenizer).equals(COMMA)) {
+        do {
             points.add(nested ?
                     readPoint(tokenizer, is3D) :
                     Point.of(getCoordinate(tokenizer, is3D)));
-        }
+        } while (nextCloserOrComma(tokenizer).equals(COMMA));
 
         return MultiPoint.of(points);
     }
@@ -223,7 +219,7 @@ public class WKTParser {
             } else {
                 try {
                     return Double.parseDouble(tokenizer.sval);
-                } catch (NumberFormatException ex) {
+                } catch (NumberFormatException e) {
                     throw new GeometryException("Invalid number: " + tokenizer.sval);
                 }
             }
