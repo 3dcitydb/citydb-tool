@@ -24,8 +24,11 @@ package org.citydb.query.executor;
 import org.apache.logging.log4j.Logger;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.geometry.GeometryException;
+import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.util.SqlHelper;
 import org.citydb.logging.LoggerManager;
+import org.citydb.model.geometry.Envelope;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
@@ -35,19 +38,23 @@ import org.citydb.sqlbuilder.query.Select;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Objects;
 
 public class QueryExecutor {
     private final Select select;
     private final Select count;
+    private final Select extent;
     private final PersistentMapStore store;
     private final DatabaseAdapter adapter;
     private final SqlHelper helper;
 
-    private QueryExecutor(Select select, Select count, PersistentMapStore store, DatabaseAdapter adapter) {
+    private QueryExecutor(Select select, Select count, Select extent, PersistentMapStore store, DatabaseAdapter adapter) {
         this.select = select;
         this.count = count;
+        this.extent = extent;
         this.store = store;
         this.adapter = adapter;
         helper = adapter.getSchemaAdapter().getSqlHelper();
@@ -67,6 +74,28 @@ public class QueryExecutor {
 
     public long countHits(Connection connection) throws SQLException {
         return helper.count(count, connection);
+    }
+
+    public Envelope computeExtent() throws GeometryException, SQLException {
+        try (Connection connection = adapter.getPool().getConnection()) {
+            return computeExtent(connection);
+        }
+    }
+
+    public Envelope computeExtent(Connection connection) throws GeometryException, SQLException {
+        try (PreparedStatement stmt = helper.prepareStatement(extent, connection);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                Envelope envelope = adapter.getGeometryAdapter().getEnvelope(rs.getObject("extent"));
+                if (envelope != null) {
+                    SpatialReference reference = adapter.getDatabaseMetadata().getSpatialReference();
+                    return envelope.setSRID(reference.getSRID())
+                            .setSrsIdentifier(reference.getIdentifier());
+                }
+            }
+        }
+
+        return null;
     }
 
     public QueryResult executeQuery() throws SQLException {
@@ -111,7 +140,18 @@ public class QueryExecutor {
                 logger.debug("Initialized distinct id cache at {}.", store.getBackingFile());
             }
 
-            return new QueryExecutor(select, count, store, adapter);
+            return new QueryExecutor(select, count, buildExtentQuery(query, options), store, adapter);
+        }
+
+        private Select buildExtentQuery(Query query, SqlBuildOptions options) throws QueryBuildException {
+            Select extent = builder.build(query, SqlBuildOptions.of(options)
+                    .omitDistinct(true)
+                    .withColumn("envelope"));
+
+            return extent.removeSelect().select(adapter.getGeometryAdapter()
+                    .getSpatialOperationHelper()
+                    .extent(extent.getFrom().get(0).column("envelope"))
+                    .as("extent"));
         }
     }
 }
