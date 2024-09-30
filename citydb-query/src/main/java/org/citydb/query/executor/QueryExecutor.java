@@ -62,7 +62,7 @@ public class QueryExecutor {
     }
 
     public long countHits() throws SQLException {
-        return helper.count(count, adapter.getPool().getConnection());
+        return helper.count(count);
     }
 
     public long countHits(Connection connection) throws SQLException {

@@ -42,6 +42,7 @@ import org.citydb.sqlbuilder.schema.Column;
 import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Set;
 
 public class SqlQueryBuilder {
@@ -66,6 +67,7 @@ public class SqlQueryBuilder {
         SqlContext context = SqlContext.of(featureType, helper);
         Select select = Select.newInstance()
                 .select(context.getTable().columns("id", "objectclass_id"))
+                .select(context.getTable().columns(List.copyOf(options.getColumns())))
                 .from(context.getTable());
 
         helper.getFeatureTypesBuilder().build(featureTypes, select, context);
@@ -96,14 +98,14 @@ public class SqlQueryBuilder {
         }
 
         if (!options.isOmitDistinct() && !select.getJoins().isEmpty()) {
-            select = buildDistinct(query, select, context);
+            select = buildDistinct(query, select, context, options);
         }
 
         return select;
     }
 
-    private Select buildDistinct(Query query, Select select, SqlContext context) {
-        if (query.getSorting().isPresent()) {
+    private Select buildDistinct(Query query, Select select, SqlContext context, SqlBuildOptions options) {
+        if (query.getSorting().isPresent() || options.getColumns().contains("envelope")) {
             Table table = Table.of(select);
             Select outerQuery = Select.newInstance().from(table);
 
