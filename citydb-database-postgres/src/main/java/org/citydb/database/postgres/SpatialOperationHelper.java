@@ -33,7 +33,12 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     private final StringLiteral TRUE = StringLiteral.of("TRUE");
 
     @Override
-    public ScalarExpression transform(ScalarExpression operand, int srid) {
+    public Function extent(ScalarExpression operand) {
+        return Function.of("st_3dextent", operand);
+    }
+
+    @Override
+    public Function transform(ScalarExpression operand, int srid) {
         return Function.of("st_transform", operand, IntegerLiteral.of(srid));
     }
 

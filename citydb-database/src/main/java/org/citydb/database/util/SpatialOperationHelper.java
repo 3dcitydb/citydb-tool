@@ -21,11 +21,14 @@
 
 package org.citydb.database.util;
 
+import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 
 public interface SpatialOperationHelper {
-    ScalarExpression transform(ScalarExpression operand, int srid);
+    Function extent(ScalarExpression operand);
+
+    Function transform(ScalarExpression operand, int srid);
 
     BooleanExpression bbox(ScalarExpression leftOperand, ScalarExpression rightOperand);
 
