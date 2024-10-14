@@ -1,4 +1,4 @@
-def geotools_version = '31.3'
+def geotools_version = '32.0'
 
 dependencies {
     api project(':citydb-core')
@@ -7,6 +7,7 @@ dependencies {
     api project(':citydb-model')
     api 'org.citydb:sqlbuilder:3.0.2'
     api "org.geotools:gt-referencing:$geotools_version"
+    api 'systems.uom:systems-quantity:2.1'
     implementation 'org.apache.tomcat:tomcat-jdbc:10.1.29'
     implementation "org.geotools:gt-epsg-wkt:$geotools_version"
     implementation "org.geotools:gt-epsg-extension:$geotools_version"

@@ -1,11 +1,8 @@
 module org.citydb.query {
     requires org.citydb.config;
-    requires si.uom.units;
-    requires systems.uom.common;
     requires transitive org.citydb.database;
     requires transitive org.citydb.model;
     requires transitive org.citydb.sqlbuilder;
-    requires transitive java.measure;
 
     exports org.citydb.query;
     exports org.citydb.query.builder;

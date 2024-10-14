@@ -10,6 +10,8 @@ module org.citydb.database {
     requires transitive org.geotools.metadata;
     requires transitive org.geotools.referencing;
     requires transitive java.sql;
+    requires transitive si.uom.units;
+    requires transitive systems.uom.common;
 
     exports org.citydb.database;
     exports org.citydb.database.adapter;

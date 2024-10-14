@@ -62,7 +62,6 @@ subprojects {
             requires('org.apache.tomcat.juli')
             exports('org.apache.tomcat.jdbc.pool')
         }
-        automaticModule("javax.inject-1.jar", "javax.inject")
     }
 
     idea {
