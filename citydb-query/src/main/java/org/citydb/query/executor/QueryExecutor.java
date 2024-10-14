@@ -25,7 +25,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
-import org.citydb.database.metadata.SpatialReference;
+import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.util.SqlHelper;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.geometry.Envelope;

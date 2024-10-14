@@ -19,6 +19,7 @@ module org.citydb.database {
     exports org.citydb.database.geometry;
     exports org.citydb.database.metadata;
     exports org.citydb.database.schema;
+    exports org.citydb.database.srs;
     exports org.citydb.database.util;
 
     uses org.citydb.database.adapter.DatabaseAdapter;

@@ -21,7 +21,7 @@
 
 package org.citydb.query.builder.sql;
 
-import org.citydb.database.metadata.SpatialReference;
+import org.citydb.database.srs.SpatialReference;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
 import org.citydb.query.filter.Filter;

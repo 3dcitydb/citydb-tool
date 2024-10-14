@@ -26,10 +26,10 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.database.geometry.GeometryBuilder;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.PropertiesBuilder;
-import org.citydb.database.metadata.SpatialReference;
+import org.citydb.database.srs.SpatialReference;
+import org.citydb.database.srs.SrsException;
 import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.database.util.SrsHelper;
-import org.citydb.database.util.SrsParseException;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
 
@@ -88,8 +88,8 @@ public abstract class GeometryAdapter {
         return getSpatialReference(srid, null);
     }
 
-    public SpatialReference getSpatialReference(String identifier) throws SrsParseException, SQLException {
-        return getSpatialReference(srsHelper.parse(identifier), identifier);
+    public SpatialReference getSpatialReference(String identifier) throws SrsException, SQLException {
+        return getSpatialReference(srsHelper.parseSRID(identifier), identifier);
     }
 
     public SpatialReference getSpatialReference(int srid, String identifier) throws SQLException {
@@ -119,7 +119,7 @@ public abstract class GeometryAdapter {
         }
     }
 
-    public SpatialReference getSpatialReference(SrsReference reference) throws SrsParseException, SQLException {
+    public SpatialReference getSpatialReference(SrsReference reference) throws SrsException, SQLException {
         if (reference != null) {
             if (reference.getSRID().isPresent()) {
                 return getSpatialReference(reference.getSRID().get(), reference.getIdentifier().orElse(null));

@@ -19,23 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.database.util;
+package org.citydb.database.srs;
 
-public class SrsParseException extends Exception {
+public class SrsException extends Exception {
 
-    public SrsParseException() {
+    public SrsException() {
         super();
     }
 
-    public SrsParseException(String message) {
+    public SrsException(String message) {
         super(message);
     }
 
-    public SrsParseException(Throwable cause) {
+    public SrsException(Throwable cause) {
         super(cause);
     }
 
-    public SrsParseException(String message, Throwable cause) {
+    public SrsException(String message, Throwable cause) {
         super(message, cause);
     }
 }

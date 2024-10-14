@@ -21,6 +21,8 @@
 
 package org.citydb.database.metadata;
 
+import org.citydb.database.srs.SpatialReference;
+
 public class DatabaseMetadata {
     private final DatabaseVersion version;
     private final SpatialReference spatialReference;

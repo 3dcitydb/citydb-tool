@@ -21,8 +21,8 @@
 
 package org.citydb.database.adapter;
 
-import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.*;
+import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SqlHelper;

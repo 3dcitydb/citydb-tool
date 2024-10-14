@@ -26,8 +26,8 @@ import org.citydb.database.Pool;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.metadata.DatabaseVersion;
-import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.SchemaException;
+import org.citydb.database.srs.SpatialReference;
 
 import java.sql.*;
 import java.util.Objects;

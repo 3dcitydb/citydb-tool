@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.database.metadata;
+package org.citydb.database.srs;
 
 import org.citydb.core.concurrent.LazyInitializer;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;

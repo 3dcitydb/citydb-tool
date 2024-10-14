@@ -22,9 +22,9 @@
 package org.citydb.operation.exporter;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.metadata.SpatialReference;
 import org.citydb.database.schema.SchemaMapping;
-import org.citydb.database.util.SrsParseException;
+import org.citydb.database.srs.SpatialReference;
+import org.citydb.database.srs.SrsException;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
@@ -63,7 +63,7 @@ public class ExportHelper {
     private final Set<String> addressIdCache = new HashSet<>();
     private final Set<String> externalFileIdCache = new HashSet<>();
 
-    ExportHelper(DatabaseAdapter adapter, ExportOptions options) throws SQLException, SrsParseException {
+    ExportHelper(DatabaseAdapter adapter, ExportOptions options) throws SQLException, SrsException {
         this.adapter = adapter;
         this.options = options;
 

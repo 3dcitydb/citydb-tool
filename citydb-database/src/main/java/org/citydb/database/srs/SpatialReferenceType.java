@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.database.metadata;
+package org.citydb.database.srs;
 
 public enum SpatialReferenceType {
     PROJECTED_CRS,

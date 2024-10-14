@@ -23,9 +23,9 @@ package org.citydb.database.postgres;
 
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.metadata.SpatialReferenceType;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
+import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.model.common.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.function.Function;

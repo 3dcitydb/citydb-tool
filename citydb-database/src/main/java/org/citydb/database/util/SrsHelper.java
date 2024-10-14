@@ -21,6 +21,8 @@
 
 package org.citydb.database.util;
 
+import org.citydb.database.srs.SrsException;
+
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -45,7 +47,7 @@ public class SrsHelper {
         return "http://www.opengis.net/def/crs/EPSG/0/" + srid;
     }
 
-    public int parse(String identifier) throws SrsParseException {
+    public int parseSRID(String identifier) throws SrsException {
         int code = 0;
         if (identifier != null && !identifier.isEmpty()) {
             String candidate = identifier.toLowerCase(Locale.ROOT);
@@ -61,11 +63,11 @@ public class SrsHelper {
         if (code != 0) {
             return code;
         } else {
-            throw new SrsParseException("Unknown SRS identifier schema '" + identifier + "'.");
+            throw new SrsException("Unknown SRS identifier schema '" + identifier + "'.");
         }
     }
 
-    private int parseHttpSchema(String identifier) throws SrsParseException {
+    private int parseHttpSchema(String identifier) throws SrsException {
         matcher.reset(identifier).usePattern(httpPattern);
         if (matcher.matches()) {
             String code = matcher.group(2);
@@ -81,25 +83,25 @@ public class SrsHelper {
         return 0;
     }
 
-    private int parseUrnSchema(String identifier) throws SrsParseException {
+    private int parseUrnSchema(String identifier) throws SrsException {
         matcher.reset(identifier).usePattern(urnPattern);
         return matcher.matches() ?
                 parseCode(matcher.group(2), identifier) :
                 0;
     }
 
-    private int parseEpsgSchema(String identifier) throws SrsParseException {
+    private int parseEpsgSchema(String identifier) throws SrsException {
         matcher.reset(identifier).usePattern(epsgPattern);
         return matcher.matches() ?
                 parseCode(matcher.group(1), identifier) :
                 0;
     }
 
-    private int parseCode(String code, String identifier) throws SrsParseException {
+    private int parseCode(String code, String identifier) throws SrsException {
         try {
             return Integer.parseInt(code);
         } catch (NumberFormatException e) {
-            throw new SrsParseException("Failed to parse '" + code + "' as SRS code from '" + identifier + "'", e);
+            throw new SrsException("Failed to parse '" + code + "' as SRS code from '" + identifier + "'", e);
         }
     }
 }
