@@ -44,7 +44,7 @@ public class ConfigObject<T> extends LinkedHashMap<String, T> {
             try {
                 E config = JSON.parseObject(object.toString(), type);
                 if (config != null) {
-                    set(config);
+                    set(name, config);
                     return config;
                 }
             } catch (Exception e) {
