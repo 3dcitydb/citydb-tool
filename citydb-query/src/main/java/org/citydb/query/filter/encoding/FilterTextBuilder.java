@@ -23,6 +23,7 @@ package org.citydb.query.filter.encoding;
 
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.WKTParser;
+import org.citydb.database.srs.SrsUnit;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.query.filter.common.*;
@@ -155,7 +156,7 @@ public class FilterTextBuilder {
                     buildExpression(node.getChildren().get(2), NumericLiteral.class).doubleValue());
             if (node.getChildren().size() == 4) {
                 StringLiteral literal = buildExpression(node.getChildren().get(3), StringLiteral.class);
-                DistanceUnit unit = DistanceUnit.of(literal.getValue());
+                SrsUnit unit = SrsUnit.of(literal.getValue());
                 if (unit != null) {
                     distance.setUnit(unit);
                 } else {

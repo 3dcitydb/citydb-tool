@@ -21,14 +21,19 @@
 
 package org.citydb.database.util;
 
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.srs.SrsException;
+import org.citydb.database.srs.SrsUnit;
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
+import org.geotools.measure.Units;
 
+import javax.measure.Unit;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SrsHelper {
-    private static final SrsHelper instance = new SrsHelper();
+    private final DatabaseAdapter adapter;
     private final Pattern httpPattern = Pattern.compile(
             "https?://www.opengis.net/def/crs/([^/]+?)/[^/]+?/([^/]+?)(?:/.*)?", Pattern.CASE_INSENSITIVE);
     private final Pattern urnPattern = Pattern.compile(
@@ -36,11 +41,12 @@ public class SrsHelper {
     private final Pattern epsgPattern = Pattern.compile("EPSG:([0-9]+)", Pattern.CASE_INSENSITIVE);
     private final Matcher matcher = Pattern.compile("").matcher("");
 
-    private SrsHelper() {
+    private SrsHelper(DatabaseAdapter adapter) {
+        this.adapter = adapter;
     }
 
-    public static SrsHelper getInstance() {
-        return instance;
+    public static SrsHelper newInstance(DatabaseAdapter adapter) {
+        return new SrsHelper(adapter);
     }
 
     public String getDefaultIdentifier(int srid) {
@@ -102,6 +108,27 @@ public class SrsHelper {
             return Integer.parseInt(code);
         } catch (NumberFormatException e) {
             throw new SrsException("Failed to parse '" + code + "' as SRS code from '" + identifier + "'", e);
+        }
+    }
+
+    public double convert(double value, SrsUnit fromUnit) throws SrsException {
+        if (fromUnit != null) {
+            CoordinateReferenceSystem crs = adapter.getDatabaseMetadata()
+                    .getSpatialReference()
+                    .getDefinition().orElse(null);
+            if (crs != null && crs.getCoordinateSystem().getDimension() > 0) {
+                try {
+                    Unit<?> toUnit = crs.getCoordinateSystem().getAxis(0).getUnit();
+                    return Units.getConverterToAny(fromUnit.getUnit(), toUnit).convert(value);
+                } catch (Exception e) {
+                    throw new SrsException("Failed to convert from the unit '" + fromUnit.getSymbol() + "' " +
+                            "to the unit of the database SRS.", e);
+                }
+            } else {
+                throw new SrsException("Failed to retrieve the unit of the database SRS.");
+            }
+        } else {
+            return value;
         }
     }
 }

@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.query.filter.common;
+package org.citydb.database.srs;
 
 import si.uom.NonSI;
 import si.uom.SI;
@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public enum DistanceUnit {
+public enum SrsUnit {
     CENTIMETER(MetricPrefix.CENTI(SI.METRE), "cm", "centimetre", "centimeter", "centimetres", "centimeters"),
     DEGREE_ANGLE(NonSI.DEGREE_ANGLE, "deg", "degree", "degree angle", "degrees", "degrees angle"),
     FOOT(USCustomary.FOOT, "ft", "foot", "feet"),
@@ -45,7 +45,7 @@ public enum DistanceUnit {
     RADIAN(SI.RADIAN, "rad", "radian", "radians"),
     YARD(USCustomary.YARD, "yd", "yard", "yards");
 
-    private final static Map<String, DistanceUnit> units = new HashMap<>();
+    private final static Map<String, SrsUnit> units = new HashMap<>();
     private final Unit<?> unit;
     private final String[] symbols;
 
@@ -54,12 +54,12 @@ public enum DistanceUnit {
                 Arrays.stream(unit.symbols).forEach(symbol -> units.put(symbol.toLowerCase(Locale.ROOT), unit)));
     }
 
-    DistanceUnit(Unit<?> unit, String... symbols) {
+    SrsUnit(Unit<?> unit, String... symbols) {
         this.unit = unit;
         this.symbols = symbols;
     }
 
-    public static DistanceUnit of(String symbol) {
+    public static SrsUnit of(String symbol) {
         return symbol != null ? units.get(symbol.toLowerCase(Locale.ROOT)) : null;
     }
 

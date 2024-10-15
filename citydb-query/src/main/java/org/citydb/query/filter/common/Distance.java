@@ -21,18 +21,20 @@
 
 package org.citydb.query.filter.common;
 
+import org.citydb.database.srs.SrsUnit;
+
 import java.util.Optional;
 
 public class Distance {
     private final double value;
-    private DistanceUnit unit;
+    private SrsUnit unit;
 
-    private Distance(double value, DistanceUnit unit) {
+    private Distance(double value, SrsUnit unit) {
         this.value = value;
         this.unit = unit;
     }
 
-    public static Distance of(double value, DistanceUnit unit) {
+    public static Distance of(double value, SrsUnit unit) {
         return new Distance(value, unit);
     }
 
@@ -44,11 +46,11 @@ public class Distance {
         return value;
     }
 
-    public Optional<DistanceUnit> getUnit() {
+    public Optional<SrsUnit> getUnit() {
         return Optional.ofNullable(unit);
     }
 
-    public Distance setUnit(DistanceUnit unit) {
+    public Distance setUnit(SrsUnit unit) {
         this.unit = unit;
         return this;
     }

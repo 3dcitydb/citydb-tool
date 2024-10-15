@@ -42,10 +42,11 @@ public abstract class GeometryAdapter {
     protected final DatabaseAdapter adapter;
     private final GeometryBuilder geometryBuilder = new GeometryBuilder();
     private final PropertiesBuilder propertiesBuilder = new PropertiesBuilder();
-    private final SrsHelper srsHelper = SrsHelper.getInstance();
+    private final SrsHelper srsHelper;
 
     protected GeometryAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
+        srsHelper = SrsHelper.newInstance(adapter);
     }
 
     public abstract int getGeometrySqlType();
@@ -63,6 +64,10 @@ public abstract class GeometryAdapter {
     public abstract boolean hasImplicitGeometries(Connection connection) throws SQLException;
 
     public abstract SpatialOperationHelper getSpatialOperationHelper();
+
+    public SrsHelper getSrsHelper() {
+        return srsHelper;
+    }
 
     public Object getGeometry(Geometry<?> geometry) throws GeometryException {
         return getGeometry(geometry, true);

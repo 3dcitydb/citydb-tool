@@ -36,7 +36,6 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.SrsHelper;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
@@ -261,7 +260,8 @@ public abstract class ExportController implements Command {
             if (targetSrs != null && targetSrs.getIdentifier().isPresent()) {
                 writeOptions.setSrsName(targetSrs.getIdentifier().get());
             } else if (targetSrs != null && targetSrs.getSRID().isPresent()) {
-                writeOptions.setSrsName(SrsHelper.getInstance().getDefaultIdentifier(targetSrs.getSRID().get()));
+                writeOptions.setSrsName(adapter.getGeometryAdapter().getSrsHelper()
+                        .getDefaultIdentifier(targetSrs.getSRID().get()));
             } else {
                 writeOptions.setSrsName(adapter.getDatabaseMetadata().getSpatialReference().getIdentifier());
             }

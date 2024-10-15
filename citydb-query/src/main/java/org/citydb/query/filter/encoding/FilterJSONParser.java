@@ -25,6 +25,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.database.srs.SrsUnit;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.query.filter.common.*;
@@ -214,7 +215,7 @@ public class FilterJSONParser {
             Distance distance = Distance.of(readExpression(args.get(2), NumericLiteral.class).doubleValue());
             if (args.size() == 4) {
                 StringLiteral literal = readExpression(args.get(3), StringLiteral.class);
-                DistanceUnit unit = DistanceUnit.of(literal.getValue());
+                SrsUnit unit = SrsUnit.of(literal.getValue());
                 if (unit != null) {
                     distance.setUnit(unit);
                 } else {

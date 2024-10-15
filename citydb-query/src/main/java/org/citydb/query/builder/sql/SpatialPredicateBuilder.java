@@ -22,6 +22,7 @@
 package org.citydb.query.builder.sql;
 
 import org.citydb.database.srs.SpatialReference;
+import org.citydb.database.srs.SrsException;
 import org.citydb.model.geometry.SpatialObject;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
@@ -35,10 +36,6 @@ import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.Not;
 import org.citydb.sqlbuilder.query.Select;
-import org.geotools.measure.Units;
-import org.geotools.referencing.util.CRSUtilities;
-
-import javax.measure.Unit;
 
 public class SpatialPredicateBuilder {
     private final FilterBuilder filterBuilder;
@@ -162,23 +159,16 @@ public class SpatialPredicateBuilder {
     }
 
     private double getDistance(Distance distance) throws QueryBuildException {
-        double value = distance.getValue();
         if (distance.getUnit().isPresent()) {
-            if (databaseSrs.getDefinition().isPresent()) {
-                try {
-                    Unit<?> fromUnit = distance.getUnit().get().getUnit();
-                    Unit<?> toUnit = CRSUtilities.getUnit(databaseSrs.getDefinition().get().getCoordinateSystem());
-                    value = Units.getConverterToAny(fromUnit, toUnit).convert(value);
-                } catch (Exception e) {
-                    throw new QueryBuildException("Failed to convert the distance value to the unit " +
-                            "of the database SRS.", e);
-                }
-            } else {
-                throw new QueryBuildException("Failed to retrieve the unit of the database SRS.");
+            try {
+                return helper.getDatabaseAdapter().getGeometryAdapter().getSrsHelper()
+                        .convert(distance.getValue(), distance.getUnit().get());
+            } catch (SrsException e) {
+                throw new QueryBuildException("Failed to convert distance value.", e);
             }
+        } else {
+            return distance.getValue();
         }
-
-        return value;
     }
 
     private SpatialOperator negate(SpatialOperator operator, boolean negate) {
