@@ -25,12 +25,14 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.citygml.writer.options.AddressMode;
+import org.citydb.io.citygml.writer.options.CityGMLVersionReader;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements OutputFormatOptions {
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString,
+            deserializeUsing = CityGMLVersionReader.class)
     private CityGMLVersion version = CityGMLVersion.v3_0;
     private boolean prettyPrint = true;
     private boolean useLod4AsLod3;

@@ -24,6 +24,7 @@ package org.citydb.io.citygml.writer;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
+import org.citydb.io.citygml.writer.options.CityJSONVersionReader;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citygml4j.cityjson.adapter.appearance.serializer.AppearanceSerializer;
@@ -39,7 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CityJSONFormatOptions implements OutputFormatOptions {
     public static final String TEMPLATE_LOD_PROPERTY = "lod";
 
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString,
+            deserializeUsing = CityJSONVersionReader.class)
     private CityJSONVersion version = CityJSONVersion.v2_0;
     private boolean prettyPrint;
     private boolean jsonLines = true;
