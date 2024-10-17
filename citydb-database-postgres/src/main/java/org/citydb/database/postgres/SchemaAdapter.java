@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public String getDefaultSchema() {
         return "citydb";
+    }
+
+    @Override
+    public Optional<Table> getDummyTable() {
+        return Optional.empty();
     }
 
     @Override

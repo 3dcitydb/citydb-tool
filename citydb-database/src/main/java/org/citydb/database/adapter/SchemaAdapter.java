@@ -30,6 +30,7 @@ import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
+import java.util.Optional;
 import java.util.Set;
 
 public abstract class SchemaAdapter {
@@ -45,6 +46,8 @@ public abstract class SchemaAdapter {
     }
 
     public abstract String getDefaultSchema();
+
+    public abstract Optional<Table> getDummyTable();
 
     public abstract String getNextSequenceValues(Sequence sequence);
 

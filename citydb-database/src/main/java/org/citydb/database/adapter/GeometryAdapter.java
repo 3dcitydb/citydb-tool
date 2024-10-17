@@ -32,11 +32,10 @@ import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.database.util.SrsHelper;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
+import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.query.Select;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public abstract class GeometryAdapter {
     protected final DatabaseAdapter adapter;
@@ -83,13 +82,51 @@ public abstract class GeometryAdapter {
         return propertiesBuilder.buildProperties(geometry);
     }
 
+    public <T extends Geometry<?>> T transform(T geometry) throws GeometryException, SQLException {
+        return transform(geometry, adapter.getDatabaseMetadata().getSpatialReference().getSRID());
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends Geometry<?>> T transform(T geometry, int srid) throws GeometryException, SQLException {
+        int sourceSRID = geometry.getSRID()
+                .orElseThrow(() -> new GeometryException("The input geometry lacks an SRID."));
+        if (sourceSRID != srid) {
+            Select select = Select.newInstance()
+                    .select(getSpatialOperationHelper().transform(Placeholder.of(geometry), srid));
+            adapter.getSchemaAdapter().getDummyTable().ifPresent(select::from);
+
+            try (Connection conn = adapter.getPool().getConnection();
+                 PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, conn);
+                 ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Geometry<?> result = buildGeometry(rs.getObject(1), buildGeometryProperties(geometry));
+                    if (geometry.getClass().isInstance(result)) {
+                        return (T) result.setSRID(srid);
+                    }
+                }
+
+                throw new GeometryException("Failed to transform geometry to SRID " + srid + ".");
+            }
+        } else {
+            return geometry;
+        }
+    }
+
+    public Envelope transform(Envelope envelope) throws GeometryException, SQLException {
+        return transform(envelope, adapter.getDatabaseMetadata().getSpatialReference().getSRID());
+    }
+
+    public Envelope transform(Envelope envelope, int srid) throws GeometryException, SQLException {
+        return transform(envelope.convertToPolygon(), srid).getEnvelope();
+    }
+
     public boolean hasImplicitGeometries() throws SQLException {
         try (Connection connection = adapter.getPool().getConnection()) {
             return hasImplicitGeometries(connection);
         }
     }
 
-    public SpatialReference getSpatialReference(int srid) throws SQLException {
+    public SpatialReference getSpatialReference(int srid) throws SrsException, SQLException {
         return getSpatialReference(srid, null);
     }
 
@@ -97,7 +134,7 @@ public abstract class GeometryAdapter {
         return getSpatialReference(srsHelper.parseSRID(identifier), identifier);
     }
 
-    public SpatialReference getSpatialReference(int srid, String identifier) throws SQLException {
+    public SpatialReference getSpatialReference(int srid, String identifier) throws SrsException, SQLException {
         SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
         if (srid == databaseSrs.getSRID()) {
             return databaseSrs.getIdentifier().equals(identifier) ?
@@ -120,7 +157,7 @@ public abstract class GeometryAdapter {
                 }
             }
 
-            throw new SQLException("The SRID " + srid + " is not supported by the database.");
+            throw new SrsException("The SRID " + srid + " is not supported by the database.");
         }
     }
 
