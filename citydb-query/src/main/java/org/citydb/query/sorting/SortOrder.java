@@ -37,8 +37,9 @@ public enum SortOrder {
 
     public static SortOrder fromValue(String value) {
         for (SortOrder v : SortOrder.values()) {
-            if (v.value.equals(value))
+            if (v.value.equals(value)) {
                 return v;
+            }
         }
 
         return null;

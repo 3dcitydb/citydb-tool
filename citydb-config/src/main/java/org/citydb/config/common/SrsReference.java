@@ -34,7 +34,7 @@ public class SrsReference {
     }
 
     @JSONField(name = "srid")
-    public SrsReference setSRID(int srid) {
+    public SrsReference setSRID(Integer srid) {
         this.srid = srid;
         return this;
     }

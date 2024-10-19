@@ -37,8 +37,9 @@ public enum DeleteMode {
 
     public static DeleteMode fromValue(String value) {
         for (DeleteMode v : DeleteMode.values()) {
-            if (v.value.equals(value))
+            if (v.value.equals(value)) {
                 return v;
+            }
         }
 
         return null;

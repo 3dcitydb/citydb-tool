@@ -39,8 +39,9 @@ public enum LodMode {
 
     public static LodMode fromValue(String value) {
         for (LodMode v : LodMode.values()) {
-            if (v.value.equals(value))
+            if (v.value.equals(value)) {
                 return v;
+            }
         }
 
         return null;

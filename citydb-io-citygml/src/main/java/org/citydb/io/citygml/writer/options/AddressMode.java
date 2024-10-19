@@ -39,8 +39,9 @@ public enum AddressMode {
 
     public static AddressMode fromValue(String value) {
         for (AddressMode v : AddressMode.values()) {
-            if (v.value.equals(value))
+            if (v.value.equals(value)) {
                 return v;
+            }
         }
 
         return null;

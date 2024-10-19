@@ -37,8 +37,9 @@ public enum LodFilterMode {
 
     public static LodFilterMode fromValue(String value) {
         for (LodFilterMode v : LodFilterMode.values()) {
-            if (v.value.equals(value))
+            if (v.value.equals(value)) {
                 return v;
+            }
         }
 
         return null;
