@@ -1,0 +1,127 @@
+/*
+ * 3D City Database - The Open Source CityGML Database
+ * https://www.3dcitydb.org/
+ *
+ * Copyright 2013 - 2024
+ * Chair of Geoinformatics
+ * Technical University of Munich, Germany
+ * https://www.lrg.tum.de/gis/
+ *
+ * The 3D City Database is jointly developed with the following
+ * cooperation partners:
+ *
+ * Virtual City Systems, Berlin <https://vc.systems/>
+ * M.O.S.S. Computer Grafik Systeme GmbH, Taufkirchen <http://www.moss.de/>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.citydb.tiling.options;
+
+import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.annotation.JSONField;
+import com.alibaba.fastjson2.annotation.JSONType;
+import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.srs.SrsException;
+import org.citydb.database.util.SrsHelper;
+import org.citydb.model.geometry.Coordinate;
+import org.citydb.model.geometry.Envelope;
+import org.citydb.tiling.TileMatrix;
+import org.citydb.tiling.TilingException;
+import org.citydb.tiling.TilingScheme;
+
+import java.util.Optional;
+
+@JSONType(typeName = "dimension")
+public class DimensionScheme extends TilingScheme {
+    private Dimension width;
+    private Dimension height;
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
+    private TileAlignment tileAlignment = TileAlignment.SRS;
+
+    public static DimensionScheme of(Dimension width, Dimension height) {
+        return of(width, height, TileAlignment.SRS);
+    }
+
+    public static DimensionScheme of(Dimension width, Dimension height, TileAlignment tileAlignment) {
+        return new DimensionScheme()
+                .setWidth(width)
+                .setHeight(height)
+                .setTileAlignment(tileAlignment);
+    }
+
+    public static DimensionScheme of(double width, double height) {
+        return of(Dimension.of(width), Dimension.of(height));
+    }
+
+    public Optional<Dimension> getHeight() {
+        return Optional.ofNullable(height);
+    }
+
+    public DimensionScheme setHeight(Dimension height) {
+        this.height = height;
+        return this;
+    }
+
+    public Optional<Dimension> getWidth() {
+        return Optional.ofNullable(width);
+    }
+
+    public DimensionScheme setWidth(Dimension width) {
+        this.width = width;
+        return this;
+    }
+
+    public TileAlignment getTileAlignment() {
+        return tileAlignment != null ? tileAlignment : TileAlignment.SRS;
+    }
+
+    public DimensionScheme setTileAlignment(TileAlignment tileAlignment) {
+        this.tileAlignment = tileAlignment;
+        return this;
+    }
+
+    @Override
+    protected TileMatrix createTileMatrix(Envelope extent, DatabaseAdapter adapter) throws TilingException {
+        if (width == null) {
+            throw new TilingException("No tile width provided for the dimension tiling scheme.");
+        } else if (height == null) {
+            throw new TilingException("No tile height provided for the dimension tiling scheme.");
+        }
+
+        double tileWidth, tileHeight;
+        try {
+            SrsHelper helper = adapter.getGeometryAdapter().getSrsHelper();
+            tileWidth = helper.convert(width.getValue(), width.getUnit().orElse(null));
+            tileHeight = helper.convert(height.getValue(), height.getUnit().orElse(null));
+        } catch (SrsException e) {
+            throw new TilingException("Failed to convert tile dimension to the unit of the database SRS.", e);
+        }
+
+        double minX, minY;
+        if (getTileAlignment() == TileAlignment.EXTENT) {
+            minX = extent.getLowerCorner().getX();
+            minY = extent.getLowerCorner().getY();
+        } else {
+            minX = (int) (extent.getLowerCorner().getX() / tileWidth) * tileWidth;
+            minY = (int) (extent.getLowerCorner().getY() / tileHeight) * tileHeight;
+        }
+
+        int columns = (int) Math.ceil((extent.getUpperCorner().getX() - minX) / tileWidth);
+        int rows = (int) Math.ceil((extent.getUpperCorner().getY() - minY) / tileHeight);
+        Coordinate lowerCorner = Coordinate.of(minX, minY);
+        Coordinate upperCorner = Coordinate.of(minX + columns * tileWidth, minY + rows * tileHeight);
+
+        return createTileMatrix(lowerCorner, upperCorner, columns, rows, tileWidth, tileHeight, adapter);
+    }
+}
