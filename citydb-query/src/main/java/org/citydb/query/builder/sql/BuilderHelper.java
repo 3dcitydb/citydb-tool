@@ -156,7 +156,8 @@ public class BuilderHelper {
     }
 
     SpatialReference getSpatialReference(SrsReference reference) throws SrsException, SQLException {
-        return adapter.getGeometryAdapter().getSpatialReference(reference);
+        return adapter.getGeometryAdapter().getSpatialReference(reference)
+                .orElse(adapter.getDatabaseMetadata().getSpatialReference());
     }
 
     SpatialObject getSpatialLiteral(GeometryExpression expression) {

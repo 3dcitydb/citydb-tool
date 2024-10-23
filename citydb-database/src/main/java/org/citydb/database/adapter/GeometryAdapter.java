@@ -36,6 +36,7 @@ import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 
 import java.sql.*;
+import java.util.Optional;
 
 public abstract class GeometryAdapter {
     protected final DatabaseAdapter adapter;
@@ -161,15 +162,22 @@ public abstract class GeometryAdapter {
         }
     }
 
-    public SpatialReference getSpatialReference(SrsReference reference) throws SrsException, SQLException {
+    public Optional<SpatialReference> getSpatialReference(SrsReference reference) throws SrsException, SQLException {
         if (reference != null) {
             if (reference.getSRID().isPresent()) {
-                return getSpatialReference(reference.getSRID().get(), reference.getIdentifier().orElse(null));
+                return Optional.of(getSpatialReference(reference.getSRID().get(),
+                        reference.getIdentifier().orElse(null)));
             } else if (reference.getIdentifier().isPresent()) {
-                return getSpatialReference(reference.getIdentifier().get());
+                return Optional.of(getSpatialReference(reference.getIdentifier().get()));
             }
         }
 
-        return adapter.getDatabaseMetadata().getSpatialReference();
+        return Optional.empty();
+    }
+
+    public Optional<SpatialReference> getSpatialReference(org.citydb.model.geometry.SrsReference reference) throws SrsException, SQLException {
+        return getSpatialReference(new SrsReference()
+                .setSRID(reference.getSRID().orElse(null))
+                .setIdentifier(reference.getSrsIdentifier().orElse(null)));
     }
 }
