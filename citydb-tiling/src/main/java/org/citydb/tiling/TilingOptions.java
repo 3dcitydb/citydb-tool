@@ -21,6 +21,7 @@
 
 package org.citydb.tiling;
 
+import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.model.geometry.Envelope;
@@ -35,6 +36,7 @@ public class TilingOptions {
     @JSONField(serializeUsing = ExtentWriter.class, deserializeUsing = ExtentReader.class)
     private Envelope extent;
     private TilingScheme scheme;
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private TileMatrixOrigin tileMatrixOrigin = TileMatrixOrigin.TOP_LEFT;
 
     public static TilingOptions of(Envelope extent, TilingScheme scheme) {
