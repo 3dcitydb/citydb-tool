@@ -25,8 +25,8 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.model.geometry.Envelope;
-import org.citydb.tiling.options.ExtentReader;
-import org.citydb.tiling.options.ExtentWriter;
+import org.citydb.tiling.encoding.ExtentReader;
+import org.citydb.tiling.encoding.ExtentWriter;
 import org.citydb.tiling.options.TileMatrixOrigin;
 
 import java.util.Optional;

@@ -35,7 +35,7 @@ import org.citydb.tiling.TileMatrix;
 import org.citydb.tiling.TilingException;
 import org.citydb.tiling.TilingScheme;
 
-@JSONType(typeName = "matrix")
+@JSONType(typeName = "Matrix")
 public class MatrixScheme extends TilingScheme {
     private int columns = 1;
     private int rows = 1;

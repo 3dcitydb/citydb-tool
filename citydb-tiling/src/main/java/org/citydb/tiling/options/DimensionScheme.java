@@ -28,40 +28,45 @@
 
 package org.citydb.tiling.options;
 
-import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.geometry.GeometryException;
+import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SrsException;
 import org.citydb.database.util.SrsHelper;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
+import org.citydb.model.geometry.Point;
 import org.citydb.tiling.TileMatrix;
 import org.citydb.tiling.TilingException;
 import org.citydb.tiling.TilingScheme;
+import org.citydb.tiling.encoding.PointReader;
+import org.citydb.tiling.encoding.PointWriter;
 
+import java.sql.SQLException;
 import java.util.Optional;
 
-@JSONType(typeName = "dimension")
+@JSONType(typeName = "Dimension")
 public class DimensionScheme extends TilingScheme {
     private Dimension width;
     private Dimension height;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
-    private TileAlignment tileAlignment = TileAlignment.SRS;
-
-    public static DimensionScheme of(Dimension width, Dimension height) {
-        return of(width, height, TileAlignment.SRS);
-    }
-
-    public static DimensionScheme of(Dimension width, Dimension height, TileAlignment tileAlignment) {
-        return new DimensionScheme()
-                .setWidth(width)
-                .setHeight(height)
-                .setTileAlignment(tileAlignment);
-    }
+    @JSONField(serializeUsing = PointWriter.class, deserializeUsing = PointReader.class)
+    private Point gridPoint;
 
     public static DimensionScheme of(double width, double height) {
         return of(Dimension.of(width), Dimension.of(height));
+    }
+
+    public static DimensionScheme of(Dimension width, Dimension height) {
+        return of(width, height, null);
+    }
+
+    public static DimensionScheme of(Dimension width, Dimension height, Point gridPoint) {
+        return new DimensionScheme()
+                .setWidth(width)
+                .setHeight(height)
+                .setGridPoint(gridPoint);
     }
 
     public Optional<Dimension> getHeight() {
@@ -82,12 +87,12 @@ public class DimensionScheme extends TilingScheme {
         return this;
     }
 
-    public TileAlignment getTileAlignment() {
-        return tileAlignment != null ? tileAlignment : TileAlignment.SRS;
+    public Optional<Point> getGridPoint() {
+        return Optional.ofNullable(gridPoint);
     }
 
-    public DimensionScheme setTileAlignment(TileAlignment tileAlignment) {
-        this.tileAlignment = tileAlignment;
+    public DimensionScheme setGridPoint(Point gridPoint) {
+        this.gridPoint = gridPoint;
         return this;
     }
 
@@ -108,20 +113,37 @@ public class DimensionScheme extends TilingScheme {
             throw new TilingException("Failed to convert tile dimension to the unit of the database SRS.", e);
         }
 
-        double minX, minY;
-        if (getTileAlignment() == TileAlignment.EXTENT) {
-            minX = extent.getLowerCorner().getX();
-            minY = extent.getLowerCorner().getY();
+        double gridX, gridY;
+        if (gridPoint != null) {
+            try {
+                SpatialReference reference = adapter.getGeometryAdapter().getSpatialReference(gridPoint)
+                        .orElse(adapter.getDatabaseMetadata().getSpatialReference());
+                Point point = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID() ?
+                        adapter.getGeometryAdapter().transform(gridPoint) :
+                        gridPoint;
+                gridX = point.getCoordinate().getX();
+                gridY = point.getCoordinate().getY();
+            } catch (GeometryException | SrsException | SQLException e) {
+                throw new TilingException("Failed to transform the grid point to the database SRS.", e);
+            }
         } else {
-            minX = (int) (extent.getLowerCorner().getX() / tileWidth) * tileWidth;
-            minY = (int) (extent.getLowerCorner().getY() / tileHeight) * tileHeight;
+            gridX = gridY = 0;
         }
 
+        double minX = getNearestNeighbor(gridX, extent.getLowerCorner().getX(), tileWidth);
+        double minY = getNearestNeighbor(gridY, extent.getLowerCorner().getY(), tileHeight);
         int columns = (int) Math.ceil((extent.getUpperCorner().getX() - minX) / tileWidth);
         int rows = (int) Math.ceil((extent.getUpperCorner().getY() - minY) / tileHeight);
         Coordinate lowerCorner = Coordinate.of(minX, minY);
         Coordinate upperCorner = Coordinate.of(minX + columns * tileWidth, minY + rows * tileHeight);
 
         return createTileMatrix(lowerCorner, upperCorner, columns, rows, tileWidth, tileHeight, adapter);
+    }
+
+    private double getNearestNeighbor(double gridValue, double candidate, double offset) {
+        double distance = Math.sqrt((gridValue - candidate) * (gridValue - candidate));
+        return gridValue >= candidate ?
+                gridValue - Math.ceil(distance / offset) * offset :
+                gridValue + Math.floor(distance / offset) * offset;
     }
 }

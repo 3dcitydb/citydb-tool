@@ -5,4 +5,5 @@ module org.citydb.tiling {
 
     exports org.citydb.tiling;
     exports org.citydb.tiling.options;
+    exports org.citydb.tiling.encoding;
 }
