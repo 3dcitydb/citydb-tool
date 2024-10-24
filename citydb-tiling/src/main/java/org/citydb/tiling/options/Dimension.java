@@ -24,6 +24,7 @@ package org.citydb.tiling.options;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.database.srs.SrsUnit;
+import org.citydb.tiling.encoding.SrsUnitReader;
 
 import java.util.Optional;
 

@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.tiling.options;
+package org.citydb.tiling.encoding;
 
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.reader.ObjectReader;
