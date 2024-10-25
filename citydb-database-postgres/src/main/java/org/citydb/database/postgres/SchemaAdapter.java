@@ -245,7 +245,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
-                    .replace("%SCHEMA%", adapter.getConnectionDetails().getSchema());
+                    .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema());
         }
     }
 
@@ -254,7 +254,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_recursive_implicit_geometry.sql"))))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
-                    .replace("%SCHEMA%", adapter.getConnectionDetails().getSchema());
+                    .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema());
         }
     }
 }
