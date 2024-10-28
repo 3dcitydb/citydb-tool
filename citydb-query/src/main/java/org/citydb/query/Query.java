@@ -52,6 +52,20 @@ public class Query {
     private Sorting sorting;
     private CountLimit countLimit;
 
+    public static Query newInstance() {
+        return new Query();
+    }
+
+    public static Query of(Query other) {
+        return Query.newInstance()
+                .setFeatureTypes(other.featureTypes != null ? new ArrayList<>(other.featureTypes) : null)
+                .setFilter(other.filter)
+                .setFilterSrs(other.filterSrs)
+                .setLodFilter(other.lodFilter)
+                .setSorting(other.sorting)
+                .setCountLimit(other.countLimit);
+    }
+
     public boolean hasFeatureTypes() {
         return featureTypes != null && !featureTypes.isEmpty();
     }
