@@ -176,8 +176,15 @@ public abstract class GeometryAdapter {
     }
 
     public Optional<SpatialReference> getSpatialReference(org.citydb.model.geometry.SrsReference reference) throws SrsException, SQLException {
-        return getSpatialReference(new SrsReference()
-                .setSRID(reference.getSRID().orElse(null))
-                .setIdentifier(reference.getSrsIdentifier().orElse(null)));
+        if (reference != null) {
+            if (reference.getSRID().isPresent()) {
+                return Optional.of(getSpatialReference(reference.getSRID().get(),
+                        reference.getSrsIdentifier().orElse(null)));
+            } else if (reference.getSrsIdentifier().isPresent()) {
+                return Optional.of(getSpatialReference(reference.getSrsIdentifier().get()));
+            }
+        }
+
+        return Optional.empty();
     }
 }
