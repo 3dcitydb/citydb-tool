@@ -117,6 +117,10 @@ public class CommandHelper {
         return manager;
     }
 
+    public QueryExecutor getQueryExecutor(Query query, SqlBuildOptions options, DatabaseAdapter adapter) throws ExecutionException {
+        return getQueryExecutor(query, options, null, adapter);
+    }
+
     public QueryExecutor getQueryExecutor(Query query, SqlBuildOptions options, Path tempDirectory, DatabaseAdapter adapter) throws ExecutionException {
         try {
             return QueryExecutor.builder(adapter)
