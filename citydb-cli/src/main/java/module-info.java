@@ -1,13 +1,14 @@
 module org.citydb.cli {
-    requires org.citydb.config;
-    requires org.citygml4j.core;
-    requires org.citydb.io;
     requires org.citydb.io.citygml;
-    requires org.citydb.logging;
-    requires org.citydb.database;
-    requires org.citydb.operation;
-    requires org.citydb.query;
+    requires transitive org.citydb.config;
+    requires transitive org.citygml4j.core;
+    requires transitive org.citydb.database;
+    requires transitive org.citydb.io;
+    requires transitive org.citydb.logging;
+    requires transitive org.citydb.operation;
     requires transitive org.citydb.plugin;
+    requires transitive org.citydb.query;
+    requires transitive org.citydb.tiling;
     requires transitive info.picocli;
 
     exports org.citydb.cli;

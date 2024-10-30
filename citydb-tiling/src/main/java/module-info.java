@@ -4,6 +4,6 @@ module org.citydb.tiling {
     requires transitive org.citydb.model;
 
     exports org.citydb.tiling;
-    exports org.citydb.tiling.options;
     exports org.citydb.tiling.encoding;
+    exports org.citydb.tiling.options;
 }

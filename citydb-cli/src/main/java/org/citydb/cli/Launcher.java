@@ -61,6 +61,7 @@ import java.util.stream.Collectors;
         scope = CommandLine.ScopeType.INHERIT,
         description = "Command-line interface for the 3D City Database.",
         synopsisSubcommandLabel = "COMMAND",
+        abbreviateSynopsis = true,
         mixinStandardHelpOptions = true,
         versionProvider = Launcher.class,
         showAtFileInUsageHelp = true,
