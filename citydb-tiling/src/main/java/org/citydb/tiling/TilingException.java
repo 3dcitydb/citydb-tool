@@ -19,34 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.exporter;
+package org.citydb.tiling;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.query.Query;
-import org.citydb.tiling.Tiling;
+public class TilingException extends Exception {
 
-import java.util.Optional;
-
-@SerializableConfig(name = "exportOptions")
-public class ExportOptions extends org.citydb.operation.exporter.ExportOptions {
-    private Query query;
-    private Tiling tiling;
-
-    public Optional<Query> getQuery() {
-        return Optional.ofNullable(query);
+    public TilingException() {
+        super();
     }
 
-    public ExportOptions setQuery(Query query) {
-        this.query = query;
-        return this;
+    public TilingException(String message) {
+        super(message);
     }
 
-    public Optional<Tiling> getTiling() {
-        return Optional.ofNullable(tiling);
+    public TilingException(Throwable cause) {
+        super(cause);
     }
 
-    public ExportOptions setTiling(Tiling tiling) {
-        this.tiling = tiling;
-        return this;
+    public TilingException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

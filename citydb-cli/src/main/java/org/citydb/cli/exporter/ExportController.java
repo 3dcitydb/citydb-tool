@@ -26,7 +26,9 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.exporter.options.QueryOptions;
+import org.citydb.cli.exporter.options.TilingOptions;
 import org.citydb.cli.exporter.util.SequentialWriter;
+import org.citydb.cli.exporter.util.TilingHelper;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.config.Config;
@@ -52,6 +54,9 @@ import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.util.QueryHelper;
+import org.citydb.tiling.Tile;
+import org.citydb.tiling.TileIterator;
+import org.citydb.tiling.Tiling;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -77,7 +82,11 @@ public abstract class ExportController implements Command {
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
-    private QueryOptions queryOptions;
+    protected QueryOptions queryOptions;
+
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Tiling options:%n")
+    protected TilingOptions tilingOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
@@ -119,71 +128,97 @@ public abstract class ExportController implements Command {
         WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
-        Query query = getQuery(exportOptions);
-        QueryExecutor executor = helper.getQueryExecutor(query,
-                SqlBuildOptions.defaults().omitDistinct(true),
-                tempDirectory,
-                databaseManager.getAdapter());
-
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         initialize(exportOptions, writeOptions, databaseManager);
 
-        try (OutputFile outputFile = builder.newOutputFile(outputFileOptions.getFile());
-             FeatureWriter writer = createWriter(query, ioAdapter)) {
-            Exporter exporter = Exporter.newInstance();
-            exportOptions.setOutputFile(outputFile);
+        Query query = getQuery(exportOptions);
+        Tiling tiling = getTiling(exportOptions);
+        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
+        AtomicLong counter = new AtomicLong();
 
-            AtomicLong counter = new AtomicLong();
+        try {
+            TilingHelper tilingHelper = TilingHelper.of(tiling, query, databaseManager.getAdapter());
+            if (tilingHelper.isUseTiling()) {
+                logger.info("Creating {} tile(s) based on provided tiling scheme.",
+                        tilingHelper.getTileMatrix().size());
+            }
 
-            logger.info("Exporting to {} file {}.", ioManager.getFileFormat(ioAdapter), outputFile.getFile());
-            writer.initialize(outputFile, writeOptions);
+            TileIterator iterator = tilingHelper.getTileMatrix().getTileIterator();
+            while (iterator.hasNext()) {
+                Tile tile = iterator.next();
+                QueryExecutor executor = helper.getQueryExecutor(tilingHelper.getTileQuery(tile),
+                        SqlBuildOptions.defaults()
+                                .omitDistinct(true)
+                                .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
+                        tempDirectory,
+                        databaseManager.getAdapter());
 
-            logger.info("Querying features matching the request...");
-            logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
-                    databaseManager.getAdapter()));
+                Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
+                FeatureStatistics tileStatistics = new FeatureStatistics(databaseManager.getAdapter());
 
-            long sequenceId = 1;
-            try (QueryResult result = executor.executeQuery()) {
-                exporter.startSession(databaseManager.getAdapter(), exportOptions);
-                while (shouldRun && result.hasNext()) {
-                    long id = result.getId();
-                    exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
-                        if (feature != null) {
-                            try {
-                                writer.write(feature, (success, e) -> {
-                                    if (success == Boolean.TRUE) {
-                                        statistics.add(feature);
-                                        long count = counter.incrementAndGet();
-                                        if (count % 1000 == 0) {
-                                            logger.info("{} features exported.", count);
-                                        }
-                                    } else {
+                try (OutputFile outputFile = builder.newOutputFile(file);
+                     FeatureWriter writer = createWriter(query, ioAdapter)) {
+                    Exporter exporter = Exporter.newInstance();
+                    exportOptions.setOutputFile(outputFile);
+
+                    logger.info("{}Exporting to {} file {}.", getTileCounter(tilingHelper, tile),
+                            ioManager.getFileFormat(ioAdapter), outputFile.getFile());
+                    writer.initialize(outputFile, writeOptions);
+
+                    logger.debug("Querying features matching the request...");
+                    logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
+                            databaseManager.getAdapter()));
+
+                    long sequenceId = 1;
+                    try (QueryResult result = executor.executeQuery()) {
+                        exporter.startSession(databaseManager.getAdapter(), exportOptions);
+                        while (shouldRun && result.hasNext()) {
+                            long id = result.getId();
+
+                            if (tilingHelper.isUseTiling() && !tile.isOnTile(databaseManager.getAdapter()
+                                    .getGeometryAdapter()
+                                    .getEnvelope(result.get(rs -> rs.getObject("envelope"))))) {
+                                continue;
+                            }
+
+                            exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
+                                if (feature != null) {
+                                    try {
+                                        writer.write(feature, (success, e) -> {
+                                            if (success == Boolean.TRUE) {
+                                                tileStatistics.add(feature);
+                                                long count = counter.incrementAndGet();
+                                                if (count % 1000 == 0) {
+                                                    logger.info("{} features exported.", count);
+                                                }
+                                            } else {
+                                                abort(feature, id, e);
+                                            }
+                                        });
+                                    } catch (Throwable e) {
                                         abort(feature, id, e);
                                     }
-                                });
-                            } catch (Throwable e) {
-                                abort(feature, id, e);
-                            }
-                        } else {
-                            abort(null, id, t);
+                                } else {
+                                    abort(null, id, t);
+                                }
+                            });
                         }
-                    });
+                    } finally {
+                        exporter.closeSession();
+                    }
+                } catch (Throwable e) {
+                    logger.warn("Database export aborted due to an error.");
+                    throw new ExecutionException("A fatal error has occurred during export.", e);
+                } finally {
+                    statistics.merge(tileStatistics);
+                    if (tilingHelper.isUseTiling()) {
+                        logStatistics(tileStatistics, "Tile export summary:", Level.DEBUG);
+                    }
                 }
-            } finally {
-                exporter.closeSession();
             }
-        } catch (Throwable e) {
-            logger.warn("Database export aborted due to an error.");
-            throw new ExecutionException("A fatal error has occurred during export.", e);
         } finally {
             databaseManager.disconnect();
-            if (!statistics.isEmpty()) {
-                logger.info("Export summary:");
-                statistics.logFeatureSummary(Level.INFO);
-            } else {
-                logger.info("No features exported.");
-            }
+            logStatistics(statistics, "Export summary:", Level.INFO);
         }
 
         return shouldRun;
@@ -204,6 +239,12 @@ public abstract class ExportController implements Command {
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
+    }
+
+    protected Tiling getTiling(ExportOptions exportOptions) throws ExecutionException {
+        return tilingOptions != null ?
+                tilingOptions.getTiling() :
+                exportOptions.getTiling().orElseGet(TilingHelper::noTiling);
     }
 
     protected ExportOptions getExportOptions() throws ExecutionException {
@@ -268,6 +309,22 @@ public abstract class ExportController implements Command {
         }
 
         return writeOptions;
+    }
+
+    private String getTileCounter(TilingHelper helper, Tile tile) {
+        return helper.isUseTiling() ?
+                "[" + (tile.getRow() * helper.getTileMatrix().getColumns() + tile.getColumn() + 1) + "|" +
+                        helper.getTileMatrix().size() + "] " :
+                "";
+    }
+
+    private void logStatistics(FeatureStatistics statistics, String title, Level level) {
+        if (!statistics.isEmpty()) {
+            logger.log(level, title);
+            statistics.logFeatureSummary(level);
+        } else {
+            logger.log(level, "No features exported.");
+        }
     }
 
     private void abort(Feature feature, long id, Throwable e) {
