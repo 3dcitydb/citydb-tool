@@ -28,6 +28,7 @@ import com.alibaba.fastjson2.JSONReader;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
+import org.citydb.database.util.OperationHelper;
 import org.citydb.model.appearance.Color;
 import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Envelope;
@@ -47,14 +48,16 @@ public abstract class DatabaseExporter {
     protected final DatabaseAdapter adapter;
     protected final SchemaMapping schemaMapping;
     protected final TableHelper tableHelper;
+    protected final OperationHelper operationHelper;
 
     protected PreparedStatement stmt;
 
     public DatabaseExporter(ExportHelper helper) {
         this.helper = helper;
-        this.adapter = helper.getAdapter();
-        this.schemaMapping = helper.getSchemaMapping();
-        this.tableHelper = helper.getTableHelper();
+        adapter = helper.getAdapter();
+        schemaMapping = helper.getSchemaMapping();
+        tableHelper = helper.getTableHelper();
+        operationHelper = helper.getOperationHelper();
     }
 
     protected Long getLong(String column, ResultSet rs) throws SQLException {

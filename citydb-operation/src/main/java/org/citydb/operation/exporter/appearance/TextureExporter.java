@@ -43,7 +43,7 @@ public abstract class TextureExporter extends SurfaceDataExporter {
 
     public TextureExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        blobExporter = new BlobExporter(Table.TEX_IMAGE, "id", "image_data", helper);
+        blobExporter = new BlobExporter(tableHelper.getTable(Table.TEX_IMAGE), "id", "image_data", helper);
         externalFileHelper = ExternalFileHelper.newInstance(helper)
                 .withRelativeOutputFolder(ExportConstants.TEXTURE_DIR)
                 .withFileNamePrefix(ExportConstants.TEXTURE_PREFIX)

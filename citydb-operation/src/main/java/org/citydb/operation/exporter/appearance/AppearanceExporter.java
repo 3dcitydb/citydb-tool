@@ -22,12 +22,16 @@
 package org.citydb.operation.exporter.appearance;
 
 import org.citydb.database.schema.FeatureType;
-import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.Reference;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;
+import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.operation.BooleanExpression;
+import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -36,41 +40,63 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 public class AppearanceExporter extends DatabaseExporter {
+    private final Table appearance;
+    private final Select select;
     private final FeatureType material;
     private final FeatureType parameterizedTexture;
     private final FeatureType georeferencedTexture;
 
     public AppearanceExporter(ExportHelper helper) throws SQLException {
         super(helper);
+        appearance = tableHelper.getTable(org.citydb.database.schema.Table.APPEARANCE);
+        select = getBaseQuery();
         material = schemaMapping.getFeatureType(X3DMaterial.newInstance().getName());
         parameterizedTexture = schemaMapping.getFeatureType(ParameterizedTexture.newInstance().getName());
         georeferencedTexture = schemaMapping.getFeatureType(GeoreferencedTexture.newInstance().getName());
-        stmt = helper.getConnection().prepareStatement(getBaseQuery() +
-                "where a.id = ?");
+        stmt = helper.getConnection().prepareStatement(Select.of(select)
+                .where(appearance.column("id").eq(Placeholder.empty()))
+                .toSql());
     }
 
-    private String getBaseQuery() {
-        return "select a.id, a.objectid, a.identifier, a.identifier_codespace, a.theme, a.creation_date, " +
-                "a.termination_date, a.valid_from, a.valid_to, a.feature_id, a.implicit_geometry_id, " +
-                "sd.id as sd_id, sd.objectid as sd_objectid, sd.identifier as sd_identifier, " +
-                "sd.identifier_codespace as sd_identifier_codespace, sd.is_front, sd.objectclass_id, " +
-                "sd.x3d_shininess, sd.x3d_transparency, sd.x3d_ambient_intensity, sd.x3d_specular_color, " +
-                "sd.x3d_diffuse_color, sd.x3d_emissive_color, sd.x3d_is_smooth, sd.tex_image_id, " +
-                "sd.tex_texture_type, sd.tex_wrap_mode, sd.tex_border_color, sd.gt_orientation, " +
-                helper.getTransformOperator("sd.gt_reference_point") + ", ti.image_uri, ti.mime_type, ti.mime_type_codespace, " +
-                "sdm.geometry_data_id, sdm.material_mapping, sdm.texture_mapping, sdm.world_to_texture_mapping, " +
-                "sdm.georeferenced_texture_mapping " +
-                "from " + tableHelper.getPrefixedTableName(Table.APPEARANCE) + " a " +
-                "inner join " + tableHelper.getPrefixedTableName(Table.APPEAR_TO_SURFACE_DATA) + " a2sd on a.id = a2sd.appearance_id " +
-                "inner join " + tableHelper.getPrefixedTableName(Table.SURFACE_DATA) + " sd on a2sd.surface_data_id = sd.id " +
-                "left join " + tableHelper.getPrefixedTableName(Table.TEX_IMAGE) + " ti on sd.tex_image_id = ti.id " +
-                "left join " + tableHelper.getPrefixedTableName(Table.SURFACE_DATA_MAPPING) + " sdm on sd.id = sdm.surface_data_id ";
+    private Select getBaseQuery() {
+        Table appearToSurfaceData = tableHelper.getTable(org.citydb.database.schema.Table.APPEAR_TO_SURFACE_DATA);
+        Table surfaceData = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA);
+        Table texImage = tableHelper.getTable(org.citydb.database.schema.Table.TEX_IMAGE);
+        Table surfaceDataMapping = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING);
+        return Select.newInstance()
+                .select(appearance.columns("id", "objectid", "identifier", "identifier_codespace", "theme",
+                        "creation_date", "termination_date", "valid_from", "valid_to", "feature_id",
+                        "implicit_geometry_id"))
+                .select(surfaceData.columns(Map.of("id", "sd_id", "objectid", "sd_objectid", "identifier",
+                        "sd_identifier", "identifier_codespace", "sd_identifier_codespace")))
+                .select(surfaceData.columns("is_front", "objectclass_id", "x3d_shininess", "x3d_transparency",
+                        "x3d_ambient_intensity", "x3d_specular_color", "x3d_diffuse_color", "x3d_emissive_color",
+                        "x3d_is_smooth", "tex_image_id", "tex_texture_type", "tex_wrap_mode", "tex_border_color",
+                        "gt_orientation"))
+                .select(helper.getTransformOperator(surfaceData.column("gt_reference_point")))
+                .select(texImage.columns("image_uri", "mime_type", "mime_type_codespace"))
+                .select(surfaceDataMapping.columns("geometry_data_id", "material_mapping", "texture_mapping",
+                        "world_to_texture_mapping", "georeferenced_texture_mapping"))
+                .from(appearance)
+                .join(appearToSurfaceData).on(appearToSurfaceData.column("appearance_id").eq(appearance.column("id")))
+                .join(surfaceData).on(surfaceData.column("id").eq(appearToSurfaceData.column("surface_data_id")))
+                .leftJoin(texImage).on(texImage.column("id").eq(surfaceData.column("tex_image_id")))
+                .leftJoin(surfaceDataMapping).on(surfaceDataMapping.column("surface_data_id")
+                        .eq(surfaceData.column("id")));
     }
 
-    private String getQuery(Set<Long> ids, Set<Long> implicitGeometryIds) {
-        return getBaseQuery() +
-                "where " + helper.getInOperator("a.id", ids) +
-                " or " + helper.getInOperator("a.implicit_geometry_id", implicitGeometryIds);
+    private Select getQuery(Set<Long> ids, Set<Long> implicitGeometryIds) {
+        BooleanExpression condition;
+        if (!ids.isEmpty() && !implicitGeometryIds.isEmpty()) {
+            condition = Operators.or(operationHelper.in(appearance.column("id"), ids),
+                    operationHelper.in(appearance.column("implicit_geometry_id"), implicitGeometryIds));
+        } else if (!implicitGeometryIds.isEmpty()) {
+            condition = operationHelper.in(appearance.column("implicit_geometry_id"), implicitGeometryIds);
+        } else {
+            condition = operationHelper.in(appearance.column("id"), ids);
+        }
+
+        return Select.of(select).where(condition);
     }
 
     public Appearance doExport(long id) throws ExportException, SQLException {
@@ -83,7 +109,7 @@ public class AppearanceExporter extends DatabaseExporter {
     public Map<Long, Appearance> doExport(Set<Long> ids, Set<Long> implicitGeometryIds) throws ExportException, SQLException {
         if (!ids.isEmpty() || !implicitGeometryIds.isEmpty()) {
             try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids, implicitGeometryIds))) {
+                 ResultSet rs = stmt.executeQuery(getQuery(ids, implicitGeometryIds).toSql())) {
                 return doExport(rs);
             }
         } else {

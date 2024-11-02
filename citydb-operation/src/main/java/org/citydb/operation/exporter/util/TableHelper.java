@@ -21,7 +21,6 @@
 
 package org.citydb.operation.exporter.util;
 
-import org.citydb.database.schema.Table;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.address.AddressExporter;
@@ -31,6 +30,7 @@ import org.citydb.operation.exporter.feature.FeatureExporter;
 import org.citydb.operation.exporter.geometry.GeometryExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.property.PropertyExporter;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -44,8 +44,8 @@ public class TableHelper {
         this.helper = helper;
     }
 
-    public String getPrefixedTableName(Table table) {
-        return helper.getAdapter().getConnectionDetails().getSchema() + "." + table;
+    public Table getTable(org.citydb.database.schema.Table table) {
+        return Table.of(table.getName(), helper.getAdapter().getConnectionDetails().getSchema());
     }
 
     public <T extends DatabaseExporter> T getOrCreateExporter(Class<T> type) throws ExportException {

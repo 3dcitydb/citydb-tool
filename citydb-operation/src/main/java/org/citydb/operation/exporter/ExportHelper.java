@@ -25,6 +25,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SrsException;
+import org.citydb.database.util.OperationHelper;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
@@ -38,12 +39,12 @@ import org.citydb.operation.exporter.util.LodFilter;
 import org.citydb.operation.exporter.util.Postprocessor;
 import org.citydb.operation.exporter.util.SurfaceDataMapper;
 import org.citydb.operation.exporter.util.TableHelper;
-import org.citydb.sqlbuilder.util.PlainText;
+import org.citydb.sqlbuilder.query.Selection;
+import org.citydb.sqlbuilder.schema.Column;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
 
@@ -104,6 +105,10 @@ public class ExportHelper {
         return tableHelper;
     }
 
+    public OperationHelper getOperationHelper() {
+        return adapter.getSchemaAdapter().getOperationHelper();
+    }
+
     public int getSRID() {
         return targetSrs.getSRID();
     }
@@ -151,43 +156,10 @@ public class ExportHelper {
         return objectId != null && !externalFileIdCache.add(objectId);
     }
 
-    public String getInOperator(String column, Set<Long> values) {
-        if (values.isEmpty()) {
-            return column + " = 0";
-        } else if (values.size() == 1) {
-            return column + " = " + values.iterator().next();
-        }
-
-        int i = 0;
-        StringBuilder builder = new StringBuilder();
-        Iterator<Long> iterator = values.iterator();
-        while (iterator.hasNext()) {
-            if (i == 0) {
-                if (!builder.isEmpty()) {
-                    builder.append(" or ");
-                }
-
-                builder.append(column).append(" in (");
-            }
-
-            builder.append(iterator.next());
-            if (++i == adapter.getSchemaAdapter().getMaximumNumberOfItemsForInOperator() || !iterator.hasNext()) {
-                builder.append(")");
-                i = 0;
-            } else {
-                builder.append(",");
-            }
-        }
-
-        return builder.toString();
-    }
-
-    public String getTransformOperator(String column) {
+    public Selection<?> getTransformOperator(Column column) {
         return adapter.getDatabaseMetadata().getSpatialReference().getSRID() == getSRID() ?
                 column :
-                adapter.getGeometryAdapter().getSpatialOperationHelper()
-                        .transform(PlainText.of(column), getSRID())
-                        .toString();
+                adapter.getGeometryAdapter().getSpatialOperationHelper().transform(column, getSRID());
     }
 
     Feature exportFeature(long id, long sequenceId) throws ExportException {

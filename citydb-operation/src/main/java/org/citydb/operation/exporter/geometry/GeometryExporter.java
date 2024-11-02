@@ -23,12 +23,14 @@ package org.citydb.operation.exporter.geometry;
 
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.geometry.GeometryException;
-import org.citydb.database.schema.Table;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.GeometryDescriptor;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;
+import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,10 +39,17 @@ public class GeometryExporter extends DatabaseExporter {
 
     public GeometryExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        stmt = helper.getConnection().prepareStatement("select " + helper.getTransformOperator("geometry") + ", " +
-                "implicit_geometry, geometry_properties, feature_id as geometry_feature_id " +
-                "from " + tableHelper.getPrefixedTableName(Table.GEOMETRY_DATA) +
-                " where id = ?");
+        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
+    }
+
+    private Select getQuery() {
+        Table geometryData = tableHelper.getTable(org.citydb.database.schema.Table.GEOMETRY_DATA);
+        return Select.newInstance()
+                .select(helper.getTransformOperator(geometryData.column("geometry")))
+                .select(geometryData.columns("implicit_geometry", "geometry_properties"))
+                .select(geometryData.column("feature_id", "geometry_feature_id"))
+                .from(geometryData)
+                .where(geometryData.column("id").eq(Placeholder.empty()));
     }
 
     public Geometry<?> doExport(long id) throws ExportException, SQLException {

@@ -21,7 +21,6 @@
 
 package org.citydb.operation.exporter.geometry;
 
-import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.appearance.AppearanceDescriptor;
 import org.citydb.model.common.ExternalFile;
@@ -37,6 +36,9 @@ import org.citydb.operation.exporter.appearance.AppearanceExporter;
 import org.citydb.operation.exporter.common.BlobExporter;
 import org.citydb.operation.exporter.common.DatabaseExporter;
 import org.citydb.operation.exporter.util.ExternalFileHelper;
+import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -45,31 +47,40 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ImplicitGeometryExporter extends DatabaseExporter {
+    private final Table implicitGeometry;
+    private final Select select;
     private final BlobExporter blobExporter;
     private final ExternalFileHelper externalFileHelper;
 
     public ImplicitGeometryExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        blobExporter = new BlobExporter(Table.IMPLICIT_GEOMETRY, "id", "library_object", helper);
+        implicitGeometry = tableHelper.getTable(org.citydb.database.schema.Table.IMPLICIT_GEOMETRY);
+        select = getBaseQuery();
+        blobExporter = new BlobExporter(implicitGeometry, "id", "library_object", helper);
         externalFileHelper = ExternalFileHelper.newInstance(helper)
                 .withRelativeOutputFolder(ExportConstants.LIBRARY_OBJECTS_DIR)
                 .withFileNamePrefix(ExportConstants.LIBRARY_OBJECTS_PREFIX)
                 .createUniqueFileNames(true);
-        stmt = helper.getConnection().prepareStatement(getBaseQuery() +
-                "where ig.id = ?");
+        stmt = helper.getConnection().prepareStatement(Select.of(select)
+                .where(implicitGeometry.column("id").eq(Placeholder.empty()))
+                .toSql());
     }
 
-    private String getBaseQuery() {
-        return "select ig.id, ig.mime_type, ig.mime_type_codespace, ig.reference_to_library, " +
-                "ig.relative_geometry_id, gd.implicit_geometry, " +
-                "gd.geometry_properties, gd.feature_id as geometry_feature_id " +
-                "from " + tableHelper.getPrefixedTableName(Table.IMPLICIT_GEOMETRY) + " ig " +
-                "left join " + tableHelper.getPrefixedTableName(Table.GEOMETRY_DATA) + " gd on ig.relative_geometry_id = gd.id ";
+    private Select getBaseQuery() {
+        Table geometryData = tableHelper.getTable(org.citydb.database.schema.Table.GEOMETRY_DATA);
+        return Select.newInstance()
+                .select(implicitGeometry.columns("id", "mime_type", "mime_type_codespace", "reference_to_library",
+                        "relative_geometry_id"))
+                .select(geometryData.columns("implicit_geometry", "geometry_properties"))
+                .select(geometryData.column("feature_id", "geometry_feature_id"))
+                .from(implicitGeometry)
+                .leftJoin(geometryData).on(geometryData.column("id")
+                        .eq(implicitGeometry.column("relative_geometry_id")));
     }
 
-    private String getQuery(Set<Long> ids) {
-        return getBaseQuery() +
-                "where " + helper.getInOperator("ig.id", ids);
+    private Select getQuery(Set<Long> ids) {
+        return Select.of(select)
+                .where(operationHelper.in(implicitGeometry.column("id"), ids));
     }
 
     public ImplicitGeometry doExport(long id) throws ExportException, SQLException {
@@ -86,7 +97,7 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
     public Map<Long, ImplicitGeometry> doExport(Set<Long> ids, Collection<Appearance> appearances) throws ExportException, SQLException {
         if (!ids.isEmpty()) {
             try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids))) {
+                 ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
                 return doExport(appearances, rs);
             }
         } else {

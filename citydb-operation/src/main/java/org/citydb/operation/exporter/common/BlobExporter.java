@@ -22,10 +22,12 @@
 package org.citydb.operation.exporter.common;
 
 import org.citydb.core.file.OutputFile;
-import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
+import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -48,9 +50,14 @@ public class BlobExporter {
     public BlobExporter(Table table, String idColumn, String blobColumn, ExportHelper helper) throws SQLException {
         this.outputFile = helper.getOptions().getOutputFile();
         batchSize = Math.min(1000, helper.getAdapter().getSchemaAdapter().getMaximumNumberOfItemsForInOperator());
-        stmt = helper.getConnection().prepareStatement("select " + idColumn + ", " + blobColumn +
-                " from " + helper.getTableHelper().getPrefixedTableName(table) +
-                " where " + idColumn + " in (" + String.join(",", Collections.nCopies(batchSize, "?")) + ")");
+        stmt = helper.getConnection().prepareStatement(getQuery(table, idColumn, blobColumn).toSql());
+    }
+
+    private Select getQuery(Table table, String idColumn, String blobColumn) {
+        return Select.newInstance()
+                .select(table.columns(idColumn, blobColumn))
+                .from(table)
+                .where(table.column(idColumn).in(Collections.nCopies(batchSize, Placeholder.empty())));
     }
 
     public void addBatch(long id, ExternalFile externalFile) throws ExportException, SQLException {

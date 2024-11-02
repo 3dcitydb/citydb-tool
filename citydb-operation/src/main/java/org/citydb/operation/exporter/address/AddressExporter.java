@@ -21,27 +21,37 @@
 
 package org.citydb.operation.exporter.address;
 
-import org.citydb.database.schema.Table;
 import org.citydb.model.address.Address;
 import org.citydb.model.address.AddressDescriptor;
 import org.citydb.model.geometry.MultiPoint;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;
+import org.citydb.sqlbuilder.literal.Placeholder;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
 
 public class AddressExporter extends DatabaseExporter {
 
     public AddressExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        stmt = helper.getConnection().prepareStatement("select id, objectid, identifier as address_identifier, " +
-                "identifier_codespace as address_identifier_codespace, street, house_number, po_box, " +
-                "zip_code, city, state, country, free_text, " + helper.getTransformOperator("multi_point") + ", " +
-                "content, content_mime_type " +
-                "from " + tableHelper.getPrefixedTableName(Table.ADDRESS) +
-                " where id = ?");
+        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
+    }
+
+    private Select getQuery() {
+        Table address = tableHelper.getTable(org.citydb.database.schema.Table.ADDRESS);
+        return Select.newInstance()
+                .select(address.columns(Map.of("objectid", "address_objectid", "identifier", "address_identifier",
+                        "identifier_codespace", "address_identifier_codespace")))
+                .select(address.columns("street", "house_number", "po_box", "zip_code", "city",
+                        "state", "country", "free_text", "content", "content_mime_type"))
+                .select(helper.getTransformOperator(address.column("multi_point")))
+                .from(address)
+                .where(address.column("id").eq(Placeholder.empty()));
     }
 
     public Address doExport(long id) throws ExportException, SQLException {
@@ -57,7 +67,7 @@ public class AddressExporter extends DatabaseExporter {
 
     public Address doExport(long addressId, ResultSet rs) throws ExportException, SQLException {
         return Address.newInstance()
-                .setObjectId(rs.getString("address_object_id"))
+                .setObjectId(rs.getString("address_objectid"))
                 .setIdentifier(rs.getString("address_identifier"))
                 .setIdentifierCodeSpace(rs.getString("address_identifier_codespace"))
                 .setStreet(rs.getString("street"))
