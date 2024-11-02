@@ -23,6 +23,7 @@ package org.citydb.config;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONException;
+import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.JSONWriter;
 
 import java.io.BufferedInputStream;
@@ -46,7 +47,8 @@ public class ConfigManager {
     public <T> T read(Path inputFile, Class<T> type) throws ConfigException, IOException {
         Objects.requireNonNull(inputFile, "The input file must not be null.");
         try (InputStream stream = new BufferedInputStream(Files.newInputStream(inputFile))) {
-            return JSON.parseObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8), type);
+            return JSON.parseObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8), type,
+                    JSONReader.Feature.UseDoubleForDecimals);
         } catch (JSONException e) {
             throw new ConfigException("Failed to parse config file " + inputFile + ".", e);
         }

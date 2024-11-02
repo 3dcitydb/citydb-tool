@@ -73,11 +73,11 @@ public abstract class DatabaseExporter {
     }
 
     protected JSONObject getJSONObject(String content) {
-        return JSON.parseObject(content, JSONReader.Feature.UseBigDecimalForDoubles);
+        return JSON.parseObject(content, JSONReader.Feature.UseDoubleForDecimals);
     }
 
     protected JSONArray getJSONArray(String content) {
-        return JSON.parseArray(content, JSONReader.Feature.UseBigDecimalForDoubles);
+        return JSON.parseArray(content, JSONReader.Feature.UseDoubleForDecimals);
     }
 
     protected Name getName(String nameColumn, String namespaceIdColumn, ResultSet rs) throws SQLException {
