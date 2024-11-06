@@ -49,6 +49,7 @@ public class HierarchyBuilder {
     private final PropertyBuilder propertyBuilder;
     private final Hierarchy hierarchy = new Hierarchy();
     private final List<PropertyStub> propertyStubs = new ArrayList<>();
+    private final boolean exportAppearances;
 
     private HierarchyBuilder(long rootId, ExportHelper helper) {
         this.rootId = rootId;
@@ -56,6 +57,7 @@ public class HierarchyBuilder {
         lodFilter = helper.getLodFilter();
         tableHelper = helper.getTableHelper();
         propertyBuilder = new PropertyBuilder(helper);
+        exportAppearances = helper.getOptions().isExportAppearances();
     }
 
     public static HierarchyBuilder newInstance(long rootId, ExportHelper helper) {
@@ -81,9 +83,11 @@ public class HierarchyBuilder {
                         .doExport(geometryId, false, rs));
             }
 
-            long appearanceId = rs.getLong("val_appearance_id");
-            if (!rs.wasNull()) {
-                appearanceIds.add(appearanceId);
+            if (exportAppearances) {
+                long appearanceId = rs.getLong("val_appearance_id");
+                if (!rs.wasNull()) {
+                    appearanceIds.add(appearanceId);
+                }
             }
 
             long addressId = rs.getLong("val_address_id");
@@ -107,9 +111,11 @@ public class HierarchyBuilder {
             }
         }
 
-        tableHelper.getOrCreateExporter(AppearanceExporter.class)
-                .doExport(appearanceIds, implicitGeometryIds)
-                .forEach(hierarchy::addAppearance);
+        if (exportAppearances) {
+            tableHelper.getOrCreateExporter(AppearanceExporter.class)
+                    .doExport(appearanceIds, implicitGeometryIds)
+                    .forEach(hierarchy::addAppearance);
+        }
 
         tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
                 .doExport(implicitGeometryIds, hierarchy.getAppearances().values())

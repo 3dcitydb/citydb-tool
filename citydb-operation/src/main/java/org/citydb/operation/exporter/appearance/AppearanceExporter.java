@@ -27,6 +27,7 @@ import org.citydb.model.common.Reference;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;
+import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.Operators;
@@ -63,7 +64,9 @@ public class AppearanceExporter extends DatabaseExporter {
         Table surfaceData = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA);
         Table texImage = tableHelper.getTable(org.citydb.database.schema.Table.TEX_IMAGE);
         Table surfaceDataMapping = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING);
-        return Select.newInstance()
+        BooleanExpression themeFilter = getThemeFilter();
+
+        Select select = Select.newInstance()
                 .select(appearance.columns("id", "objectid", "identifier", "identifier_codespace", "theme",
                         "creation_date", "termination_date", "valid_from", "valid_to", "feature_id",
                         "implicit_geometry_id"))
@@ -83,6 +86,10 @@ public class AppearanceExporter extends DatabaseExporter {
                 .leftJoin(texImage).on(texImage.column("id").eq(surfaceData.column("tex_image_id")))
                 .leftJoin(surfaceDataMapping).on(surfaceDataMapping.column("surface_data_id")
                         .eq(surfaceData.column("id")));
+
+        return themeFilter != null ?
+                select.where(themeFilter) :
+                select;
     }
 
     private Select getQuery(Set<Long> ids, Set<Long> implicitGeometryIds) {
@@ -169,5 +176,26 @@ public class AppearanceExporter extends DatabaseExporter {
         }
 
         return appearances;
+    }
+
+    private BooleanExpression getThemeFilter() {
+        Set<String> themes = helper.getOptions().getAppearanceOptions()
+                .map(AppearanceOptions::getThemes)
+                .orElse(Collections.emptySet());
+        if (!themes.isEmpty()) {
+            boolean containsNullTheme = themes.contains(null);
+            if (containsNullTheme && themes.size() == 1) {
+                return appearance.column("theme").isNull();
+            } else {
+                BooleanExpression filter = operationHelper.in(appearance.column("theme"), themes.stream()
+                        .filter(Objects::nonNull)
+                        .toList());
+                return containsNullTheme ?
+                        Operators.or(appearance.column("theme").isNull(), filter) :
+                        filter;
+            }
+        } else {
+            return null;
+        }
     }
 }

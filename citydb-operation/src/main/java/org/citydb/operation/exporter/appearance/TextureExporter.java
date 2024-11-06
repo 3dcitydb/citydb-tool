@@ -32,6 +32,7 @@ import org.citydb.operation.exporter.ExportConstants;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.BlobExporter;
+import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.util.ExternalFileHelper;
 
 import java.sql.ResultSet;
@@ -48,7 +49,9 @@ public abstract class TextureExporter extends SurfaceDataExporter {
                 .withRelativeOutputFolder(ExportConstants.TEXTURE_DIR)
                 .withFileNamePrefix(ExportConstants.TEXTURE_PREFIX)
                 .createUniqueFileNames(true)
-                .withNumberOfBuckets(helper.getOptions().getNumberOfTextureBuckets());
+                .withNumberOfBuckets(helper.getOptions().getAppearanceOptions()
+                        .map(AppearanceOptions::getNumberOfTextureBuckets)
+                        .orElse(0));
     }
 
     protected <T extends Texture<?>> T doExport(T texture, ResultSet rs) throws ExportException, SQLException {

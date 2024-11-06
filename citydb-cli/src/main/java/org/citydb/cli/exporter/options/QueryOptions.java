@@ -47,6 +47,9 @@ public class QueryOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
     private LodOptions lodOptions;
 
+    @CommandLine.ArgGroup(exclusive = false)
+    private AppearanceOptions appearanceOptions;
+
     public Query getQuery() throws FilterParseException {
         Query query = new Query();
         if (typeNameOption != null) {
@@ -79,6 +82,10 @@ public class QueryOptions implements Option {
         return lodOptions;
     }
 
+    public AppearanceOptions getAppearanceOptions() {
+        return appearanceOptions;
+    }
+
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (countLimitOptions != null) {
@@ -87,6 +94,10 @@ public class QueryOptions implements Option {
 
         if (lodOptions != null) {
             lodOptions.preprocess(commandLine);
+        }
+
+        if (appearanceOptions != null) {
+            appearanceOptions.preprocess(commandLine);
         }
     }
 }

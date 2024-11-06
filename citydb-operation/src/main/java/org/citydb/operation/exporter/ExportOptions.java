@@ -27,6 +27,7 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
+import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.options.LodOptions;
 
 import java.io.IOException;
@@ -43,9 +44,10 @@ public class ExportOptions {
     @JSONField(serialize = false, deserialize = false)
     private OutputFile outputFile;
     private int numberOfThreads;
-    private int numberOfTextureBuckets;
     private SrsReference targetSrs;
     private LodOptions lodOptions;
+    private boolean exportAppearances = true;
+    private AppearanceOptions appearanceOptions;
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -78,15 +80,6 @@ public class ExportOptions {
         return this;
     }
 
-    public int getNumberOfTextureBuckets() {
-        return numberOfTextureBuckets;
-    }
-
-    public ExportOptions setNumberOfTextureBuckets(int numberOfTextureBuckets) {
-        this.numberOfTextureBuckets = numberOfTextureBuckets;
-        return this;
-    }
-
     public Optional<SrsReference> getTargetSrs() {
         return Optional.ofNullable(targetSrs);
     }
@@ -102,6 +95,24 @@ public class ExportOptions {
 
     public ExportOptions setLodOptions(LodOptions lodOptions) {
         this.lodOptions = lodOptions;
+        return this;
+    }
+
+    public boolean isExportAppearances() {
+        return exportAppearances;
+    }
+
+    public ExportOptions setExportAppearances(boolean exportAppearances) {
+        this.exportAppearances = exportAppearances;
+        return this;
+    }
+
+    public Optional<AppearanceOptions> getAppearanceOptions() {
+        return Optional.ofNullable(appearanceOptions);
+    }
+
+    public ExportOptions setAppearanceOptions(AppearanceOptions appearanceOptions) {
+        this.appearanceOptions = appearanceOptions;
         return this;
     }
 }

@@ -48,6 +48,7 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
+import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.query.Query;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
@@ -79,6 +80,10 @@ public abstract class ExportController implements Command {
 
     @CommandLine.Mixin
     protected CrsOptions crsOptions;
+
+    @CommandLine.Option(names = "--no-appearances",
+            description = "Do not export appearances.")
+    private Boolean noAppearances;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
@@ -263,8 +268,19 @@ public abstract class ExportController implements Command {
             exportOptions.setTargetSrs(crsOptions.getTargetSrs());
         }
 
-        if (queryOptions != null && queryOptions.getLodOptions() != null) {
-            exportOptions.setLodOptions(queryOptions.getLodOptions().getLodExportOptions());
+        if (noAppearances != null) {
+            exportOptions.setExportAppearances(!noAppearances);
+        }
+
+        if (queryOptions != null) {
+            if (queryOptions.getLodOptions() != null) {
+                exportOptions.setLodOptions(queryOptions.getLodOptions().getLodExportOptions());
+            }
+
+            if (queryOptions.getAppearanceOptions() != null
+                    && queryOptions.getAppearanceOptions().getThemes() != null) {
+                getAppearanceOptions(exportOptions).setThemes(queryOptions.getAppearanceOptions().getThemes());
+            }
         }
 
         return exportOptions;
@@ -309,6 +325,13 @@ public abstract class ExportController implements Command {
         }
 
         return writeOptions;
+    }
+
+    private AppearanceOptions getAppearanceOptions(ExportOptions exportOptions) {
+        AppearanceOptions appearanceOptions = exportOptions.getAppearanceOptions()
+                .orElseGet(AppearanceOptions::new);
+        exportOptions.setAppearanceOptions(appearanceOptions);
+        return appearanceOptions;
     }
 
     private String getTileCounter(TilingHelper helper, Tile tile) {
