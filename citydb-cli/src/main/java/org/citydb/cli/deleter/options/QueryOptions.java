@@ -24,14 +24,14 @@ package org.citydb.cli.deleter.options;
 import org.citydb.cli.common.CountLimitOptions;
 import org.citydb.cli.common.FilterOptions;
 import org.citydb.cli.common.Option;
-import org.citydb.cli.common.TypeNameOption;
+import org.citydb.cli.common.TypeNameOptions;
 import org.citydb.query.Query;
 import org.citydb.query.filter.encoding.FilterParseException;
 import picocli.CommandLine;
 
 public class QueryOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
-    private TypeNameOption typeNameOption;
+    private TypeNameOptions typeNameOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     private FilterOptions filterOptions;
@@ -41,8 +41,8 @@ public class QueryOptions implements Option {
 
     public Query getQuery() throws FilterParseException {
         Query query = new Query();
-        if (typeNameOption != null) {
-            query.setFeatureTypes(typeNameOption.getTypeNames());
+        if (typeNameOptions != null) {
+            query.setFeatureTypes(typeNameOptions.getTypeNames());
         }
 
         if (filterOptions != null) {

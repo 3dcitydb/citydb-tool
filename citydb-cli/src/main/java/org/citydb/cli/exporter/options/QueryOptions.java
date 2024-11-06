@@ -24,7 +24,7 @@ package org.citydb.cli.exporter.options;
 import org.citydb.cli.common.CountLimitOptions;
 import org.citydb.cli.common.FilterOptions;
 import org.citydb.cli.common.Option;
-import org.citydb.cli.common.TypeNameOption;
+import org.citydb.cli.common.TypeNameOptions;
 import org.citydb.query.Query;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
@@ -33,13 +33,13 @@ import picocli.CommandLine;
 
 public class QueryOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
-    private TypeNameOption typeNameOption;
+    private TypeNameOptions typeNameOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     private FilterOptions filterOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
-    private SortingOption sortingOption;
+    private SortingOptions sortingOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     private CountLimitOptions countLimitOptions;
@@ -52,8 +52,8 @@ public class QueryOptions implements Option {
 
     public Query getQuery() throws FilterParseException {
         Query query = new Query();
-        if (typeNameOption != null) {
-            query.setFeatureTypes(typeNameOption.getTypeNames());
+        if (typeNameOptions != null) {
+            query.setFeatureTypes(typeNameOptions.getTypeNames());
         }
 
         if (filterOptions != null) {
@@ -63,8 +63,8 @@ public class QueryOptions implements Option {
             query.setFilter(Filter.of(QueryHelper.terminationDateIsNull()));
         }
 
-        if (sortingOption != null) {
-            query.setSorting(sortingOption.getSorting());
+        if (sortingOptions != null) {
+            query.setSorting(sortingOptions.getSorting());
         }
 
         if (countLimitOptions != null) {

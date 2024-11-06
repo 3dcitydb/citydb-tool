@@ -27,7 +27,7 @@ import org.citydb.query.sorting.SortOrder;
 import org.citydb.query.sorting.Sorting;
 import picocli.CommandLine;
 
-public class SortingOption implements Option {
+public class SortingOptions implements Option {
     @CommandLine.Option(names = {"-s", "--sort-by"}, split = ",", paramLabel = "<property[+|-]>", required = true,
             description = "Properties and sort orders for sorting features.")
     private String[] sortBy;

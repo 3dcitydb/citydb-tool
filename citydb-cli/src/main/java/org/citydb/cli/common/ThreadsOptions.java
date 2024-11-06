@@ -21,20 +21,22 @@
 
 package org.citydb.cli.common;
 
-import org.citydb.model.common.PrefixedName;
 import picocli.CommandLine;
 
-import java.util.Arrays;
-import java.util.List;
+public class ThreadsOptions implements Option {
+    @CommandLine.Option(names = "--threads",
+            description = "Number of threads to use for parallel processing.")
+    private Integer threads;
 
-public class TypeNameOption implements Option {
-    @CommandLine.Option(names = {"-t", "--type-name"}, split = ",", paramLabel = "<[prefix:]name>", required = true,
-            description = "Names of the features to process.")
-    private String[] typeNames;
+    public Integer getNumberOfThreads() {
+        return threads;
+    }
 
-    public List<PrefixedName> getTypeNames() {
-        return Arrays.stream(typeNames)
-                .map(PrefixedName::of)
-                .toList();
+    @Override
+    public void preprocess(CommandLine commandLine) {
+        if (threads != null && threads <= 0) {
+            throw new CommandLine.ParameterException(commandLine,
+                    "Error: Number of threads must be a positive integer but was '" + threads + "'");
+        }
     }
 }

@@ -62,7 +62,7 @@ public class DeleteCommand implements Command {
     private Mode mode;
 
     @CommandLine.Mixin
-    protected IndexOption indexOption;
+    protected IndexOptions indexOptions;
 
     @CommandLine.Option(names = "--preview",
             description = "Run in preview mode. Features will not be deleted.")
@@ -111,10 +111,10 @@ public class DeleteCommand implements Command {
                 tempDirectory,
                 databaseManager.getAdapter());
 
-        IndexOption.Mode indexMode = indexOption.getMode();
+        IndexOptions.Mode indexMode = indexOptions.getMode();
         AtomicLong counter = new AtomicLong();
 
-        if (indexMode != IndexOption.Mode.keep) {
+        if (indexMode != IndexOptions.Mode.keep) {
             logger.info("Dropping database indexes...");
             helper.dropIndexes(databaseManager.getAdapter());
         }
@@ -159,7 +159,7 @@ public class DeleteCommand implements Command {
                 }
             }
 
-            if (shouldRun && indexMode == IndexOption.Mode.drop_create) {
+            if (shouldRun && indexMode == IndexOptions.Mode.drop_create) {
                 logger.info("Re-creating database indexes. This operation may take some time...");
                 helper.createIndexes(databaseManager.getAdapter());
             }

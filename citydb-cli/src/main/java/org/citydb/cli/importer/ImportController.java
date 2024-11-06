@@ -60,14 +60,14 @@ public abstract class ImportController implements Command {
     protected Path tempDirectory;
 
     @CommandLine.Mixin
-    protected ThreadsOption threadsOption;
+    protected ThreadsOptions threadsOptions;
 
     @CommandLine.Option(names = "--preview",
             description = "Run in preview mode. Features will not be imported.")
     protected boolean preview;
 
     @CommandLine.Mixin
-    protected IndexOption indexOption;
+    protected IndexOptions indexOptions;
 
     @CommandLine.Option(names = "--compute-extent",
             description = "Compute and overwrite extents of features.")
@@ -114,9 +114,9 @@ public abstract class ImportController implements Command {
         ImportOptions importOptions = getImportOptions();
 
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
-        IndexOption.Mode indexMode = indexOption.getMode();
+        IndexOptions.Mode indexMode = indexOptions.getMode();
 
-        if (indexMode != IndexOption.Mode.keep) {
+        if (indexMode != IndexOptions.Mode.keep) {
             logger.info("Dropping database indexes...");
             helper.dropIndexes(databaseManager.getAdapter());
         }
@@ -171,7 +171,7 @@ public abstract class ImportController implements Command {
                 }
             }
 
-            if (shouldRun && indexMode == IndexOption.Mode.drop_create) {
+            if (shouldRun && indexMode == IndexOptions.Mode.drop_create) {
                 logger.info("Re-creating database indexes. This operation may take some time...");
                 helper.createIndexes(databaseManager.getAdapter());
             }
@@ -219,8 +219,8 @@ public abstract class ImportController implements Command {
             readOptions.setTempDirectory(tempDirectory.toString());
         }
 
-        if (threadsOption.getNumberOfThreads() != null) {
-            readOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        if (threadsOptions.getNumberOfThreads() != null) {
+            readOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
         if (inputFileOptions.getEncoding() != null) {
@@ -246,8 +246,8 @@ public abstract class ImportController implements Command {
             importOptions.setTempDirectory(tempDirectory.toString());
         }
 
-        if (threadsOption.getNumberOfThreads() != null) {
-            importOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        if (threadsOptions.getNumberOfThreads() != null) {
+            importOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
         return importOptions;

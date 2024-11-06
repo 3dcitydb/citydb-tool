@@ -76,7 +76,7 @@ public abstract class ExportController implements Command {
     protected Path tempDirectory;
 
     @CommandLine.Mixin
-    protected ThreadsOption threadsOption;
+    protected ThreadsOptions threadsOptions;
 
     @CommandLine.Mixin
     protected CrsOptions crsOptions;
@@ -260,8 +260,8 @@ public abstract class ExportController implements Command {
             throw new ExecutionException("Failed to get export options from config.", e);
         }
 
-        if (threadsOption.getNumberOfThreads() != null) {
-            exportOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        if (threadsOptions.getNumberOfThreads() != null) {
+            exportOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
         if (crsOptions.getTargetSrs() != null) {
@@ -302,8 +302,8 @@ public abstract class ExportController implements Command {
             writeOptions.setTempDirectory(tempDirectory.toString());
         }
 
-        if (threadsOption.getNumberOfThreads() != null) {
-            writeOptions.setNumberOfThreads(threadsOption.getNumberOfThreads());
+        if (threadsOptions.getNumberOfThreads() != null) {
+            writeOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
         if (outputFileOptions.getEncoding() != null) {
