@@ -29,6 +29,9 @@ import org.citydb.io.citygml.writer.options.CityGMLVersionReader;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements OutputFormatOptions {
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString,
@@ -40,6 +43,7 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
     private boolean mapLod1MultiSurfaces;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private AddressMode addressMode = AddressMode.COLUMNS_FIRST;
+    private List<String> xslTransforms;
 
     public CityGMLVersion getVersion() {
         return version != null ? version : CityGMLVersion.v3_0;
@@ -102,6 +106,27 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
 
     public CityGMLFormatOptions setAddressMode(String addressMode) {
         this.addressMode = AddressMode.fromValue(addressMode);
+        return this;
+    }
+
+    public List<String> getXslTransforms() {
+        if (xslTransforms == null) {
+            xslTransforms = new ArrayList<>();
+        }
+
+        return xslTransforms;
+    }
+
+    public CityGMLFormatOptions setXslTransforms(List<String> xslTransforms) {
+        this.xslTransforms = xslTransforms;
+        return this;
+    }
+
+    public CityGMLFormatOptions addXslTransform(String xslTransform) {
+        if (xslTransform != null) {
+            getXslTransforms().add(xslTransform);
+        }
+
         return this;
     }
 }

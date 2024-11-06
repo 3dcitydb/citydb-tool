@@ -21,13 +21,18 @@
 
 package org.citydb.io.citygml.writer;
 
+import org.citydb.core.CoreConstants;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citygml4j.xml.CityGMLContext;
 import org.citygml4j.xml.module.citygml.CoreModule;
+import org.citygml4j.xml.transform.TransformerPipeline;
 
+import javax.xml.transform.stream.StreamSource;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 
 public class CityGMLWriterFactory {
@@ -54,10 +59,26 @@ public class CityGMLWriterFactory {
                     .setDefaultNamespace(CoreModule.of(formatOptions.getVersion()).getNamespaceURI())
                     .setIndent(formatOptions.isPrettyPrint() ? "  " : null);
 
+            if (!formatOptions.getXslTransforms().isEmpty()) {
+                writer.setTransformer(getTransformer(formatOptions.getXslTransforms()));
+            }
+
             writer.writeHeader();
             return writer;
         } catch (Exception e) {
             throw new WriteException("Failed to create CityGML writer.", e);
+        }
+    }
+
+    private TransformerPipeline getTransformer(List<String> stylesheets) throws WriteException {
+        try {
+            return TransformerPipeline.newInstance(stylesheets.stream()
+                    .map(CoreConstants.WORKING_DIR::resolve)
+                    .map(Path::toFile)
+                    .map(StreamSource::new)
+                    .toArray(StreamSource[]::new));
+        } catch (Exception e) {
+            throw new WriteException("Failed to build XSL transformation pipeline.", e);
         }
     }
 }

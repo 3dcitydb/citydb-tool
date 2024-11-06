@@ -35,6 +35,8 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 import picocli.CommandLine;
 
+import java.util.Arrays;
+
 @CommandLine.Command(
         name = "citygml",
         description = "Export data in CityGML format.")
@@ -46,6 +48,10 @@ public class CityGMLExportCommand extends ExportController {
     @CommandLine.Option(names = "--no-pretty-print", negatable = true, defaultValue = "true",
             description = "Format and indent output file (default: ${DEFAULT-VALUE}).")
     private boolean prettyPrint;
+
+    @CommandLine.Option(names = {"-x", "--xsl-transform"}, split = ",", paramLabel = "<stylesheet>",
+            description = "Apply XSLT stylesheets to transform output.")
+    private String[] stylesheets;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
@@ -80,6 +86,10 @@ public class CityGMLExportCommand extends ExportController {
             options = new CityGMLFormatOptions()
                     .setVersion(version)
                     .setPrettyPrint(prettyPrint);
+        }
+
+        if (stylesheets != null) {
+            options.setXslTransforms(Arrays.asList(stylesheets));
         }
 
         if (upgradeOptions != null) {
