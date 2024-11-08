@@ -81,23 +81,19 @@ public class SpatialPredicateBuilder {
                 && rightOperand.getExpression() instanceof ScalarExpression rightExpression) {
             SpatialOperator operator = negate(predicate.getOperator(), negate);
             negate = negate ^ operator != predicate.getOperator();
-            boolean requiresTransformation = false;
 
             SpatialObject leftLiteral = helper.getSpatialLiteral(predicate.getLeftOperand());
             if (leftLiteral != null && helper.getOrSetSRID(leftLiteral, filterSrs) != databaseSrs.getSRID()) {
                 leftExpression = helper.getSpatialOperationHelper().transform(leftExpression, databaseSrs.getSRID());
-                requiresTransformation = true;
             }
 
             SpatialObject rightLiteral = helper.getSpatialLiteral(predicate.getRightOperand());
             if (rightLiteral != null && helper.getOrSetSRID(rightLiteral, filterSrs) != databaseSrs.getSRID()) {
                 rightExpression = helper.getSpatialOperationHelper().transform(rightExpression, databaseSrs.getSRID());
-                requiresTransformation = true;
             }
 
             BooleanExpression expression;
-            if (!requiresTransformation
-                    && leftOperand.getType() == Type.ENVELOPE
+            if (leftOperand.getType() == Type.ENVELOPE
                     && rightOperand.getType() == Type.ENVELOPE
                     && (operator == SpatialOperator.INTERSECTS
                     || operator == SpatialOperator.DISJOINT)) {
