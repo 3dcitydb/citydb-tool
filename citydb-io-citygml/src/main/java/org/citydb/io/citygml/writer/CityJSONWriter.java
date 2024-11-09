@@ -69,6 +69,9 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public void initialize(OutputFile file, WriteOptions options) throws WriteException {
+        Objects.requireNonNull(file, "The output file must not be null.");
+        Objects.requireNonNull(options, "The write options must not be null.");
+
         CityJSONFormatOptions formatOptions;
         try {
             formatOptions = options.getFormatOptions()

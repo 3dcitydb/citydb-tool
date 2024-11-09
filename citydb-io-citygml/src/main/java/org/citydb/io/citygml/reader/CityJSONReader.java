@@ -66,7 +66,7 @@ public class CityJSONReader implements FeatureReader {
     @Override
     public void initialize(InputFile file, ReadOptions options) throws ReadException {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
-        this.options = Objects.requireNonNull(options, "The reader options must not be null.");
+        this.options = Objects.requireNonNull(options, "The read options must not be null.");
 
         try {
             store = PersistentMapStore.builder()
