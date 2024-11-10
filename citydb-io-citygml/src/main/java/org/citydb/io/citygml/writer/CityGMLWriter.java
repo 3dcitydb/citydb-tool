@@ -44,25 +44,18 @@ import java.util.concurrent.ExecutorService;
 
 public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
     private final Logger logger = LoggerManager.getInstance().getLogger(CityGMLWriter.class);
-    private final CityGMLAdapterContext context;
+    private final CityGMLChunkWriter writer;
+    private final PersistentMapStore store;
+    private final ExecutorService service;
+    private final ThreadLocal<ModelSerializerHelper> helpers;
+    private final CountLatch countLatch;
 
-    private CityGMLChunkWriter writer;
-    private PersistentMapStore store;
-    private ExecutorService service;
-    private ThreadLocal<ModelSerializerHelper> helpers;
-    private CountLatch countLatch;
+    private volatile boolean shouldRun = true;
 
-    private volatile boolean isInitialized;
-    private volatile boolean shouldRun;
-
-    public CityGMLWriter(CityGMLAdapterContext context) {
-        this.context = Objects.requireNonNull(context, "CityGML adapter context must not be null.");
-    }
-
-    @Override
-    public void initialize(OutputFile file, WriteOptions options) throws WriteException {
+    public CityGMLWriter(OutputFile file, WriteOptions options, CityGMLAdapterContext context) throws WriteException {
         Objects.requireNonNull(file, "The output file must not be null.");
         Objects.requireNonNull(options, "The write options must not be null.");
+        Objects.requireNonNull(context, "CityGML adapter context must not be null.");
 
         CityGMLFormatOptions formatOptions;
         try {
@@ -90,9 +83,6 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
         helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, context)
                 .initialize(options, formatOptions));
         countLatch = new CountLatch();
-
-        isInitialized = true;
-        shouldRun = true;
     }
 
     @Override
@@ -117,28 +107,23 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
     private CompletableFuture<Boolean> write(SAXBuffer buffer) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
-        if (isInitialized) {
-            if (shouldRun) {
-                countLatch.increment();
-                service.execute(() -> {
-                    try {
-                        if (buffer != null && !buffer.isEmpty()) {
-                            buffer.send(writer.getContentHandler(), false);
-                            result.complete(true);
-                        } else {
-                            result.complete(false);
-                        }
-                    } catch (Throwable e) {
-                        shouldRun = false;
-                        result.completeExceptionally(new WriteException("Failed to write feature.", e));
-                    } finally {
-                        countLatch.decrement();
+        if (shouldRun) {
+            countLatch.increment();
+            service.execute(() -> {
+                try {
+                    if (buffer != null && !buffer.isEmpty()) {
+                        buffer.send(writer.getContentHandler(), false);
+                        result.complete(true);
+                    } else {
+                        result.complete(false);
                     }
-                });
-            }
-        } else {
-            result.completeExceptionally(
-                    new WriteException("Illegal to write data when writer has not been initialized."));
+                } catch (Throwable e) {
+                    shouldRun = false;
+                    result.completeExceptionally(new WriteException("Failed to write feature.", e));
+                } finally {
+                    countLatch.decrement();
+                }
+            });
         }
 
         return result;
@@ -151,17 +136,14 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public void close() throws WriteException {
-        if (isInitialized) {
-            try {
-                countLatch.await();
-                store.close();
-                writer.close();
-            } catch (Exception e) {
-                throw new WriteException("Failed to close CityGML writer.", e);
-            } finally {
-                service.shutdown();
-                isInitialized = false;
-            }
+        try {
+            countLatch.await();
+            store.close();
+            writer.close();
+        } catch (Exception e) {
+            throw new WriteException("Failed to close CityGML writer.", e);
+        } finally {
+            service.shutdown();
         }
     }
 }

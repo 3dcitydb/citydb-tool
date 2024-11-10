@@ -49,28 +49,20 @@ import java.util.concurrent.ExecutorService;
 
 public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
     private final Logger logger = LoggerManager.getInstance().getLogger(CityJSONWriter.class);
-    private final CityGMLAdapterContext adapterContext;
-    private final CityJSONContext cityJSONContext;
+    private final AbstractCityJSONWriter<?> writer;
+    private final PersistentMapStore store;
+    private final ExecutorService service;
+    private final ThreadLocal<ModelSerializerHelper> helpers;
+    private final CountLatch countLatch;
 
-    private AbstractCityJSONWriter<?> writer;
-    private PersistentMapStore store;
-    private ExecutorService service;
-    private ThreadLocal<ModelSerializerHelper> helpers;
-    private CountLatch countLatch;
+    private volatile boolean shouldRun = true;
     private Throwable exception;
 
-    private volatile boolean isInitialized;
-    private volatile boolean shouldRun;
-
-    public CityJSONWriter(CityGMLAdapterContext adapterContext, CityJSONContext cityJSONContext) {
-        this.adapterContext = Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
-        this.cityJSONContext = Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
-    }
-
-    @Override
-    public void initialize(OutputFile file, WriteOptions options) throws WriteException {
+    public CityJSONWriter(OutputFile file, WriteOptions options, CityGMLAdapterContext adapterContext, CityJSONContext cityJSONContext) throws WriteException {
         Objects.requireNonNull(file, "The output file must not be null.");
         Objects.requireNonNull(options, "The write options must not be null.");
+        Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
+        Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
 
         CityJSONFormatOptions formatOptions;
         try {
@@ -99,9 +91,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
                 .initialize(options, formatOptions));
         countLatch = new CountLatch();
 
-        shouldRun = true;
         processGlobalTemplates(formatOptions.consumeGlobalTemplates());
-        isInitialized = true;
     }
 
     @Override
@@ -126,28 +116,23 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
     private CompletableFuture<Boolean> writeCityObject(AbstractFeature feature) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
-        if (isInitialized) {
-            if (shouldRun) {
-                countLatch.increment();
-                service.execute(() -> {
-                    try {
-                        if (feature != null) {
-                            writer.writeCityObject(feature);
-                            result.complete(true);
-                        } else {
-                            result.complete(false);
-                        }
-                    } catch (Throwable e) {
-                        shouldRun = false;
-                        result.completeExceptionally(new WriteException("Failed to write feature.", e));
-                    } finally {
-                        countLatch.decrement();
+        if (shouldRun) {
+            countLatch.increment();
+            service.execute(() -> {
+                try {
+                    if (feature != null) {
+                        writer.writeCityObject(feature);
+                        result.complete(true);
+                    } else {
+                        result.complete(false);
                     }
-                });
-            }
-        } else {
-            result.completeExceptionally(
-                    new WriteException("Illegal to write data when writer has not been initialized."));
+                } catch (Throwable e) {
+                    shouldRun = false;
+                    result.completeExceptionally(new WriteException("Failed to write feature.", e));
+                } finally {
+                    countLatch.decrement();
+                }
+            });
         }
 
         return result;
@@ -197,7 +182,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
                 geometries.forEach(writer::withGlobalTemplateGeometry);
                 appearances.forEach(writer::withGlobalAppearance);
             } else {
-                throw new WriteException("Failed to process global template geometries.", exception);
+                throw new WriteException("Failed to preprocess global template geometries.", exception);
             }
         }
     }
@@ -209,17 +194,14 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
     @Override
     public void close() throws WriteException {
-        if (isInitialized) {
-            try {
-                countLatch.await();
-                store.close();
-                writer.close();
-            } catch (Exception e) {
-                throw new WriteException("Failed to close CityJSON writer.", e);
-            } finally {
-                service.shutdown();
-                isInitialized = false;
-            }
+        try {
+            countLatch.await();
+            store.close();
+            writer.close();
+        } catch (Exception e) {
+            throw new WriteException("Failed to close CityJSON writer.", e);
+        } finally {
+            service.shutdown();
         }
     }
 }

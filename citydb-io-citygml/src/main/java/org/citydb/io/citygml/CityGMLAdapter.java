@@ -22,15 +22,20 @@
 package org.citydb.io.citygml;
 
 import org.citydb.core.file.InputFile;
+import org.citydb.core.file.OutputFile;
 import org.citydb.io.FileFormat;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.citygml.reader.CityGMLReader;
 import org.citydb.io.citygml.writer.CityGMLWriter;
 import org.citydb.io.reader.FeatureReader;
+import org.citydb.io.reader.ReadException;
+import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.validator.ValidateException;
 import org.citydb.io.validator.Validator;
 import org.citydb.io.writer.FeatureWriter;
+import org.citydb.io.writer.WriteException;
+import org.citydb.io.writer.WriteOptions;
 import org.citygml4j.core.ade.ADERegistry;
 import org.citygml4j.xml.CityGMLADELoader;
 import org.citygml4j.xml.module.citygml.CityGMLModules;
@@ -75,13 +80,13 @@ public class CityGMLAdapter implements IOAdapter {
     }
 
     @Override
-    public FeatureReader createReader() {
-        return new CityGMLReader(context);
+    public FeatureReader createReader(InputFile file, ReadOptions options) throws ReadException {
+        return new CityGMLReader(file, options, context);
     }
 
     @Override
-    public FeatureWriter createWriter() {
-        return new CityGMLWriter(context);
+    public FeatureWriter createWriter(OutputFile file, WriteOptions options) throws WriteException {
+        return new CityGMLWriter(file, options, context);
     }
 
     @Override

@@ -162,13 +162,12 @@ public abstract class ExportController implements Command {
                 FeatureStatistics tileStatistics = new FeatureStatistics(databaseManager.getAdapter());
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
-                     FeatureWriter writer = createWriter(query, ioAdapter)) {
+                     FeatureWriter writer = createWriter(outputFile, writeOptions, query, ioAdapter)) {
                     Exporter exporter = Exporter.newInstance();
                     exportOptions.setOutputFile(outputFile);
 
                     logger.info("{}Exporting to {} file {}.", getTileCounter(tilingHelper, tile),
                             ioManager.getFileFormat(ioAdapter), outputFile.getFile());
-                    writer.initialize(outputFile, writeOptions);
 
                     logger.debug("Querying features matching the request...");
                     logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
@@ -229,8 +228,8 @@ public abstract class ExportController implements Command {
         return shouldRun;
     }
 
-    private FeatureWriter createWriter(Query query, IOAdapter ioAdapter) throws WriteException {
-        FeatureWriter writer = ioAdapter.createWriter();
+    private FeatureWriter createWriter(OutputFile file, WriteOptions options, Query query, IOAdapter ioAdapter) throws WriteException {
+        FeatureWriter writer = ioAdapter.createWriter(file, options);
         return query.getSorting().isPresent() ?
                 SequentialWriter.of(writer) :
                 writer;

@@ -41,22 +41,18 @@ import java.util.Set;
 
 public class CityGMLReaderFactory {
     private final CityGMLContext context;
+    private final ReadOptions options;
     private final String seed;
-    private ReadOptions options;
 
-    private CityGMLReaderFactory(CityGMLContext context) {
+    private CityGMLReaderFactory(CityGMLContext context, ReadOptions options) {
         this.context = Objects.requireNonNull(context, "CityGML context must not be null.");
+        this.options = Objects.requireNonNull(options, "The read options must not be null.");
         seed = "citydb-" + Long.toUnsignedString(new SecureRandom().nextLong() ^ System.currentTimeMillis());
         TextContent.setZoneOffsetProvider(localDateTime -> ZoneOffset.UTC);
     }
 
-    public static CityGMLReaderFactory newInstance(CityGMLContext context) {
-        return new CityGMLReaderFactory(context);
-    }
-
-    public CityGMLReaderFactory setReadOptions(ReadOptions options) {
-        this.options = options;
-        return this;
+    public static CityGMLReaderFactory newInstance(CityGMLContext context, ReadOptions options) {
+        return new CityGMLReaderFactory(context, options);
     }
 
     public CityGMLInputFactory createInputFactory() throws ReadException {

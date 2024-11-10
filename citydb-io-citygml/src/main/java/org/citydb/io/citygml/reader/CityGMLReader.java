@@ -48,32 +48,26 @@ import java.util.function.Consumer;
 
 public class CityGMLReader implements FeatureReader {
     private final Logger logger = LoggerManager.getInstance().getLogger(CityGMLReader.class);
+    private final InputFile file;
+    private final ReadOptions options;
     private final CityGMLAdapterContext context;
     private final CityGMLReaderFactory factory;
+    private final CityGMLFormatOptions formatOptions;
+    private final PersistentMapStore store;
 
-    private InputFile file;
-    private ReadOptions options;
-    private CityGMLFormatOptions formatOptions;
+    private volatile boolean isPreprocessed;
+    private volatile boolean shouldRun = true;
     private Preprocessor preprocessor;
-    private PersistentMapStore store;
     private Throwable exception;
 
-    private volatile boolean isInitialized;
-    private volatile boolean shouldRun;
-
-    public CityGMLReader(CityGMLAdapterContext context) {
-        this.context = Objects.requireNonNull(context, "CityGML adapter context must not be null.");
-        factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext());
-    }
-
-    @Override
-    public void initialize(InputFile file, ReadOptions options) throws ReadException {
+    public CityGMLReader(InputFile file, ReadOptions options, CityGMLAdapterContext context) throws ReadException {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
         this.options = Objects.requireNonNull(options, "The read options must not be null.");
-        factory.setReadOptions(options);
+        this.context = Objects.requireNonNull(context, "CityGML adapter context must not be null.");
 
         try {
-            formatOptions = options.getFormatOptions().getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
+            formatOptions = options.getFormatOptions()
+                    .getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
         } catch (ConfigException e) {
             throw new ReadException("Failed to get CityGML format options from config.", e);
         }
@@ -87,6 +81,7 @@ public class CityGMLReader implements FeatureReader {
             throw new ReadException("Failed to initialize local cache.", e);
         }
 
+        factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options);
         preprocessor = new Preprocessor()
                 .resolveGeometryReferences(formatOptions.isResolveGeometryReferences())
                 .resolveCrossLodReferences(formatOptions.isResolveCrossLodReferences())
@@ -95,18 +90,12 @@ public class CityGMLReader implements FeatureReader {
                 .mapLod0RoofEdge(formatOptions.isMapLod0RoofEdge())
                 .mapLod1MultiSurfaces(formatOptions.isMapLod1MultiSurfaces())
                 .setNumberOfThreads(options.getNumberOfThreads());
-
-        logger.debug("Reading global objects and resolving global references.");
-        preprocessor.processGlobalObjects(file, factory);
-
-        isInitialized = true;
-        shouldRun = true;
     }
 
     @Override
     public void read(Consumer<Feature> consumer) throws ReadException {
-        if (!isInitialized) {
-            throw new ReadException("Illegal to read data when reader has not been initialized.");
+        if (!isPreprocessed) {
+            preprocess();
         }
 
         CityGMLInputFactory inputFactory = factory.createInputFactory();
@@ -178,21 +167,22 @@ public class CityGMLReader implements FeatureReader {
         }
     }
 
+    private void preprocess() throws ReadException {
+        logger.debug("Reading global objects and resolving global references...");
+        preprocessor.processGlobalObjects(file, factory);
+        isPreprocessed = true;
+    }
+
     @Override
     public void cancel() {
         shouldRun = false;
-        if (isInitialized) {
-            preprocessor.cancel();
-        }
+        preprocessor.cancel();
     }
 
     @Override
     public void close() {
-        if (isInitialized) {
-            store.close();
-            preprocessor = null;
-            exception = null;
-            isInitialized = false;
-        }
+        store.close();
+        preprocessor = null;
+        exception = null;
     }
 }

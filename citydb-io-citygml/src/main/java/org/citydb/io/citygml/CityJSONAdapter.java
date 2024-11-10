@@ -22,15 +22,20 @@
 package org.citydb.io.citygml;
 
 import org.citydb.core.file.InputFile;
+import org.citydb.core.file.OutputFile;
 import org.citydb.io.FileFormat;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.citygml.reader.CityJSONReader;
 import org.citydb.io.citygml.writer.CityJSONWriter;
 import org.citydb.io.reader.FeatureReader;
+import org.citydb.io.reader.ReadException;
+import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.validator.ValidateException;
 import org.citydb.io.validator.Validator;
 import org.citydb.io.writer.FeatureWriter;
+import org.citydb.io.writer.WriteException;
+import org.citydb.io.writer.WriteOptions;
 import org.citygml4j.cityjson.CityJSONContext;
 import org.citygml4j.cityjson.CityJSONContextException;
 
@@ -77,13 +82,13 @@ public class CityJSONAdapter implements IOAdapter {
     }
 
     @Override
-    public FeatureReader createReader() {
-        return new CityJSONReader(adapterContext, cityJSONContext);
+    public FeatureReader createReader(InputFile file, ReadOptions options) throws ReadException {
+        return new CityJSONReader(file, options, adapterContext, cityJSONContext);
     }
 
     @Override
-    public FeatureWriter createWriter() {
-        return new CityJSONWriter(adapterContext, cityJSONContext);
+    public FeatureWriter createWriter(OutputFile file, WriteOptions options) throws WriteException {
+        return new CityJSONWriter(file, options, adapterContext, cityJSONContext);
     }
 
     @Override

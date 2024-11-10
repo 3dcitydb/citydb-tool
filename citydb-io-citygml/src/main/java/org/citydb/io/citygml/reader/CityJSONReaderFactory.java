@@ -38,30 +38,19 @@ import java.util.Objects;
 
 public class CityJSONReaderFactory {
     private final CityJSONContext context;
+    private final ReadOptions options;
+    private final CityJSONFormatOptions formatOptions;
     private final String seed;
-    private ReadOptions options;
-    private CityJSONFormatOptions formatOptions = new CityJSONFormatOptions();
 
-    private CityJSONReaderFactory(CityJSONContext context) {
+    private CityJSONReaderFactory(CityJSONContext context, ReadOptions options, CityJSONFormatOptions formatOptions) {
         this.context = Objects.requireNonNull(context, "CityJSON context must not be null.");
+        this.options = Objects.requireNonNull(options, "The read options must not be null.");
+        this.formatOptions = Objects.requireNonNull(formatOptions, "The format options must not be null.");
         seed = "citydb-" + Long.toUnsignedString(new SecureRandom().nextLong() ^ System.currentTimeMillis());
     }
 
-    public static CityJSONReaderFactory newInstance(CityJSONContext context) {
-        return new CityJSONReaderFactory(context);
-    }
-
-    public CityJSONReaderFactory setReadOptions(ReadOptions options) {
-        this.options = options;
-        return this;
-    }
-
-    public CityJSONReaderFactory setFormatOptions(CityJSONFormatOptions formatOptions) {
-        if (formatOptions != null) {
-            this.formatOptions = formatOptions;
-        }
-
-        return this;
+    public static CityJSONReaderFactory newInstance(CityJSONContext context, ReadOptions options, CityJSONFormatOptions formatOptions) {
+        return new CityJSONReaderFactory(context, options, formatOptions);
     }
 
     public CityJSONReader createReader(InputFile file) throws ReadException {

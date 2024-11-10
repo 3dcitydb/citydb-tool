@@ -138,11 +138,7 @@ public abstract class ImportController implements Command {
                 InputFile inputFile = inputFiles.get(i);
                 logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
 
-                try (FeatureReader reader = ioAdapter.createReader()) {
-                    logger.debug("Preprocessing input file...");
-                    reader.initialize(inputFile, readOptions);
-
-                    logger.debug("Importing features from input file...");
+                try (FeatureReader reader = ioAdapter.createReader(inputFile, readOptions)) {
                     importer.startSession(databaseManager.getAdapter(), importOptions);
 
                     reader.read(feature -> {

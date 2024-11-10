@@ -46,27 +46,28 @@ import java.util.function.Consumer;
 
 public class CityJSONReader implements FeatureReader {
     private final Logger logger = LoggerManager.getInstance().getLogger(CityJSONReader.class);
+    private final InputFile file;
+    private final ReadOptions options;
     private final CityGMLAdapterContext adapterContext;
-    private final CityJSONContext cityJSONContext;
+    private final CityJSONReaderFactory factory;
+    private final PersistentMapStore store;
 
-    private InputFile file;
-    private ReadOptions options;
-    private CityJSONReaderFactory factory;
-    private PersistentMapStore store;
+    private volatile boolean shouldRun = true;
     private Throwable exception;
 
-    private volatile boolean isInitialized;
-    private volatile boolean shouldRun;
-
-    public CityJSONReader(CityGMLAdapterContext adapterContext, CityJSONContext cityJSONContext) {
-        this.adapterContext = Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
-        this.cityJSONContext = Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
-    }
-
-    @Override
-    public void initialize(InputFile file, ReadOptions options) throws ReadException {
+    public CityJSONReader(InputFile file, ReadOptions options, CityGMLAdapterContext adapterContext, CityJSONContext cityJSONContext) throws ReadException {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
         this.options = Objects.requireNonNull(options, "The read options must not be null.");
+        this.adapterContext = Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
+        Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
+
+        CityJSONFormatOptions formatOptions;
+        try {
+            formatOptions = options.getFormatOptions()
+                    .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
+        } catch (ConfigException e) {
+            throw new ReadException("Failed to get CityJSON format options from config.", e);
+        }
 
         try {
             store = PersistentMapStore.builder()
@@ -77,27 +78,11 @@ public class CityJSONReader implements FeatureReader {
             throw new ReadException("Failed to initialize local cache.", e);
         }
 
-        CityJSONFormatOptions formatOptions;
-        try {
-            formatOptions = options.getFormatOptions().get(CityJSONFormatOptions.class);
-        } catch (ConfigException e) {
-            throw new ReadException("Failed to get CityJSON format options from config.", e);
-        }
-
-        factory = CityJSONReaderFactory.newInstance(cityJSONContext)
-                .setReadOptions(options)
-                .setFormatOptions(formatOptions);
-
-        isInitialized = true;
-        shouldRun = true;
+        factory = CityJSONReaderFactory.newInstance(cityJSONContext, options, formatOptions);
     }
 
     @Override
     public void read(Consumer<Feature> consumer) throws ReadException {
-        if (!isInitialized) {
-            throw new ReadException("Illegal to read data when reader has not been initialized.");
-        }
-
         ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
                 options.getNumberOfThreads() :
                 Math.max(2, Runtime.getRuntime().availableProcessors()));
@@ -147,10 +132,7 @@ public class CityJSONReader implements FeatureReader {
 
     @Override
     public void close() {
-        if (isInitialized) {
-            store.close();
-            exception = null;
-            isInitialized = false;
-        }
+        store.close();
+        exception = null;
     }
 }
