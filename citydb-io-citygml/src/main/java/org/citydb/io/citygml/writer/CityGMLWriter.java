@@ -117,8 +117,8 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
     private CompletableFuture<Boolean> write(SAXBuffer buffer) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
-        if (shouldRun) {
-            if (isInitialized) {
+        if (isInitialized) {
+            if (shouldRun) {
                 countLatch.increment();
                 service.execute(() -> {
                     try {
@@ -135,10 +135,10 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
                         countLatch.decrement();
                     }
                 });
-            } else {
-                result.completeExceptionally(
-                        new WriteException("Illegal to write data when writer has not been initialized."));
             }
+        } else {
+            result.completeExceptionally(
+                    new WriteException("Illegal to write data when writer has not been initialized."));
         }
 
         return result;
