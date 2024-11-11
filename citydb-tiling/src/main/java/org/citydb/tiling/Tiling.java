@@ -37,7 +37,7 @@ import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Optional;
 
-@SerializableConfig(name = "tiling")
+@SerializableConfig(name = "tilingOptions")
 public class Tiling {
     @JSONField(serializeUsing = ExtentWriter.class, deserializeUsing = ExtentReader.class)
     private Envelope extent;
