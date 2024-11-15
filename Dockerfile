@@ -5,8 +5,8 @@
 
 # Fetch & build stage #########################################################
 # ARGS
-ARG BUILDER_IMAGE_TAG='21-jdk-jammy'
-ARG RUNTIME_IMAGE_TAG='21-jre-jammy'
+ARG BUILDER_IMAGE_TAG='21-jdk-noble'
+ARG RUNTIME_IMAGE_TAG='21-jre-noble'
 
 # Base image
 FROM eclipse-temurin:${BUILDER_IMAGE_TAG} AS builder
