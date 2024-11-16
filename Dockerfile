@@ -16,7 +16,8 @@ WORKDIR /build
 COPY . /build
 
 # Build
-RUN chmod u+x ./gradlew && ./gradlew installDist
+RUN set -x && \
+    chmod u+x ./gradlew && ./gradlew installDist
 
 # Runtime stage ###############################################################
 # Base image
@@ -30,12 +31,11 @@ ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 COPY --from=builder /build/citydb-cli/build/install/citydb-tool /opt/citydb-tool
 
 # Run as non-root user, put start script in path and set permissions
-RUN groupadd --gid 1000 -r citydb-tool && \
-    useradd --uid 1000 --gid 1000 -d /data -m -r --no-log-init citydb-tool && \
+RUN set -x && \
     ln -sf /opt/citydb-tool/citydb /usr/local/bin
 
-WORKDIR /data
 USER 1000
+WORKDIR /data
 
 ENTRYPOINT ["citydb"]
 CMD ["--help"]
