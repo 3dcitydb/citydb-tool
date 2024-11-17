@@ -50,49 +50,43 @@ public class DatabaseManager {
 
     public void connect(ConnectionDetails connectionDetails, DatabaseAdapterManager manager) throws DatabaseException, SQLException {
         Objects.requireNonNull(connectionDetails, "The connection details must not be null.");
-        ConnectionDetails connection = new ConnectionDetails()
+        connectionDetails = ConnectionDetails.of(connectionDetails)
                 .setDatabaseName(connectionDetails.getDatabaseName("PostgreSQL"))
-                .setHost(connectionDetails.getHost(System.getenv(DatabaseConstants.ENV_CITYDB_HOST)))
-                .setPort(connectionDetails.getPort(System.getenv(DatabaseConstants.ENV_CITYDB_PORT)))
-                .setDatabase(connectionDetails.getDatabase(System.getenv(DatabaseConstants.ENV_CITYDB_NAME)))
-                .setSchema(connectionDetails.getSchema(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)))
-                .setUser(connectionDetails.getUser(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME)))
-                .setPassword(connectionDetails.getPassword(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD)))
-                .setPoolOptions(connectionDetails.getPoolOptions().orElseGet(PoolOptions::new));
+                .fillAbsentValuesFromEnv();
 
-        adapter = manager.getAdapterForDatabase(connection.getDatabaseName());
+        adapter = manager.getAdapterForDatabase(connectionDetails.getDatabaseName());
         if (adapter == null) {
             throw new DatabaseException("No database adapter available for the database '" +
-                    connection.getDatabaseName() + "'.");
-        } else if (connection.getHost() == null) {
+                    connectionDetails.getDatabaseName() + "'.");
+        } else if (connectionDetails.getHost() == null) {
             throw new DatabaseException("Missing host name for database connection.");
-        } else if (connection.getDatabase() == null) {
+        } else if (connectionDetails.getDatabase() == null) {
             throw new DatabaseException("Missing database name for database connection.");
-        } else if (connection.getUser() == null) {
+        } else if (connectionDetails.getUser() == null) {
             throw new DatabaseException("Missing username for database connection.");
-        } else if (connection.getPort() == null) {
-            connection.setPort(adapter.getDefaultPort());
+        } else if (connectionDetails.getPort() == null) {
+            connectionDetails.setPort(adapter.getDefaultPort());
         }
 
         PoolProperties properties = new PoolProperties();
         properties.setDriverClassName(adapter.getDriverClass().getName());
-        properties.setUsername(connection.getUser());
-        properties.setPassword(connection.getPassword());
-        properties.setUrl(adapter.getConnectionString(connection.getHost(),
-                connection.getPort(),
-                connection.getDatabase()));
+        properties.setUsername(connectionDetails.getUser());
+        properties.setPassword(connectionDetails.getPassword());
+        properties.setUrl(adapter.getConnectionString(connectionDetails.getHost(),
+                connectionDetails.getPort(),
+                connectionDetails.getDatabase()));
 
         properties.setInitialSize(0);
         properties.setDefaultAutoCommit(false);
         properties.setRollbackOnReturn(true);
 
         dataSource = new DataSource(properties);
-        dataSource.setLoginTimeout(connection.getPoolOptions()
+        dataSource.setLoginTimeout(connectionDetails.getPoolOptions()
                 .map(PoolOptions::getLoginTimeout)
                 .orElse(PoolOptions.DEFAULT_LOGIN_TIMEOUT));
         dataSource.createPool();
 
-        adapter.initialize(Pool.newInstance(this), connection);
+        adapter.initialize(Pool.newInstance(this), connectionDetails);
     }
 
     public void connect(ConnectionDetails connectionDetails) throws DatabaseException, SQLException {

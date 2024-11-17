@@ -21,6 +21,8 @@
 
 package org.citydb.database.connection;
 
+import org.citydb.database.DatabaseConstants;
+
 import java.util.Optional;
 
 public class ConnectionDetails {
@@ -33,6 +35,19 @@ public class ConnectionDetails {
     private String database;
     private String schema;
     private PoolOptions poolOptions;
+
+    public static ConnectionDetails of(ConnectionDetails other) {
+        return new ConnectionDetails()
+                .setDescription(other.getDescription())
+                .setDatabaseName(other.getDatabaseName())
+                .setUser(other.getUser())
+                .setPassword(other.getPassword())
+                .setHost(other.getHost())
+                .setPort(other.getPort())
+                .setDatabase(other.getDatabase())
+                .setSchema(other.getSchema())
+                .setPoolOptions(other.getPoolOptions().orElse(null));
+    }
 
     public String getDescription() {
         return description;
@@ -157,6 +172,15 @@ public class ConnectionDetails {
     public ConnectionDetails setPoolOptions(PoolOptions poolOptions) {
         this.poolOptions = poolOptions;
         return this;
+    }
+
+    public ConnectionDetails fillAbsentValuesFromEnv() {
+        return setUser(getUser(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME)))
+                .setPassword(getPassword(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD)))
+                .setHost(getHost(System.getenv(DatabaseConstants.ENV_CITYDB_HOST)))
+                .setPort(getPort(System.getenv(DatabaseConstants.ENV_CITYDB_PORT)))
+                .setDatabase(getDatabase(System.getenv(DatabaseConstants.ENV_CITYDB_NAME)))
+                .setSchema(getSchema(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)));
     }
 
     public String toConnectString() {
