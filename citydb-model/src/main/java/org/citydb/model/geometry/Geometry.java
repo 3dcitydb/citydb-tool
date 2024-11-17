@@ -53,7 +53,7 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     @Override
     public Optional<Integer> getSRID() {
         if (srid == null) {
-            SrsReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSrsReference();
             if (parent != null) {
                 return parent.getSRID();
             }
@@ -71,7 +71,7 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     @Override
     public Optional<String> getSrsIdentifier() {
         if (srsIdentifier == null) {
-            SrsReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSrsReference();
             if (parent != null) {
                 return parent.getSrsIdentifier();
             }

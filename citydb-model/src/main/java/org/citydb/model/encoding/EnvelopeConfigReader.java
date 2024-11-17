@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.tiling.encoding;
+package org.citydb.model.encoding;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -32,24 +32,31 @@ import org.citydb.model.geometry.Envelope;
 import java.lang.reflect.Type;
 import java.util.List;
 
-public class ExtentReader implements ObjectReader<Envelope> {
+public class EnvelopeConfigReader implements ObjectReader<Envelope> {
     @Override
     public Envelope readObject(JSONReader jsonReader, Type type, Object o, long l) {
         if (jsonReader.isObject()) {
-            JSONObject extent = jsonReader.readJSONObject();
-            Object bounds = extent.get("coordinates");
+            JSONObject object = jsonReader.readJSONObject();
+            Object bounds = object.get("coordinates");
             if (bounds instanceof JSONArray value) {
+                Envelope envelope = null;
                 List<Double> coordinates = value.stream()
                         .filter(Number.class::isInstance)
                         .map(Number.class::cast)
                         .map(Number::doubleValue)
                         .toList();
-                if (coordinates.size() > 3) {
-                    Envelope envelope = Envelope.of(
+                if (coordinates.size() == 4) {
+                    envelope = Envelope.of(
                             Coordinate.of(coordinates.get(0), coordinates.get(1)),
                             Coordinate.of(coordinates.get(2), coordinates.get(3)));
+                } else if (coordinates.size() == 6) {
+                    envelope = Envelope.of(
+                            Coordinate.of(coordinates.get(0), coordinates.get(1), coordinates.get(2)),
+                            Coordinate.of(coordinates.get(3), coordinates.get(4), coordinates.get(5)));
+                }
 
-                    SrsReference srs = extent.getObject("srs", SrsReference.class);
+                if (envelope != null) {
+                    SrsReference srs = object.getObject("srs", SrsReference.class);
                     if (srs != null) {
                         envelope.setSRID(srs.getSRID().orElse(null))
                                 .setSrsIdentifier(srs.getIdentifier().orElse(null));

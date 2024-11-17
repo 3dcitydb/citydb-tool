@@ -35,7 +35,7 @@ public interface SrsReference {
 
     SrsReference setSrsIdentifier(String srsIdentifier);
 
-    default SrsReference getInheritedSRSReference() {
+    default SrsReference getInheritedSrsReference() {
         if (this instanceof Child parent) {
             while ((parent = parent.getParent().orElse(null)) != null) {
                 if (parent instanceof SrsReference reference) {

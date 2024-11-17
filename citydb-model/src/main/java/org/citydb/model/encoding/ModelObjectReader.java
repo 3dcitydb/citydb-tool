@@ -19,46 +19,53 @@
  * limitations under the License.
  */
 
-package org.citydb.model.util;
+package org.citydb.model.encoding;
 
 import org.citydb.model.appearance.Texture;
 import org.citydb.model.appearance.TextureImageProperty;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.model.feature.FeatureCollection;
+import org.citydb.model.common.Visitable;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.walker.ModelWalker;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-public class ModelReader {
+public class ModelObjectReader {
 
-    private ModelReader() {
+    private ModelObjectReader() {
     }
 
-    public static ModelReader newInstance() {
-        return new ModelReader();
+    public static ModelObjectReader newInstance() {
+        return new ModelObjectReader();
     }
 
-    public FeatureCollection read(Path inputFile) throws IOException {
+    public <T extends Serializable> T read(Path inputFile, Class<T> type) throws IOException {
+        Object object = read(inputFile);
+        if (type.isInstance(object)) {
+            return type.cast(object);
+        } else {
+            throw new IOException("Failed to cast content of input file to " + type.getSimpleName() + ".");
+        }
+    }
+
+    public Object read(Path inputFile) throws IOException {
         Objects.requireNonNull(inputFile, "The input file must not be null.");
-
         try (ObjectInputStream stream = new ObjectInputStream(new BufferedInputStream(
                 Files.newInputStream(inputFile)))) {
             Object object = stream.readObject();
-            if (!(object instanceof FeatureCollection collection)) {
-                throw new IOException("The input file " + inputFile + " is not a feature collection.");
+            if (object instanceof Visitable visitable) {
+                visitable.accept(new Postprocessor(inputFile));
             }
 
-            Postprocessor postprocessor = new Postprocessor(inputFile);
-            collection.getFeatures().forEach(feature -> feature.accept(postprocessor));
-            return collection;
+            return object;
         } catch (ClassNotFoundException e) {
-            throw new IOException("Failed to read feature collection.", e);
+            throw new IOException("Failed to parse model object.", e);
         }
     }
 

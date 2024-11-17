@@ -21,13 +21,16 @@
 
 package org.citydb.model.feature;
 
+import org.citydb.model.common.Visitable;
+import org.citydb.model.common.Visitor;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class FeatureCollection implements Serializable {
+public class FeatureCollection implements Visitable, Serializable {
     private final List<Feature> features;
 
     private FeatureCollection(List<Feature> features) {
@@ -73,5 +76,10 @@ public class FeatureCollection implements Serializable {
 
     public void clear() {
         features.clear();
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        features.forEach(feature -> feature.accept(visitor));
     }
 }

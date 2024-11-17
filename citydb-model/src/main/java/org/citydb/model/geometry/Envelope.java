@@ -64,7 +64,7 @@ public class Envelope extends Child implements SpatialObject {
     @Override
     public Optional<Integer> getSRID() {
         if (srid == null) {
-            SrsReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSrsReference();
             if (parent != null) {
                 return parent.getSRID();
             }
@@ -82,7 +82,7 @@ public class Envelope extends Child implements SpatialObject {
     @Override
     public Optional<String> getSrsIdentifier() {
         if (srsIdentifier == null) {
-            SrsReference parent = getInheritedSRSReference();
+            SrsReference parent = getInheritedSrsReference();
             if (parent != null) {
                 return parent.getSrsIdentifier();
             }

@@ -19,11 +19,13 @@
  * limitations under the License.
  */
 
-package org.citydb.model.util;
+package org.citydb.model.encoding;
 
 import org.citydb.model.appearance.Texture;
 import org.citydb.model.appearance.TextureImageProperty;
+import org.citydb.model.common.Child;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.FeatureCollection;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.walker.ModelWalker;
@@ -31,70 +33,81 @@ import org.citydb.model.walker.ModelWalker;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 
-public class ModelWriter {
+public class ModelObjectWriter {
     private boolean failFast;
     private boolean copyExternalFiles = true;
     private boolean createUniqueFileNames;
     private String textureFolder;
     private String libraryObjectsFolder;
 
-    private ModelWriter() {
+    private ModelObjectWriter() {
     }
 
-    public static ModelWriter newInstance() {
-        return new ModelWriter();
+    public static ModelObjectWriter newInstance() {
+        return new ModelObjectWriter();
     }
 
-    public ModelWriter failFast(boolean failFast) {
+    public ModelObjectWriter failFast(boolean failFast) {
         this.failFast = failFast;
         return this;
     }
 
-    public ModelWriter copyExternalFiles(boolean copyExternalFiles) {
+    public ModelObjectWriter copyExternalFiles(boolean copyExternalFiles) {
         this.copyExternalFiles = copyExternalFiles;
         return this;
     }
 
-    public ModelWriter createUniqueFileNames(boolean createUniqueFileNames) {
+    public ModelObjectWriter createUniqueFileNames(boolean createUniqueFileNames) {
         this.createUniqueFileNames = createUniqueFileNames;
         return this;
     }
 
-    public ModelWriter withRelativeTextureFolder(String textureFolder) {
+    public ModelObjectWriter withRelativeTextureFolder(String textureFolder) {
         this.textureFolder = textureFolder;
         return this;
     }
 
-    public ModelWriter withRelativeLibraryObjectsFolder(String libraryObjectsFolder) {
+    public ModelObjectWriter withRelativeLibraryObjectsFolder(String libraryObjectsFolder) {
         this.libraryObjectsFolder = libraryObjectsFolder;
         return this;
     }
 
+    public void write(Child object, Path outputFile) throws IOException {
+        writeObject(object, outputFile);
+    }
+
     public void write(FeatureCollection collection, Path outputFile) throws IOException {
-        Objects.requireNonNull(collection, "The feature collection must not be null.");
+        writeObject(collection, outputFile);
+    }
+
+    private void writeObject(Serializable object, Path outputFile) throws IOException {
+        Objects.requireNonNull(object, "The model object must not be null.");
         outputFile = Objects.requireNonNull(outputFile, "The output file must not be null.")
                 .normalize()
                 .toAbsolutePath();
 
         try (ObjectOutputStream stream = new ObjectOutputStream(new BufferedOutputStream(
                 Files.newOutputStream(outputFile)))) {
-            Preprocessor preprocessor = new Preprocessor(outputFile);
-            collection.getFeatures().forEach(feature -> feature.accept(preprocessor));
-            stream.writeObject(collection);
+            if (object instanceof Visitable visitable) {
+                visitable.accept(new Postprocessor(outputFile));
+            }
+
+            stream.writeObject(object);
         }
     }
 
-    private class Preprocessor extends ModelWalker {
+    private class Postprocessor extends ModelWalker {
         private final FileHelper textureHelper;
         private final FileHelper libraryObjectsHelper;
 
-        Preprocessor(Path outputFile) {
+        Postprocessor(Path outputFile) {
             this.textureHelper = new FileHelper(textureFolder, "appearance", outputFile, "tex_");
             this.libraryObjectsHelper = new FileHelper(libraryObjectsFolder, "library-objects", outputFile, "lib_");
         }
