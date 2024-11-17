@@ -95,8 +95,7 @@ public class CommandHelper {
 
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
-            connectionDetails.fillAbsentValuesFromEnv();
-            logger.info("Connecting to database {}.", connectionDetails.toConnectString());
+            logger.info("Connecting to database {}.", connectionDetails.fillAbsentValuesFromEnv().toConnectString());
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
             databaseManager.logDatabaseMetadata(Level.INFO);
