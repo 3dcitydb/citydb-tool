@@ -179,10 +179,9 @@ public class AppearanceExporter extends DatabaseExporter {
     }
 
     private BooleanExpression getThemeFilter() {
-        Set<String> themes = helper.getOptions().getAppearanceOptions()
-                .map(AppearanceOptions::getThemes)
-                .orElse(Collections.emptySet());
-        if (!themes.isEmpty()) {
+        AppearanceOptions options = helper.getOptions().getAppearanceOptions().orElse(null);
+        if (options != null && options.hasThemes()) {
+            Set<String> themes = options.getThemes();
             boolean containsNullTheme = themes.contains(null);
             if (containsNullTheme && themes.size() == 1) {
                 return appearance.column("theme").isNull();

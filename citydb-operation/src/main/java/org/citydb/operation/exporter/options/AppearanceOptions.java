@@ -37,6 +37,10 @@ public class AppearanceOptions {
         return this;
     }
 
+    public boolean hasThemes() {
+        return themes != null && !themes.isEmpty();
+    }
+
     public Set<String> getThemes() {
         if (themes == null) {
             themes = new HashSet<>();
