@@ -21,6 +21,7 @@
 
 package org.citydb.model.common;
 
+import java.util.Objects;
 import java.util.Optional;
 
 public class PrefixedName extends Name {
@@ -53,6 +54,22 @@ public class PrefixedName extends Name {
 
     public Optional<String> getPrefix() {
         return Optional.ofNullable(prefix);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getLocalName(), getNamespace(), prefix);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        } else if (!(obj instanceof PrefixedName other)) {
+            return false;
+        } else {
+            return super.equals(other) && Objects.equals(prefix, other.prefix);
+        }
     }
 
     @Override

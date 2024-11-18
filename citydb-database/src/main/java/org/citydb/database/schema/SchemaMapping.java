@@ -62,7 +62,7 @@ public class SchemaMapping {
     public Name resolvePrefixedName(PrefixedName name) {
         return name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
                 Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI()) :
-                name;
+                Name.of(name.getLocalName(), name.getNamespace());
     }
 
     void addNamespace(Namespace namespace) {
