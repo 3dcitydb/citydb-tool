@@ -28,8 +28,8 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SrsException;
-import org.citydb.model.encoding.EnvelopeConfigReader;
-import org.citydb.model.encoding.EnvelopeConfigWriter;
+import org.citydb.model.encoding.EnvelopeReader;
+import org.citydb.model.encoding.EnvelopeWriter;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.tiling.options.TileMatrixOrigin;
 
@@ -39,7 +39,7 @@ import java.util.Optional;
 
 @SerializableConfig(name = "tilingOptions")
 public class Tiling {
-    @JSONField(serializeUsing = EnvelopeConfigWriter.class, deserializeUsing = EnvelopeConfigReader.class)
+    @JSONField(serializeUsing = EnvelopeWriter.class, deserializeUsing = EnvelopeReader.class)
     private Envelope extent;
     private TilingScheme scheme;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)

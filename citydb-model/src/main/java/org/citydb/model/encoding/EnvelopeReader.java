@@ -32,7 +32,7 @@ import org.citydb.model.geometry.Envelope;
 import java.lang.reflect.Type;
 import java.util.List;
 
-public class EnvelopeConfigReader implements ObjectReader<Envelope> {
+public class EnvelopeReader implements ObjectReader<Envelope> {
     @Override
     public Envelope readObject(JSONReader jsonReader, Type type, Object o, long l) {
         if (jsonReader.isObject()) {

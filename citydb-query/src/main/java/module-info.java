@@ -10,7 +10,6 @@ module org.citydb.query {
     exports org.citydb.query.builder.schema;
     exports org.citydb.query.builder.sql;
     exports org.citydb.query.executor;
-    exports org.citydb.query.feature;
     exports org.citydb.query.filter;
     exports org.citydb.query.filter.common;
     exports org.citydb.query.filter.encoding;

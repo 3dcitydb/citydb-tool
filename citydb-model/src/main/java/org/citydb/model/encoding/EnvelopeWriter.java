@@ -30,7 +30,7 @@ import org.citydb.model.geometry.Envelope;
 import java.lang.reflect.Type;
 import java.util.List;
 
-public class EnvelopeConfigWriter implements ObjectWriter<Envelope> {
+public class EnvelopeWriter implements ObjectWriter<Envelope> {
     @Override
     public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
         if (o instanceof Envelope envelope) {

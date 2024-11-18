@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.query.feature;
+package org.citydb.model.encoding;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONReader;
@@ -30,7 +30,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FeatureTypesReader implements ObjectReader<List<PrefixedName>> {
+public class PrefixedNameReader implements ObjectReader<List<PrefixedName>> {
     @Override
     public List<PrefixedName> readObject(JSONReader jsonReader, Type type, Object o, long l) {
         if (jsonReader.isArray()) {
