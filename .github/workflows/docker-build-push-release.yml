@@ -3,7 +3,7 @@ name: docker-build-push-release
 on:
   workflow_dispatch:
   release:
-    types: [ published, edited ]
+    types: [published, edited]
 env:
   IMAGE_NAME: citydb-tool
   PLATFORMS: linux/amd64,linux/arm64
@@ -20,7 +20,7 @@ jobs:
         run: |
           echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
         env:
-          OWNER: '${{ github.repository_owner }}'
+          OWNER: "${{ github.repository_owner }}"
       - name: Checkout repo
         uses: actions/checkout@v4
       - name: Docker login Dockerhub
@@ -78,5 +78,7 @@ jobs:
           build-args: |
             CITYDB_TOOL_VERSION=${{ steps.release_version.outputs.version }}
           annotations: ${{ steps.meta.outputs.annotations }}
+          provenance: false
+          sbom: false
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
