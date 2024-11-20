@@ -43,6 +43,10 @@ public class SchemaMapping {
     SchemaMapping() {
     }
 
+    public Collection<Namespace> getNamespaces() {
+        return namespacesById.values();
+    }
+
     public Namespace getNamespace(int id) {
         return namespacesById.getOrDefault(id, Namespace.UNDEFINED);
     }
