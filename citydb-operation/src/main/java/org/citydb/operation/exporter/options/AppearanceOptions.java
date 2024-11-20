@@ -25,8 +25,18 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class AppearanceOptions {
+    private boolean exportAppearances = true;
     private int numberOfTextureBuckets;
     private Set<String> themes;
+
+    public boolean isExportAppearances() {
+        return exportAppearances;
+    }
+
+    public AppearanceOptions setExportAppearances(boolean exportAppearances) {
+        this.exportAppearances = exportAppearances;
+        return this;
+    }
 
     public int getNumberOfTextureBuckets() {
         return numberOfTextureBuckets;

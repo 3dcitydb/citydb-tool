@@ -50,8 +50,8 @@ public abstract class TextureExporter extends SurfaceDataExporter {
                 .withFileNamePrefix(ExportConstants.TEXTURE_PREFIX)
                 .createUniqueFileNames(true)
                 .withNumberOfBuckets(helper.getOptions().getAppearanceOptions()
-                        .map(AppearanceOptions::getNumberOfTextureBuckets)
-                        .orElse(0));
+                        .orElseGet(AppearanceOptions::new)
+                        .getNumberOfTextureBuckets());
     }
 
     protected <T extends Texture<?>> T doExport(T texture, ResultSet rs) throws ExportException, SQLException {

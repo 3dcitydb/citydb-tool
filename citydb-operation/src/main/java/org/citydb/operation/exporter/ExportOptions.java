@@ -46,7 +46,6 @@ public class ExportOptions {
     private int numberOfThreads;
     private SrsReference targetSrs;
     private LodOptions lodOptions;
-    private boolean exportAppearances = true;
     private AppearanceOptions appearanceOptions;
 
     public OutputFile getOutputFile() {
@@ -95,15 +94,6 @@ public class ExportOptions {
 
     public ExportOptions setLodOptions(LodOptions lodOptions) {
         this.lodOptions = lodOptions;
-        return this;
-    }
-
-    public boolean isExportAppearances() {
-        return exportAppearances;
-    }
-
-    public ExportOptions setExportAppearances(boolean exportAppearances) {
-        this.exportAppearances = exportAppearances;
         return this;
     }
 

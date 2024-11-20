@@ -268,7 +268,7 @@ public abstract class ExportController implements Command {
         }
 
         if (noAppearances != null) {
-            exportOptions.setExportAppearances(!noAppearances);
+            getAppearanceOptions(exportOptions).setExportAppearances(!noAppearances);
         }
 
         if (queryOptions != null) {

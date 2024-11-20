@@ -32,6 +32,7 @@ import org.citydb.operation.exporter.appearance.AppearanceExporter;
 import org.citydb.operation.exporter.feature.FeatureExporter;
 import org.citydb.operation.exporter.geometry.GeometryExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
+import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.property.PropertyExporter;
 import org.citydb.operation.exporter.property.PropertyStub;
 import org.citydb.operation.exporter.util.LodFilter;
@@ -57,7 +58,9 @@ public class HierarchyBuilder {
         lodFilter = helper.getLodFilter();
         tableHelper = helper.getTableHelper();
         propertyBuilder = new PropertyBuilder(helper);
-        exportAppearances = helper.getOptions().isExportAppearances();
+        exportAppearances = helper.getOptions().getAppearanceOptions()
+                .orElseGet(AppearanceOptions::new)
+                .isExportAppearances();
     }
 
     public static HierarchyBuilder newInstance(long rootId, ExportHelper helper) {
