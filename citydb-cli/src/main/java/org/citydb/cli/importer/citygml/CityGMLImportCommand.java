@@ -60,7 +60,7 @@ public class CityGMLImportCommand extends ImportController {
         }
 
         if (importXALSource != null) {
-            options.setImportXALSource(importXALSource);
+            options.setIncludeXALSource(importXALSource);
         }
 
         if (upgradeOptions != null) {

@@ -32,7 +32,7 @@ public class CityGMLFormatOptions implements InputFormatOptions {
     private boolean useLod4AsLod3;
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
-    private boolean importXALSource;
+    private boolean includeXALSource;
 
     public boolean isResolveGeometryReferences() {
         return resolveGeometryReferences;
@@ -88,12 +88,12 @@ public class CityGMLFormatOptions implements InputFormatOptions {
         return this;
     }
 
-    public boolean isImportXALSource() {
-        return importXALSource;
+    public boolean isIncludeXALSource() {
+        return includeXALSource;
     }
 
-    public CityGMLFormatOptions setImportXALSource(boolean importXALSource) {
-        this.importXALSource = importXALSource;
+    public CityGMLFormatOptions setIncludeXALSource(boolean includeXALSource) {
+        this.includeXALSource = includeXALSource;
         return this;
     }
 }

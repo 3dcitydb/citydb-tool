@@ -54,7 +54,7 @@ public class AddressAdapter implements ModelBuilder<org.citygml4j.core.model.cor
 
         if (source.getXALAddress() != null && source.getXALAddress().getObject() != null) {
             builder.build(source.getXALAddress().getObject(), target);
-            if (helper.isImportXALSource()) {
+            if (helper.isIncludeXALSource()) {
                 target.setGenericContentMimeType(MimeTypes.XML)
                         .setGenericContent(helper.toXML(source.getXALAddress().getObject(),
                                 helper.getCityGMLVersion() == CityGMLVersion.v3_0 ?

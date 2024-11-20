@@ -87,7 +87,7 @@ public class ModelBuilderHelper {
     private String rootSrsName;
     private boolean failFast;
     private boolean computeEnvelopes;
-    private boolean importXALSource;
+    private boolean includeXALSource;
 
     ModelBuilderHelper(InputFile file, PersistentMapStore store, CityGMLAdapterContext context) {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
@@ -108,7 +108,7 @@ public class ModelBuilderHelper {
     }
 
     ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityGMLFormatOptions formatOptions) {
-        importXALSource = formatOptions.isImportXALSource();
+        includeXALSource = formatOptions.isIncludeXALSource();
         return initialize(metadata, options);
     }
 
@@ -132,8 +132,8 @@ public class ModelBuilderHelper {
         return computeEnvelopes;
     }
 
-    public boolean isImportXALSource() {
-        return importXALSource;
+    public boolean isIncludeXALSource() {
+        return includeXALSource;
     }
 
     public void logOrThrow(Level level, String message, Throwable cause) throws ModelBuildException {
