@@ -23,6 +23,8 @@ package org.citydb.io.citygml.adapter.appearance.builder;
 
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.ModelBuilderHelper;
+import org.citydb.io.citygml.reader.options.AppearanceOptions;
+import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.appearance.ParameterizedTexture;
 import org.citydb.model.appearance.X3DMaterial;
@@ -53,14 +55,25 @@ public class AppearanceHelper {
     private final Map<AbstractSurfaceData, SurfaceData<?>> surfaceData = new IdentityHashMap<>();
     private final Map<GMLObject, List<TargetContext<Surface<?>>>> surfaces = new IdentityHashMap<>();
     private final Map<GMLObject, List<TargetContext<LinearRing>>> rings = new IdentityHashMap<>();
+    private boolean processAppearances = true;
+    private Set<String> themes;
 
     public AppearanceHelper(ModelBuilderHelper helper) {
         this.helper = helper;
         builder = new AppearanceBuilder(this);
     }
 
+    public AppearanceHelper initialize(FormatOptions<?> formatOptions) {
+        AppearanceOptions options = formatOptions.getAppearanceOptions().orElseGet(AppearanceOptions::new);
+        processAppearances = options.isReadAppearances();
+        themes = options.hasThemes() ? options.getThemes() : null;
+        return this;
+    }
+
     public org.citydb.model.appearance.Appearance getAppearance(AbstractAppearance source) throws ModelBuildException {
-        if (source instanceof Appearance appearance) {
+        if (processAppearances
+                && source instanceof Appearance appearance
+                && (themes == null || themes.contains(appearance.getTheme()))) {
             org.citydb.model.appearance.Appearance target = org.citydb.model.appearance.Appearance.newInstance();
             builder.build(appearance, target, helper);
             return target;
@@ -70,26 +83,28 @@ public class AppearanceHelper {
     }
 
     public void addSurfaceData(SurfaceData<?> surfaceData, AbstractSurfaceData source) {
-        if (surfaceData != null && source != null) {
+        if (processAppearances && surfaceData != null && source != null) {
             this.surfaceData.put(source, surfaceData);
         }
     }
 
     public void addTarget(Surface<?> surface, GMLObject source, GeometryProperty<?> parent) {
-        if (surface != null && source != null) {
+        if (processAppearances && surface != null && source != null) {
             surfaces.computeIfAbsent(source, v -> new ArrayList<>()).add(new TargetContext<>(surface, parent));
         }
     }
 
     public void addTarget(LinearRing ring, AbstractGeometry source, GeometryProperty<?> parent) {
-        if (ring != null && source != null) {
+        if (processAppearances && ring != null && source != null) {
             rings.computeIfAbsent(source, v -> new ArrayList<>()).add(new TargetContext<>(ring, parent));
         }
     }
 
     public void processTargets(AbstractFeature feature) {
-        AppearanceCollector collector = new AppearanceCollector();
-        collector.collect(feature).forEach(processor::process);
+        if (processAppearances) {
+            AppearanceCollector collector = new AppearanceCollector();
+            collector.collect(feature).forEach(processor::process);
+        }
     }
 
     public void reset() {

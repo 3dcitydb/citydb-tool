@@ -22,10 +22,10 @@
 package org.citydb.io.citygml.reader;
 
 import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.options.InputFormatOptions;
+import org.citydb.io.citygml.reader.options.FormatOptions;
 
 @SerializableConfig(name = "CityGML")
-public class CityGMLFormatOptions implements InputFormatOptions {
+public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
     private boolean resolveGeometryReferences = true;
     private boolean resolveCrossLodReferences = true;
     private boolean createCityObjectRelations = true;
@@ -94,6 +94,11 @@ public class CityGMLFormatOptions implements InputFormatOptions {
 
     public CityGMLFormatOptions setIncludeXALSource(boolean includeXALSource) {
         this.includeXALSource = includeXALSource;
+        return this;
+    }
+
+    @Override
+    protected CityGMLFormatOptions self() {
         return this;
     }
 }

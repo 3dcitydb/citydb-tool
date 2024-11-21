@@ -27,6 +27,7 @@ module org.citydb.io.citygml {
     exports org.citydb.io.citygml.annotation;
     exports org.citydb.io.citygml.builder;
     exports org.citydb.io.citygml.reader;
+    exports org.citydb.io.citygml.reader.options;
     exports org.citydb.io.citygml.reader.preprocess;
     exports org.citydb.io.citygml.reader.util;
     exports org.citydb.io.citygml.serializer;

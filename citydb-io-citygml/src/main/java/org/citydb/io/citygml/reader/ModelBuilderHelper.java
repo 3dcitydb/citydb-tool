@@ -35,6 +35,7 @@ import org.citydb.io.citygml.adapter.geometry.builder.Lod;
 import org.citydb.io.citygml.adapter.gml.CodeAdapter;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.builder.ModelBuilder;
+import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.ReadOptions;
@@ -98,18 +99,23 @@ public class ModelBuilderHelper {
         geometryHelper = new GeometryHelper(appearanceHelper, this);
     }
 
-    ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options) {
+    private ModelBuilderHelper doInitialize(FileMetadata metadata, ReadOptions options, FormatOptions<?> formatOptions) {
         version = metadata.getVersion() != null ? metadata.getVersion() : CityGMLVersion.v3_0;
         encoding = metadata.getEncoding() != null ? metadata.getEncoding() : StandardCharsets.UTF_8.name();
         rootSrsName = metadata.getSrsName();
         failFast = options.isFailFast();
         computeEnvelopes = options.isComputeEnvelopes();
+        appearanceHelper.initialize(formatOptions);
         return this;
     }
 
     ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityGMLFormatOptions formatOptions) {
         includeXALSource = formatOptions.isIncludeXALSource();
-        return initialize(metadata, options);
+        return doInitialize(metadata, options, formatOptions);
+    }
+
+    ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityJSONFormatOptions formatOptions) {
+        return doInitialize(metadata, options, formatOptions);
     }
 
     public InputFile getInputFile() {

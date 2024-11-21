@@ -19,26 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.io.citygml.reader;
+package org.citydb.io.citygml.reader.options;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.io.citygml.reader.options.FormatOptions;
+import org.citydb.io.reader.options.InputFormatOptions;
 
-@SerializableConfig(name = "CityJSON")
-public class CityJSONFormatOptions extends FormatOptions<CityJSONFormatOptions> {
-    private boolean mapUnsupportedTypesToGenerics = true;
+import java.util.Optional;
 
-    public boolean isMapUnsupportedTypesToGenerics() {
-        return mapUnsupportedTypesToGenerics;
+public abstract class FormatOptions<T extends FormatOptions<T>> implements InputFormatOptions {
+    private AppearanceOptions appearanceOptions;
+
+    protected abstract T self();
+
+    public Optional<AppearanceOptions> getAppearanceOptions() {
+        return Optional.ofNullable(appearanceOptions);
     }
 
-    public CityJSONFormatOptions setMapUnsupportedTypesToGenerics(boolean mapUnsupportedTypesToGenerics) {
-        this.mapUnsupportedTypesToGenerics = mapUnsupportedTypesToGenerics;
-        return this;
-    }
-
-    @Override
-    protected CityJSONFormatOptions self() {
-        return this;
+    public T setAppearanceOptions(AppearanceOptions appearanceOptions) {
+        this.appearanceOptions = appearanceOptions;
+        return self();
     }
 }

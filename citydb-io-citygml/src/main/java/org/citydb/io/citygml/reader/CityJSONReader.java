@@ -50,6 +50,7 @@ public class CityJSONReader implements FeatureReader {
     private final ReadOptions options;
     private final CityGMLAdapterContext adapterContext;
     private final CityJSONReaderFactory factory;
+    private final CityJSONFormatOptions formatOptions;
     private final PersistentMapStore store;
 
     private volatile boolean shouldRun = true;
@@ -61,7 +62,6 @@ public class CityJSONReader implements FeatureReader {
         this.adapterContext = Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
         Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
 
-        CityJSONFormatOptions formatOptions;
         try {
             formatOptions = options.getFormatOptions()
                     .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
@@ -92,7 +92,7 @@ public class CityJSONReader implements FeatureReader {
             FileMetadata metadata = FileMetadata.of(reader);
             ReferenceResolver referenceResolver = DefaultReferenceResolver.newInstance();
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->
-                    new ModelBuilderHelper(file, store, adapterContext).initialize(metadata, options));
+                    new ModelBuilderHelper(file, store, adapterContext).initialize(metadata, options, formatOptions));
 
             while (shouldRun && reader.hasNext()) {
                 AbstractFeature feature = reader.next();
