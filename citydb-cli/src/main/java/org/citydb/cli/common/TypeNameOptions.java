@@ -28,7 +28,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TypeNameOptions implements Option {
-    @CommandLine.Option(names = {"-t", "--type-name"}, split = ",", paramLabel = "<[prefix:]name>", required = true,
+    @CommandLine.Option(names = {"-t", "--type-name"}, split = ",", paramLabel = "<[prefix:]name>",
             description = "Names of the features to process.")
     private String[] typeNames;
 
