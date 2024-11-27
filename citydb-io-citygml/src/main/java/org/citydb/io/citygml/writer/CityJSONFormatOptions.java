@@ -68,11 +68,6 @@ public class CityJSONFormatOptions implements OutputFormatOptions {
         return this;
     }
 
-    public CityJSONFormatOptions setVersion(String version) {
-        this.version = CityJSONVersion.fromValue(version);
-        return this;
-    }
-
     public boolean isPrettyPrint() {
         return prettyPrint;
     }

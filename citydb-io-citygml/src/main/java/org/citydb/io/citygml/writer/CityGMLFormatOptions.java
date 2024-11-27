@@ -54,11 +54,6 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
         return this;
     }
 
-    public CityGMLFormatOptions setVersion(String version) {
-        this.version = CityGMLVersion.fromValue(version);
-        return this;
-    }
-
     public boolean isPrettyPrint() {
         return prettyPrint;
     }
@@ -101,11 +96,6 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
 
     public CityGMLFormatOptions setAddressMode(AddressMode addressMode) {
         this.addressMode = addressMode;
-        return this;
-    }
-
-    public CityGMLFormatOptions setAddressMode(String addressMode) {
-        this.addressMode = AddressMode.fromValue(addressMode);
         return this;
     }
 
