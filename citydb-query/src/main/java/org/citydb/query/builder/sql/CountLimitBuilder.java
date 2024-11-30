@@ -21,7 +21,7 @@
 
 package org.citydb.query.builder.sql;
 
-import org.citydb.query.limit.CountLimit;
+import org.citydb.config.common.CountLimit;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
 import org.citydb.sqlbuilder.query.OrderBy;
 import org.citydb.sqlbuilder.query.Select;

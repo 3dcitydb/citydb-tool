@@ -113,7 +113,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
-    private int execute(String[] args) throws Exception {
+    public int execute(String[] args) throws Exception {
         Instant start = Instant.now();
         int exitCode = CommandLine.ExitCode.SOFTWARE;
 

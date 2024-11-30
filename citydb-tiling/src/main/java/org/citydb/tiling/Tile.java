@@ -80,10 +80,7 @@ public class Tile {
                 throw new TilingException("Failed to transform the point geometry to the database SRS.", e);
             }
 
-            return point.getCoordinate().getX() > extent.getLowerCorner().getX()
-                    && point.getCoordinate().getX() <= extent.getUpperCorner().getX()
-                    && point.getCoordinate().getY() > extent.getLowerCorner().getY()
-                    && point.getCoordinate().getY() <= extent.getUpperCorner().getY();
+            return extent.isOnTile(point.getCoordinate());
         } else {
             return false;
         }

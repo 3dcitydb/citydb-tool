@@ -19,8 +19,9 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.common;
+package org.citydb.cli.importer.options;
 
+import org.citydb.cli.common.Option;
 import org.citydb.config.common.CountLimit;
 import picocli.CommandLine;
 
@@ -30,7 +31,7 @@ public class CountLimitOptions implements Option {
     private Long limit;
 
     @CommandLine.Option(names = "--start-index", paramLabel = "<index>",
-            description = "Index within the result set from which features are processed.")
+            description = "Index within the input set from which features are processed.")
     private Long startIndex;
 
     public CountLimit getCountLimit() {

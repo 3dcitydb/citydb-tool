@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.query.limit;
+package org.citydb.config.common;
 
 import java.util.Optional;
 

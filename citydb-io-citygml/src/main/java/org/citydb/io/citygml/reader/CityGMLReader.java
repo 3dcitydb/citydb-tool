@@ -33,6 +33,7 @@ import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.ReadOptions;
+import org.citydb.io.reader.filter.Filter;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
@@ -54,6 +55,7 @@ public class CityGMLReader implements FeatureReader {
     private final CityGMLReaderFactory factory;
     private final CityGMLFormatOptions formatOptions;
     private final PersistentMapStore store;
+    private final Filter filter;
 
     private volatile boolean isPreprocessed;
     private volatile boolean shouldRun = true;
@@ -82,6 +84,7 @@ public class CityGMLReader implements FeatureReader {
         }
 
         factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options);
+        filter = options.getFilter().orElseGet(Filter::acceptAll);
         preprocessor = new Preprocessor()
                 .resolveGeometryReferences(formatOptions.isResolveGeometryReferences())
                 .resolveCrossLodReferences(formatOptions.isResolveCrossLodReferences())
@@ -99,9 +102,11 @@ public class CityGMLReader implements FeatureReader {
         }
 
         CityGMLInputFactory inputFactory = factory.createInputFactory();
-        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
-                options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
+        int threads = filter.needsSequentialProcessing() ? 1 :
+                options.getNumberOfThreads() > 0 ?
+                        options.getNumberOfThreads() :
+                        Math.max(2, Runtime.getRuntime().availableProcessors());
+        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
         CountLatch countLatch = new CountLatch();
 
         try (org.citygml4j.xml.reader.CityGMLReader reader = factory.createReader(file, inputFactory)) {
@@ -163,7 +168,12 @@ public class CityGMLReader implements FeatureReader {
     private void process(AbstractFeature feature, Consumer<Feature> consumer, ModelBuilderHelper helper) throws Exception {
         Feature object = helper.getTopLevelFeature(feature);
         if (object != null) {
-            consumer.accept(object);
+            Filter.Result result = filter.test(object);
+            if (result == Filter.Result.ACCEPT) {
+                consumer.accept(object);
+            } else if (result == Filter.Result.STOP) {
+                shouldRun = false;
+            }
         }
     }
 

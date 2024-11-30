@@ -19,23 +19,11 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.importer;
+package org.citydb.io.reader.filter;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.options.FilterOptions;
+import org.citydb.model.feature.Feature;
 
-import java.util.Optional;
-
-@SerializableConfig(name = "importOptions")
-public class ImportOptions extends org.citydb.operation.importer.ImportOptions {
-    private FilterOptions filterOptions;
-
-    public Optional<FilterOptions> getFilterOptions() {
-        return Optional.ofNullable(filterOptions);
-    }
-
-    public ImportOptions setFilterOptions(FilterOptions filterOptions) {
-        this.filterOptions = filterOptions;
-        return this;
-    }
+@FunctionalInterface
+public interface FilterPredicate {
+    boolean test(Feature feature) throws FilterException;
 }

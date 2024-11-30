@@ -6,6 +6,7 @@ module org.citydb.io {
 
     exports org.citydb.io;
     exports org.citydb.io.reader;
+    exports org.citydb.io.reader.filter;
     exports org.citydb.io.reader.options;
     exports org.citydb.io.util;
     exports org.citydb.io.validator;

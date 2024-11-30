@@ -19,23 +19,20 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.importer;
+package org.citydb.cli.importer.options;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.options.FilterOptions;
+import picocli.CommandLine;
 
-import java.util.Optional;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
-@SerializableConfig(name = "importOptions")
-public class ImportOptions extends org.citydb.operation.importer.ImportOptions {
-    private FilterOptions filterOptions;
+public class IdOptions {
+    @CommandLine.Option(names = {"-i", "--id"}, split = ",", paramLabel = "<id>",
+            description = "Identifiers of the features to process.")
+    private String[] ids;
 
-    public Optional<FilterOptions> getFilterOptions() {
-        return Optional.ofNullable(filterOptions);
-    }
-
-    public ImportOptions setFilterOptions(FilterOptions filterOptions) {
-        this.filterOptions = filterOptions;
-        return this;
+    public Set<String> getIds() {
+        return new HashSet<>(Arrays.asList(ids));
     }
 }

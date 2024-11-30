@@ -21,6 +21,7 @@
 
 package org.citydb.query.builder.sql;
 
+import org.citydb.config.common.CountLimit;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.database.srs.SpatialReference;
@@ -28,7 +29,6 @@ import org.citydb.database.srs.SrsException;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.Filter;
-import org.citydb.query.limit.CountLimit;
 import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
 import org.citydb.sqlbuilder.function.Function;

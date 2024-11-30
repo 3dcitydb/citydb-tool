@@ -21,9 +21,11 @@
 
 package org.citydb.io.reader;
 
+import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.core.CoreConstants;
+import org.citydb.io.reader.filter.Filter;
 import org.citydb.io.reader.options.InputFormatOptions;
 
 import java.nio.file.Path;
@@ -37,6 +39,9 @@ public class ReadOptions {
     private String encoding;
     private boolean computeEnvelopes;
     private ConfigObject<InputFormatOptions> formatOptions;
+
+    @JSONField(serialize = false, deserialize = false)
+    private Filter filter;
 
     public boolean isFailFast() {
         return failFast;
@@ -93,6 +98,15 @@ public class ReadOptions {
 
     public ReadOptions setFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
         this.formatOptions = formatOptions;
+        return this;
+    }
+
+    public Optional<Filter> getFilter() {
+        return Optional.ofNullable(filter);
+    }
+
+    public ReadOptions setFilter(Filter filter) {
+        this.filter = filter;
         return this;
     }
 }

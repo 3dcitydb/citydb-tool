@@ -19,23 +19,35 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.importer;
+package org.citydb.io.reader.options;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.options.FilterOptions;
+public enum BboxMode {
+    INTERSECTS("intersects"),
+    CONTAINS("contains"),
+    ON_TILE("onTile");
 
-import java.util.Optional;
+    private final String value;
 
-@SerializableConfig(name = "importOptions")
-public class ImportOptions extends org.citydb.operation.importer.ImportOptions {
-    private FilterOptions filterOptions;
-
-    public Optional<FilterOptions> getFilterOptions() {
-        return Optional.ofNullable(filterOptions);
+    BboxMode(String value) {
+        this.value = value;
     }
 
-    public ImportOptions setFilterOptions(FilterOptions filterOptions) {
-        this.filterOptions = filterOptions;
-        return this;
+    public String toValue() {
+        return value;
+    }
+
+    public static BboxMode fromValue(String value) {
+        for (BboxMode v : BboxMode.values()) {
+            if (v.value.equals(value)) {
+                return v;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return value;
     }
 }
