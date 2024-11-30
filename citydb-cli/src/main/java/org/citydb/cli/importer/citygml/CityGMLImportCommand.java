@@ -41,7 +41,7 @@ import picocli.CommandLine;
 public class CityGMLImportCommand extends ImportController {
     @CommandLine.Option(names = "--import-xal-source",
             description = "Import XML snippets of xAL address elements.")
-    protected Boolean importXALSource;
+    private Boolean importXALSource;
 
     @CommandLine.ArgGroup(exclusive = false)
     private AppearanceOptions appearanceOptions;
