@@ -59,7 +59,7 @@ public class CityGMLWriterFactory {
                     .setDefaultNamespace(CoreModule.of(formatOptions.getVersion()).getNamespaceURI())
                     .setIndent(formatOptions.isPrettyPrint() ? "  " : null);
 
-            if (!formatOptions.getXslTransforms().isEmpty()) {
+            if (formatOptions.hasXslTransforms()) {
                 writer.setTransformer(getTransformer(formatOptions.getXslTransforms()));
             }
 

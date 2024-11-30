@@ -24,6 +24,9 @@ package org.citydb.io.citygml.reader;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.citygml.reader.options.FormatOptions;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
     private boolean resolveGeometryReferences = true;
@@ -33,6 +36,7 @@ public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
     private boolean includeXALSource;
+    private List<String> xslTransforms;
 
     public boolean isResolveGeometryReferences() {
         return resolveGeometryReferences;
@@ -94,6 +98,31 @@ public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
 
     public CityGMLFormatOptions setIncludeXALSource(boolean includeXALSource) {
         this.includeXALSource = includeXALSource;
+        return this;
+    }
+
+    public boolean hasXslTransforms() {
+        return xslTransforms != null && !xslTransforms.isEmpty();
+    }
+
+    public List<String> getXslTransforms() {
+        if (xslTransforms == null) {
+            xslTransforms = new ArrayList<>();
+        }
+
+        return xslTransforms;
+    }
+
+    public CityGMLFormatOptions setXslTransforms(List<String> xslTransforms) {
+        this.xslTransforms = xslTransforms;
+        return this;
+    }
+
+    public CityGMLFormatOptions addXslTransform(String xslTransform) {
+        if (xslTransform != null) {
+            getXslTransforms().add(xslTransform);
+        }
+
         return this;
     }
 

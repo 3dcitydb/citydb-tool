@@ -32,6 +32,10 @@ public class LodOptions {
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private LodMode mode;
 
+    public boolean hasLods() {
+        return lods != null && !lods.isEmpty();
+    }
+
     public Set<String> getLods() {
         if (lods == null) {
             lods = new LinkedHashSet<>();

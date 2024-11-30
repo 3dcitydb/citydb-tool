@@ -99,6 +99,10 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
         return this;
     }
 
+    public boolean hasXslTransforms() {
+        return xslTransforms != null && !xslTransforms.isEmpty();
+    }
+
     public List<String> getXslTransforms() {
         if (xslTransforms == null) {
             xslTransforms = new ArrayList<>();

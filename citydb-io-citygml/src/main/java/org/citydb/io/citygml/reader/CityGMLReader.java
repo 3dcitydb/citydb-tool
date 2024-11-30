@@ -83,7 +83,7 @@ public class CityGMLReader implements FeatureReader {
             throw new ReadException("Failed to initialize local cache.", e);
         }
 
-        factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options);
+        factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options, formatOptions);
         filter = options.getFilter().orElseGet(Filter::acceptAll);
         preprocessor = new Preprocessor()
                 .resolveGeometryReferences(formatOptions.isResolveGeometryReferences())

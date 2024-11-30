@@ -35,6 +35,8 @@ import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
+import java.util.Arrays;
+
 @CommandLine.Command(
         name = "citygml",
         description = "Import data in CityGML format.")
@@ -42,6 +44,10 @@ public class CityGMLImportCommand extends ImportController {
     @CommandLine.Option(names = "--import-xal-source",
             description = "Import XML snippets of xAL address elements.")
     private Boolean importXALSource;
+
+    @CommandLine.Option(names = {"-x", "--xsl-transform"}, split = ",", paramLabel = "<stylesheet>",
+            description = "Apply XSLT stylesheets to transform input.")
+    private String[] stylesheets;
 
     @CommandLine.ArgGroup(exclusive = false)
     private AppearanceOptions appearanceOptions;
@@ -66,6 +72,10 @@ public class CityGMLImportCommand extends ImportController {
 
         if (importXALSource != null) {
             options.setIncludeXALSource(importXALSource);
+        }
+
+        if (stylesheets != null) {
+            options.setXslTransforms(Arrays.asList(stylesheets));
         }
 
         if (appearanceOptions != null) {
