@@ -22,6 +22,7 @@
 package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.UpgradeOptions;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
@@ -30,6 +31,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.reader.CityGMLFormatOptions;
+import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
@@ -40,6 +42,9 @@ public class CityGMLImportCommand extends ImportController {
     @CommandLine.Option(names = "--import-xal-source",
             description = "Import XML snippets of xAL address elements.")
     protected Boolean importXALSource;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private AppearanceOptions appearanceOptions;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
@@ -63,6 +68,12 @@ public class CityGMLImportCommand extends ImportController {
             options.setIncludeXALSource(importXALSource);
         }
 
+        if (appearanceOptions != null) {
+            getAppearanceOptions(options)
+                    .setReadAppearances(appearanceOptions.isProcessAppearances())
+                    .setThemes(appearanceOptions.getThemes());
+        }
+
         if (upgradeOptions != null) {
             if (upgradeOptions.getUseLod4AsLod3() != null) {
                 options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
@@ -78,5 +89,12 @@ public class CityGMLImportCommand extends ImportController {
         }
 
         return options;
+    }
+
+    private org.citydb.io.citygml.reader.options.AppearanceOptions getAppearanceOptions(FormatOptions<?> formatOptions) {
+        org.citydb.io.citygml.reader.options.AppearanceOptions appearanceOptions = formatOptions.getAppearanceOptions()
+                .orElseGet(org.citydb.io.citygml.reader.options.AppearanceOptions::new);
+        formatOptions.setAppearanceOptions(appearanceOptions);
+        return appearanceOptions;
     }
 }

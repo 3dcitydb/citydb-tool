@@ -19,18 +19,25 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.exporter.options;
+package org.citydb.cli.common;
 
-import org.citydb.cli.common.Option;
 import picocli.CommandLine;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class AppearanceOptions implements Option {
+    @CommandLine.Option(names = "--no-appearances",
+            description = "Do not process appearances.")
+    private Boolean noAppearances;
+
     @CommandLine.Option(names = {"-a", "--appearance-theme"}, split = ",", paramLabel = "<theme>",
-            description = "Export appearances with a matching theme. Use 'none' for the null theme.")
+            description = "Process appearances with a matching theme. Use 'none' for the null theme.")
     private Set<String> themes;
+
+    public boolean isProcessAppearances() {
+        return noAppearances == null || !noAppearances;
+    }
 
     public Set<String> getThemes() {
         return themes;
