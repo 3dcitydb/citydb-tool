@@ -19,23 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.importer;
+package org.citydb.io.reader.filter;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.io.reader.options.FilterOptions;
+public class FilterException extends Exception {
 
-import java.util.Optional;
-
-@SerializableConfig(name = "importOptions")
-public class ImportOptions extends org.citydb.operation.importer.ImportOptions {
-    private FilterOptions filterOptions;
-
-    public Optional<FilterOptions> getFilterOptions() {
-        return Optional.ofNullable(filterOptions);
+    public FilterException() {
+        super();
     }
 
-    public ImportOptions setFilterOptions(FilterOptions filterOptions) {
-        this.filterOptions = filterOptions;
-        return this;
+    public FilterException(String message) {
+        super(message);
+    }
+
+    public FilterException(Throwable cause) {
+        super(cause);
+    }
+
+    public FilterException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

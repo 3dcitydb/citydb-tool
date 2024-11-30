@@ -19,29 +19,20 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.exporter.options;
+package org.citydb.cli.importer.options;
 
-import org.citydb.cli.common.Option;
 import picocli.CommandLine;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
-public class AppearanceOptions implements Option {
-    @CommandLine.Option(names = {"-a", "--appearance-theme"}, split = ",", paramLabel = "<theme>",
-            description = "Export appearances with a matching theme. Use 'none' for the null theme.")
-    private Set<String> themes;
+public class IdOptions {
+    @CommandLine.Option(names = {"-i", "--id"}, split = ",", paramLabel = "<id>",
+            description = "Identifiers of the features to process.")
+    private String[] ids;
 
-    public Set<String> getThemes() {
-        return themes;
-    }
-
-    @Override
-    public void preprocess(CommandLine commandLine) throws Exception {
-        if (themes != null) {
-            themes = themes.stream()
-                    .map(theme -> "none".equalsIgnoreCase(theme) ? null : theme)
-                    .collect(Collectors.toSet());
-        }
+    public Set<String> getIds() {
+        return new HashSet<>(Arrays.asList(ids));
     }
 }

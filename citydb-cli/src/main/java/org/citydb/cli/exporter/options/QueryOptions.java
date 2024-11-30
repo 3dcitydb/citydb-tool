@@ -21,10 +21,7 @@
 
 package org.citydb.cli.exporter.options;
 
-import org.citydb.cli.common.CountLimitOptions;
-import org.citydb.cli.common.FilterOptions;
-import org.citydb.cli.common.Option;
-import org.citydb.cli.common.TypeNameOptions;
+import org.citydb.cli.common.*;
 import org.citydb.query.Query;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;

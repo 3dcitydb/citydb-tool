@@ -162,6 +162,17 @@ public class Envelope extends Child implements SpatialObject {
         return !disconnected;
     }
 
+    public boolean isOnTile(Envelope envelope) {
+        return isOnTile(envelope.getCenter());
+    }
+
+    public boolean isOnTile(Coordinate point) {
+        return point.getX() > lowerCorner.getX()
+                && point.getX() <= upperCorner.getX()
+                && point.getY() > lowerCorner.getY()
+                && point.getY() <= upperCorner.getY();
+    }
+
     public Envelope include(Coordinate coordinate) {
         if (coordinate.getX() < lowerCorner.getX()) {
             lowerCorner.setX(coordinate.getX());

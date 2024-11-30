@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.query.feature;
+package org.citydb.model.encoding;
 
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
@@ -31,7 +31,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FeatureTypesWriter implements ObjectWriter<List<PrefixedName>> {
+public class PrefixedNamesWriter implements ObjectWriter<List<PrefixedName>> {
     @Override
     public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
         if (o instanceof List<?> list) {

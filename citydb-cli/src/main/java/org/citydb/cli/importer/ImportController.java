@@ -25,17 +25,21 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
+import org.citydb.cli.importer.filter.Filter;
+import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.core.file.InputFile;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
+import org.citydb.io.reader.filter.FilterException;
 import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
@@ -72,6 +76,10 @@ public abstract class ImportController implements Command {
     @CommandLine.Option(names = "--compute-extent",
             description = "Compute and overwrite extents of features.")
     protected Boolean computeEnvelopes;
+
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Filter options:%n")
+    protected FilterOptions filterOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
@@ -111,6 +119,7 @@ public abstract class ImportController implements Command {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
+        readOptions.setFilter(getFilter(databaseManager.getAdapter()));
         ImportOptions importOptions = getImportOptions();
 
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
@@ -142,9 +151,9 @@ public abstract class ImportController implements Command {
                     importer.startSession(databaseManager.getAdapter(), importOptions);
 
                     reader.read(feature -> {
-                        importLogger.add(feature);
                         importer.importFeature(feature).whenComplete((descriptor, e) -> {
                             if (descriptor != null) {
+                                importLogger.add(feature);
                                 long count = counter.incrementAndGet();
                                 if (count % 1000 == 0) {
                                     logger.info("{} features processed.", count);
@@ -196,6 +205,16 @@ public abstract class ImportController implements Command {
                     .find();
         } catch (IOException e) {
             throw new ExecutionException("Failed to create list of input files.", e);
+        }
+    }
+
+    protected Filter getFilter(DatabaseAdapter adapter) throws ExecutionException {
+        try {
+            return filterOptions != null ?
+                    Filter.of(filterOptions.getReadFilterOptions(), adapter) :
+                    null;
+        } catch (FilterException e) {
+            throw new ExecutionException("Failed to build import filter.", e);
         }
     }
 

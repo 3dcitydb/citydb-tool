@@ -81,10 +81,6 @@ public abstract class ExportController implements Command {
     @CommandLine.Mixin
     protected CrsOptions crsOptions;
 
-    @CommandLine.Option(names = "--no-appearances",
-            description = "Do not export appearances.")
-    private Boolean noAppearances;
-
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
     protected QueryOptions queryOptions;
@@ -267,18 +263,15 @@ public abstract class ExportController implements Command {
             exportOptions.setTargetSrs(crsOptions.getTargetSrs());
         }
 
-        if (noAppearances != null) {
-            getAppearanceOptions(exportOptions).setExportAppearances(!noAppearances);
-        }
-
         if (queryOptions != null) {
             if (queryOptions.getLodOptions() != null) {
                 exportOptions.setLodOptions(queryOptions.getLodOptions().getLodExportOptions());
             }
 
-            if (queryOptions.getAppearanceOptions() != null
-                    && queryOptions.getAppearanceOptions().getThemes() != null) {
-                getAppearanceOptions(exportOptions).setThemes(queryOptions.getAppearanceOptions().getThemes());
+            if (queryOptions.getAppearanceOptions() != null) {
+                getAppearanceOptions(exportOptions)
+                        .setExportAppearances(queryOptions.getAppearanceOptions().isProcessAppearances())
+                        .setThemes(queryOptions.getAppearanceOptions().getThemes());
             }
         }
 

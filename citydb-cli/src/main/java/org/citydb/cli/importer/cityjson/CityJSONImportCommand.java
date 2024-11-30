@@ -22,6 +22,7 @@
 package org.citydb.cli.importer.cityjson;
 
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
@@ -30,6 +31,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.citygml.CityJSONAdapter;
 import org.citydb.io.citygml.reader.CityJSONFormatOptions;
+import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
@@ -41,6 +43,9 @@ public class CityJSONImportCommand extends ImportController {
             description = "Map city objects from unsupported extensions onto generic city objects " +
                     "(default: ${DEFAULT-VALUE}).")
     private boolean mapUnknownObjects;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private AppearanceOptions appearanceOptions;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
@@ -68,6 +73,19 @@ public class CityJSONImportCommand extends ImportController {
                     .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
         }
 
+        if (appearanceOptions != null) {
+            getAppearanceOptions(options)
+                    .setReadAppearances(appearanceOptions.isProcessAppearances())
+                    .setThemes(appearanceOptions.getThemes());
+        }
+
         return options;
+    }
+
+    private org.citydb.io.citygml.reader.options.AppearanceOptions getAppearanceOptions(FormatOptions<?> formatOptions) {
+        org.citydb.io.citygml.reader.options.AppearanceOptions appearanceOptions = formatOptions.getAppearanceOptions()
+                .orElseGet(org.citydb.io.citygml.reader.options.AppearanceOptions::new);
+        formatOptions.setAppearanceOptions(appearanceOptions);
+        return appearanceOptions;
     }
 }

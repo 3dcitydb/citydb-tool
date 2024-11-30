@@ -32,6 +32,7 @@ import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.ReadOptions;
+import org.citydb.io.reader.filter.Filter;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.cityjson.CityJSONContext;
@@ -52,6 +53,7 @@ public class CityJSONReader implements FeatureReader {
     private final CityJSONReaderFactory factory;
     private final CityJSONFormatOptions formatOptions;
     private final PersistentMapStore store;
+    private final Filter filter;
 
     private volatile boolean shouldRun = true;
     private Throwable exception;
@@ -79,13 +81,16 @@ public class CityJSONReader implements FeatureReader {
         }
 
         factory = CityJSONReaderFactory.newInstance(cityJSONContext, options, formatOptions);
+        filter = options.getFilter().orElseGet(Filter::acceptAll);
     }
 
     @Override
     public void read(Consumer<Feature> consumer) throws ReadException {
-        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
-                options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
+        int threads = filter.needsSequentialProcessing() ? 1 :
+                options.getNumberOfThreads() > 0 ?
+                        options.getNumberOfThreads() :
+                        Math.max(2, Runtime.getRuntime().availableProcessors());
+        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
         CountLatch countLatch = new CountLatch();
 
         try (org.citygml4j.cityjson.reader.CityJSONReader reader = factory.createReader(file)) {
@@ -103,7 +108,12 @@ public class CityJSONReader implements FeatureReader {
                         referenceResolver.resolveReferences(feature);
                         Feature object = helpers.get().getTopLevelFeature(feature);
                         if (object != null) {
-                            consumer.accept(object);
+                            Filter.Result result = filter.test(object);
+                            if (result == Filter.Result.ACCEPT) {
+                                consumer.accept(object);
+                            } else if (result == Filter.Result.STOP) {
+                                shouldRun = false;
+                            }
                         }
                     } catch (Throwable e) {
                         shouldRun = false;

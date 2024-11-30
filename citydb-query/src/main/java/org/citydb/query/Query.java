@@ -23,17 +23,17 @@ package org.citydb.query;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.common.CountLimit;
 import org.citydb.config.common.SrsReference;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.PrefixedName;
+import org.citydb.model.encoding.PrefixedNamesReader;
+import org.citydb.model.encoding.PrefixedNamesWriter;
 import org.citydb.model.feature.FeatureTypeProvider;
-import org.citydb.query.feature.FeatureTypesReader;
-import org.citydb.query.feature.FeatureTypesWriter;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterConfigReader;
 import org.citydb.query.filter.encoding.FilterConfigWriter;
-import org.citydb.query.limit.CountLimit;
 import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
 
@@ -43,7 +43,7 @@ import java.util.Optional;
 
 @SerializableConfig(name = "query")
 public class Query {
-    @JSONField(serializeUsing = FeatureTypesWriter.class, deserializeUsing = FeatureTypesReader.class)
+    @JSONField(serializeUsing = PrefixedNamesWriter.class, deserializeUsing = PrefixedNamesReader.class)
     private List<PrefixedName> featureTypes;
     @JSONField(serializeUsing = FilterConfigWriter.class, deserializeUsing = FilterConfigReader.class)
     private Filter filter;
