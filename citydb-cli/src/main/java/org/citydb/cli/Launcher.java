@@ -155,6 +155,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 }
             }
 
+            initializeLogging();
+
             for (CommandLine commandLine : commandLines) {
                 Object command = commandLine.getCommand();
 
@@ -223,7 +225,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     @Override
     public Integer call() throws ExecutionException {
-        initializeLogging();
         logger.info("Starting {}, version {}.", CliConstants.APP_NAME, CliConstants.APP_VERSION);
 
         if (pidFile != null) {
