@@ -24,6 +24,7 @@ package org.citydb.cli.importer.cityjson;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.importer.ImportController;
+import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.io.IOAdapter;
@@ -34,6 +35,8 @@ import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
+import java.util.Optional;
+
 @CommandLine.Command(
         name = "cityjson",
         description = "Import data in CityJSON format.")
@@ -42,6 +45,10 @@ public class CityJSONImportCommand extends ImportController {
             description = "Map city objects from unsupported extensions onto generic city objects " +
                     "(default: ${DEFAULT-VALUE}).")
     private boolean mapUnknownObjects;
+
+    @CommandLine.ArgGroup(exclusive = false,
+            heading = "Filter options:%n")
+    private FilterOptions filterOptions;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
@@ -77,6 +84,13 @@ public class CityJSONImportCommand extends ImportController {
         }
 
         return options;
+    }
+
+    @Override
+    protected Optional<org.citydb.io.reader.options.FilterOptions> getFilterOptions() {
+        return filterOptions != null ?
+                Optional.of(filterOptions.getImportFilterOptions()) :
+                Optional.empty();
     }
 
     private org.citydb.io.citygml.reader.options.AppearanceOptions getAppearanceOptions(FormatOptions<?> formatOptions) {

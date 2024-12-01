@@ -26,7 +26,6 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.importer.filter.Filter;
-import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
@@ -40,6 +39,7 @@ import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.filter.FilterException;
+import org.citydb.io.reader.options.FilterOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
@@ -49,6 +49,7 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ImportController implements Command {
@@ -78,10 +79,6 @@ public abstract class ImportController implements Command {
     protected Boolean computeEnvelopes;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
-            heading = "Filter options:%n")
-    protected FilterOptions filterOptions;
-
-    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
 
@@ -96,6 +93,8 @@ public abstract class ImportController implements Command {
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
 
     protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
+
+    protected abstract Optional<FilterOptions> getFilterOptions() throws ExecutionException;
 
     @Override
     public Integer call() throws ExecutionException {
@@ -210,8 +209,9 @@ public abstract class ImportController implements Command {
 
     protected Filter getFilter(DatabaseAdapter adapter) throws ExecutionException {
         try {
-            return filterOptions != null ?
-                    Filter.of(filterOptions.getImportFilterOptions(), adapter) :
+            FilterOptions filterOptions = getFilterOptions().orElse(null);
+            return filterOptions != null && !filterOptions.isEmpty() ?
+                    Filter.of(filterOptions, adapter) :
                     null;
         } catch (FilterException e) {
             throw new ExecutionException("Failed to build import filter.", e);

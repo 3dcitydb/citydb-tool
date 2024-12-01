@@ -45,6 +45,13 @@ public class FilterOptions {
     private BboxMode bboxMode;
     private CountLimit countLimit;
 
+    public boolean isEmpty() {
+        return !hasFeatureTypes()
+                && !hasIds()
+                && bbox == null
+                && countLimit == null;
+    }
+
     public boolean hasFeatureTypes() {
         return featureTypes != null && !featureTypes.isEmpty();
     }
