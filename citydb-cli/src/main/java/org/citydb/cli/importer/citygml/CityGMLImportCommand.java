@@ -22,7 +22,6 @@
 package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.UpgradeOptions;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
@@ -48,9 +47,6 @@ public class CityGMLImportCommand extends ImportController {
     @CommandLine.Option(names = {"-x", "--xsl-transform"}, split = ",", paramLabel = "<stylesheet>",
             description = "Apply XSLT stylesheets to transform input.")
     private String[] stylesheets;
-
-    @CommandLine.ArgGroup(exclusive = false)
-    private AppearanceOptions appearanceOptions;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
@@ -78,12 +74,6 @@ public class CityGMLImportCommand extends ImportController {
             options.setXslTransforms(Arrays.asList(stylesheets));
         }
 
-        if (appearanceOptions != null) {
-            getAppearanceOptions(options)
-                    .setReadAppearances(appearanceOptions.isProcessAppearances())
-                    .setThemes(appearanceOptions.getThemes());
-        }
-
         if (upgradeOptions != null) {
             if (upgradeOptions.getUseLod4AsLod3() != null) {
                 options.setUseLod4AsLod3(upgradeOptions.getUseLod4AsLod3());
@@ -96,6 +86,13 @@ public class CityGMLImportCommand extends ImportController {
             if (upgradeOptions.getMapLod1MultiSurface() != null) {
                 options.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
             }
+        }
+
+        if (filterOptions != null
+                && filterOptions.getAppearanceOptions() != null) {
+            getAppearanceOptions(options)
+                    .setReadAppearances(filterOptions.getAppearanceOptions().isProcessAppearances())
+                    .setThemes(filterOptions.getAppearanceOptions().getThemes());
         }
 
         return options;

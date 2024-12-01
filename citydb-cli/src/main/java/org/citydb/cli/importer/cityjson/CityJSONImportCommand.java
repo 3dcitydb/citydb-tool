@@ -22,7 +22,6 @@
 package org.citydb.cli.importer.cityjson;
 
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
@@ -43,9 +42,6 @@ public class CityJSONImportCommand extends ImportController {
             description = "Map city objects from unsupported extensions onto generic city objects " +
                     "(default: ${DEFAULT-VALUE}).")
     private boolean mapUnknownObjects;
-
-    @CommandLine.ArgGroup(exclusive = false)
-    private AppearanceOptions appearanceOptions;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
@@ -73,10 +69,11 @@ public class CityJSONImportCommand extends ImportController {
                     .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
         }
 
-        if (appearanceOptions != null) {
+        if (filterOptions != null
+                && filterOptions.getAppearanceOptions() != null) {
             getAppearanceOptions(options)
-                    .setReadAppearances(appearanceOptions.isProcessAppearances())
-                    .setThemes(appearanceOptions.getThemes());
+                    .setReadAppearances(filterOptions.getAppearanceOptions().isProcessAppearances())
+                    .setThemes(filterOptions.getAppearanceOptions().getThemes());
         }
 
         return options;
