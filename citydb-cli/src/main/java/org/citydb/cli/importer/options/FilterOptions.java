@@ -38,7 +38,7 @@ public class FilterOptions implements Option {
     @CommandLine.ArgGroup(exclusive = false)
     private CountLimitOptions countLimitOptions;
 
-    public org.citydb.io.reader.options.FilterOptions getReadFilterOptions() {
+    public org.citydb.io.reader.options.FilterOptions getImportFilterOptions() {
         org.citydb.io.reader.options.FilterOptions options = new org.citydb.io.reader.options.FilterOptions();
         if (typeNameOptions != null) {
             options.setFeatureTypes(typeNameOptions.getTypeNames());

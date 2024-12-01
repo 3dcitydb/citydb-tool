@@ -211,7 +211,7 @@ public abstract class ImportController implements Command {
     protected Filter getFilter(DatabaseAdapter adapter) throws ExecutionException {
         try {
             return filterOptions != null ?
-                    Filter.of(filterOptions.getReadFilterOptions(), adapter) :
+                    Filter.of(filterOptions.getImportFilterOptions(), adapter) :
                     null;
         } catch (FilterException e) {
             throw new ExecutionException("Failed to build import filter.", e);

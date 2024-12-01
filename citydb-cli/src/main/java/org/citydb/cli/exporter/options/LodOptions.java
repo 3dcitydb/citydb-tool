@@ -54,7 +54,7 @@ public class LodOptions implements Option {
                 .setMode(mode == Mode.and ? LodFilterMode.AND : LodFilterMode.OR);
     }
 
-    public org.citydb.operation.exporter.options.LodOptions getLodExportOptions() {
+    public org.citydb.operation.exporter.options.LodOptions getExportLodOptions() {
         return new org.citydb.operation.exporter.options.LodOptions()
                 .setLods(lods != null ? new LinkedHashSet<>(Arrays.asList(lods)) : null)
                 .setMode(switch (mode) {

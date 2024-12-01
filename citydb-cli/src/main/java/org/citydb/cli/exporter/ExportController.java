@@ -265,7 +265,7 @@ public abstract class ExportController implements Command {
 
         if (queryOptions != null) {
             if (queryOptions.getLodOptions() != null) {
-                exportOptions.setLodOptions(queryOptions.getLodOptions().getLodExportOptions());
+                exportOptions.setLodOptions(queryOptions.getLodOptions().getExportLodOptions());
             }
 
             if (queryOptions.getAppearanceOptions() != null) {
