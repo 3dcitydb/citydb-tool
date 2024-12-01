@@ -32,17 +32,16 @@ import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
 import java.nio.file.Path;
 
 public class LoggerManager {
+    private static final LoggerManager instance = new LoggerManager();
     private final LogConsole logConsole = new LogConsole(this);
     private final LogFile logFile = new LogFile(this);
 
-    private static final LoggerManager instance = new LoggerManager();
+    private LoggerManager() {
+        logConsole().setEnabled(true).configure();
+    }
 
     public static LoggerManager getInstance() {
         return instance;
-    }
-
-    private LoggerManager() {
-        logConsole().setEnabled(true).configure();
     }
 
     protected LoggerManager updateConfigurations() {
@@ -51,7 +50,7 @@ public class LoggerManager {
 
         // configure console log
         if (logConsole.isEnabled()) {
-            final String CONSOLE_LOGGER_NAME = "LOG_CONSOLE";
+            String CONSOLE_LOGGER_NAME = "LOG_CONSOLE";
 
             rootLogger.add(builder.newAppenderRef(CONSOLE_LOGGER_NAME)
                     .addAttribute("level", logConsole.getLogLevel().name()));
@@ -59,15 +58,15 @@ public class LoggerManager {
             LayoutComponentBuilder patternLayoutBuilder = builder.newLayout("PatternLayout")
                     .addAttribute("pattern", logConsole.getLogPattern());
 
-            builder.add(builder
-                    .newAppender(CONSOLE_LOGGER_NAME, "CONSOLE")
+            builder.add(builder.newAppender(CONSOLE_LOGGER_NAME, "CONSOLE")
                     .addAttribute("target", ConsoleAppender.Target.SYSTEM_OUT)
                     .add(patternLayoutBuilder));
         }
 
         // config file log
         if (logFile.isEnabled()) {
-            final String FILE_LOGGER_NAME = "LOG_FILE";
+            String FILE_LOGGER_NAME = "LOG_FILE";
+            Path filePath = logFile.getPath().toAbsolutePath();
 
             rootLogger.add(builder.newAppenderRef(FILE_LOGGER_NAME)
                     .addAttribute("level", logFile.getLogLevel().name()));
@@ -75,15 +74,15 @@ public class LoggerManager {
             LayoutComponentBuilder patternLayoutBuilder = builder.newLayout("PatternLayout")
                     .addAttribute("pattern", logFile.getLogPattern());
 
-            Path filePath = logFile.getPath().toAbsolutePath();
-
             AppenderComponentBuilder appenderComponentBuilder = builder
                     .newAppender(FILE_LOGGER_NAME, logFile.isUseLogRotation() ? "RollingFile" : "File")
                     .addAttribute("fileName", filePath)
+                    .addAttribute("append", logFile.isUseLogRotation())
                     .add(patternLayoutBuilder);
 
             if (logFile.isUseLogRotation()) {
-                appenderComponentBuilder.addAttribute("filePattern", filePath + logFile.getFilePattern() + ".gz")
+                appenderComponentBuilder
+                        .addAttribute("filePattern", filePath + logFile.getFilePattern() + ".gz")
                         .add(builder.newLayout("TimeBasedTriggeringPolicy"));
             }
 
@@ -91,7 +90,6 @@ public class LoggerManager {
         }
 
         Configurator.reconfigure(builder.add(rootLogger).build());
-
         return this;
     }
 
