@@ -21,6 +21,7 @@
 
 package org.citydb.cli.index;
 
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.database.DatabaseManager;
@@ -57,6 +58,7 @@ public class CreateIndexCommand extends IndexController {
             }
         }
 
+        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         return CommandLine.ExitCode.OK;
     }
 }
