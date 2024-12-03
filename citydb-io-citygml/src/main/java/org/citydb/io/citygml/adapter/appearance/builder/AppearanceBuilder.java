@@ -43,11 +43,7 @@ public class AppearanceBuilder implements ModelBuilder<org.citygml4j.core.model.
     @Override
     public void build(org.citygml4j.core.model.appearance.Appearance source, Appearance target, ModelBuilderHelper helper) throws ModelBuildException {
         target.setObjectId(source.getId())
-                .setTheme(source.getTheme())
-                .setCreationDate(source.getCreationDate())
-                .setTerminationDate(source.getTerminationDate())
-                .setValidFrom(source.getValidFrom())
-                .setValidTo(source.getValidTo());
+                .setTheme(source.getTheme());
 
         if (source.getIdentifier() != null && source.getIdentifier().getValue() != null) {
             target.setIdentifier(source.getIdentifier().getValue())

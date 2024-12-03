@@ -32,7 +32,6 @@ import org.citydb.operation.importer.common.DatabaseImporter;
 
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.OffsetDateTime;
 import java.util.Collections;
 
 public class AppearanceImporter extends DatabaseImporter {
@@ -45,9 +44,9 @@ public class AppearanceImporter extends DatabaseImporter {
     @Override
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
-                "(id, objectid, identifier, identifier_codespace, theme, creation_date, termination_date, " +
-                "valid_from, valid_to, is_global, feature_id, implicit_geometry_id) " +
-                "values (" + String.join(",", Collections.nCopies(12, "?")) + ")";
+                "(id, objectid, identifier, identifier_codespace, theme, is_global, feature_id, " +
+                "implicit_geometry_id) " +
+                "values (" + String.join(",", Collections.nCopies(8, "?")) + ")";
     }
 
     public AppearanceDescriptor doImport(Appearance appearance, long targetId, Type type) throws ImportException, SQLException {
@@ -58,44 +57,22 @@ public class AppearanceImporter extends DatabaseImporter {
         stmt.setString(3, appearance.getIdentifier().orElse(null));
         stmt.setString(4, appearance.getIdentifierCodeSpace().orElse(null));
         stmt.setString(5, appearance.getTheme().orElse(null));
-        stmt.setObject(6, appearance.getCreationDate().orElse(OffsetDateTime.now()));
-
-        OffsetDateTime terminationDate = appearance.getTerminationDate().orElse(null);
-        if (terminationDate != null) {
-            stmt.setObject(7, terminationDate);
-        } else {
-            stmt.setNull(7, Types.TIMESTAMP);
-        }
-
-        OffsetDateTime validFrom = appearance.getValidFrom().orElse(null);
-        if (validFrom != null) {
-            stmt.setObject(8, validFrom);
-        } else {
-            stmt.setNull(8, Types.TIMESTAMP);
-        }
-
-        OffsetDateTime validTo = appearance.getValidTo().orElse(null);
-        if (validTo != null) {
-            stmt.setObject(9, validTo);
-        } else {
-            stmt.setNull(9, Types.TIMESTAMP);
-        }
 
         switch (type) {
             case GLOBAL:
-                stmt.setInt(10, 1);
-                stmt.setNull(11, Types.BIGINT);
-                stmt.setNull(12, Types.BIGINT);
+                stmt.setInt(6, 1);
+                stmt.setNull(7, Types.BIGINT);
+                stmt.setNull(8, Types.BIGINT);
                 break;
             case IMPLICIT_GEOMETRY:
-                stmt.setInt(10, 0);
-                stmt.setNull(11, Types.BIGINT);
-                stmt.setLong(12, targetId);
+                stmt.setInt(6, 0);
+                stmt.setNull(7, Types.BIGINT);
+                stmt.setLong(8, targetId);
                 break;
             default:
-                stmt.setInt(10, 0);
-                stmt.setLong(11, targetId);
-                stmt.setNull(12, Types.BIGINT);
+                stmt.setInt(6, 0);
+                stmt.setLong(7, targetId);
+                stmt.setNull(8, Types.BIGINT);
                 break;
         }
 

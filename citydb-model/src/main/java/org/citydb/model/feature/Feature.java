@@ -36,8 +36,15 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Feature extends ModelObject<Feature> implements Describable<FeatureDescriptor> {
+public class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
     private final Name featureType;
+    private String objectId;
+    private String identifier;
+    private String identifierCodeSpace;
+    private OffsetDateTime creationDate;
+    private OffsetDateTime terminationDate;
+    private OffsetDateTime validFrom;
+    private OffsetDateTime validTo;
     private Envelope envelope;
     private OffsetDateTime lastModificationDate;
     private String updatingPerson;
@@ -70,6 +77,75 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
 
     public Name getFeatureType() {
         return featureType;
+    }
+
+    @Override
+    public Optional<String> getObjectId() {
+        return Optional.ofNullable(objectId);
+    }
+
+    @Override
+    public Feature setObjectId(String objectId) {
+        this.objectId = objectId;
+        return this;
+    }
+
+    @Override
+    public Optional<String> getIdentifier() {
+        return Optional.ofNullable(identifier);
+    }
+
+    @Override
+    public Feature setIdentifier(String identifier) {
+        this.identifier = identifier;
+        return this;
+    }
+
+    @Override
+    public Optional<String> getIdentifierCodeSpace() {
+        return Optional.ofNullable(identifierCodeSpace);
+    }
+
+    @Override
+    public Feature setIdentifierCodeSpace(String identifierCodeSpace) {
+        this.identifierCodeSpace = identifierCodeSpace;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getCreationDate() {
+        return Optional.ofNullable(creationDate);
+    }
+
+    public Feature setCreationDate(OffsetDateTime creationDate) {
+        this.creationDate = creationDate;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getTerminationDate() {
+        return Optional.ofNullable(terminationDate);
+    }
+
+    public Feature setTerminationDate(OffsetDateTime terminationDate) {
+        this.terminationDate = terminationDate;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getValidFrom() {
+        return Optional.ofNullable(validFrom);
+    }
+
+    public Feature setValidFrom(OffsetDateTime validFrom) {
+        this.validFrom = validFrom;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getValidTo() {
+        return Optional.ofNullable(validTo);
+    }
+
+    public Feature setValidTo(OffsetDateTime validTo) {
+        this.validTo = validTo;
+        return this;
     }
 
     public Optional<Envelope> getEnvelope() {
@@ -361,10 +437,5 @@ public class Feature extends ModelObject<Feature> implements Describable<Feature
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
-    }
-
-    @Override
-    protected Feature self() {
-        return this;
     }
 }

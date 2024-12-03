@@ -23,7 +23,10 @@ package org.citydb.model.walker;
 
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.*;
-import org.citydb.model.common.*;
+import org.citydb.model.common.InlineOrByReferenceProperty;
+import org.citydb.model.common.InlineProperty;
+import org.citydb.model.common.Visitable;
+import org.citydb.model.common.Visitor;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.*;
@@ -41,9 +44,6 @@ public class ModelWalker implements Visitor {
 
     public void reset() {
         shouldWalk = true;
-    }
-
-    public void visit(ModelObject<?> object) {
     }
 
     public void visit(Geometry<?> geometry) {
@@ -89,8 +89,6 @@ public class ModelWalker implements Visitor {
 
     @Override
     public void visit(Appearance appearance) {
-        visit((ModelObject<?>) appearance);
-
         if (appearance.hasSurfaceData()) {
             for (SurfaceDataProperty property : appearance.getSurfaceData()) {
                 visit(property);
@@ -110,8 +108,6 @@ public class ModelWalker implements Visitor {
 
     @Override
     public void visit(Feature feature) {
-        visit((ModelObject<?>) feature);
-
         if (feature.hasFeatures()) {
             for (FeatureProperty property : feature.getFeatures().getAll()) {
                 visit(property);

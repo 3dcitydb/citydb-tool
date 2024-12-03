@@ -37,7 +37,6 @@ import org.citydb.sqlbuilder.schema.Table;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.OffsetDateTime;
 import java.util.*;
 
 public class AppearanceExporter extends DatabaseExporter {
@@ -68,8 +67,7 @@ public class AppearanceExporter extends DatabaseExporter {
 
         Select select = Select.newInstance()
                 .select(appearance.columns("id", "objectid", "identifier", "identifier_codespace", "theme",
-                        "creation_date", "termination_date", "valid_from", "valid_to", "feature_id",
-                        "implicit_geometry_id"))
+                        "feature_id", "implicit_geometry_id"))
                 .select(surfaceData.columns(Map.of("id", "sd_id", "objectid", "sd_objectid", "identifier",
                         "sd_identifier", "identifier_codespace", "sd_identifier_codespace")))
                 .select(surfaceData.columns("is_front", "objectclass_id", "x3d_shininess", "x3d_transparency",
@@ -139,10 +137,6 @@ public class AppearanceExporter extends DatabaseExporter {
                         .setObjectId(rs.getString("objectid"))
                         .setIdentifier(rs.getString("identifier"))
                         .setIdentifierCodeSpace(rs.getString("identifier_codespace"))
-                        .setCreationDate(rs.getObject("creation_date", OffsetDateTime.class))
-                        .setTerminationDate(rs.getObject("termination_date", OffsetDateTime.class))
-                        .setValidFrom(rs.getObject("valid_from", OffsetDateTime.class))
-                        .setValidTo(rs.getObject("valid_to", OffsetDateTime.class))
                         .setDescriptor(AppearanceDescriptor.of(id)
                                 .setFeatureId(rs.getLong("feature_id"))
                                 .setImplicitGeometryId(rs.getLong("implicit_geometry_id")));

@@ -47,6 +47,7 @@ public class Namespaces {
     public static final String WATER_BODY = "http://3dcitydb.org/3dcitydb/waterbody/5.0";
 
     private static final Map<String, String> aliases = new HashMap<>();
+
     static {
         aliases.put("app", APPEARANCE);
         aliases.put("brid", BRIDGE);

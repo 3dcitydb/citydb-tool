@@ -21,15 +21,15 @@
 
 package org.citydb.model.appearance;
 
-import org.citydb.model.common.ChildList;
-import org.citydb.model.common.Describable;
-import org.citydb.model.common.ModelObject;
-import org.citydb.model.common.Visitor;
+import org.citydb.model.common.*;
 
 import java.util.List;
 import java.util.Optional;
 
-public class Appearance extends ModelObject<Appearance> implements Describable<AppearanceDescriptor> {
+public class Appearance extends Child implements Identifiable, Visitable, Describable<AppearanceDescriptor> {
+    private String objectId;
+    private String identifier;
+    private String identifierCodeSpace;
     private String theme;
     private List<SurfaceDataProperty> surfaceData;
     private AppearanceDescriptor descriptor;
@@ -47,6 +47,39 @@ public class Appearance extends ModelObject<Appearance> implements Describable<A
 
     public static Appearance of(String theme) {
         return new Appearance(theme);
+    }
+
+    @Override
+    public Optional<String> getObjectId() {
+        return Optional.ofNullable(objectId);
+    }
+
+    @Override
+    public Appearance setObjectId(String objectId) {
+        this.objectId = objectId;
+        return this;
+    }
+
+    @Override
+    public Optional<String> getIdentifier() {
+        return Optional.ofNullable(identifier);
+    }
+
+    @Override
+    public Appearance setIdentifier(String identifier) {
+        this.identifier = identifier;
+        return this;
+    }
+
+    @Override
+    public Optional<String> getIdentifierCodeSpace() {
+        return Optional.ofNullable(identifierCodeSpace);
+    }
+
+    @Override
+    public Appearance setIdentifierCodeSpace(String identifierCodeSpace) {
+        this.identifierCodeSpace = identifierCodeSpace;
+        return this;
     }
 
     public Optional<String> getTheme() {
@@ -89,10 +122,5 @@ public class Appearance extends ModelObject<Appearance> implements Describable<A
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
-    }
-
-    @Override
-    protected Appearance self() {
-        return this;
     }
 }
