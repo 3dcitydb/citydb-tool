@@ -86,7 +86,8 @@ public class ScatterZipOutputStream implements AutoCloseable {
 
                 try (BoundedInputStream raw = BoundedInputStream.builder()
                         .setInputStream(stream)
-                        .setMaxCount(entry.getCompressedSize()).get()) {
+                        .setMaxCount(entry.getCompressedSize())
+                        .setPropagateClose(false).get()) {
                     target.addRawArchiveEntry(entry, raw);
                 }
             }
