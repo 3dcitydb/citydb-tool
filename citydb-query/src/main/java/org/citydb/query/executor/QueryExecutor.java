@@ -145,10 +145,13 @@ public class QueryExecutor {
 
         private Select buildExtentQuery(Query query, SqlBuildOptions options) throws QueryBuildException {
             Select extent = builder.build(query, SqlBuildOptions.of(options)
-                    .omitDistinct(true)
-                    .withColumn("envelope"));
+                            .omitDistinct(true)
+                            .withColumn("envelope"))
+                    .removeSelect()
+                    .removeOrderBy()
+                    .removeGroupBy();
 
-            return extent.removeSelect().select(adapter.getGeometryAdapter()
+            return extent.select(adapter.getGeometryAdapter()
                     .getSpatialOperationHelper()
                     .extent(extent.getFrom().get(0).column("envelope"))
                     .as("extent"));
