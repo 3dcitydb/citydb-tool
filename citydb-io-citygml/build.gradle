@@ -1,4 +1,4 @@
-def citygml4j_version = '3.2.2'
+def citygml4j_version = '3.2.3-SNAPSHOT'
 
 dependencies {
     api project(':citydb-logging')
