@@ -37,6 +37,10 @@ public class LazyInitializer<T> {
         return new LazyInitializer<>(supplier);
     }
 
+    public boolean isInitialized() {
+        return initialized;
+    }
+
     public T get() {
         if (!initialized) {
             synchronized (lock) {

@@ -36,6 +36,7 @@ import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -77,7 +78,7 @@ public class BlobExporter {
             }
 
             while (i <= batchSize) {
-                stmt.setLong(i++, 0);
+                stmt.setNull(i++, Types.BIGINT);
             }
 
             try (ResultSet rs = stmt.executeQuery()) {

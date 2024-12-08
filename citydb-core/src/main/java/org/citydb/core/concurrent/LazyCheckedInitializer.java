@@ -37,6 +37,10 @@ public class LazyCheckedInitializer<T, E extends Throwable> {
         return new LazyCheckedInitializer<>(supplier);
     }
 
+    public boolean isInitialized() {
+        return initialized;
+    }
+
     public T get() throws E {
         if (!initialized) {
             synchronized (lock) {
