@@ -41,6 +41,10 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
     private long currentIndex;
     private long count;
 
+    private Filter() {
+        this(null, 0, Long.MAX_VALUE);
+    }
+
     private Filter(List<FilterPredicate> predicates, long startIndex, long limit) {
         this.predicates = predicates;
         this.startIndex = startIndex;
@@ -71,6 +75,15 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
         long limit = options.getCountLimit().flatMap(CountLimit::getLimit).orElse(Long.MAX_VALUE);
 
         return new Filter(predicates, startIndex, limit);
+    }
+
+    public static Filter acceptAll() {
+        return new Filter() {
+            @Override
+            public Result test(Feature feature) {
+                return Result.ACCEPT;
+            }
+        };
     }
 
     @Override

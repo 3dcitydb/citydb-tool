@@ -97,6 +97,7 @@ public class CityGMLReader implements FeatureReader {
 
     @Override
     public void read(Consumer<Feature> consumer) throws ReadException {
+        shouldRun = true;
         if (!isPreprocessed) {
             preprocess();
         }

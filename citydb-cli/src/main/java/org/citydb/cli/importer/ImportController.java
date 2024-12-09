@@ -212,7 +212,7 @@ public abstract class ImportController implements Command {
             FilterOptions filterOptions = getFilterOptions().orElse(null);
             return filterOptions != null && !filterOptions.isEmpty() ?
                     Filter.of(filterOptions, adapter) :
-                    null;
+                    Filter.acceptAll();
         } catch (FilterException e) {
             throw new ExecutionException("Failed to build import filter.", e);
         }

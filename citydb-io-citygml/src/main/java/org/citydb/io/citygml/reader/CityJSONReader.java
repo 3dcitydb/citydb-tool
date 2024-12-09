@@ -86,6 +86,7 @@ public class CityJSONReader implements FeatureReader {
 
     @Override
     public void read(Consumer<Feature> consumer) throws ReadException {
+        shouldRun = true;
         int threads = filter.needsSequentialProcessing() ? 1 :
                 options.getNumberOfThreads() > 0 ?
                         options.getNumberOfThreads() :
