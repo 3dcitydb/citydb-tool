@@ -24,6 +24,7 @@ module org.citydb.cli {
     exports org.citydb.cli.importer;
     exports org.citydb.cli.importer.citygml;
     exports org.citydb.cli.importer.cityjson;
+    exports org.citydb.cli.importer.duplicate;
     exports org.citydb.cli.importer.filter;
     exports org.citydb.cli.importer.options;
     exports org.citydb.cli.util;

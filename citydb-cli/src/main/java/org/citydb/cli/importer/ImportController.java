@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
+import org.citydb.cli.importer.duplicate.DuplicateController;
 import org.citydb.cli.importer.filter.Filter;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
@@ -53,6 +54,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ImportController implements Command {
+    enum Mode {import_all, skip, delete, terminate}
+
     @CommandLine.Mixin
     protected InputFileOptions inputFileOptions;
 
@@ -63,6 +66,10 @@ public abstract class ImportController implements Command {
     @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
             description = "Store temporary files in this directory.")
     protected Path tempDirectory;
+
+    @CommandLine.Option(names = {"-m", "--import-mode"}, paramLabel = "<mode>", defaultValue = "import_all",
+            description = "Import mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
+    private Mode mode;
 
     @CommandLine.Mixin
     protected ThreadsOptions threadsOptions;
@@ -118,9 +125,11 @@ public abstract class ImportController implements Command {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
-        readOptions.setFilter(getFilter(databaseManager.getAdapter()));
-        ImportOptions importOptions = getImportOptions();
+        Filter filter = getFilter(databaseManager.getAdapter());
+        readOptions.setFilter(filter);
 
+        ImportOptions importOptions = getImportOptions();
+        ImportMode importMode = importOptions.getMode();
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
         IndexOptions.Mode indexMode = indexOptions.getMode();
 
@@ -135,7 +144,8 @@ public abstract class ImportController implements Command {
             logger.info("Import is running in preview mode. Features will not be imported.");
         }
 
-        try {
+        try (DuplicateController duplicateController = DuplicateController.of(importOptions,
+                databaseManager.getAdapter(), preview)) {
             Importer importer = Importer.newInstance()
                     .setTransactionMode(preview ?
                             Importer.TransactionMode.AUTO_ROLLBACK :
@@ -149,21 +159,32 @@ public abstract class ImportController implements Command {
                 logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
 
                 try (FeatureReader reader = ioAdapter.createReader(inputFile, readOptions)) {
+                    if (importMode != ImportMode.IMPORT_ALL) {
+                        logger.debug("Checking database for duplicate features...");
+                        DuplicateController.Result result = duplicateController.processDuplicates(reader, filter);
+                        if (result == DuplicateController.Result.SKIP_FILE) {
+                            logger.info("All features to be imported are duplicates. Skipping input file.");
+                            continue;
+                        }
+                    }
+
                     importer.startSession(databaseManager.getAdapter(), importOptions);
 
                     reader.read(feature -> {
-                        importLogger.add(feature);
-                        importer.importFeature(feature).whenComplete((descriptor, e) -> {
-                            if (descriptor != null) {
-                                long count = counter.incrementAndGet();
-                                if (count % 1000 == 0) {
-                                    logger.info("{} features processed.", count);
+                        if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
+                            importLogger.add(feature);
+                            importer.importFeature(feature).whenComplete((descriptor, e) -> {
+                                if (descriptor != null) {
+                                    long count = counter.incrementAndGet();
+                                    if (count % 1000 == 0) {
+                                        logger.info("{} features processed.", count);
+                                    }
+                                } else {
+                                    reader.cancel();
+                                    abort(feature, e);
                                 }
-                            } else {
-                                reader.cancel();
-                                abort(feature, e);
-                            }
-                        });
+                            });
+                        }
                     });
                 } catch (Throwable e) {
                     shouldRun = false;
@@ -262,6 +283,13 @@ public abstract class ImportController implements Command {
         if (tempDirectory != null) {
             importOptions.setTempDirectory(tempDirectory.toString());
         }
+
+        importOptions.setMode(switch (mode) {
+            case skip -> ImportMode.SKIP_EXISTING;
+            case delete -> ImportMode.DELETE_EXISTING;
+            case terminate -> ImportMode.TERMINATE_EXISTING;
+            default -> ImportMode.IMPORT_ALL;
+        });
 
         if (threadsOptions.getNumberOfThreads() != null) {
             importOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());

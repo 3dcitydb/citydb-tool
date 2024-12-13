@@ -40,6 +40,10 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
 
     private long currentIndex;
     private long count;
+    private State state;
+
+    private record State(long currentIndex, long count) {
+    }
 
     private Filter() {
         this(null, 0, Long.MAX_VALUE);
@@ -110,5 +114,17 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
         }
 
         return Result.ACCEPT;
+    }
+
+    public void saveState() {
+        state = new State(currentIndex, count);
+    }
+
+    public void restoreState() {
+        if (state != null) {
+            currentIndex = state.currentIndex;
+            count = state.count;
+            state = null;
+        }
     }
 }
