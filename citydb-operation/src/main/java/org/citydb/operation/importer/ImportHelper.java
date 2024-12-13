@@ -53,18 +53,18 @@ public class ImportHelper {
     private final SequenceHelper sequenceHelper;
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
+    private final Importer.TransactionMode transactionMode;
     private final int batchSize;
-    private final boolean autoCommit;
 
     private SequenceValues sequenceValues;
     private int batchCounter;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
-                 ImportLogger logger, boolean autoCommit) throws SQLException {
+                 ImportLogger logger, Importer.TransactionMode transactionMode) throws SQLException {
         this.adapter = adapter;
         this.referenceManager = referenceManager;
         this.logger = logger;
-        this.autoCommit = autoCommit;
+        this.transactionMode = transactionMode;
 
         connection = adapter.getPool().getConnection(false);
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
@@ -117,7 +117,7 @@ public class ImportHelper {
                 logEntries.add(ImportLogEntry.of(feature, descriptor));
             }
 
-            executeBatch(false, autoCommit);
+            executeBatch(false, transactionMode == Importer.TransactionMode.AUTO_COMMIT);
             return descriptor;
         } catch (Exception e) {
             throw new ImportException("Failed to import feature.", e);
@@ -145,6 +145,8 @@ public class ImportHelper {
 
                 if (commit) {
                     connection.commit();
+                } else if (transactionMode == Importer.TransactionMode.AUTO_ROLLBACK) {
+                    connection.rollback();
                 }
 
                 updateImportLog(commit);

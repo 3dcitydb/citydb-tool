@@ -137,7 +137,9 @@ public abstract class ImportController implements Command {
 
         try {
             Importer importer = Importer.newInstance()
-                    .setAutoCommit(!preview)
+                    .setTransactionMode(preview ?
+                            Importer.TransactionMode.AUTO_ROLLBACK :
+                            Importer.TransactionMode.AUTO_COMMIT)
                     .setImportLogger(importLogger);
 
             AtomicLong counter = new AtomicLong();

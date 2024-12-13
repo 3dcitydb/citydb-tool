@@ -123,9 +123,10 @@ public class DeleteCommand implements Command {
 
         if (preview) {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
+            deleter.setTransactionMode(Deleter.TransactionMode.AUTO_ROLLBACK);
         } else if (autoCommit) {
             logger.info("Committing delete operation after {} feature(s).", commitAfter);
-            deleter.setAutoCommit(true);
+            deleter.setTransactionMode(Deleter.TransactionMode.AUTO_COMMIT);
             deleteOptions.setBatchSize(commitAfter);
         }
 

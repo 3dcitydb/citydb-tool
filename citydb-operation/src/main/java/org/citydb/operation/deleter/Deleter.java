@@ -43,10 +43,16 @@ public class Deleter {
     private DeleteLogger logger;
     private CountLatch countLatch;
     private Throwable exception;
-    private boolean autoCommit = false;
+    private TransactionMode transactionMode = TransactionMode.NO_COMMIT;
 
     private volatile State state = State.SESSION_NOT_STARTED;
     private volatile boolean shouldRun;
+
+    public enum TransactionMode {
+        AUTO_COMMIT,
+        AUTO_ROLLBACK,
+        NO_COMMIT
+    }
 
     public enum State {
         SESSION_NOT_STARTED,
@@ -71,12 +77,12 @@ public class Deleter {
         return this;
     }
 
-    public boolean isAutoCommit() {
-        return autoCommit;
+    public TransactionMode getTransactionMode() {
+        return transactionMode;
     }
 
-    public Deleter setAutoCommit(boolean autoCommit) {
-        this.autoCommit = autoCommit;
+    public Deleter setTransactionMode(TransactionMode transactionMode) {
+        this.transactionMode = transactionMode;
         return this;
     }
 
@@ -105,7 +111,7 @@ public class Deleter {
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
                 try {
-                    DeleteHelper helper = new DeleteHelper(adapter, connection, options, logger, autoCommit);
+                    DeleteHelper helper = new DeleteHelper(adapter, connection, options, logger, transactionMode);
                     helpers.add(helper);
                     return helper;
                 } catch (Exception e) {
@@ -151,6 +157,8 @@ public class Deleter {
                 || state == State.SESSION_COMMITTED
                 || state == State.SESSION_ABORTED) {
             return;
+        } else if (transactionMode == TransactionMode.AUTO_ROLLBACK) {
+            throw new DeleteException("Illegal to commit a session in auto-rollback mode.");
         }
 
         try {

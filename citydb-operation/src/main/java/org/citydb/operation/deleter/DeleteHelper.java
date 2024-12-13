@@ -41,18 +41,18 @@ public class DeleteHelper {
     private final DeleteLogger logger;
     private final TableHelper tableHelper;
     private final List<DeleteLogEntry> logEntries = new ArrayList<>();
+    private final Deleter.TransactionMode transactionMode;
     private final int batchSize;
-    private final boolean autoCommit;
 
     private int batchCounter;
 
     DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options, DeleteLogger logger,
-                 boolean autoCommit) {
+                 Deleter.TransactionMode transactionMode) {
         this.adapter = adapter;
         this.connection = connection;
         this.options = options;
         this.logger = logger;
-        this.autoCommit = autoCommit;
+        this.transactionMode = transactionMode;
 
         tableHelper = new TableHelper(this);
         batchSize = options.getBatchSize() > 0 ?
@@ -84,7 +84,7 @@ public class DeleteHelper {
                 logEntries.add(DeleteLogEntry.of(Table.FEATURE, id));
             }
 
-            executeBatch(false, autoCommit);
+            executeBatch(false, transactionMode == Deleter.TransactionMode.AUTO_COMMIT);
         } catch (Exception e) {
             throw new DeleteException("Failed to delete feature (ID: " + id + ").", e);
         }
@@ -101,6 +101,8 @@ public class DeleteHelper {
 
                 if (commit) {
                     connection.commit();
+                } else if (transactionMode == Deleter.TransactionMode.AUTO_ROLLBACK) {
+                    connection.rollback();
                 }
 
                 updateDeleteLog(commit);

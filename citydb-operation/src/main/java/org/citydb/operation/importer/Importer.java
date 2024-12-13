@@ -44,10 +44,16 @@ public class Importer {
     private ImportLogger logger;
     private CountLatch countLatch;
     private Throwable exception;
-    private boolean autoCommit = true;
+    private TransactionMode transactionMode = TransactionMode.AUTO_COMMIT;
 
     private volatile State state = State.SESSION_NOT_STARTED;
     private volatile boolean shouldRun;
+
+    public enum TransactionMode {
+        AUTO_COMMIT,
+        AUTO_ROLLBACK,
+        NO_COMMIT
+    }
 
     public enum State {
         SESSION_NOT_STARTED,
@@ -72,12 +78,12 @@ public class Importer {
         return this;
     }
 
-    public boolean isAutoCommit() {
-        return autoCommit;
+    public TransactionMode getTransactionMode() {
+        return transactionMode;
     }
 
-    public Importer setAutoCommit(boolean autoCommit) {
-        this.autoCommit = autoCommit;
+    public Importer setTransactionMode(TransactionMode transactionMode) {
+        this.transactionMode = transactionMode;
         return this;
     }
 
@@ -107,7 +113,7 @@ public class Importer {
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
                 try {
-                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, logger, autoCommit);
+                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, logger, transactionMode);
                     helpers.add(helper);
                     return helper;
                 } catch (Exception e) {
@@ -152,6 +158,8 @@ public class Importer {
                 || state == State.SESSION_COMMITTED
                 || state == State.SESSION_ABORTED) {
             return;
+        } else if (transactionMode == TransactionMode.AUTO_ROLLBACK) {
+            throw new ImportException("Illegal to commit a session in auto-rollback mode.");
         }
 
         try {
