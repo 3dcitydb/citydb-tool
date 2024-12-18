@@ -3,7 +3,7 @@ DELETE FROM datatype;
 -- Core Module --
 
 INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCHEMA)
-VALUES (1, null, 'Undefined', 0, 1, '{"identifier":"core:Undefined","description":"Undefined is a fallback data type used to represent values that do not match any of the predefined types.","table":"property"}');
+VALUES (1, null, 'Undefined', 1, 1, '{"identifier":"core:Undefined","description":"Undefined data type.","table":"property"}');
 
 INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCHEMA)
 VALUES (2, null, 'Boolean', 0, 1, '{"identifier":"core:Boolean","description":"Boolean is a basic type and can have one of two values: true (represented as 1) or false (represented as 0).","table":"property","value":{"column":"val_int","type":"boolean"}}');
