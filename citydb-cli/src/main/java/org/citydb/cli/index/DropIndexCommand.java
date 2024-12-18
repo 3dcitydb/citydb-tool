@@ -31,7 +31,6 @@ import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
-import java.util.List;
 
 @CommandLine.Command(
         name = "drop",
@@ -46,11 +45,10 @@ public class DropIndexCommand extends IndexController {
 
         logger.info("Dropping database indexes.");
 
-        List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
-        for (int i = 0; i < indexes.size(); i++) {
+        int i = 1, size = IndexHelper.DEFAULT_INDEXES.size();
+        for (Index index : IndexHelper.DEFAULT_INDEXES) {
             try {
-                Index index = indexes.get(i);
-                logger.info("[{}|{}] Dropping database index on {}.", i + 1, indexes.size(), index);
+                logger.info("[{}|{}] Dropping database index on {}.", i++, size, index);
                 indexHelper.drop(index);
             } catch (SQLException e) {
                 throw new ExecutionException("Failed to drop database indexes.", e);

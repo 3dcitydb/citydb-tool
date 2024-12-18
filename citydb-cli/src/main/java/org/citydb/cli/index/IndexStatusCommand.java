@@ -31,7 +31,6 @@ import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
-import java.util.List;
 
 @CommandLine.Command(
         name = "status",
@@ -47,11 +46,10 @@ public class IndexStatusCommand extends IndexController {
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
         logger.info("Indexes list:");
 
-        List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
-        for (int i = 0; i < indexes.size(); i++) {
+        int i = 1, size = IndexHelper.DEFAULT_INDEXES.size();
+        for (Index index : IndexHelper.DEFAULT_INDEXES) {
             try {
-                Index index = indexes.get(i);
-                logger.info("[{}|{}] Database index on {}: {}", i + 1, indexes.size(), index,
+                logger.info("[{}|{}] Database index on {}: {}", i++, size, index,
                         indexHelper.exists(index) ? "on" : "off");
             } catch (SQLException e) {
                 throw new ExecutionException("Failed to query status of database indexes.", e);

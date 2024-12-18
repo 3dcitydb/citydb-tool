@@ -49,7 +49,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Consumer;
 
 public class CommandHelper {
@@ -142,11 +141,10 @@ public class CommandHelper {
     public void createIndexes(DatabaseAdapter adapter) throws ExecutionException {
         try {
             IndexHelper indexHelper = adapter.getSchemaAdapter().getIndexHelper();
-            List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
-            for (int i = 0; i < indexes.size(); i++) {
-                Index index = indexes.get(i);
-                logger.debug("Creating database index {} of {} on {}.", i + 1, indexes.size(), index);
-                indexHelper.create(index);
+            int i = 1, size = IndexHelper.DEFAULT_INDEXES.size();
+            for (Index index : IndexHelper.DEFAULT_INDEXES) {
+                logger.debug("Creating database index {} of {} on {}.", i++, size, index);
+                indexHelper.create(index, IndexHelper.DEFAULT_PARTIAL_INDEXES.contains(index));
             }
         } catch (SQLException e) {
             throw new ExecutionException("Failed to create database indexes.", e);
@@ -156,10 +154,9 @@ public class CommandHelper {
     public void dropIndexes(DatabaseAdapter adapter) throws ExecutionException {
         try {
             IndexHelper indexHelper = adapter.getSchemaAdapter().getIndexHelper();
-            List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
-            for (int i = 0; i < indexes.size(); i++) {
-                Index index = indexes.get(i);
-                logger.debug("Dropping database index {} of {} on {}.", i + 1, indexes.size(), index);
+            int i = 1, size = IndexHelper.DEFAULT_INDEXES.size();
+            for (Index index : IndexHelper.DEFAULT_INDEXES) {
+                logger.debug("Dropping database index {} of {} on {}.", i++, size, index);
                 indexHelper.drop(index);
             }
         } catch (SQLException e) {

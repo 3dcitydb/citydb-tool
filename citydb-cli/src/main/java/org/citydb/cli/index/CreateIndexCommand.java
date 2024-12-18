@@ -31,12 +31,18 @@ import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
-import java.util.List;
 
 @CommandLine.Command(
         name = "create",
         description = "Create indexes on the database tables.")
 public class CreateIndexCommand extends IndexController {
+    enum Mode {partial, full}
+
+    @CommandLine.Option(names = {"-m", "--index-mode"}, paramLabel = "<mode>", defaultValue = "partial",
+            description = "Index mode for property value columns: ${COMPLETION-CANDIDATES} " +
+                    "(default: ${DEFAULT-VALUE}). Null values are not indexed in partial mode.")
+    private Mode mode;
+
     private final Logger logger = LoggerManager.getInstance().getLogger(CreateIndexCommand.class);
 
     @Override
@@ -47,12 +53,11 @@ public class CreateIndexCommand extends IndexController {
         logger.info("Creating database indexes.");
         logger.info("Depending on the database size, this operation may take some time.");
 
-        List<Index> indexes = IndexHelper.DEFAULT_INDEXES;
-        for (int i = 0; i < indexes.size(); i++) {
+        int i = 1, size = IndexHelper.DEFAULT_INDEXES.size();
+        for (Index index : IndexHelper.DEFAULT_INDEXES) {
             try {
-                Index index = indexes.get(i);
-                logger.info("[{}|{}] Creating database index on {}.", i + 1, indexes.size(), index);
-                indexHelper.create(index);
+                logger.info("[{}|{}] Creating database index on {}.", i++, size, index);
+                indexHelper.create(index, mode == Mode.partial && IndexHelper.DEFAULT_PARTIAL_INDEXES.contains(index));
             } catch (SQLException e) {
                 throw new ExecutionException("Failed to create database indexes.", e);
             }

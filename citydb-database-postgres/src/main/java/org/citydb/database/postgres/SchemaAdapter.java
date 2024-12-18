@@ -183,11 +183,19 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public String getCreateIndex(Index index) {
-        return "create index if not exists " + index.getName() +
+    public String getCreateIndex(Index index, boolean ignoreNulls) {
+        String stmt = "create index if not exists " + index.getName() +
                 " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable().getName() +
                 (index.getType() == Index.Type.SPATIAL ? " using gist " : " ") +
                 "(" + String.join(", ", index.getColumns()) + ")";
+
+        if (ignoreNulls) {
+            stmt += " where " + index.getColumns().stream()
+                    .map(column -> column + " is not null")
+                    .collect(Collectors.joining(" and "));
+        }
+
+        return stmt;
     }
 
     @Override

@@ -28,12 +28,11 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.function.Function;
 
 public class IndexHelper {
-    public static final List<Index> DEFAULT_INDEXES = List.of(
+    public static final Set<Index> DEFAULT_INDEXES = new LinkedHashSet<>(List.of(
             Index.FEATURE_OBJECTID,
             Index.FEATURE_IDENTIFIER,
             Index.FEATURE_ENVELOPE,
@@ -48,14 +47,23 @@ public class IndexHelper {
             Index.PROPERTY_VAL_LOD,
             Index.PROPERTY_VAL_STRING,
             Index.PROPERTY_VAL_UOM,
-            Index.PROPERTY_VAL_URI);
+            Index.PROPERTY_VAL_URI));
 
-    public static final List<Index> DEFAULT_NORMAL_INDEXES = DEFAULT_INDEXES.stream()
+    public static final Set<Index> DEFAULT_PARTIAL_INDEXES = new LinkedHashSet<>(List.of(
+            Index.PROPERTY_VAL_TIMESTAMP,
+            Index.PROPERTY_VAL_DOUBLE,
+            Index.PROPERTY_VAL_INT,
+            Index.PROPERTY_VAL_LOD,
+            Index.PROPERTY_VAL_STRING,
+            Index.PROPERTY_VAL_UOM,
+            Index.PROPERTY_VAL_URI));
+
+    public static final Set<Index> DEFAULT_NORMAL_INDEXES = new LinkedHashSet<>(DEFAULT_INDEXES.stream()
             .filter(index -> index.getType() == Index.Type.NORMAL)
-            .toList();
-    public static final List<Index> DEFAULT_SPATIAL_INDEXES = DEFAULT_INDEXES.stream()
+            .toList());
+    public static final Set<Index> DEFAULT_SPATIAL_INDEXES = new LinkedHashSet<>(DEFAULT_INDEXES.stream()
             .filter(index -> index.getType() == Index.Type.SPATIAL)
-            .toList();
+            .toList());
 
     public enum Status {
         ON,
@@ -75,22 +83,35 @@ public class IndexHelper {
     }
 
     public void create(Index index) throws SQLException {
+        create(index, false);
+    }
+
+    public void create(Index index, boolean ignoreNulls) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
             if (!exists(index, connection)) {
                 try (Statement stmt = createStatement(connection)) {
-                    stmt.executeUpdate(adapter.getSchemaAdapter().getCreateIndex(index));
+                    stmt.executeUpdate(adapter.getSchemaAdapter().getCreateIndex(index, ignoreNulls));
                 }
             }
         }
     }
 
     public void createAll(Index... indexes) throws SQLException {
-        createAll(Arrays.asList(indexes));
+        createAll(Arrays.asList(indexes), index -> false);
+    }
+
+    public void createAll(Function<Index, Boolean> ignoreNulls, Index... indexes) throws SQLException {
+        createAll(Arrays.asList(indexes), ignoreNulls);
     }
 
     public void createAll(Collection<Index> indexes) throws SQLException {
+        createAll(indexes, index -> false);
+    }
+
+    public void createAll(Collection<Index> indexes, Function<Index, Boolean> ignoreNulls) throws SQLException {
         for (Index index : indexes) {
-            create(index);
+            Boolean result = ignoreNulls != null ? ignoreNulls.apply(index) : null;
+            create(index, result != null ? result : false);
         }
     }
 

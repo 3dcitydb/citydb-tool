@@ -63,7 +63,7 @@ public abstract class SchemaAdapter {
 
     public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table);
 
-    public abstract String getCreateIndex(Index index);
+    public abstract String getCreateIndex(Index index, boolean ignoreNulls);
 
     public abstract String getDropIndex(Index index);
 
@@ -93,5 +93,9 @@ public abstract class SchemaAdapter {
 
     public IndexHelper getIndexHelper() {
         return indexHelper;
+    }
+
+    public String getCreateIndex(Index index) {
+        return getCreateIndex(index, false);
     }
 }
