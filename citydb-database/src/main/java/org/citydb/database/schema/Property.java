@@ -31,6 +31,7 @@ import java.util.Optional;
 
 public class Property implements ValueObject, Typeable, Joinable {
     private final Name name;
+    private final String description;
     private final Integer parentIndex;
     private final Value value;
     private final String typeIdentifier;
@@ -42,9 +43,10 @@ public class Property implements ValueObject, Typeable, Joinable {
     private Map<Name, Property> properties;
     private Join join;
 
-    private Property(Name name, Integer parentIndex, Value value, String typeIdentifier, String targetIdentifier,
-                     Join join, JoinTable joinTable) {
+    private Property(Name name, String description, Integer parentIndex, Value value, String typeIdentifier,
+                     String targetIdentifier, Join join, JoinTable joinTable) {
         this.name = name;
+        this.description = description;
         this.parentIndex = parentIndex;
         this.value = value;
         this.typeIdentifier = typeIdentifier;
@@ -55,6 +57,7 @@ public class Property implements ValueObject, Typeable, Joinable {
 
     static Property of(JSONObject object) throws SchemaException {
         String propertyName = object.getString("name");
+        String description = object.getString("description");
         String namespace = object.getString("namespace");
         Integer parentIndex = object.getInteger("parent");
         JSONObject valueObject = object.getJSONObject("value");
@@ -86,7 +89,7 @@ public class Property implements ValueObject, Typeable, Joinable {
             };
         }
 
-        return new Property(Name.of(propertyName, namespace), parentIndex,
+        return new Property(Name.of(propertyName, namespace), description, parentIndex,
                 valueObject != null ? Value.of(valueObject) : null,
                 typeIdentifier, targetIdentifier,
                 joinObject != null ? Join.of(joinObject) : null,
@@ -96,6 +99,10 @@ public class Property implements ValueObject, Typeable, Joinable {
     @Override
     public Name getName() {
         return name;
+    }
+
+    public Optional<String> getDescription() {
+        return Optional.ofNullable(description);
     }
 
     Integer getParentIndex() {

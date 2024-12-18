@@ -33,7 +33,7 @@ INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCH
 VALUES (10, null, 'FeatureProperty', 0, 1, '{"identifier":"core:FeatureProperty","description":"FeatureProperty links a feature or property to a feature.","table":"property","join":{"table":"feature","fromColumn":"val_feature_id","toColumn":"id","conditions":[{"column":"objectclass_id","value":"@target.objectclass_id@","type":"integer"}]}}');
 
 INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCHEMA)
-VALUES (11, null, 'GeometryProperty', 0, 1, '{"identifier":"core:GeometryProperty","description":"GeometryProperty links a feature or property to a geometry.","table":"property","properties":[{"name":"lod","namespace":"http://3dcitydb.org/3dcitydb/core/5.0","value":{"column":"val_lod","type":"string"}}],"join":{"table":"geometry_data","fromColumn":"val_geometry_id","toColumn":"id"}}');
+VALUES (11, null, 'GeometryProperty', 0, 1, '{"identifier":"core:GeometryProperty","description":"GeometryProperty links a feature or property to a geometry.","table":"property","properties":[{"name":"lod","namespace":"http://3dcitydb.org/3dcitydb/core/5.0","description":"Specifies the Level of Detail of the geometry.","value":{"column":"val_lod","type":"string"}}],"join":{"table":"geometry_data","fromColumn":"val_geometry_id","toColumn":"id"}}');
 
 INSERT INTO datatype (ID, SUPERTYPE_ID, TYPENAME, IS_ABSTRACT, NAMESPACE_ID, SCHEMA)
 VALUES (12, null, 'Reference', 0, 1, '{"identifier":"core:Reference","description":"Reference links a feature or property to a remote resource identified by a URI.","table":"property","value":{"column":"val_uri","type":"uri"}}');

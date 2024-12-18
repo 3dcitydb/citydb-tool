@@ -30,19 +30,21 @@ import java.util.Map;
 
 public class FeatureType extends Type<FeatureType> {
     public static final FeatureType UNDEFINED = new FeatureType(1, "core:Undefined",
-            Name.of("Undefined", Namespaces.CORE), Table.FEATURE, false, false, null, null, null, null);
+            Name.of("Undefined", Namespaces.CORE), Table.FEATURE, null, false, false, null, null, null, null);
 
     private final boolean isTopLevel;
 
-    private FeatureType(int id, String identifier, Name name, Table table, boolean isAbstract, boolean isTopLevel,
-                        Integer superTypeId, Map<Name, Property> properties, Join join, JoinTable joinTable) {
-        super(id, identifier, name, table, isAbstract, superTypeId, properties, join, joinTable);
+    private FeatureType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
+                        boolean isTopLevel, Integer superTypeId, Map<Name, Property> properties, Join join,
+                        JoinTable joinTable) {
+        super(id, identifier, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
         this.isTopLevel = isTopLevel;
     }
 
     static FeatureType of(int id, Name name, boolean isAbstract, boolean isTopLevel, Integer superTypeId, JSONObject object) throws SchemaException {
         String identifier = object.getString("identifier");
         String tableName = object.getString("table");
+        String description = object.getString("description");
         JSONArray propertiesArray = object.getJSONArray("properties");
         JSONObject joinObject = object.getJSONObject("join");
         JSONObject joinTableObject = object.getJSONObject("joinTable");
@@ -61,7 +63,7 @@ public class FeatureType extends Type<FeatureType> {
         }
 
         try {
-            return new FeatureType(id, identifier, name, table, isAbstract, isTopLevel, superTypeId,
+            return new FeatureType(id, identifier, name, table, description, isAbstract, isTopLevel, superTypeId,
                     propertiesArray != null ? Type.buildProperties(propertiesArray) : null,
                     joinObject != null ? Join.of(joinObject) : null,
                     joinTableObject != null ? JoinTable.of(joinTableObject) : null);

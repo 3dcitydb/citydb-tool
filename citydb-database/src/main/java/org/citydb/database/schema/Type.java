@@ -32,6 +32,7 @@ public abstract class Type<T extends Type<T>> implements Joinable {
     final String identifier;
     final Name name;
     final Table table;
+    final String description;
     final boolean isAbstract;
     final Integer superTypeId;
     final Map<Name, Property> properties;
@@ -39,12 +40,13 @@ public abstract class Type<T extends Type<T>> implements Joinable {
     final JoinTable joinTable;
     T superType;
 
-    Type(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
-         Map<Name, Property> properties, Join join, JoinTable joinTable) {
+    Type(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
+         Integer superTypeId, Map<Name, Property> properties, Join join, JoinTable joinTable) {
         this.id = id;
         this.identifier = identifier;
         this.name = name;
         this.table = table;
+        this.description = description;
         this.isAbstract = isAbstract;
         this.superTypeId = superTypeId;
         this.properties = properties;
@@ -88,6 +90,10 @@ public abstract class Type<T extends Type<T>> implements Joinable {
 
     public Table getTable() {
         return table;
+    }
+
+    public Optional<String> getDescription() {
+        return Optional.ofNullable(description);
     }
 
     public boolean isAbstract() {

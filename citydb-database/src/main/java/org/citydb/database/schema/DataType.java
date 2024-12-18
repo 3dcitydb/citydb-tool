@@ -31,19 +31,20 @@ import java.util.Optional;
 
 public class DataType extends Type<DataType> implements ValueObject {
     public static final DataType UNDEFINED = new DataType(1, "core:Undefined", Name.of("Undefined", Namespaces.CORE),
-            Table.PROPERTY, false, null, null, null, null, null);
+            Table.PROPERTY, null, false, null, null, null, null, null);
 
     private final Value value;
 
-    private DataType(int id, String identifier, Name name, Table table, boolean isAbstract, Integer superTypeId,
-                     Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
-        super(id, identifier, name, table, isAbstract, superTypeId, properties, join, joinTable);
+    private DataType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
+                     Integer superTypeId, Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
+        super(id, identifier, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
         this.value = value;
     }
 
     static DataType of(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object) throws SchemaException {
         String identifier = object.getString("identifier");
         String tableName = object.getString("table");
+        String description = object.getString("description");
         JSONArray propertiesArray = object.getJSONArray("properties");
         JSONObject valueObject = object.getJSONObject("value");
         JSONObject joinObject = object.getJSONObject("join");
@@ -63,7 +64,7 @@ public class DataType extends Type<DataType> implements ValueObject {
         }
 
         try {
-            return new DataType(id, identifier, name, table, isAbstract, superTypeId,
+            return new DataType(id, identifier, name, table, description, isAbstract, superTypeId,
                     propertiesArray != null ? Type.buildProperties(propertiesArray) : null,
                     valueObject != null ? Value.of(valueObject) : null,
                     joinObject != null ? Join.of(joinObject) : null,
