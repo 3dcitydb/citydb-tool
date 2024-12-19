@@ -41,6 +41,7 @@ public class DuplicateDeleter {
     private final DatabaseAdapter adapter;
     private final boolean preview;
     private volatile boolean shouldRun = true;
+    private Throwable exception;
 
     DuplicateDeleter(ImportOptions options, DatabaseAdapter adapter, boolean preview) {
         this.options = options;
@@ -74,9 +75,14 @@ public class DuplicateDeleter {
                             }
                         } else {
                             shouldRun = false;
+                            exception = t;
                             logger.error("Failed to delete duplicate feature (ID: {}).", id);
                         }
                     });
+                }
+
+                if (exception != null) {
+                    throw exception;
                 }
             } finally {
                 if (shouldRun && !preview && deleter.wasSuccessful()) {
@@ -85,7 +91,7 @@ public class DuplicateDeleter {
                     deleter.abortSession();
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ExecutionException("Failed to delete duplicate features.", e);
         }
 
