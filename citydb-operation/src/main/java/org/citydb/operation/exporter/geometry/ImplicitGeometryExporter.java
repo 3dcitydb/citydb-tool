@@ -95,7 +95,12 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
     }
 
     public Map<Long, ImplicitGeometry> doExport(Set<Long> ids, Collection<Appearance> appearances) throws ExportException, SQLException {
-        if (!ids.isEmpty()) {
+        if (ids.size() == 1) {
+            stmt.setLong(1, ids.iterator().next());
+            try (ResultSet rs = stmt.executeQuery()) {
+                return doExport(appearances, rs);
+            }
+        } else if (!ids.isEmpty()) {
             try (Statement stmt = helper.getConnection().createStatement();
                  ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
                 return doExport(appearances, rs);

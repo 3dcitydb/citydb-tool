@@ -69,6 +69,7 @@ public class HierarchyBuilder {
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
         Set<Long> appearanceIds = new HashSet<>();
+        Set<Long> addressIds = new HashSet<>();
         Set<Long> implicitGeometryIds = new HashSet<>();
 
         while (rs.next()) {
@@ -94,9 +95,8 @@ public class HierarchyBuilder {
             }
 
             long addressId = rs.getLong("val_address_id");
-            if (!rs.wasNull() && hierarchy.getAddress(addressId) == null) {
-                hierarchy.addAddress(addressId, tableHelper.getOrCreateExporter(AddressExporter.class)
-                        .doExport(addressId, rs));
+            if (!rs.wasNull()) {
+                addressIds.add(addressId);
             }
 
             long implicitGeometryId = rs.getLong("val_implicitgeom_id");
@@ -114,15 +114,23 @@ public class HierarchyBuilder {
             }
         }
 
-        if (exportAppearances) {
+        if (exportAppearances && !appearanceIds.isEmpty()) {
             tableHelper.getOrCreateExporter(AppearanceExporter.class)
                     .doExport(appearanceIds, implicitGeometryIds)
                     .forEach(hierarchy::addAppearance);
         }
 
-        tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
-                .doExport(implicitGeometryIds, hierarchy.getAppearances().values())
-                .forEach(hierarchy::addImplicitGeometry);
+        if (!addressIds.isEmpty()) {
+            tableHelper.getOrCreateExporter(AddressExporter.class)
+                    .doExport(addressIds)
+                    .forEach(hierarchy::addAddress);
+        }
+
+        if (!implicitGeometryIds.isEmpty()) {
+            tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
+                    .doExport(implicitGeometryIds, hierarchy.getAppearances().values())
+                    .forEach(hierarchy::addImplicitGeometry);
+        }
 
         return this;
     }
