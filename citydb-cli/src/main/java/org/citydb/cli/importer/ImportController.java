@@ -154,7 +154,7 @@ public abstract class ImportController implements Command {
 
             AtomicLong counter = new AtomicLong();
 
-            for (int i = 0; shouldRun && i < inputFiles.size(); i++) {
+            for (int i = 0; shouldRun && filter.isCountWithinLimit() && i < inputFiles.size(); i++) {
                 InputFile inputFile = inputFiles.get(i);
                 logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
 

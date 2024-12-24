@@ -90,6 +90,10 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
         };
     }
 
+    public boolean isCountWithinLimit() {
+        return useCountLimit && count < limit;
+    }
+
     @Override
     public boolean needsSequentialProcessing() {
         return useCountLimit;
