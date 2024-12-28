@@ -24,7 +24,7 @@ package org.citydb.operation.importer.appearance;
 import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.appearance.GeoreferencedTexture;
-import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.Point;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 
@@ -61,7 +61,7 @@ public class GeoreferencedTextureImporter extends TextureImporter {
         }
 
         Object referencePoint = getGeometry(texture.getReferencePoint()
-                .map(Geometry::force2D)
+                .map(Point::force2D)
                 .orElse(null), false);
         if (referencePoint != null) {
             stmt.setObject(12, referencePoint, adapter.getGeometryAdapter().getGeometrySqlType());
