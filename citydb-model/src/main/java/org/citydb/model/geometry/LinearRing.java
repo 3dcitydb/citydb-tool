@@ -74,8 +74,15 @@ public class LinearRing extends Child implements Referencable {
         return points.stream().anyMatch(coordinate -> coordinate.getDimension() == 2) ? 2 : 3;
     }
 
-    LinearRing force2D() {
+    public LinearRing force2D() {
         points.forEach(Coordinate::force2D);
         return this;
+    }
+
+    public LinearRing copy() {
+        return new LinearRing(points.stream()
+                .map(Coordinate::copy)
+                .toArray(Coordinate[]::new))
+                .setObjectId(objectId);
     }
 }

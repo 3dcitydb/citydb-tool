@@ -41,6 +41,13 @@ public class Polygon extends Surface<Polygon> {
         this.reversed = reversed;
     }
 
+    private Polygon(LinearRing exteriorRing, LinearRing[] interiorRings, boolean reversed) {
+        Objects.requireNonNull(exteriorRing, "The exterior ring must not be null.");
+        this.exteriorRing = asChild(exteriorRing);
+        this.interiorRings = interiorRings != null ? asChild(Arrays.asList(interiorRings)) : null;
+        this.reversed = reversed;
+    }
+
     public static Polygon of(LinearRing exteriorRing, List<LinearRing> interiorRings, boolean reversed) {
         return new Polygon(exteriorRing, interiorRings, reversed);
     }
@@ -50,23 +57,23 @@ public class Polygon extends Surface<Polygon> {
     }
 
     public static Polygon of(LinearRing exteriorRing, LinearRing[] interiorRings, boolean reversed) {
-        return new Polygon(exteriorRing, interiorRings != null ? Arrays.asList(interiorRings) : null, reversed);
+        return new Polygon(exteriorRing, interiorRings, reversed);
     }
 
     public static Polygon of(LinearRing exteriorRing, LinearRing[] interiorRings) {
-        return new Polygon(exteriorRing, interiorRings != null ? Arrays.asList(interiorRings) : null, false);
+        return new Polygon(exteriorRing, interiorRings, false);
     }
 
     public static Polygon of(LinearRing exteriorRing, boolean reversed) {
-        return new Polygon(exteriorRing, null, reversed);
+        return new Polygon(exteriorRing, (List<LinearRing>) null, reversed);
     }
 
     public static Polygon of(LinearRing exteriorRing) {
-        return new Polygon(exteriorRing, null, false);
+        return new Polygon(exteriorRing, (List<LinearRing>) null, false);
     }
 
     public static Polygon empty() {
-        return new Polygon(LinearRing.empty(), null, false);
+        return new Polygon(LinearRing.empty(), (List<LinearRing>) null, false);
     }
 
     public LinearRing getExteriorRing() {
@@ -119,6 +126,17 @@ public class Polygon extends Surface<Polygon> {
         }
 
         return this;
+    }
+
+    @Override
+    public Polygon copy() {
+        return new Polygon(exteriorRing.copy(),
+                interiorRings != null ? interiorRings.stream()
+                        .map(LinearRing::copy)
+                        .toArray(LinearRing[]::new) :
+                        null,
+                reversed)
+                .copyPropertiesFrom(this);
     }
 
     @Override

@@ -69,6 +69,14 @@ public class MultiPoint extends Geometry<MultiPoint> {
     }
 
     @Override
+    public MultiPoint copy() {
+        return new MultiPoint(points.stream()
+                .map(Point::copy)
+                .toArray(Point[]::new))
+                .copyPropertiesFrom(this);
+    }
+
+    @Override
     public GeometryType getGeometryType() {
         return GeometryType.MULTI_POINT;
     }

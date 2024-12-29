@@ -49,6 +49,14 @@ public class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> 
     }
 
     @Override
+    public TriangulatedSurface copy() {
+        return new TriangulatedSurface(getPolygons().stream()
+                .map(Polygon::copy)
+                .toArray(Polygon[]::new))
+                .copyPropertiesFrom(this);
+    }
+
+    @Override
     public GeometryType getGeometryType() {
         return GeometryType.TRIANGULATED_SURFACE;
     }

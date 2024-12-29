@@ -35,6 +35,8 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     private String srsIdentifier;
     private GeometryDescriptor descriptor;
 
+    public abstract T copy();
+
     public abstract GeometryType getGeometryType();
 
     abstract T self();
@@ -169,5 +171,14 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
         return envelope
                 .setSRID(srid)
                 .setSrsIdentifier(srsIdentifier);
+    }
+
+    T copyPropertiesFrom(Geometry<T> other) {
+        objectId = other.objectId;
+        srid = other.srid;
+        srsIdentifier = other.srsIdentifier;
+        descriptor = other.descriptor;
+
+        return self();
     }
 }

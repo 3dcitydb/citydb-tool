@@ -49,6 +49,14 @@ public class CompositeSurface extends SurfaceCollection<CompositeSurface> {
     }
 
     @Override
+    public CompositeSurface copy() {
+        return new CompositeSurface(getPolygons().stream()
+                .map(Polygon::copy)
+                .toArray(Polygon[]::new))
+                .copyPropertiesFrom(this);
+    }
+
+    @Override
     public GeometryType getGeometryType() {
         return GeometryType.COMPOSITE_SURFACE;
     }

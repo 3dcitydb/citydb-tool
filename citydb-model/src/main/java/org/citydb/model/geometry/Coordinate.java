@@ -106,9 +106,15 @@ public class Coordinate implements Serializable {
         return dimension;
     }
 
-    Coordinate force2D() {
+    public Coordinate force2D() {
         z = 0;
         dimension = 2;
         return this;
+    }
+
+    public Coordinate copy() {
+        return dimension == 2 ?
+                new Coordinate(x, y) :
+                new Coordinate(x, y, z);
     }
 }

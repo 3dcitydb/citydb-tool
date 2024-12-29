@@ -69,6 +69,14 @@ public class MultiLineString extends Geometry<MultiLineString> {
     }
 
     @Override
+    public MultiLineString copy() {
+        return new MultiLineString(lineStrings.stream()
+                .map(LineString::copy)
+                .toArray(LineString[]::new))
+                .copyPropertiesFrom(this);
+    }
+
+    @Override
     public GeometryType getGeometryType() {
         return GeometryType.MULTI_LINE_STRING;
     }

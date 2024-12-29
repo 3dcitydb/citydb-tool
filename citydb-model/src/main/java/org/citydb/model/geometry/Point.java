@@ -52,6 +52,12 @@ public class Point extends Geometry<Point> {
     }
 
     @Override
+    public Point copy() {
+        return new Point(coordinate.copy())
+                .copyPropertiesFrom(this);
+    }
+
+    @Override
     public GeometryType getGeometryType() {
         return GeometryType.POINT;
     }
