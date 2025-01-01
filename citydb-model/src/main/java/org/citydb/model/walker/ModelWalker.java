@@ -85,6 +85,9 @@ public class ModelWalker implements Visitor {
 
     @Override
     public void visit(Address address) {
+        if (shouldWalk) {
+            address.getMultiPoint().ifPresent(multiPoint -> multiPoint.accept(this));
+        }
     }
 
     @Override
@@ -148,12 +151,16 @@ public class ModelWalker implements Visitor {
     @Override
     public void visit(GeoreferencedTexture texture) {
         visit((Texture<?>) texture);
+
+        if (shouldWalk) {
+            texture.getReferencePoint().ifPresent(referencePoint -> referencePoint.accept(this));
+        }
     }
 
     @Override
     public void visit(ImplicitGeometry implicitGeometry) {
-        if (shouldWalk && implicitGeometry.getGeometry().isPresent()) {
-            implicitGeometry.getGeometry().get().accept(this);
+        if (shouldWalk) {
+            implicitGeometry.getGeometry().ifPresent(geometry -> geometry.accept(this));
         }
 
         if (implicitGeometry.hasAppearances()) {
@@ -276,6 +283,10 @@ public class ModelWalker implements Visitor {
 
     public void visit(ImplicitGeometryProperty property) {
         visit((InlineOrByReferenceProperty<?>) property);
+
+        if (shouldWalk) {
+            property.getReferencePoint().ifPresent(referencePoint -> referencePoint.accept(this));
+        }
     }
 
     private void visitObject(Object object) {
