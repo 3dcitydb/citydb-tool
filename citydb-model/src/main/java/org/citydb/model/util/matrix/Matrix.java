@@ -72,6 +72,13 @@ public class Matrix implements Serializable {
         }
     }
 
+    public Matrix(List<Double> rowMajor, int rows) {
+        this(rowMajor.stream()
+                .map(value -> value != null ? value : 0)
+                .mapToDouble(Double::doubleValue)
+                .toArray(), rows);
+    }
+
     public static Matrix identity(int rows, int columns) {
         Matrix matrix = new Matrix(rows, columns);
         for (int i = 0; i < rows; i++) {
@@ -119,8 +126,9 @@ public class Matrix implements Serializable {
         return elements[row][column];
     }
 
-    public void set(int row, int column, double value) {
+    public Matrix set(int row, int column, double value) {
         elements[row][column] = value;
+        return this;
     }
 
     public Matrix getSubMatrix(int rowStart, int rowEnd, int columnStart, int columnEnd) {
@@ -141,10 +149,12 @@ public class Matrix implements Serializable {
         return result;
     }
 
-    public void setSubMatrix(int rowStart, int rowEnd, int columnStart, int columnEnd, Matrix matrix) {
+    public Matrix setSubMatrix(int rowStart, int rowEnd, int columnStart, int columnEnd, Matrix matrix) {
         for (int i = rowStart; i <= rowEnd; i++) {
             System.arraycopy(matrix.elements[i - rowStart], 0, elements[i], columnStart, columnEnd - columnStart + 1);
         }
+
+        return this;
     }
 
     public Matrix transpose() {
