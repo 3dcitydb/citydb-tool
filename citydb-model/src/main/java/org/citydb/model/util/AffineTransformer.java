@@ -63,7 +63,7 @@ public class AffineTransformer {
         return ofRowMajor(values, 4);
     }
 
-    public void transform(Coordinate coordinate) {
+    public Coordinate transform(Coordinate coordinate) {
         Matrix transformed = matrix.times(new Matrix(new double[][]{
                 {coordinate.getX()},
                 {coordinate.getY()},
@@ -76,21 +76,27 @@ public class AffineTransformer {
         if (coordinate.getDimension() == 3) {
             coordinate.setZ(transformed.get(2, 0));
         }
+
+        return coordinate;
     }
 
-    public void transform(Feature feature) {
+    public Feature transform(Feature feature) {
         feature.accept(processor);
+        return feature;
     }
 
-    public void transform(Geometry<?> geometry) {
+    public Geometry<?> transform(Geometry<?> geometry) {
         geometry.accept(processor);
+        return geometry;
     }
 
-    public void transform(Envelope envelope) {
+    public Envelope transform(Envelope envelope) {
         if (!envelope.isEmpty()) {
             transform(envelope.getLowerCorner());
             transform(envelope.getUpperCorner());
         }
+
+        return envelope;
     }
 
     private class Processor extends ModelWalker {

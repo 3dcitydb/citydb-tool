@@ -99,7 +99,7 @@ public class EnvelopeHelper {
                     List<Double> transformationMatrix = property.getTransformationMatrix().orElse(null);
                     Point referencePoint = property.getReferencePoint().orElse(null);
                     if (transformationMatrix != null
-                            && transformationMatrix.size() > 11
+                            && transformationMatrix.size() > 15
                             && referencePoint != null) {
                         ImplicitGeometry geometry = property.getObject().orElse(
                                 implicitGeometries.get(property.getReference()
