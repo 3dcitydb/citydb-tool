@@ -108,6 +108,14 @@ public class Appearance extends Child implements Identifiable, Visitable, Descri
         return this;
     }
 
+    public Appearance addSurfaceData(SurfaceDataProperty surfaceData) {
+        if (surfaceData != null) {
+            getSurfaceData().add(surfaceData);
+        }
+
+        return this;
+    }
+
     @Override
     public Optional<AppearanceDescriptor> getDescriptor() {
         return Optional.ofNullable(descriptor);
