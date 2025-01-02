@@ -104,7 +104,7 @@ public class FilterJSONWriter {
         @Override
         public void visit(BinaryBooleanPredicate predicate) {
             startOp(predicate.getOperator().getJSONToken().value());
-            writeList(predicate.getOperands(), jsonWriter::writeComma);
+            writeList(predicate.getOperands(), jsonWriter);
             endOp();
         }
 
@@ -163,7 +163,7 @@ public class FilterJSONWriter {
                 negate(function);
             } else {
                 startOp(function.getName().getJsonToken());
-                writeList(function.getArguments(), jsonWriter::writeComma);
+                writeList(function.getArguments(), jsonWriter);
                 endOp();
             }
         }
@@ -182,7 +182,7 @@ public class FilterJSONWriter {
                 in.getOperand().accept(this);
                 jsonWriter.writeComma();
                 jsonWriter.startArray();
-                writeList(in.getValues(), jsonWriter::writeComma);
+                writeList(in.getValues(), jsonWriter);
                 jsonWriter.endArray();
                 endOp();
             }
@@ -296,18 +296,13 @@ public class FilterJSONWriter {
             expression.negate();
         }
 
-        private void writeList(List<? extends Expression> expressions, DelimiterWriter delimiter) {
+        private void writeList(List<? extends Expression> expressions, JSONWriter writer) {
             for (int i = 0; i < expressions.size(); i++) {
-                expressions.get(i).accept(this);
-                if (i < expressions.size() - 1) {
-                    delimiter.write();
+                if (i != 0) {
+                    writer.writeComma();
                 }
+                expressions.get(i).accept(this);
             }
         }
-    }
-
-    @FunctionalInterface
-    private interface DelimiterWriter {
-        void write();
     }
 }
