@@ -28,6 +28,7 @@ import org.citydb.model.common.RelationType;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.PropertyDescriptor;
+import org.citydb.model.util.matrix.Matrix;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.geometry.ImplicitGeometryImporter;
@@ -84,7 +85,8 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
         }
 
         String transformationMatrix = property.getTransformationMatrix()
-                .map(JSONArray::copyOf)
+                .map(Matrix::toRowMajor)
+                .map(JSONArray::new)
                 .map(JSONArray::toString)
                 .orElse(null);
         if (transformationMatrix != null) {

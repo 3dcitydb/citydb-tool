@@ -118,23 +118,20 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
         return this;
     }
 
-    public Envelope getEnvelope(List<Double> transformationMatrix, Point referencePoint) {
-        if (transformationMatrix != null
-                && transformationMatrix.size() > 15
-                && referencePoint != null) {
+    public Envelope getEnvelope(Matrix4x4 transformationMatrix, Point referencePoint) {
+        if (transformationMatrix != null && referencePoint != null) {
             Envelope envelope;
             if (geometry != null) {
-                envelope = AffineTransformer.of(new Matrix(transformationMatrix.subList(0, 16), 4)
-                                .plusEquals(new Matrix(4, 4)
-                                        .set(0, 3, referencePoint.getCoordinate().getX())
-                                        .set(1, 3, referencePoint.getCoordinate().getY())
-                                        .set(2, 3, referencePoint.getCoordinate().getZ())))
+                envelope = AffineTransformer.of(transformationMatrix.plus(new Matrix(4, 4)
+                                .set(0, 3, referencePoint.getCoordinate().getX())
+                                .set(1, 3, referencePoint.getCoordinate().getY())
+                                .set(2, 3, referencePoint.getCoordinate().getZ())))
                         .transform(geometry.getEnvelope());
             } else {
                 envelope = Envelope.empty().include(Point.of(Coordinate.of(
-                        referencePoint.getCoordinate().getX() + transformationMatrix.get(3),
-                        referencePoint.getCoordinate().getY() + transformationMatrix.get(7),
-                        referencePoint.getCoordinate().getZ() + transformationMatrix.get(11))));
+                        referencePoint.getCoordinate().getX() + transformationMatrix.get(0, 3),
+                        referencePoint.getCoordinate().getY() + transformationMatrix.get(1, 3),
+                        referencePoint.getCoordinate().getZ() + transformationMatrix.get(2, 3))));
             }
 
             return envelope.setSRID(referencePoint.getSRID().orElse(null))

@@ -21,6 +21,7 @@
 
 package org.citydb.operation.exporter.util;
 
+import org.citydb.model.common.Matrix4x4;
 import org.citydb.model.common.Reference;
 import org.citydb.model.common.RelationType;
 import org.citydb.model.feature.Feature;
@@ -34,7 +35,10 @@ import org.citydb.model.util.GeometryInfo;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportHelper;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 
 public class EnvelopeHelper {
     private final ExportHelper helper;
@@ -96,11 +100,9 @@ public class EnvelopeHelper {
 
             if (geometryInfo.hasImplicitGeometries()) {
                 for (ImplicitGeometryProperty property : geometryInfo.getImplicitGeometries()) {
-                    List<Double> transformationMatrix = property.getTransformationMatrix().orElse(null);
+                    Matrix4x4 transformationMatrix = property.getTransformationMatrix().orElse(null);
                     Point referencePoint = property.getReferencePoint().orElse(null);
-                    if (transformationMatrix != null
-                            && transformationMatrix.size() > 15
-                            && referencePoint != null) {
+                    if (transformationMatrix != null && referencePoint != null) {
                         ImplicitGeometry geometry = property.getObject().orElse(
                                 implicitGeometries.get(property.getReference()
                                         .map(Reference::getTarget).orElse(null)));
@@ -108,9 +110,9 @@ public class EnvelopeHelper {
                             envelope.include(geometry.getEnvelope(transformationMatrix, referencePoint));
                         } else {
                             envelope.include(Point.of(Coordinate.of(
-                                    referencePoint.getCoordinate().getX() + transformationMatrix.get(3),
-                                    referencePoint.getCoordinate().getY() + transformationMatrix.get(7),
-                                    referencePoint.getCoordinate().getZ() + transformationMatrix.get(11))));
+                                    referencePoint.getCoordinate().getX() + transformationMatrix.get(0, 3),
+                                    referencePoint.getCoordinate().getY() + transformationMatrix.get(1, 3),
+                                    referencePoint.getCoordinate().getZ() + transformationMatrix.get(2, 3))));
                         }
                     }
                 }

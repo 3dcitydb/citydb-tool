@@ -21,6 +21,7 @@
 
 package org.citydb.model.appearance;
 
+import org.citydb.model.common.Matrix2x2;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.Visitor;
@@ -33,7 +34,7 @@ import java.util.Optional;
 
 public class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
     private Point referencePoint;
-    private List<Double> orientation;
+    private Matrix2x2 orientation;
     private List<Surface<?>> targets;
 
     private GeoreferencedTexture() {
@@ -57,14 +58,19 @@ public class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
         return this;
     }
 
-    public Optional<List<Double>> getOrientation() {
+    public Optional<Matrix2x2> getOrientation() {
         return Optional.ofNullable(orientation);
     }
 
+    public GeoreferencedTexture setOrientation(Matrix2x2 orientation) {
+        this.orientation = orientation;
+        return this;
+    }
+
     public GeoreferencedTexture setOrientation(List<Double> orientation) {
-        this.orientation = orientation != null && orientation.size() > 3 ?
-                new ArrayList<>(orientation.subList(0, 4)) :
-                null;
+        if (orientation != null && orientation.size() > 3) {
+            this.orientation = Matrix2x2.ofRowMajor(orientation);
+        }
 
         return this;
     }

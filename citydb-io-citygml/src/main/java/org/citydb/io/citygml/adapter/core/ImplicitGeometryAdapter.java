@@ -66,7 +66,8 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
     @Override
     public void serialize(ImplicitGeometryProperty source, org.citygml4j.core.model.core.ImplicitGeometry target, ModelSerializerHelper helper) throws ModelSerializeException {
         source.getTransformationMatrix().ifPresent(transformationMatrix ->
-                target.setTransformationMatrix(TransformationMatrix4x4.ofRowMajorList(transformationMatrix)));
+                target.setTransformationMatrix(TransformationMatrix4x4.ofRowMajorList(
+                        transformationMatrix.toRowMajor())));
 
         source.getReferencePoint().ifPresent(referencePoint ->
                 target.setReferencePoint(new PointProperty(helper.getPoint(referencePoint))));

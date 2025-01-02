@@ -25,6 +25,7 @@ import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.geometry.Point;
+import org.citydb.model.util.matrix.Matrix;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 
@@ -51,7 +52,8 @@ public class GeoreferencedTextureImporter extends TextureImporter {
         long surfaceDataId = nextSequenceValue(Sequence.SURFACE_DATA);
 
         String orientation = texture.getOrientation()
-                .map(JSONArray::copyOf)
+                .map(Matrix::toRowMajor)
+                .map(JSONArray::new)
                 .map(JSONArray::toString)
                 .orElse(null);
         if (orientation != null) {

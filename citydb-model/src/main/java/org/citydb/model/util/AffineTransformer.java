@@ -23,6 +23,9 @@ package org.citydb.model.util;
 
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.appearance.ParameterizedTexture;
+import org.citydb.model.common.Matrix2x2;
+import org.citydb.model.common.Matrix3x4;
+import org.citydb.model.common.Matrix4x4;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.AppearanceProperty;
@@ -46,21 +49,16 @@ public class AffineTransformer {
     }
 
     public static AffineTransformer of(Matrix matrix) {
-        Objects.requireNonNull(matrix, "The matrix must not be null.");
-        int rows = Math.min(matrix.getRows(), 4);
-        int columns = Math.min(matrix.getColumns(), 4);
-        return new AffineTransformer(rows != 4 || columns != 4 ?
-                Matrix.identity(4, 4).setSubMatrix(0, rows - 1, 0, columns - 1, matrix) :
-                matrix.copy());
+        return new AffineTransformer(Matrix4x4.of(matrix));
+    }
+
+    public static AffineTransformer ofRowMajor(List<Double> values) {
+        return new AffineTransformer(Matrix4x4.ofRowMajor(values));
     }
 
     public static AffineTransformer ofRowMajor(List<Double> values, int rows) {
         Objects.requireNonNull(values, "The matrix values must not be null.");
         return of(new Matrix(values, rows));
-    }
-
-    public static AffineTransformer ofRowMajor(List<Double> values) {
-        return ofRowMajor(values, 4);
     }
 
     public Coordinate transform(Coordinate coordinate) {
@@ -109,34 +107,29 @@ public class AffineTransformer {
         @Override
         public void visit(GeoreferencedTexture texture) {
             texture.getOrientation().ifPresent(orientation -> texture.setOrientation(
-                    new Matrix(orientation, 2)
-                            .times(inverse.getSubMatrix(0, 1, 0, 1))
-                            .getRowMajor()
-                            .subList(0, 4)));
+                    Matrix2x2.of(orientation.times(inverse.getSubMatrix(0, 1, 0, 1)))));
             super.visit(texture);
         }
 
         @Override
         public void visit(ParameterizedTexture texture) {
             if (texture.hasWorldToTextureMappings()) {
-                Map<Surface<?>, List<Double>> mappings = new IdentityHashMap<>(texture.getWorldToTextureMappings());
-                mappings.forEach((surface, worldToTexture) -> texture.addWorldToTextureMapping(surface,
-                        Matrix.identity(4, 4).setSubMatrix(0, 2, 0, 3, new Matrix(worldToTexture, 3))
-                                .times(inverse)
-                                .getRowMajor()
-                                .subList(0, 12)));
+                Map<Surface<?>, Matrix3x4> mappings = new IdentityHashMap<>(texture.getWorldToTextureMappings());
+                mappings.forEach((surface, transformationMatrix) -> texture.addWorldToTextureMapping(surface,
+                        Matrix3x4.of(Matrix.identity(4, 4)
+                                .setSubMatrix(0, 2, 0, 3, transformationMatrix)
+                                .times(inverse))));
             }
         }
 
         @Override
         public void visit(ImplicitGeometryProperty property) {
             property.getTransformationMatrix().ifPresent(transformationMatrix -> property.setTransformationMatrix(
-                    matrix.copy()
+                    Matrix4x4.of(matrix.copy()
                             .set(0, 3, 0)
                             .set(1, 3, 0)
                             .set(2, 3, 0)
-                            .times(new Matrix(transformationMatrix, 4))
-                            .getRowMajor()));
+                            .times(transformationMatrix))));
             super.visit(property);
         }
 

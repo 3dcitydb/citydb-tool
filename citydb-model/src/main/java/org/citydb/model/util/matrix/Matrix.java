@@ -30,7 +30,7 @@ public class Matrix implements Serializable {
     final double[][] elements;
     final int rows, columns;
 
-    Matrix(double[][] elements, int rows, int columns) {
+    protected Matrix(double[][] elements, int rows, int columns) {
         this.elements = elements;
         this.rows = rows;
         this.columns = columns;
@@ -92,7 +92,7 @@ public class Matrix implements Serializable {
         return elements;
     }
 
-    public List<Double> getColumnMajor() {
+    public List<Double> toColumnMajor() {
         List<Double> values = new ArrayList<>(rows * columns);
         for (int i = 0; i < columns; ++i) {
             for (int j = 0; j < rows; ++j) {
@@ -103,7 +103,7 @@ public class Matrix implements Serializable {
         return values;
     }
 
-    public List<Double> getRowMajor() {
+    public List<Double> toRowMajor() {
         List<Double> values = new ArrayList<>(rows * columns);
         for (double[] row : elements) {
             for (double value : row) {

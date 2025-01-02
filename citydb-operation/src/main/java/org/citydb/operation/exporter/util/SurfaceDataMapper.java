@@ -27,7 +27,6 @@ import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.appearance.TextureCoordinate;
 
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class SurfaceDataMapper {
@@ -90,7 +89,7 @@ public class SurfaceDataMapper {
                 if (entry.getValue() instanceof JSONArray array) {
                     List<Double> worldToTexture = IntStream.range(0, array.size())
                             .mapToObj(array::getDouble)
-                            .collect(Collectors.toList());
+                            .toList();
                     worldToTextureMappings.computeIfAbsent(surfaceData, v -> new HashMap<>())
                             .put(getKey(geometryDataId, entry.getKey()), worldToTexture);
                 }

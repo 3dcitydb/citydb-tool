@@ -86,7 +86,7 @@ public class GeoreferencedTextureAdapter extends TextureAdapter<GeoreferencedTex
                 target.setReferencePoint(new PointProperty(helper.getPoint(referencePoint, false))));
 
         source.getOrientation().ifPresent(transformationMatrix ->
-                target.setOrientation(TransformationMatrix2x2.ofRowMajorList(transformationMatrix)));
+                target.setOrientation(TransformationMatrix2x2.ofRowMajorList(transformationMatrix.toRowMajor())));
     }
 
     private void processWorldFile(org.citygml4j.core.model.appearance.GeoreferencedTexture source, ExternalFile textureImage, ModelBuilderHelper helper) throws ModelBuildException {

@@ -32,8 +32,6 @@ import org.citydb.model.property.*;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.property.PropertyStub;
 
-import java.util.stream.Collectors;
-
 public class PropertyBuilder {
     private final ExportHelper helper;
 
@@ -97,7 +95,7 @@ public class PropertyBuilder {
                 property.setTransformationMatrix(propertyStub.getArrayValue().getValues().stream()
                         .filter(Value::isDouble)
                         .map(Value::doubleValue)
-                        .collect(Collectors.toList()));
+                        .toList());
             }
 
             return property.setReferencePoint(propertyStub.getReferencePoint())
