@@ -31,6 +31,7 @@ import org.citydb.model.property.Attribute;
 import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.Property;
+import org.citydb.model.util.AffineTransformer;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportHelper;
 
@@ -43,6 +44,7 @@ public class Postprocessor {
     private final ExportHelper helper;
     private final EnvelopeHelper envelopeHelper;
     private final AppearanceHelper appearanceHelper;
+    private final AffineTransformer transformer;
     private final Comparator<Property<?>> comparator = Comparator.comparingLong(
             property -> property.getDescriptor()
                     .map(DatabaseDescriptor::getId)
@@ -52,6 +54,7 @@ public class Postprocessor {
         this.helper = helper;
         appearanceHelper = new AppearanceHelper(helper);
         envelopeHelper = new EnvelopeHelper(helper);
+        transformer = helper.getOptions().getAffineTransform().map(AffineTransformer::of).orElse(null);
     }
 
     public void process(Feature feature) {
@@ -75,11 +78,20 @@ public class Postprocessor {
             envelopeHelper.updateEnvelope(feature);
         }
 
+        if (transformer != null) {
+            transformer.transform(feature);
+        }
+
         sortAttributes(feature);
     }
 
     public void process(Visitable visitable) {
         appearanceHelper.assignSurfaceData(visitable, helper.getSurfaceDataMapper());
+
+        if (transformer != null) {
+            transformer.transform(visitable);
+        }
+
         sortAttributes(visitable);
     }
 

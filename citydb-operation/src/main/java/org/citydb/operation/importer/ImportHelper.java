@@ -29,6 +29,7 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
+import org.citydb.model.util.AffineTransformer;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.feature.FeatureImporter;
 import org.citydb.operation.importer.reference.CacheType;
@@ -51,6 +52,7 @@ public class ImportHelper {
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
     private final SequenceHelper sequenceHelper;
+    private final AffineTransformer transformer;
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
     private final Importer.TransactionMode transactionMode;
@@ -70,6 +72,7 @@ public class ImportHelper {
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
         sequenceHelper = new SequenceHelper(this);
+        transformer = options.getAffineTransform().map(AffineTransformer::of).orElse(null);
         batchSize = options.getBatchSize() > 0 ?
                 Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
                 ImportOptions.DEFAULT_BATCH_SIZE;
@@ -110,6 +113,10 @@ public class ImportHelper {
 
     FeatureDescriptor importFeature(Feature feature) throws ImportException {
         try {
+            if (transformer != null) {
+                transformer.transform(feature);
+            }
+
             generateSequenceValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 

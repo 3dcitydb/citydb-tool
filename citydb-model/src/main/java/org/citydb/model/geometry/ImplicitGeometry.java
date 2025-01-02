@@ -122,11 +122,12 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
         if (transformationMatrix != null && referencePoint != null) {
             Envelope envelope;
             if (geometry != null) {
-                envelope = AffineTransformer.of(transformationMatrix.plus(new Matrix(4, 4)
+                envelope = geometry.getEnvelope();
+                AffineTransformer.of(transformationMatrix.plus(new Matrix(4, 4)
                                 .set(0, 3, referencePoint.getCoordinate().getX())
                                 .set(1, 3, referencePoint.getCoordinate().getY())
                                 .set(2, 3, referencePoint.getCoordinate().getZ())))
-                        .transform(geometry.getEnvelope());
+                        .transform(envelope);
             } else {
                 envelope = Envelope.empty().include(Point.of(Coordinate.of(
                         referencePoint.getCoordinate().getX() + transformationMatrix.get(0, 3),

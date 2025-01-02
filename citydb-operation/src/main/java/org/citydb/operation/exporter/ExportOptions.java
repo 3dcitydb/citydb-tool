@@ -27,6 +27,9 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
+import org.citydb.model.common.Matrix3x4;
+import org.citydb.model.encoding.Matrix3x4Reader;
+import org.citydb.model.encoding.Matrix3x4Writer;
 import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.options.LodOptions;
 
@@ -47,6 +50,8 @@ public class ExportOptions {
     private SrsReference targetSrs;
     private LodOptions lodOptions;
     private AppearanceOptions appearanceOptions;
+    @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
+    private Matrix3x4 affineTransform;
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -103,6 +108,15 @@ public class ExportOptions {
 
     public ExportOptions setAppearanceOptions(AppearanceOptions appearanceOptions) {
         this.appearanceOptions = appearanceOptions;
+        return this;
+    }
+
+    public Optional<Matrix3x4> getAffineTransform() {
+        return Optional.ofNullable(affineTransform);
+    }
+
+    public ExportOptions setAffineTransform(Matrix3x4 affineTransform) {
+        this.affineTransform = affineTransform;
         return this;
     }
 }

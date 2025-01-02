@@ -26,6 +26,7 @@ import org.citydb.model.appearance.ParameterizedTexture;
 import org.citydb.model.common.Matrix2x2;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.common.Matrix4x4;
+import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.AppearanceProperty;
@@ -61,7 +62,7 @@ public class AffineTransformer {
         return of(new Matrix(values, rows));
     }
 
-    public Coordinate transform(Coordinate coordinate) {
+    public void transform(Coordinate coordinate) {
         Matrix transformed = matrix.times(new Matrix(new double[][]{
                 {coordinate.getX()},
                 {coordinate.getY()},
@@ -74,27 +75,25 @@ public class AffineTransformer {
         if (coordinate.getDimension() == 3) {
             coordinate.setZ(transformed.get(2, 0));
         }
-
-        return coordinate;
     }
 
-    public Feature transform(Feature feature) {
+    public void transform(Feature feature) {
         feature.accept(processor);
-        return feature;
     }
 
-    public Geometry<?> transform(Geometry<?> geometry) {
+    public void transform(Geometry<?> geometry) {
         geometry.accept(processor);
-        return geometry;
     }
 
-    public Envelope transform(Envelope envelope) {
+    public void transform(Visitable visitable) {
+        visitable.accept(processor);
+    }
+
+    public void transform(Envelope envelope) {
         if (!envelope.isEmpty()) {
             transform(envelope.getLowerCorner());
             transform(envelope.getUpperCorner());
         }
-
-        return envelope;
     }
 
     private class Processor extends ModelWalker {
