@@ -68,7 +68,7 @@ public class AddressImporter extends DatabaseImporter {
         stmt.setString(11, address.getCountry().orElse(null));
 
         String arrayValue = address.getFreeText()
-                .map(array -> JSONArray.copyOf(array.getValues().stream()
+                .map(array -> new JSONArray(array.getValues().stream()
                         .map(Value::rawValue)
                         .collect(Collectors.toList())).toString())
                 .orElse(null);

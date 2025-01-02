@@ -86,7 +86,7 @@ public class AttributeImporter extends PropertyImporter {
         stmt.setString(13, attribute.getUom().orElse(null));
 
         String arrayValue = attribute.getArrayValue()
-                .map(array -> JSONArray.copyOf(array.getValues().stream()
+                .map(array -> new JSONArray(array.getValues().stream()
                         .map(Value::rawValue)
                         .collect(Collectors.toList())).toString())
                 .orElse(null);
