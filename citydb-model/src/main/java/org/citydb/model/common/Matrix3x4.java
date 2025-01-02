@@ -23,6 +23,7 @@ package org.citydb.model.common;
 
 import org.citydb.model.util.matrix.Matrix;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -60,7 +61,11 @@ public class Matrix3x4 extends Matrix {
         }
     }
 
+    public static Matrix3x4 ofRowMajor(double... values) {
+        return ofRowMajor(values != null ? Arrays.stream(values).boxed().toList() : null);
+    }
+
     public static Matrix3x4 identity() {
-        return new Matrix3x4(Matrix.identity(4, 4).getSubMatrix(0, 2, 0, 3));
+        return new Matrix3x4(Matrix.identity(3, 4));
     }
 }

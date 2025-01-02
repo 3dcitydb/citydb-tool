@@ -81,6 +81,9 @@ public abstract class ExportController implements Command {
     @CommandLine.Mixin
     protected CrsOptions crsOptions;
 
+    @CommandLine.Mixin
+    protected TransformOptions transformOptions;
+
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
     protected QueryOptions queryOptions;
@@ -261,6 +264,10 @@ public abstract class ExportController implements Command {
 
         if (crsOptions.getTargetSrs() != null) {
             exportOptions.setTargetSrs(crsOptions.getTargetSrs());
+        }
+
+        if (transformOptions != null) {
+            exportOptions.setAffineTransform(transformOptions.getTransformationMatrix());
         }
 
         if (queryOptions != null) {

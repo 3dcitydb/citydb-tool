@@ -23,6 +23,7 @@ package org.citydb.model.common;
 
 import org.citydb.model.util.matrix.Matrix;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -56,6 +57,10 @@ public class Matrix4x4 extends Matrix {
         } else {
             throw new IllegalArgumentException("A 4x4 matrix requires 16 values.");
         }
+    }
+
+    public static Matrix4x4 ofRowMajor(double... values) {
+        return ofRowMajor(values != null ? Arrays.stream(values).boxed().toList() : null);
     }
 
     public static Matrix4x4 identity() {

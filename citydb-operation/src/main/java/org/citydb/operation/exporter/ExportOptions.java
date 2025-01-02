@@ -48,10 +48,10 @@ public class ExportOptions {
     private OutputFile outputFile;
     private int numberOfThreads;
     private SrsReference targetSrs;
-    private LodOptions lodOptions;
-    private AppearanceOptions appearanceOptions;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
+    private LodOptions lodOptions;
+    private AppearanceOptions appearanceOptions;
 
     public OutputFile getOutputFile() {
         if (outputFile == null) {
@@ -93,6 +93,15 @@ public class ExportOptions {
         return this;
     }
 
+    public Optional<Matrix3x4> getAffineTransform() {
+        return Optional.ofNullable(affineTransform);
+    }
+
+    public ExportOptions setAffineTransform(Matrix3x4 affineTransform) {
+        this.affineTransform = affineTransform;
+        return this;
+    }
+
     public Optional<LodOptions> getLodOptions() {
         return Optional.ofNullable(lodOptions);
     }
@@ -108,15 +117,6 @@ public class ExportOptions {
 
     public ExportOptions setAppearanceOptions(AppearanceOptions appearanceOptions) {
         this.appearanceOptions = appearanceOptions;
-        return this;
-    }
-
-    public Optional<Matrix3x4> getAffineTransform() {
-        return Optional.ofNullable(affineTransform);
-    }
-
-    public ExportOptions setAffineTransform(Matrix3x4 affineTransform) {
-        this.affineTransform = affineTransform;
         return this;
     }
 }

@@ -23,6 +23,7 @@ package org.citydb.model.common;
 
 import org.citydb.model.util.matrix.Matrix;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -56,6 +57,10 @@ public class Matrix2x2 extends Matrix {
         } else {
             throw new IllegalArgumentException("A 2x2 matrix requires 4 values.");
         }
+    }
+
+    public static Matrix2x2 ofRowMajor(double... values) {
+        return ofRowMajor(values != null ? Arrays.stream(values).boxed().toList() : null);
     }
 
     public static Matrix2x2 identity() {
