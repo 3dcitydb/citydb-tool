@@ -28,6 +28,7 @@ import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.appearance.SurfaceDataProperty;
 import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.common.Child;
+import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.LinearRing;
@@ -146,13 +147,13 @@ public class AppearanceHelper {
                         "#" + k, new AbstractTextureParameterizationProperty(v)))));
     }
 
-    public void addWorldToTextureTargets(Map<Surface<?>, List<Double>> mapping, ParameterizedTexture target, Set<String> geometries) {
+    public void addWorldToTextureTargets(Map<Surface<?>, Matrix3x4> mapping, ParameterizedTexture target, Set<String> geometries) {
         Set<String> targets = new HashSet<>();
         mapping.forEach((k, v) -> {
             String surfaceId = k.getOrCreateObjectId();
             if (geometries.contains(surfaceId) && targets.add(surfaceId)) {
                 TexCoordGen texCoordGen = new TexCoordGen();
-                texCoordGen.setWorldToTexture(TransformationMatrix3x4.ofRowMajorList(v));
+                texCoordGen.setWorldToTexture(TransformationMatrix3x4.ofRowMajorList(v.toRowMajor()));
                 target.getTextureParameterizations().add(new TextureAssociationProperty(new TextureAssociation(
                         "#" + surfaceId, new AbstractTextureParameterizationProperty(texCoordGen))));
             }

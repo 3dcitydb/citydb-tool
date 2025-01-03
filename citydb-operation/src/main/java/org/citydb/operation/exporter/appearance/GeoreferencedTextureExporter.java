@@ -29,7 +29,6 @@ import org.citydb.operation.exporter.ExportHelper;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class GeoreferencedTextureExporter extends TextureExporter {
@@ -45,7 +44,7 @@ public class GeoreferencedTextureExporter extends TextureExporter {
         if (orientation != null) {
             texture.setOrientation(IntStream.range(0, orientation.size())
                     .mapToObj(orientation::getDouble)
-                    .collect(Collectors.toList()));
+                    .toList());
         }
 
         Point referencePoint = getGeometry(rs.getObject("gt_reference_point"), Point.class);

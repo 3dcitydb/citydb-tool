@@ -21,15 +21,11 @@
 
 package org.citydb.model.property;
 
-import org.citydb.model.common.Child;
-import org.citydb.model.common.InlineOrByReferenceProperty;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
+import org.citydb.model.common.*;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -37,7 +33,7 @@ import java.util.Optional;
 public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty> implements InlineOrByReferenceProperty<ImplicitGeometry> {
     private ImplicitGeometry implicitGeometry;
     private Reference reference;
-    private List<Double> transformationMatrix;
+    private Matrix4x4 transformationMatrix;
     private Point referencePoint;
     private String lod;
 
@@ -93,14 +89,19 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
         return this;
     }
 
-    public Optional<List<Double>> getTransformationMatrix() {
+    public Optional<Matrix4x4> getTransformationMatrix() {
         return Optional.ofNullable(transformationMatrix);
     }
 
+    public ImplicitGeometryProperty setTransformationMatrix(Matrix4x4 transformationMatrix) {
+        this.transformationMatrix = transformationMatrix;
+        return this;
+    }
+
     public ImplicitGeometryProperty setTransformationMatrix(List<Double> transformationMatrix) {
-        this.transformationMatrix = transformationMatrix != null && transformationMatrix.size() > 15 ?
-                new ArrayList<>(transformationMatrix.subList(0, 16)) :
-                null;
+        if (transformationMatrix != null && transformationMatrix.size() > 15) {
+            this.transformationMatrix = Matrix4x4.ofRowMajor(transformationMatrix);
+        }
 
         return this;
     }

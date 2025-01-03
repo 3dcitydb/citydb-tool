@@ -21,10 +21,15 @@
 
 package org.citydb.operation.importer;
 
+import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.core.CoreConstants;
+import org.citydb.model.common.Matrix3x4;
+import org.citydb.model.encoding.Matrix3x4Reader;
+import org.citydb.model.encoding.Matrix3x4Writer;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
 @SerializableConfig(name = "importOptions")
 public class ImportOptions {
@@ -33,6 +38,8 @@ public class ImportOptions {
     private String tempDirectory;
     private int numberOfThreads;
     private int batchSize = DEFAULT_BATCH_SIZE;
+    @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
+    private Matrix3x4 affineTransform;
 
     public Path getTempDirectory() {
         return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
@@ -58,6 +65,15 @@ public class ImportOptions {
 
     public ImportOptions setBatchSize(int batchSize) {
         this.batchSize = batchSize;
+        return this;
+    }
+
+    public Optional<Matrix3x4> getAffineTransform() {
+        return Optional.ofNullable(affineTransform);
+    }
+
+    public ImportOptions setAffineTransform(Matrix3x4 affineTransform) {
+        this.affineTransform = affineTransform;
         return this;
     }
 }

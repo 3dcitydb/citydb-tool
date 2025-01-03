@@ -85,6 +85,9 @@ public abstract class ImportController implements Command {
             description = "Compute and overwrite extents of features.")
     protected Boolean computeEnvelopes;
 
+    @CommandLine.Mixin
+    protected TransformOptions transformOptions;
+
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
@@ -293,6 +296,10 @@ public abstract class ImportController implements Command {
 
         if (threadsOptions.getNumberOfThreads() != null) {
             importOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
+        }
+
+        if (transformOptions != null) {
+            importOptions.setAffineTransform(transformOptions.getTransformationMatrix());
         }
 
         return importOptions;

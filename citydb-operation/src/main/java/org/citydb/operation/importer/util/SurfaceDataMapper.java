@@ -23,6 +23,7 @@ package org.citydb.operation.importer.util;
 
 import com.alibaba.fastjson2.JSONArray;
 import org.citydb.model.appearance.*;
+import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.geometry.GeometryDescriptor;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Polygon;
@@ -70,9 +71,10 @@ public class SurfaceDataMapper {
             for (Surface<?> surface : entry.getValue()) {
                 String objectId = surface.getObjectId().orElse(null);
                 if (objectId != null) {
-                    List<Double> worldToTexture = texture.getWorldToTextureMapping(surface);
+                    Matrix3x4 worldToTexture = texture.getWorldToTextureMapping(surface);
                     if (worldToTexture != null) {
-                        mapping.getOrCreateWorldToTextureMapping().put(objectId, JSONArray.copyOf(worldToTexture));
+                        mapping.getOrCreateWorldToTextureMapping()
+                                .put(objectId, new JSONArray(worldToTexture.toRowMajor()));
                     }
 
                     if (surface instanceof Polygon polygon) {

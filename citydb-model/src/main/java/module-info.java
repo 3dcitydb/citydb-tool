@@ -9,5 +9,6 @@ module org.citydb.model {
     exports org.citydb.model.geometry;
     exports org.citydb.model.property;
     exports org.citydb.model.util;
+    exports org.citydb.model.util.matrix;
     exports org.citydb.model.walker;
 }
