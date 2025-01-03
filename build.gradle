@@ -74,7 +74,7 @@ subprojects {
         from("$rootDir/resources/license/LICENSE.txt") {
             filteringCharset = 'UTF-8'
             filter(ReplaceTokens, tokens: [
-                    name: project.appName
+                    name: appName
             ])
         }
         into "$projectDir/build/tmp/license"
@@ -87,11 +87,11 @@ subprojects {
             overview "$projectDir/build/tmp/javadoc/overview.html"
             bottom """
                 <a href="${appIssueTrackerUrl}">Report a bug or suggest an enhancement</a><br>
-                ${project.name} is open source and licensed under the <a target="_blank" href="http://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.<br>
-                Official website and more information at: <a target="_blank" href="${project.appWebsiteUrl}">${project.appWebsiteUrl}</a><br>
-                Copyright &copy; ${project.appCopyrightYear}<br>
-                ${project.vendorName}, ${project.vendorCountry}<br>
-                <a target="_blank" href="${project.vendorWebsiteUrl}">${project.vendorWebsiteUrl}</a>
+                ${project.name} is open source and licensed under the <a target="_blank" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.<br>
+                Official website and more information at: <a target="_blank" href="$appWebsiteUrl">$appWebsiteUrl</a><br>
+                Copyright &copy; $appCopyrightYear<br>
+                $vendorName, $vendorCountry<br>
+                <a target="_blank" href="$vendorWebsiteUrl">$vendorWebsiteUrl</a>
                 """.replaceAll("[\r|\n]+", "")
             addStringOption('doctitle', project.name + ' - ' + project.version)
             addStringOption('Xdoclint:none', '-quiet')
@@ -114,9 +114,9 @@ subprojects {
 
     jar {
         manifest {
-            attributes('Implementation-Title': project.appName,
+            attributes('Implementation-Title': appName,
                     'Implementation-Version': project.version,
-                    'Implementation-Vendor': project.vendorName
+                    'Implementation-Vendor': vendorName
             )
         }
         into('META-INF') {
@@ -131,10 +131,10 @@ subprojects {
                 from components.java
                 pom {
                     name = project.name
-                    url = project.vendorWebsiteUrl
+                    url = vendorWebsiteUrl
                     scm {
-                        url = project.appGitHubUrl
-                        connection = 'scm:git:' + project.appGitConnection
+                        url = appGitHubUrl
+                        connection = 'scm:git:' + appGitConnection
                     }
                 }
             }

@@ -34,7 +34,7 @@ processResources {
 application {
     mainModule = 'org.citydb.cli'
     mainClass = 'org.citydb.cli.Launcher'
-    applicationName = project.appCliCommand
+    applicationName = appCliCommand
     executableDir = ''
 
     startScripts {
@@ -50,7 +50,7 @@ application {
 
 distributions {
     main {
-        distributionBaseName = project.appName
+        distributionBaseName = appName
         contents {
             into('license') {
                 from "$rootDir/resources/license/APACHE-2.0.txt"
@@ -70,8 +70,9 @@ distributions {
 }
 
 tasks.register('buildBundle', Zip) {
+    group = 'distribution'
     dependsOn installDist
-    from "$projectDir/build/install/$project.appName"
+    from "$projectDir/build/install/$appName"
     destinationDirectory = distZip.destinationDirectory.get()
-    archiveFileName = project.appName + '-' + project.version + '.zip'
+    archiveFileName = appName + '-' + project.version + '.zip'
 }

@@ -5,9 +5,9 @@ ext {
     appCliCommand = 'citydb'
     appDescription = 'Command-line tool for the 3D City Database'
     appWebsiteUrl = 'https://github.com/3dcitydb'
-    appGitHubUrl = 'https://github.com/3dcitydb/importer-exporter'
+    appGitHubUrl = 'https://github.com/3dcitydb/citydb-tool'
     appGitConnection = appGitHubUrl + '.git'
-    appIssueTrackerUrl = 'https://github.com/3dcitydb/importer-exporter/issues'
+    appIssueTrackerUrl = 'https://github.com/3dcitydb/citydb-tool/issues'
     appCopyrightYear = '2022-' + date.format('yyyy')
 
     vendorName = 'virtualcitysystems GmbH'
