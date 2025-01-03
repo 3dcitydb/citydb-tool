@@ -6,10 +6,10 @@ plugins {
 
 apply from: 'properties.gradle'
 
-version '0.10.0-beta'
+version = '0.10.1-beta'
 
 allprojects {
-    group 'org.citydb'
+    group = 'org.citydb'
 }
 
 subprojects {
@@ -18,7 +18,7 @@ subprojects {
     apply plugin: 'org.gradlex.extra-java-module-info'
     apply plugin: 'idea'
 
-    version parent.version
+    version = parent.version
 
     java {
         toolchain {
@@ -34,20 +34,20 @@ subprojects {
 
     repositories {
         maven {
-            url 'https://repo.osgeo.org/repository/release/'
+            url = 'https://repo.osgeo.org/repository/release/'
         }
         maven {
-            url 'https://oss.sonatype.org/content/repositories/snapshots/'
+            url = 'https://oss.sonatype.org/content/repositories/snapshots/'
         }
         maven {
-            url 'https://3dcitydb.org/maven'
+            url = 'https://3dcitydb.org/maven'
         }
         mavenCentral()
     }
 
     dependencies {
-        testImplementation(platform('org.junit:junit-bom:5.9.2'))
-        testImplementation('org.junit.jupiter:junit-jupiter')
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 
     test {
@@ -66,11 +66,11 @@ subprojects {
 
     idea {
         module {
-            outputDir file('out/production/classes')
+            outputDir = file('out/production/classes')
         }
     }
 
-    task processLicense(type: Copy) {
+    tasks.register('processLicense', Copy) {
         from("$rootDir/resources/license/LICENSE.txt") {
             filteringCharset = 'UTF-8'
             filter(ReplaceTokens, tokens: [
@@ -102,9 +102,9 @@ subprojects {
                 from("$rootDir/resources/javadoc/overview.html") {
                     filteringCharset = 'UTF-8'
                     filter(ReplaceTokens, tokens: [
-                            name: project.name,
-                            version: project.version,
-                            appName: project.appName,
+                            name: name,
+                            version: version,
+                            appName: appName,
                     ])
                 }
                 into "$projectDir/build/tmp/javadoc"
@@ -141,8 +141,8 @@ subprojects {
         }
         repositories {
             maven {
-                url project.hasProperty('gitLab_maven_url') ? project.property('gitLab_maven_url') : System.getenv('GITLAB_MAVEN_URL')
-                name 'gitlab-maven'
+                url = project.hasProperty('gitLab_maven_url') ? project.property('gitLab_maven_url') : System.getenv('GITLAB_MAVEN_URL')
+                name = 'gitlab-maven'
                 credentials(HttpHeaderCredentials) {
                     name = 'Private-Token'
                     value = project.hasProperty('gitLab_private_token') ? project.property('gitLab_private_token') : System.getenv('GITLAB_PRIVATE_TOKEN')

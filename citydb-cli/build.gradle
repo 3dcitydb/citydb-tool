@@ -23,10 +23,10 @@ processResources {
     filteringCharset = 'ISO-8859-1'
     filesMatching('**/application.properties') {
         filter(ReplaceTokens, tokens: [
-                name: project.appName,
-                version: project.version,
-                copyrightYear: project.appCopyrightYear,
-                vendor: project.vendorName
+                name: appName,
+                version: version,
+                copyrightYear: appCopyrightYear,
+                vendor: vendorName
         ])
     }
 }
