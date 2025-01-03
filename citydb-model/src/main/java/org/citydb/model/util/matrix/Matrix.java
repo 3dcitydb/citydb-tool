@@ -349,20 +349,6 @@ public class Matrix implements Serializable {
         return new Matrix(this);
     }
 
-    public boolean isEqual(Matrix matrix) {
-        if (matrix.rows == rows && matrix.columns == columns) {
-            for (int i = 0; i < rows; i++) {
-                if (!Arrays.equals(elements[i], matrix.elements[i])) {
-                    return false;
-                }
-            }
-
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     private void checkDimensions(Matrix matrix) {
         if (matrix.rows != rows || matrix.columns != columns) {
             throw new IllegalArgumentException("Matrix dimensions must agree.");
