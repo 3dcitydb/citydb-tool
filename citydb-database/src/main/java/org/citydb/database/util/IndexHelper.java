@@ -53,7 +53,6 @@ public class IndexHelper {
             Index.PROPERTY_VAL_TIMESTAMP,
             Index.PROPERTY_VAL_DOUBLE,
             Index.PROPERTY_VAL_INT,
-            Index.PROPERTY_VAL_LOD,
             Index.PROPERTY_VAL_STRING,
             Index.PROPERTY_VAL_UOM,
             Index.PROPERTY_VAL_URI));

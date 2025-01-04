@@ -33,54 +33,84 @@ import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class AddressExporter extends DatabaseExporter {
+    private final Table address;
+    private final Select select;
 
     public AddressExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
+        address = tableHelper.getTable(org.citydb.database.schema.Table.ADDRESS);
+        select = getBaseQuery();
+        stmt = helper.getConnection().prepareStatement(Select.of(select)
+                .where(address.column("id").eq(Placeholder.empty()))
+                .toSql());
     }
 
-    private Select getQuery() {
-        Table address = tableHelper.getTable(org.citydb.database.schema.Table.ADDRESS);
+    private Select getBaseQuery() {
         return Select.newInstance()
-                .select(address.columns(Map.of("objectid", "address_objectid", "identifier", "address_identifier",
-                        "identifier_codespace", "address_identifier_codespace")))
-                .select(address.columns("street", "house_number", "po_box", "zip_code", "city",
-                        "state", "country", "free_text", "content", "content_mime_type"))
+                .select(address.columns("id", "objectid", "identifier", "identifier_codespace", "street",
+                        "house_number", "po_box", "zip_code", "city", "state", "country", "free_text", "content",
+                        "content_mime_type"))
                 .select(helper.getTransformOperator(address.column("multi_point")))
-                .from(address)
-                .where(address.column("id").eq(Placeholder.empty()));
+                .from(address);
+    }
+
+    private Select getQuery(Set<Long> ids) {
+        return Select.of(select)
+                .where(operationHelper.in(address.column("id"), ids));
     }
 
     public Address doExport(long id) throws ExportException, SQLException {
         stmt.setLong(1, id);
         try (ResultSet rs = stmt.executeQuery()) {
-            if (rs.next()) {
-                return doExport(id, rs);
-            }
+            return doExport(rs).get(id);
         }
-
-        return null;
     }
 
-    public Address doExport(long addressId, ResultSet rs) throws ExportException, SQLException {
-        return Address.newInstance()
-                .setObjectId(rs.getString("address_objectid"))
-                .setIdentifier(rs.getString("address_identifier"))
-                .setIdentifierCodeSpace(rs.getString("address_identifier_codespace"))
-                .setStreet(rs.getString("street"))
-                .setHouseNumber(rs.getString("house_number"))
-                .setPoBox(rs.getString("po_box"))
-                .setZipCode(rs.getString("zip_code"))
-                .setCity(rs.getString("city"))
-                .setState(rs.getString("state"))
-                .setCountry(rs.getString("country"))
-                .setFreeText(getArrayValue(rs.getString("free_text")))
-                .setMultiPoint(getGeometry(rs.getObject("multi_point"), MultiPoint.class))
-                .setGenericContent(rs.getString("content"))
-                .setGenericContentMimeType(rs.getString("content_mime_type"))
-                .setDescriptor(AddressDescriptor.of(addressId));
+    public Map<Long, Address> doExport(Set<Long> ids) throws ExportException, SQLException {
+        if (ids.size() == 1) {
+            stmt.setLong(1, ids.iterator().next());
+            try (ResultSet rs = stmt.executeQuery()) {
+                return doExport(rs);
+            }
+        } else if (!ids.isEmpty()) {
+            try (Statement stmt = helper.getConnection().createStatement();
+                 ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
+                return doExport(rs);
+            }
+        } else {
+            return Collections.emptyMap();
+        }
+    }
+
+    private Map<Long, Address> doExport(ResultSet rs) throws ExportException, SQLException {
+        Map<Long, Address> addresses = new HashMap<>();
+        while (rs.next()) {
+            long id = rs.getLong("id");
+            addresses.put(id, Address.newInstance()
+                    .setObjectId(rs.getString("objectid"))
+                    .setIdentifier(rs.getString("identifier"))
+                    .setIdentifierCodeSpace(rs.getString("identifier_codespace"))
+                    .setStreet(rs.getString("street"))
+                    .setHouseNumber(rs.getString("house_number"))
+                    .setPoBox(rs.getString("po_box"))
+                    .setZipCode(rs.getString("zip_code"))
+                    .setCity(rs.getString("city"))
+                    .setState(rs.getString("state"))
+                    .setCountry(rs.getString("country"))
+                    .setFreeText(getArrayValue(rs.getString("free_text")))
+                    .setMultiPoint(getGeometry(rs.getObject("multi_point"), MultiPoint.class))
+                    .setGenericContent(rs.getString("content"))
+                    .setGenericContentMimeType(rs.getString("content_mime_type"))
+                    .setDescriptor(AddressDescriptor.of(id)));
+        }
+
+        return addresses;
     }
 }
