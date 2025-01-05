@@ -78,7 +78,7 @@ public class AttributeImporter extends PropertyImporter {
         if (timestamp != null) {
             stmt.setObject(10, timestamp);
         } else {
-            stmt.setNull(10, Types.TIMESTAMP);
+            stmt.setNull(10, Types.TIMESTAMP_WITH_TIMEZONE);
         }
 
         stmt.setString(11, attribute.getURI().orElse(null));

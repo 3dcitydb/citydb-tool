@@ -81,21 +81,21 @@ public class FeatureImporter extends DatabaseImporter {
         if (terminationDate != null) {
             stmt.setObject(12, terminationDate);
         } else {
-            stmt.setNull(12, Types.TIMESTAMP);
+            stmt.setNull(12, Types.TIMESTAMP_WITH_TIMEZONE);
         }
 
         OffsetDateTime validFrom = feature.getValidFrom().orElse(null);
         if (validFrom != null) {
             stmt.setObject(13, validFrom);
         } else {
-            stmt.setNull(13, Types.TIMESTAMP);
+            stmt.setNull(13, Types.TIMESTAMP_WITH_TIMEZONE);
         }
 
         OffsetDateTime validTo = feature.getValidTo().orElse(null);
         if (validTo != null) {
             stmt.setObject(14, validTo);
         } else {
-            stmt.setNull(14, Types.TIMESTAMP);
+            stmt.setNull(14, Types.TIMESTAMP_WITH_TIMEZONE);
         }
 
         addBatch();
