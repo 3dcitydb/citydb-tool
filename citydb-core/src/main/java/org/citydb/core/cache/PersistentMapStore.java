@@ -103,6 +103,9 @@ public class PersistentMapStore implements AutoCloseable {
         private int cacheSize;
         private int cacheConcurrency;
 
+        private Builder() {
+        }
+
         public Builder tempDirectory(Path tempDirectory) {
             this.tempDirectory = tempDirectory;
             return this;
