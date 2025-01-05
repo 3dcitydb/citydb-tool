@@ -94,4 +94,8 @@ public abstract class SchemaAdapter {
     public IndexHelper getIndexHelper() {
         return indexHelper;
     }
+
+    public String getCreateIndex(Index index) {
+        return getCreateIndex(index, false);
+    }
 }
