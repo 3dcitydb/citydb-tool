@@ -69,7 +69,7 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     @Override
-    public Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException {
+    public Object getGeometry(Geometry<?> geometry, boolean force3D) {
         return writer.write(geometry, force3D);
     }
 

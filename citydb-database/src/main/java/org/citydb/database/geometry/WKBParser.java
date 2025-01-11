@@ -23,28 +23,25 @@ package org.citydb.database.geometry;
 
 import org.citydb.model.geometry.*;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 
 public class WKBParser {
 
     public Geometry<?> parse(String wkb) throws GeometryException {
-        return wkb != null ? read(ByteBuffer.wrap(toBytes(wkb))) : null;
+        return wkb != null ? read(new StringBuffer(wkb)) : null;
     }
 
     public Geometry<?> parse(Object wkb) throws GeometryException {
-        return wkb != null ? read(ByteBuffer.wrap(toBytes(wkb.toString()))) : null;
+        return wkb != null ? read(new StringBuffer(wkb.toString())) : null;
     }
 
     public Geometry<?> parse(byte[] bytes) throws GeometryException {
-        return bytes != null ? read(ByteBuffer.wrap(bytes)) : null;
+        return bytes != null ? read(new ArrayBuffer(bytes)) : null;
     }
 
     private Geometry<?> read(ByteBuffer buffer) throws GeometryException {
-        byte byteOrder = buffer.get();
-        buffer.order(byteOrder == 1 ? ByteOrder.LITTLE_ENDIAN : ByteOrder.BIG_ENDIAN);
+        buffer.order(buffer.getByte());
 
         int typeInt = buffer.getInt();
         int geometryType = typeInt & 0xff;
@@ -182,14 +179,69 @@ public class WKBParser {
                 Coordinate.of(x, y, buffer.getDouble());
     }
 
-    private byte[] toBytes(String hex) {
-        int len = hex.length();
-        byte[] bytes = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            bytes[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4) +
-                    Character.digit(hex.charAt(i + 1), 16));
+    private static abstract class ByteBuffer {
+        final int[] bigEndian = new int[]{1, 0, 1, 2, 3, 4, 5, 6, 7};
+        final int[] littleEndian = new int[]{5, 7, 6, 5, 4, 3, 2, 1, 0};
+        int[] indexes = bigEndian;
+        int pos;
+
+        abstract int get(int pos);
+
+        void order(byte order) {
+            indexes = order == 0 ? bigEndian : littleEndian;
         }
 
-        return bytes;
+        byte getByte() {
+            return (byte) get(pos++);
+        }
+
+        int getInt() {
+            int low = indexes[0];
+            int value = (get(pos + indexes[low]) << 24) + (get(pos + indexes[low + 1]) << 16)
+                    + (get(pos + indexes[low + 2]) << 8) + get(pos + indexes[low + 3]);
+            pos += 4;
+            return value;
+        }
+
+        long getLong() {
+            long value = ((long) get(pos + indexes[1]) << 56) + ((long) get(pos + indexes[2]) << 48)
+                    + ((long) get(pos + indexes[3]) << 40) + ((long) get(pos + indexes[4]) << 32)
+                    + ((long) get(pos + indexes[5]) << 24) + ((long) get(pos + indexes[6]) << 16)
+                    + ((long) get(pos + indexes[7]) << 8) + ((long) get(pos + indexes[8]));
+            pos += 8;
+            return value;
+        }
+
+        double getDouble() {
+            return Double.longBitsToDouble(getLong());
+        }
+    }
+
+    private static class StringBuffer extends ByteBuffer {
+        final String data;
+
+        StringBuffer(String data) {
+            this.data = data;
+        }
+
+        @Override
+        int get(int pos) {
+            pos *= 2;
+            return (Character.digit(data.charAt(pos), 16) << 4) +
+                    Character.digit(data.charAt(pos + 1), 16);
+        }
+    }
+
+    private static class ArrayBuffer extends ByteBuffer {
+        final byte[] data;
+
+        ArrayBuffer(byte[] data) {
+            this.data = data;
+        }
+
+        @Override
+        int get(int pos) {
+            return data[pos] & 0xFF;
+        }
     }
 }
