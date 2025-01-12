@@ -90,8 +90,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     public String getFeatureHierarchyQuery() {
         try {
             return PlainText.of(featureHierarchyQuery.get(),
-                    "F.ENVELOPE",
-                    "G.GEOMETRY").toString();
+                    "F.ENVELOPE").toString();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create feature hierarchy query.", e);
         }
@@ -101,8 +100,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     public String getFeatureHierarchyQuery(int targetSRID) {
         try {
             return PlainText.of(featureHierarchyQuery.get(),
-                    "st_transform(F.ENVELOPE, " + targetSRID + ")",
-                    "st_transform(G.GEOMETRY, " + targetSRID + ")").toString();
+                    "st_transform(F.ENVELOPE, " + targetSRID + ")").toString();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create feature hierarchy query.", e);
         }

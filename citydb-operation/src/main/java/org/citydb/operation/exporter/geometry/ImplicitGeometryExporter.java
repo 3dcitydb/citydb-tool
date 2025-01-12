@@ -71,8 +71,7 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
         return Select.newInstance()
                 .select(implicitGeometry.columns("id", "mime_type", "mime_type_codespace", "reference_to_library",
                         "relative_geometry_id"))
-                .select(geometryData.columns("implicit_geometry", "geometry_properties"))
-                .select(geometryData.column("feature_id", "geometry_feature_id"))
+                .select(geometryData.columns("implicit_geometry", "geometry_properties", "feature_id"))
                 .from(implicitGeometry)
                 .leftJoin(geometryData).on(geometryData.column("id")
                         .eq(implicitGeometry.column("relative_geometry_id")));

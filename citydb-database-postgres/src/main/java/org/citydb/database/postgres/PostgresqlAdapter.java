@@ -51,6 +51,6 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     @Override
     public String getConnectionString(String host, int port, String database) {
         return "jdbc:postgresql://" + host + ":" + port + "/" + database +
-                "?defaultRowFetchSize=1000&reWriteBatchedInserts=true";
+                "?defaultRowFetchSize=10000&reWriteBatchedInserts=true";
     }
 }

@@ -68,6 +68,7 @@ public class HierarchyBuilder {
     }
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
+        Set<Long> geometryIds = new HashSet<>();
         Set<Long> appearanceIds = new HashSet<>();
         Set<Long> addressIds = new HashSet<>();
         Set<Long> implicitGeometryIds = new HashSet<>();
@@ -83,8 +84,7 @@ public class HierarchyBuilder {
             if (!rs.wasNull()
                     && hierarchy.getGeometry(geometryId) == null
                     && lodFilter.filter(rs.getString("val_lod"))) {
-                hierarchy.addGeometry(geometryId, tableHelper.getOrCreateExporter(GeometryExporter.class)
-                        .doExport(geometryId, false, rs));
+                geometryIds.add(geometryId);
             }
 
             if (exportAppearances) {
@@ -112,6 +112,12 @@ public class HierarchyBuilder {
                     propertyStubs.add(propertyStub);
                 }
             }
+        }
+
+        if (!geometryIds.isEmpty()) {
+            tableHelper.getOrCreateExporter(GeometryExporter.class)
+                    .doExport(geometryIds, false)
+                    .forEach(hierarchy::addGeometry);
         }
 
         if (exportAppearances) {
