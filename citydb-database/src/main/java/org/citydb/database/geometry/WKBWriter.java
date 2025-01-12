@@ -45,7 +45,7 @@ public class WKBWriter {
 
     public String write(Geometry<?> geometry, boolean force3D) {
         return geometry != null ?
-                write(geometry, force3D, StringBuffer.class).build() :
+                write(geometry, force3D, new StringBuffer()).build() :
                 null;
     }
 
@@ -55,18 +55,14 @@ public class WKBWriter {
 
     public byte[] writeBinary(Geometry<?> geometry, boolean force3D) {
         return geometry != null ?
-                write(geometry, force3D, ArrayBuffer.class).build() :
+                write(geometry, force3D, new ArrayBuffer()).build() :
                 null;
     }
 
-    @SuppressWarnings("unchecked")
-    private <T extends ByteBuffer> T write(Geometry<?> geometry, boolean force3D, Class<T> type) {
+    private <T extends ByteBuffer> T write(Geometry<?> geometry, boolean force3D, T buffer) {
         int srid = includeSRID ? geometry.getSRID().orElse(0) : 0;
         int dimension = force3D ? 3 : geometry.getVertexDimension();
-        int length = calculateBytes(geometry, dimension, srid);
-        T buffer = (T) (type == ArrayBuffer.class ?
-                new ArrayBuffer(length, useBigEndian) :
-                new StringBuffer(length, useBigEndian));
+        buffer.allocate(calculateBytes(geometry, dimension, srid));
 
         switch (geometry.getGeometryType()) {
             case POINT -> write((Point) geometry, dimension, srid, buffer);
@@ -84,13 +80,13 @@ public class WKBWriter {
     }
 
     private void write(Point point, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.POINT, dimension, srid);
         putCoordinate(buffer, point.getCoordinate(), dimension);
     }
 
     private void write(MultiPoint multiPoint, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.MULTIPOINT, dimension, srid);
         buffer.putInt(multiPoint.getPoints().size());
         for (Point point : multiPoint.getPoints()) {
@@ -99,7 +95,7 @@ public class WKBWriter {
     }
 
     private void write(MultiLineString multiLineString, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.MULTILINESTRING, dimension, srid);
         buffer.putInt(multiLineString.getLineStrings().size());
         for (LineString lineString : multiLineString.getLineStrings()) {
@@ -108,7 +104,7 @@ public class WKBWriter {
     }
 
     private void write(LineString lineString, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.LINESTRING, dimension, srid);
         if (!lineString.getPoints().isEmpty()) {
             putCoordinates(buffer, lineString.getPoints(), dimension);
@@ -116,7 +112,7 @@ public class WKBWriter {
     }
 
     private void write(Polygon polygon, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.POLYGON, dimension, srid);
 
         int numberOfRings = 1 + (polygon.hasInteriorRings() ? polygon.getInteriorRings().size() : 0);
@@ -131,7 +127,7 @@ public class WKBWriter {
     }
 
     private void write(SurfaceCollection<?> surfaces, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.MULTIPOLYGON, dimension, srid);
         buffer.putInt(surfaces.getPolygons().size());
         for (Polygon polygon : surfaces.getPolygons()) {
@@ -140,7 +136,7 @@ public class WKBWriter {
     }
 
     private void write(Solid solid, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.POLYHEDRALSURFACE, dimension, srid);
         buffer.putInt(solid.getShell().getPolygons().size());
         for (Polygon polygon : solid.getShell().getPolygons()) {
@@ -149,7 +145,7 @@ public class WKBWriter {
     }
 
     private void write(SolidCollection<?> solids, int dimension, int srid, ByteBuffer buffer) {
-        putByteOrder(buffer);
+        buffer.putByteOrder();
         putGeometryType(buffer, WKBConstants.GEOMETRYCOLLECTION, dimension, srid);
         buffer.putInt(solids.getSolids().size());
         for (Solid solid : solids.getSolids()) {
@@ -251,13 +247,9 @@ public class WKBWriter {
         return 8 * numberOfCoordinates * dimension;
     }
 
-    private void putByteOrder(ByteBuffer buffer) {
-        buffer.put(useBigEndian ? (byte) 0 : (byte) 1);
-    }
-
     private void putGeometryType(ByteBuffer buffer, int geometryType, int dimension, int srid) {
-        int is3D = (dimension == 3) ? 0x80000000 : 0;
-        int hasSRID = (srid > 0) ? 0x20000000 : 0;
+        int is3D = dimension == 3 ? 0x80000000 : 0;
+        int hasSRID = srid > 0 ? 0x20000000 : 0;
         buffer.putInt(geometryType | is3D | hasSRID);
         if (srid > 0) {
             buffer.putInt(srid);
@@ -279,24 +271,30 @@ public class WKBWriter {
         }
     }
 
-    private static abstract class ByteBuffer {
-        final int[] bigEndian = new int[]{1, 0, 1, 2, 3, 4, 5, 6, 7};
-        final int[] littleEndian = new int[]{5, 7, 6, 5, 4, 3, 2, 1, 0};
+    private abstract class ByteBuffer {
         final int[] indexes;
         int pos;
 
-        ByteBuffer(boolean useBigEndian) {
-            indexes = useBigEndian ? bigEndian : littleEndian;
+        ByteBuffer() {
+            indexes = WKBWriter.this.useBigEndian ?
+                    new int[]{0, 2, 0, 1, 2, 3, 4, 5, 6, 7} :
+                    new int[]{1, 6, 7, 6, 5, 4, 3, 2, 1, 0};
         }
 
+        abstract void allocate(int length);
+
         abstract void put(byte b, int index);
+
+        void putByteOrder() {
+            put((byte) indexes[0]);
+        }
 
         void put(byte b) {
             put(b, pos++);
         }
 
         void putInt(int value) {
-            int low = indexes[0];
+            int low = indexes[1];
             put((byte) (value >>> 24), pos + indexes[low]);
             put((byte) (value >>> 16), pos + indexes[low + 1]);
             put((byte) (value >>> 8), pos + indexes[low + 2]);
@@ -305,14 +303,14 @@ public class WKBWriter {
         }
 
         void putLong(long value) {
-            put((byte) (value >>> 56), pos + indexes[1]);
-            put((byte) (value >>> 48), pos + indexes[2]);
-            put((byte) (value >>> 40), pos + indexes[3]);
-            put((byte) (value >>> 32), pos + indexes[4]);
-            put((byte) (value >>> 24), pos + indexes[5]);
-            put((byte) (value >>> 16), pos + indexes[6]);
-            put((byte) (value >>> 8), pos + indexes[7]);
-            put((byte) value, pos + indexes[8]);
+            put((byte) (value >>> 56), pos + indexes[2]);
+            put((byte) (value >>> 48), pos + indexes[3]);
+            put((byte) (value >>> 40), pos + indexes[4]);
+            put((byte) (value >>> 32), pos + indexes[5]);
+            put((byte) (value >>> 24), pos + indexes[6]);
+            put((byte) (value >>> 16), pos + indexes[7]);
+            put((byte) (value >>> 8), pos + indexes[8]);
+            put((byte) value, pos + indexes[9]);
             pos += 8;
         }
 
@@ -321,12 +319,12 @@ public class WKBWriter {
         }
     }
 
-    private static class StringBuffer extends ByteBuffer {
+    private class StringBuffer extends ByteBuffer {
         final static char[] hexArray = "0123456789ABCDEF".toCharArray();
-        final char[] data;
+        char[] data;
 
-        StringBuffer(int length, boolean useBigEndian) {
-            super(useBigEndian);
+        @Override
+        void allocate(int length) {
             data = new char[length * 2];
         }
 
@@ -342,11 +340,11 @@ public class WKBWriter {
         }
     }
 
-    private static class ArrayBuffer extends ByteBuffer {
-        final byte[] data;
+    private class ArrayBuffer extends ByteBuffer {
+        byte[] data;
 
-        ArrayBuffer(int length, boolean useBigEndian) {
-            super(useBigEndian);
+        @Override
+        void allocate(int length) {
             data = new byte[length];
         }
 

@@ -197,17 +197,17 @@ public class WKBParser {
 
         int getInt() {
             int low = indexes[0];
-            int value = (get(pos + indexes[low]) << 24) + (get(pos + indexes[low + 1]) << 16)
-                    + (get(pos + indexes[low + 2]) << 8) + get(pos + indexes[low + 3]);
+            int value = (get(pos + indexes[low]) << 24) + (get(pos + indexes[low + 1]) << 16) +
+                    (get(pos + indexes[low + 2]) << 8) + get(pos + indexes[low + 3]);
             pos += 4;
             return value;
         }
 
         long getLong() {
-            long value = ((long) get(pos + indexes[1]) << 56) + ((long) get(pos + indexes[2]) << 48)
-                    + ((long) get(pos + indexes[3]) << 40) + ((long) get(pos + indexes[4]) << 32)
-                    + ((long) get(pos + indexes[5]) << 24) + ((long) get(pos + indexes[6]) << 16)
-                    + ((long) get(pos + indexes[7]) << 8) + ((long) get(pos + indexes[8]));
+            long value = ((long) get(pos + indexes[1]) << 56) + ((long) get(pos + indexes[2]) << 48) +
+                    ((long) get(pos + indexes[3]) << 40) + ((long) get(pos + indexes[4]) << 32) +
+                    ((long) get(pos + indexes[5]) << 24) + ((long) get(pos + indexes[6]) << 16) +
+                    ((long) get(pos + indexes[7]) << 8) + ((long) get(pos + indexes[8]));
             pos += 8;
             return value;
         }
