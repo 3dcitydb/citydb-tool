@@ -68,6 +68,7 @@ public class HierarchyBuilder {
     }
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
+        Set<Long> nestedFeatureIds = new HashSet<>();
         Set<Long> geometryIds = new HashSet<>();
         Set<Long> appearanceIds = new HashSet<>();
         Set<Long> addressIds = new HashSet<>();
@@ -76,8 +77,7 @@ public class HierarchyBuilder {
         while (rs.next()) {
             long nestedFeatureId = rs.getLong("val_feature_id");
             if (!rs.wasNull() && hierarchy.getFeature(nestedFeatureId) == null) {
-                hierarchy.addFeature(nestedFeatureId, tableHelper.getOrCreateExporter(FeatureExporter.class)
-                        .doExport(nestedFeatureId, rs));
+                nestedFeatureIds.add(nestedFeatureId);
             }
 
             long geometryId = rs.getLong("val_geometry_id");
@@ -112,6 +112,12 @@ public class HierarchyBuilder {
                     propertyStubs.add(propertyStub);
                 }
             }
+        }
+
+        if (!nestedFeatureIds.isEmpty()) {
+            tableHelper.getOrCreateExporter(FeatureExporter.class)
+                    .doExport(nestedFeatureIds)
+                    .forEach(hierarchy::addFeature);
         }
 
         if (!geometryIds.isEmpty()) {

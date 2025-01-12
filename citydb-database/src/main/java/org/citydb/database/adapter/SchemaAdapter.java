@@ -57,8 +57,6 @@ public abstract class SchemaAdapter {
 
     public abstract String getFeatureHierarchyQuery();
 
-    public abstract String getFeatureHierarchyQuery(int targetSRID);
-
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
 
     public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table);

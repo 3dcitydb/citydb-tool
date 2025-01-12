@@ -26,6 +26,7 @@ import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.address.AddressExporter;
 import org.citydb.operation.exporter.appearance.*;
 import org.citydb.operation.exporter.common.DatabaseExporter;
+import org.citydb.operation.exporter.feature.FeatureHierarchyExporter;
 import org.citydb.operation.exporter.feature.FeatureExporter;
 import org.citydb.operation.exporter.geometry.GeometryExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
@@ -52,7 +53,9 @@ public class TableHelper {
         DatabaseExporter exporter = exporters.get(type.getName());
         if (exporter == null) {
             try {
-                if (type == FeatureExporter.class) {
+                if (type == FeatureHierarchyExporter.class) {
+                    exporter = new FeatureHierarchyExporter(helper);
+                } else if (type == FeatureExporter.class) {
                     exporter = new FeatureExporter(helper);
                 } else if (type == GeometryExporter.class) {
                     exporter = new GeometryExporter(helper);

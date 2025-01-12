@@ -32,7 +32,7 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
-import org.citydb.operation.exporter.feature.FeatureExporter;
+import org.citydb.operation.exporter.feature.FeatureHierarchyExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.options.LodOptions;
 import org.citydb.operation.exporter.util.LodFilter;
@@ -166,7 +166,7 @@ public class ExportHelper {
 
     Feature exportFeature(long id, long sequenceId) throws ExportException {
         try {
-            Feature feature = tableHelper.getOrCreateExporter(FeatureExporter.class).doExport(id);
+            Feature feature = tableHelper.getOrCreateExporter(FeatureHierarchyExporter.class).doExport(id);
             feature.getDescriptor().ifPresent(descriptor -> descriptor.setSequenceId(sequenceId));
             postprocessor.process(feature);
             return feature;
