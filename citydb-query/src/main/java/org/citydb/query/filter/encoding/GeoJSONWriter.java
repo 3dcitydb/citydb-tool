@@ -24,6 +24,8 @@ package org.citydb.query.filter.encoding;
 import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.model.geometry.*;
 
+import java.util.List;
+
 public class GeoJSONWriter {
     private final JSONWriter jsonWriter;
 
@@ -125,15 +127,9 @@ public class GeoJSONWriter {
     }
 
     private void writeCoordinate(Coordinate coordinate) {
-        jsonWriter.startArray();
-        jsonWriter.writeDouble(coordinate.getX());
-        jsonWriter.writeComma();
-        jsonWriter.writeDouble(coordinate.getY());
-        if (coordinate.getDimension() == 3) {
-            jsonWriter.writeComma();
-            jsonWriter.writeDouble(coordinate.getZ());
-        }
-        jsonWriter.endArray();
+        jsonWriter.write(coordinate.getDimension() == 2 ?
+                List.of(coordinate.getX(), coordinate.getY()) :
+                List.of(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
     }
 
 

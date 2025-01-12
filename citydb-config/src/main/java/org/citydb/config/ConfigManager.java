@@ -66,6 +66,6 @@ public class ConfigManager {
                 .toAbsolutePath();
 
         Files.writeString(outputFile, JSON.toJSONString(config, JSONWriter.Feature.FieldBased,
-                JSONWriter.Feature.PrettyFormat));
+                JSONWriter.Feature.PrettyFormatWith2Space));
     }
 }

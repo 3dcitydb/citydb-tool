@@ -24,13 +24,12 @@ package org.citydb.tiling.options;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.database.srs.SrsUnit;
-import org.citydb.tiling.encoding.SrsUnitReader;
 
 import java.util.Optional;
 
 public class Dimension {
     private double value;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString, deserializeUsing = SrsUnitReader.class)
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private SrsUnit unit;
 
     public static Dimension of(double value, SrsUnit unit) {

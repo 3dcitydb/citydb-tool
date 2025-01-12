@@ -26,21 +26,12 @@ import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.model.common.Matrix3x4;
 
 import java.lang.reflect.Type;
-import java.util.List;
 
 public class Matrix3x4Writer implements ObjectWriter<Matrix3x4> {
     @Override
     public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
         if (o instanceof Matrix3x4 matrix) {
-            jsonWriter.startArray();
-            List<Double> values = matrix.toRowMajor();
-            for (int i = 0; i < values.size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
-                jsonWriter.writeDouble(values.get(i));
-            }
-            jsonWriter.endArray();
+            jsonWriter.write(matrix.toRowMajor());
         } else {
             jsonWriter.writeNull();
         }
