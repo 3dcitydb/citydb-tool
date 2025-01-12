@@ -114,7 +114,7 @@ public class HierarchyBuilder {
             }
         }
 
-        if (exportAppearances && !appearanceIds.isEmpty()) {
+        if (exportAppearances) {
             tableHelper.getOrCreateExporter(AppearanceExporter.class)
                     .doExport(appearanceIds, implicitGeometryIds)
                     .forEach(hierarchy::addAppearance);
