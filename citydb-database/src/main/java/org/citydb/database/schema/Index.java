@@ -36,6 +36,7 @@ public class Index {
     public static final Index GEOMETRY_DATA_GEOMETRY = Index.spatial("geometry_data_spx", Table.GEOMETRY_DATA, "geometry");
     public static final Index IMPLICIT_GEOMETRY_OBJECTID = Index.normal("implicit_geometry_objectid_inx", Table.IMPLICIT_GEOMETRY, "objectid");
     public static final Index PROPERTY_NAME = Index.normal("property_name_inx", Table.PROPERTY, "name");
+    public static final Index PROPERTY_NAMESPACE = Index.normal("property_namespace_inx", Table.PROPERTY, "namespace");
     public static final Index PROPERTY_VAL_TIMESTAMP = Index.normal("property_val_date_inx", Table.PROPERTY, "val_timestamp");
     public static final Index PROPERTY_VAL_DOUBLE = Index.normal("property_val_double_inx", Table.PROPERTY, "val_double");
     public static final Index PROPERTY_VAL_INT = Index.normal("property_val_int_inx", Table.PROPERTY, "val_int");

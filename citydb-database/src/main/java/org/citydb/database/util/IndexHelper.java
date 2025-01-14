@@ -33,7 +33,6 @@ import java.util.function.Function;
 
 public class IndexHelper {
     public static final Set<Index> DEFAULT_INDEXES = new LinkedHashSet<>(List.of(
-            Index.FEATURE_OBJECTID,
             Index.FEATURE_IDENTIFIER,
             Index.FEATURE_ENVELOPE,
             Index.FEATURE_CREATION_DATE,
@@ -41,6 +40,7 @@ public class IndexHelper {
             Index.FEATURE_VALID_TO,
             Index.GEOMETRY_DATA_GEOMETRY,
             Index.PROPERTY_NAME,
+            Index.PROPERTY_NAMESPACE,
             Index.PROPERTY_VAL_TIMESTAMP,
             Index.PROPERTY_VAL_DOUBLE,
             Index.PROPERTY_VAL_INT,
