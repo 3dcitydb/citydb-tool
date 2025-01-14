@@ -27,10 +27,7 @@ import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -40,6 +37,7 @@ public class DuplicateFinder {
     private final Map<String, Boolean> objectIds;
     private final Map<Long, Boolean> databaseIds;
     private final int batchSize;
+    private final Connection connection;
     private final PreparedStatement stmt;
     private final Set<String> batches = new HashSet<>();
 
@@ -48,6 +46,7 @@ public class DuplicateFinder {
         this.databaseIds = databaseIds;
 
         batchSize = adapter.getSchemaAdapter().getMaximumNumberOfItemsForInOperator();
+        connection = adapter.getPool().getConnection();
         Table table = Table.of(org.citydb.database.schema.Table.FEATURE.getName(),
                 adapter.getConnectionDetails().getSchema());
         Select select = Select.newInstance()
@@ -55,7 +54,7 @@ public class DuplicateFinder {
                 .from(table)
                 .where(table.column("objectid").in(Collections.nCopies(batchSize, Placeholder.empty()))
                         .and(table.column("termination_date").isNull()));
-        stmt = adapter.getPool().getConnection().prepareStatement(select.toSql());
+        stmt = connection.prepareStatement(select.toSql());
     }
 
     void process(Feature feature) throws SQLException {
@@ -108,7 +107,11 @@ public class DuplicateFinder {
     }
 
     void close() throws SQLException {
-        executeBatch();
-        stmt.close();
+        try {
+            executeBatch();
+            stmt.close();
+        } finally {
+            connection.close();
+        }
     }
 }
