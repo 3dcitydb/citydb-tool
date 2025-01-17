@@ -84,9 +84,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
             throw new WriteException("Failed to initialize local cache.", e);
         }
 
-        service = ExecutorHelper.newFixedAndBlockingThreadPool(1, (options.getNumberOfThreads() > 0 ?
-                options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors())) * 2);
+        service = ExecutorHelper.newFixedAndBlockingThreadPool(1, 100);
         helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, adapterContext)
                 .initialize(options, formatOptions));
         countLatch = new CountLatch();
