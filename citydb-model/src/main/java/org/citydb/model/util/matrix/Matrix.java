@@ -40,6 +40,13 @@ public class Matrix implements Serializable {
         this(new double[rows][columns], rows, columns);
     }
 
+    public Matrix(int rows, int columns, double value) {
+        this(rows, columns);
+        for (int i = 0; i < rows; i++) {
+            Arrays.fill(elements[i], value);
+        }
+    }
+
     public Matrix(Matrix other) {
         this(other.rows, other.columns);
         for (int i = 0; i < rows; ++i) {

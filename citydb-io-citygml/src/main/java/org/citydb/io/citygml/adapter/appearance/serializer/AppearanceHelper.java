@@ -153,7 +153,7 @@ public class AppearanceHelper {
             String surfaceId = k.getOrCreateObjectId();
             if (geometries.contains(surfaceId) && targets.add(surfaceId)) {
                 TexCoordGen texCoordGen = new TexCoordGen();
-                texCoordGen.setWorldToTexture(TransformationMatrix3x4.ofRowMajorList(v.toRowMajor()));
+                texCoordGen.setWorldToTexture(TransformationMatrix3x4.ofRowMajor(v.toRowMajor()));
                 target.getTextureParameterizations().add(new TextureAssociationProperty(new TextureAssociation(
                         "#" + surfaceId, new AbstractTextureParameterizationProperty(texCoordGen))));
             }

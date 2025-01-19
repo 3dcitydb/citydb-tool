@@ -43,7 +43,7 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
     @Override
     public void build(org.citygml4j.core.model.core.ImplicitGeometry source, ImplicitGeometryProperty target, ModelBuilderHelper helper) throws ModelBuildException {
         if (source.getTransformationMatrix() != null) {
-            target.setTransformationMatrix(source.getTransformationMatrix().toRowMajorList());
+            target.setTransformationMatrix(source.getTransformationMatrix().toRowMajor());
         }
 
         if (source.getReferencePoint() != null) {
@@ -66,7 +66,7 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
     @Override
     public void serialize(ImplicitGeometryProperty source, org.citygml4j.core.model.core.ImplicitGeometry target, ModelSerializerHelper helper) throws ModelSerializeException {
         source.getTransformationMatrix().ifPresent(transformationMatrix ->
-                target.setTransformationMatrix(TransformationMatrix4x4.ofRowMajorList(
+                target.setTransformationMatrix(TransformationMatrix4x4.ofRowMajor(
                         transformationMatrix.toRowMajor())));
 
         source.getReferencePoint().ifPresent(referencePoint ->

@@ -69,7 +69,7 @@ public class GeoreferencedTextureAdapter extends TextureAdapter<GeoreferencedTex
         }
 
         if (source.getOrientation() != null) {
-            target.setOrientation(source.getOrientation().toRowMajorList());
+            target.setOrientation(source.getOrientation().toRowMajor());
         }
     }
 
@@ -86,7 +86,7 @@ public class GeoreferencedTextureAdapter extends TextureAdapter<GeoreferencedTex
                 target.setReferencePoint(new PointProperty(helper.getPoint(referencePoint, false))));
 
         source.getOrientation().ifPresent(transformationMatrix ->
-                target.setOrientation(TransformationMatrix2x2.ofRowMajorList(transformationMatrix.toRowMajor())));
+                target.setOrientation(TransformationMatrix2x2.ofRowMajor(transformationMatrix.toRowMajor())));
     }
 
     private void processWorldFile(org.citygml4j.core.model.appearance.GeoreferencedTexture source, ExternalFile textureImage, ModelBuilderHelper helper) throws ModelBuildException {
@@ -121,7 +121,7 @@ public class GeoreferencedTextureAdapter extends TextureAdapter<GeoreferencedTex
                     }
 
                     if (content.size() == 6) {
-                        source.setOrientation(TransformationMatrix2x2.ofRowMajorList(content.subList(0, 4)));
+                        source.setOrientation(TransformationMatrix2x2.ofRowMajor(content.subList(0, 4)));
                         source.setReferencePoint(new PointProperty(
                                 new org.xmlobjects.gml.model.geometry.primitives.Point(
                                         new DirectPosition(content.subList(4, 6)))));

@@ -206,7 +206,7 @@ public class AppearanceHelper {
         private void addMapping(GeometryReference reference, TexCoordGen texCoordGen, ParameterizedTexture target) {
             if (texCoordGen.getWorldToTexture() != null) {
                 getTargets(reference).forEach(surface ->
-                        target.addWorldToTextureMapping(surface, texCoordGen.getWorldToTexture().toRowMajorList()));
+                        target.addWorldToTextureMapping(surface, texCoordGen.getWorldToTexture().toRowMajor()));
             }
         }
 

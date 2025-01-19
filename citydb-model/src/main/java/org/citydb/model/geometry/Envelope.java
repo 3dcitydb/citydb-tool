@@ -58,7 +58,7 @@ public class Envelope extends Child implements SpatialObject {
 
     @Override
     public int getVertexDimension() {
-        return (lowerCorner.getDimension() == 2 || upperCorner.getDimension() == 2) ? 2 : 3;
+        return lowerCorner.getDimension() == 2 || upperCorner.getDimension() == 2 ? 2 : 3;
     }
 
     @Override
@@ -173,34 +173,44 @@ public class Envelope extends Child implements SpatialObject {
                 && point.getY() <= upperCorner.getY();
     }
 
-    public Envelope include(Coordinate coordinate) {
-        if (coordinate.getX() < lowerCorner.getX()) {
-            lowerCorner.setX(coordinate.getX());
+    public Envelope include(double x, double y) {
+        if (x < lowerCorner.getX()) {
+            lowerCorner.setX(x);
         }
 
-        if (coordinate.getY() < lowerCorner.getY()) {
-            lowerCorner.setY(coordinate.getY());
+        if (y < lowerCorner.getY()) {
+            lowerCorner.setY(y);
         }
 
-        if (coordinate.getX() > upperCorner.getX()) {
-            upperCorner.setX(coordinate.getX());
+        if (x > upperCorner.getX()) {
+            upperCorner.setX(x);
         }
 
-        if (coordinate.getY() > upperCorner.getY()) {
-            upperCorner.setY(coordinate.getY());
-        }
-
-        if (coordinate.getDimension() == 3 && getVertexDimension() == 3) {
-            if (coordinate.getZ() < lowerCorner.getZ()) {
-                lowerCorner.setZ(coordinate.getZ());
-            }
-
-            if (coordinate.getZ() > upperCorner.getZ()) {
-                upperCorner.setZ(coordinate.getZ());
-            }
+        if (y > upperCorner.getY()) {
+            upperCorner.setY(y);
         }
 
         return this;
+    }
+
+    public Envelope include(double x, double y, double z) {
+        include(x, y);
+
+        if (z < lowerCorner.getZ()) {
+            lowerCorner.setZ(z);
+        }
+
+        if (z > upperCorner.getZ()) {
+            upperCorner.setZ(z);
+        }
+
+        return this;
+    }
+
+    public Envelope include(Coordinate coordinate) {
+        return coordinate.getDimension() == 2 ?
+                include(coordinate.getX(), coordinate.getY()) :
+                include(coordinate.getX(), coordinate.getY(), coordinate.getZ());
     }
 
     public Envelope include(Envelope envelope) {

@@ -84,7 +84,7 @@ subprojects {
         options {
             title = "$project.name $project.version"
             header = title
-            overview "$projectDir/build/tmp/javadoc/overview.html"
+            overview = "$projectDir/build/tmp/javadoc/overview.html"
             bottom """
                 <a href="${appIssueTrackerUrl}">Report a bug or suggest an enhancement</a><br>
                 ${project.name} is open source and licensed under the <a target="_blank" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.<br>
