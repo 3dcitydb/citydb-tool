@@ -170,7 +170,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public String getCreateIndex(Index index, boolean ignoreNulls) {
         String stmt = "create index if not exists " + index.getName() +
-                " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable().getName() +
+                " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable() +
                 (index.getType() == Index.Type.SPATIAL ? " using gist " : " ") +
                 "(" + String.join(", ", index.getColumns()) + ")";
 
