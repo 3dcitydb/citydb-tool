@@ -28,8 +28,10 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
-import java.util.function.Function;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 public class IndexHelper {
     public static final Set<Index> DEFAULT_INDEXES = new LinkedHashSet<>(List.of(
@@ -81,57 +83,44 @@ public class IndexHelper {
         return new IndexHelper(adapter);
     }
 
-    public void create(Index index) throws SQLException {
-        create(index, false);
+    public IndexHelper create(Index index) throws SQLException {
+        return create(index, false);
     }
 
-    public void create(Index index, boolean ignoreNulls) throws SQLException {
+    public IndexHelper create(Index index, Connection connection) throws SQLException {
+        return create(index, false, connection);
+    }
+
+    public IndexHelper create(Index index, boolean ignoreNulls) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            if (!exists(index, connection)) {
-                try (Statement stmt = createStatement(connection)) {
-                    stmt.executeUpdate(adapter.getSchemaAdapter().getCreateIndex(index, ignoreNulls));
-                }
+            return create(index, ignoreNulls, connection);
+        }
+    }
+
+    public IndexHelper create(Index index, boolean ignoreNulls, Connection connection) throws SQLException {
+        if (!exists(index, connection)) {
+            try (Statement stmt = createStatement(connection)) {
+                stmt.executeUpdate(adapter.getSchemaAdapter().getCreateIndex(index, ignoreNulls));
             }
         }
+
+        return this;
     }
 
-    public void createAll(Index... indexes) throws SQLException {
-        createAll(Arrays.asList(indexes), index -> false);
-    }
-
-    public void createAll(Function<Index, Boolean> ignoreNulls, Index... indexes) throws SQLException {
-        createAll(Arrays.asList(indexes), ignoreNulls);
-    }
-
-    public void createAll(Collection<Index> indexes) throws SQLException {
-        createAll(indexes, index -> false);
-    }
-
-    public void createAll(Collection<Index> indexes, Function<Index, Boolean> ignoreNulls) throws SQLException {
-        for (Index index : indexes) {
-            Boolean result = ignoreNulls != null ? ignoreNulls.apply(index) : null;
-            create(index, result != null ? result : false);
+    public IndexHelper drop(Index index) throws SQLException {
+        try (Connection connection = adapter.getPool().getConnection(true)) {
+            return drop(index, connection);
         }
     }
 
-    public void drop(Index index) throws SQLException {
-        try (Connection connection = adapter.getPool().getConnection(true)) {
-            if (exists(index, connection)) {
-                try (Statement stmt = createStatement(connection)) {
-                    stmt.executeUpdate(adapter.getSchemaAdapter().getDropIndex(index));
-                }
+    public IndexHelper drop(Index index, Connection connection) throws SQLException {
+        if (exists(index, connection)) {
+            try (Statement stmt = createStatement(connection)) {
+                stmt.executeUpdate(adapter.getSchemaAdapter().getDropIndex(index));
             }
         }
-    }
 
-    public void dropAll(Index... indexes) throws SQLException {
-        dropAll(Arrays.asList(indexes));
-    }
-
-    public void dropAll(Collection<Index> indexes) throws SQLException {
-        for (Index index : indexes) {
-            drop(index);
-        }
+        return this;
     }
 
     public boolean exists(Index index) throws SQLException {
@@ -140,14 +129,23 @@ public class IndexHelper {
         }
     }
 
-    public Status existAll(Index... indexes) throws SQLException {
-        return existAll(Arrays.asList(indexes));
+    public boolean exists(Index index, Connection connection) throws SQLException {
+        try (Statement stmt = createStatement(connection);
+             ResultSet rs = stmt.executeQuery(adapter.getSchemaAdapter().getIndexExists(index))) {
+            return rs.next() && rs.getBoolean(1);
+        }
     }
 
     public Status existAll(Collection<Index> indexes) throws SQLException {
+        try (Connection connection = adapter.getPool().getConnection()) {
+            return existAll(indexes, connection);
+        }
+    }
+
+    public Status existAll(Collection<Index> indexes, Connection connection) throws SQLException {
         Status result = null;
         for (Index index : indexes) {
-            Status status = exists(index) ? Status.ON : Status.OFF;
+            Status status = exists(index, connection) ? Status.ON : Status.OFF;
             if (result == null) {
                 result = status;
             } else if (result != status) {
@@ -156,13 +154,6 @@ public class IndexHelper {
         }
 
         return result != null ? result : Status.OFF;
-    }
-
-    private boolean exists(Index index, Connection connection) throws SQLException {
-        try (Statement stmt = createStatement(connection);
-             ResultSet rs = stmt.executeQuery(adapter.getSchemaAdapter().getIndexExists(index))) {
-            return rs.next() && rs.getBoolean(1);
-        }
     }
 
     private Statement createStatement(Connection connection) throws SQLException {
