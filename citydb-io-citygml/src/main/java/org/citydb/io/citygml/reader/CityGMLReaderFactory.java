@@ -36,9 +36,9 @@ import org.xmlobjects.xml.TextContent;
 
 import javax.xml.transform.stream.StreamSource;
 import java.nio.file.Path;
-import java.security.SecureRandom;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CityGMLReaderFactory {
     private final CityGMLContext context;
@@ -50,7 +50,7 @@ public class CityGMLReaderFactory {
         this.context = Objects.requireNonNull(context, "CityGML context must not be null.");
         this.options = Objects.requireNonNull(options, "The read options must not be null.");
         this.formatOptions = Objects.requireNonNull(formatOptions, "The format options must not be null.");
-        seed = "citydb-" + Long.toUnsignedString(new SecureRandom().nextLong() ^ System.currentTimeMillis());
+        seed = "citydb-" + Long.toUnsignedString(ThreadLocalRandom.current().nextLong() ^ System.currentTimeMillis());
         TextContent.setZoneOffsetProvider(localDateTime -> ZoneOffset.UTC);
     }
 

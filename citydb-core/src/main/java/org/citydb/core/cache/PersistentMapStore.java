@@ -26,8 +26,8 @@ import org.h2.mvstore.MVStore;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.SecureRandom;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class PersistentMapStore implements AutoCloseable {
     private MVStore store;
@@ -97,7 +97,6 @@ public class PersistentMapStore implements AutoCloseable {
     }
 
     public static class Builder {
-        private static final SecureRandom random = new SecureRandom();
         private Path tempDirectory;
         private CompressionLevel compressionLevel;
         private int cacheSize;
@@ -176,7 +175,7 @@ public class PersistentMapStore implements AutoCloseable {
                 throw new IOException("The persistent map store location " + tempDirectory + " is not a directory.");
             }
 
-            long n = random.nextLong() ^ System.currentTimeMillis();
+            long n = ThreadLocalRandom.current().nextLong() ^ System.currentTimeMillis();
             Path backingFile = tempDirectory.resolve("cache-" + Long.toUnsignedString(n) + ".tmp")
                     .normalize()
                     .toAbsolutePath();

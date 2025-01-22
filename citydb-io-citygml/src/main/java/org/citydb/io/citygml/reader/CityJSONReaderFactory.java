@@ -33,8 +33,8 @@ import org.citygml4j.core.model.CityGMLVersion;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.security.SecureRandom;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class CityJSONReaderFactory {
     private final CityJSONContext context;
@@ -46,7 +46,7 @@ public class CityJSONReaderFactory {
         this.context = Objects.requireNonNull(context, "CityJSON context must not be null.");
         this.options = Objects.requireNonNull(options, "The read options must not be null.");
         this.formatOptions = Objects.requireNonNull(formatOptions, "The format options must not be null.");
-        seed = "citydb-" + Long.toUnsignedString(new SecureRandom().nextLong() ^ System.currentTimeMillis());
+        seed = "citydb-" + Long.toUnsignedString(ThreadLocalRandom.current().nextLong() ^ System.currentTimeMillis());
     }
 
     public static CityJSONReaderFactory newInstance(CityJSONContext context, ReadOptions options, CityJSONFormatOptions formatOptions) {
