@@ -26,6 +26,11 @@ public class PoolOptions {
 
     private int loginTimeout = DEFAULT_LOGIN_TIMEOUT;
 
+    public static PoolOptions of(PoolOptions other) {
+        return new PoolOptions()
+                .setLoginTimeout(other.loginTimeout);
+    }
+
     public int getLoginTimeout() {
         return loginTimeout;
     }

@@ -31,6 +31,7 @@ import org.citydb.database.srs.SpatialReference;
 
 import java.sql.*;
 import java.util.Objects;
+import java.util.Properties;
 
 public abstract class DatabaseAdapter {
     private Pool pool;
@@ -48,6 +49,8 @@ public abstract class DatabaseAdapter {
     public abstract int getDefaultPort();
 
     public abstract String getConnectionString(String host, int port, String database);
+
+    public abstract void setDefaultConnectionProperties(Properties properties);
 
     public final void initialize(Pool pool, ConnectionDetails connectionDetails) throws DatabaseException, SQLException {
         this.pool = Objects.requireNonNull(pool, "The database pool must not be null.");

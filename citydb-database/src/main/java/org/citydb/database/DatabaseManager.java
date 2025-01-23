@@ -34,6 +34,7 @@ import org.citydb.logging.LoggerManager;
 
 import java.sql.SQLException;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.function.Consumer;
 
 public class DatabaseManager {
@@ -68,19 +69,24 @@ public class DatabaseManager {
             connectionDetails.setPort(adapter.getDefaultPort());
         }
 
-        PoolProperties properties = new PoolProperties();
-        properties.setDriverClassName(adapter.getDriverClass().getName());
-        properties.setUsername(connectionDetails.getUser());
-        properties.setPassword(connectionDetails.getPassword());
-        properties.setUrl(adapter.getConnectionString(connectionDetails.getHost(),
+        PoolProperties poolProperties = new PoolProperties();
+        poolProperties.setDriverClassName(adapter.getDriverClass().getName());
+        poolProperties.setUsername(connectionDetails.getUser());
+        poolProperties.setPassword(connectionDetails.getPassword());
+        poolProperties.setUrl(adapter.getConnectionString(connectionDetails.getHost(),
                 connectionDetails.getPort(),
                 connectionDetails.getDatabase()));
 
-        properties.setInitialSize(0);
-        properties.setDefaultAutoCommit(false);
-        properties.setRollbackOnReturn(true);
+        poolProperties.setInitialSize(0);
+        poolProperties.setDefaultAutoCommit(false);
+        poolProperties.setRollbackOnReturn(true);
 
-        dataSource = new DataSource(properties);
+        Properties dbProperties = new Properties();
+        adapter.setDefaultConnectionProperties(dbProperties);
+        connectionDetails.getProperties().forEach((k, v) -> dbProperties.setProperty(k, String.valueOf(v)));
+        poolProperties.setDbProperties(dbProperties);
+
+        dataSource = new DataSource(poolProperties);
         dataSource.setLoginTimeout(connectionDetails.getPoolOptions()
                 .map(PoolOptions::getLoginTimeout)
                 .orElse(PoolOptions.DEFAULT_LOGIN_TIMEOUT));

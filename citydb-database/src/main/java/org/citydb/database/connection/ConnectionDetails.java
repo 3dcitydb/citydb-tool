@@ -23,6 +23,8 @@ package org.citydb.database.connection;
 
 import org.citydb.database.DatabaseConstants;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 public class ConnectionDetails {
@@ -34,19 +36,21 @@ public class ConnectionDetails {
     private Integer port;
     private String database;
     private String schema;
+    private Map<String, Object> properties;
     private PoolOptions poolOptions;
 
     public static ConnectionDetails of(ConnectionDetails other) {
         return new ConnectionDetails()
-                .setDescription(other.getDescription())
-                .setDatabaseName(other.getDatabaseName())
-                .setUser(other.getUser())
-                .setPassword(other.getPassword())
-                .setHost(other.getHost())
-                .setPort(other.getPort())
-                .setDatabase(other.getDatabase())
-                .setSchema(other.getSchema())
-                .setPoolOptions(other.getPoolOptions().orElse(null));
+                .setDescription(other.description)
+                .setDatabaseName(other.databaseName)
+                .setUser(other.user)
+                .setPassword(other.password)
+                .setHost(other.host)
+                .setPort(other.port)
+                .setDatabase(other.database)
+                .setSchema(other.schema)
+                .setProperties(other.properties != null ? new HashMap<>(other.properties) : null)
+                .setPoolOptions(other.poolOptions != null ? PoolOptions.of(other.poolOptions) : null);
     }
 
     public String getDescription() {
@@ -165,6 +169,36 @@ public class ConnectionDetails {
         return this;
     }
 
+    public boolean hasProperties() {
+        return properties != null && !properties.isEmpty();
+    }
+
+    public Map<String, Object> getProperties() {
+        if (properties == null) {
+            properties = new HashMap<>();
+        }
+
+        return properties;
+    }
+
+    public ConnectionDetails setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+        return this;
+    }
+
+    private ConnectionDetails setProperties(String properties) {
+        if (properties != null && !properties.isEmpty()) {
+            for (String property : properties.split(",")) {
+                String[] items = property.split("=", 2);
+                if (items.length == 2) {
+                    getProperties().putIfAbsent(items[0].trim(), items[1].trim());
+                }
+            }
+        }
+
+        return this;
+    }
+
     public Optional<PoolOptions> getPoolOptions() {
         return Optional.ofNullable(poolOptions);
     }
@@ -180,7 +214,8 @@ public class ConnectionDetails {
                 .setHost(getHost(System.getenv(DatabaseConstants.ENV_CITYDB_HOST)))
                 .setPort(getPort(System.getenv(DatabaseConstants.ENV_CITYDB_PORT)))
                 .setDatabase(getDatabase(System.getenv(DatabaseConstants.ENV_CITYDB_NAME)))
-                .setSchema(getSchema(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)));
+                .setSchema(getSchema(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)))
+                .setProperties(System.getenv(DatabaseConstants.ENV_CITYDB_CONN_PROPS));
     }
 
     public String toConnectString() {

@@ -28,4 +28,5 @@ public class DatabaseConstants {
     public static final String ENV_CITYDB_SCHEMA = "CITYDB_SCHEMA";
     public static final String ENV_CITYDB_USERNAME = "CITYDB_USERNAME";
     public static final String ENV_CITYDB_PASSWORD = "CITYDB_PASSWORD";
+    public static final String ENV_CITYDB_CONN_PROPS = "CITYDB_CONN_PROPS";
 }

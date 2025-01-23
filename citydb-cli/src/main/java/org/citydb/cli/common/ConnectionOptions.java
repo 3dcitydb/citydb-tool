@@ -24,6 +24,10 @@ package org.citydb.cli.common;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public class ConnectionOptions implements Option {
     @CommandLine.Option(names = {"-H", "--db-host"},
             description = "Name of the host on which the 3DCityDB is running.")
@@ -38,7 +42,7 @@ public class ConnectionOptions implements Option {
     private String database;
 
     @CommandLine.Option(names = {"-S", "--db-schema"},
-            description = "Schema to use when connecting to the 3DCityDB (default: citydb | username).")
+            description = "Schema to use when connecting to the 3DCityDB (default: citydb or username).")
     private String schema;
 
     @CommandLine.Option(names = {"-u", "--db-username"},
@@ -46,8 +50,12 @@ public class ConnectionOptions implements Option {
     private String user;
 
     @CommandLine.Option(names = {"-p", "--db-password"}, arity = "0..1",
-            description = "Password to use when connecting to the 3DCityDB (leave empty to be prompted).")
+            description = "Password to use when connecting to the 3DCityDB. Leave empty to be prompted.")
     private String password;
+
+    @CommandLine.Option(names = "--db-property", split = ",", paramLabel = "<key=value>",
+            description = "Database-specific connection properties.")
+    private Map<String, String> properties;
 
     public String getHost() {
         return host;
@@ -73,6 +81,10 @@ public class ConnectionOptions implements Option {
         return password;
     }
 
+    public Map<String, String> getProperties() {
+        return properties != null ? properties : Collections.emptyMap();
+    }
+
     public ConnectionDetails toConnectionDetails() {
         return new ConnectionDetails()
                 .setHost(host)
@@ -80,6 +92,9 @@ public class ConnectionOptions implements Option {
                 .setDatabase(database)
                 .setSchema(schema)
                 .setUser(user)
-                .setPassword(password);
+                .setPassword(password)
+                .setProperties(properties != null ? properties.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) :
+                        null);
     }
 }

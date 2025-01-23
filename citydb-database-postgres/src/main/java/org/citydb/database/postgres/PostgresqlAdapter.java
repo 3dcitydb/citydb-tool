@@ -24,6 +24,9 @@ package org.citydb.database.postgres;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseType;
 import org.postgresql.Driver;
+import org.postgresql.PGProperty;
+
+import java.util.Properties;
 
 @DatabaseType(name = "PostgreSQL")
 public class PostgresqlAdapter extends DatabaseAdapter {
@@ -50,7 +53,12 @@ public class PostgresqlAdapter extends DatabaseAdapter {
 
     @Override
     public String getConnectionString(String host, int port, String database) {
-        return "jdbc:postgresql://" + host + ":" + port + "/" + database +
-                "?defaultRowFetchSize=1000&reWriteBatchedInserts=true";
+        return "jdbc:postgresql://" + host + ":" + port + "/" + database;
+    }
+
+    @Override
+    public void setDefaultConnectionProperties(Properties properties) {
+        PGProperty.DEFAULT_ROW_FETCH_SIZE.set(properties, 1000);
+        PGProperty.REWRITE_BATCHED_INSERTS.set(properties, true);
     }
 }
