@@ -23,6 +23,7 @@ package org.citydb.cli.exporter.util;
 
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
+import org.citydb.core.tuple.Pair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.common.Namespaces;
@@ -42,7 +43,10 @@ import org.citydb.tiling.TilingException;
 import org.citydb.tiling.options.MatrixScheme;
 
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -128,7 +132,7 @@ public class TilingHelper {
     public Path getOutputFile(Path outputFile, Tile tile) {
         if (useTiling) {
             String file = outputFile.toString();
-            List<AbstractMap.SimpleEntry<String, String>> replacements = new ArrayList<>();
+            List<Pair<String, String>> replacements = new ArrayList<>();
 
             matcher.reset(file).usePattern(tokenPattern);
             while (matcher.find()) {
@@ -136,8 +140,8 @@ public class TilingHelper {
             }
 
             if (!replacements.isEmpty()) {
-                for (Map.Entry<String, String> entry : replacements) {
-                    file = file.replaceFirst(entry.getKey(), entry.getValue());
+                for (Pair<String, String> pair : replacements) {
+                    file = file.replaceFirst(pair.first(), pair.second());
                 }
             } else if (tileMatrix == null || tileMatrix.size() > 1) {
                 file = getDefaultOutputFile(file, tile);
@@ -149,7 +153,7 @@ public class TilingHelper {
         }
     }
 
-    private AbstractMap.SimpleEntry<String, String> replaceToken(String token, Tile tile) {
+    private Pair<String, String> replaceToken(String token, Tile tile) {
         String[] parts = token.substring(1, token.length() - 1).split(",");
         String format = parts.length == 2 ? parts[1].trim() : "%s";
         String replacement = String.format(Locale.ENGLISH, format,
@@ -163,7 +167,7 @@ public class TilingHelper {
                     default -> parts[0];
                 });
 
-        return new AbstractMap.SimpleEntry<>(token, replacement);
+        return Pair.of(token, replacement);
     }
 
     private String getDefaultOutputFile(String file, Tile tile) {
