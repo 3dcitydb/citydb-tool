@@ -21,8 +21,8 @@
 
 package org.citydb.core.tuple;
 
-public record Triple<T, U, V>(T first, U second, V third) {
-    public static <T, U, V> Triple<T, U, V> of(T first, U second, V third) {
-        return new Triple<>(first, second, third);
+public record Quad<T, U, V, W>(T first, U second, V third, W fourth) {
+    public static <T, U, V, W> Quad<T, U, V, W> of(T first, U second, V third, W fourth) {
+        return new Quad<>(first, second, third, fourth);
     }
 }

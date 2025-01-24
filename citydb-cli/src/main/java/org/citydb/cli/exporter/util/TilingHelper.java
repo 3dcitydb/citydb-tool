@@ -23,7 +23,7 @@ package org.citydb.cli.exporter.util;
 
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.core.tuple.Pair;
+import org.citydb.core.tuple.SimplePair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.common.Namespaces;
@@ -132,7 +132,7 @@ public class TilingHelper {
     public Path getOutputFile(Path outputFile, Tile tile) {
         if (useTiling) {
             String file = outputFile.toString();
-            List<Pair<String, String>> replacements = new ArrayList<>();
+            List<SimplePair<String>> replacements = new ArrayList<>();
 
             matcher.reset(file).usePattern(tokenPattern);
             while (matcher.find()) {
@@ -140,7 +140,7 @@ public class TilingHelper {
             }
 
             if (!replacements.isEmpty()) {
-                for (Pair<String, String> replacement : replacements) {
+                for (SimplePair<String> replacement : replacements) {
                     file = file.replaceFirst(replacement.first(), replacement.second());
                 }
             } else if (tileMatrix == null || tileMatrix.size() > 1) {
@@ -153,7 +153,7 @@ public class TilingHelper {
         }
     }
 
-    private Pair<String, String> replaceToken(String token, Tile tile) {
+    private SimplePair<String> replaceToken(String token, Tile tile) {
         String[] parts = token.substring(1, token.length() - 1).split(",");
         String format = parts.length == 2 ? parts[1].trim() : "%s";
         String replacement = String.format(Locale.ENGLISH, format,
@@ -167,7 +167,7 @@ public class TilingHelper {
                     default -> parts[0];
                 });
 
-        return Pair.of(token, replacement);
+        return SimplePair.of(token, replacement);
     }
 
     private String getDefaultOutputFile(String file, Tile tile) {
