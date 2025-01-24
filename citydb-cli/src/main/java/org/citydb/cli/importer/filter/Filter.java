@@ -22,6 +22,7 @@
 package org.citydb.cli.importer.filter;
 
 import org.citydb.config.common.CountLimit;
+import org.citydb.core.tuple.Pair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.reader.filter.FilterException;
 import org.citydb.io.reader.filter.FilterPredicate;
@@ -40,10 +41,7 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
 
     private long currentIndex;
     private long count;
-    private State state;
-
-    private record State(long currentIndex, long count) {
-    }
+    private Pair<Long, Long> state;
 
     private Filter() {
         this(null, 0, Long.MAX_VALUE);
@@ -121,13 +119,13 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
     }
 
     public void saveState() {
-        state = new State(currentIndex, count);
+        state = Pair.of(currentIndex, count);
     }
 
     public void restoreState() {
         if (state != null) {
-            currentIndex = state.currentIndex;
-            count = state.count;
+            currentIndex = state.first();
+            count = state.second();
             state = null;
         }
     }

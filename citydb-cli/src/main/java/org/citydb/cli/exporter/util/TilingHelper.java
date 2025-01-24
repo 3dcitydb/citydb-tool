@@ -140,8 +140,8 @@ public class TilingHelper {
             }
 
             if (!replacements.isEmpty()) {
-                for (Pair<String, String> pair : replacements) {
-                    file = file.replaceFirst(pair.first(), pair.second());
+                for (Pair<String, String> replacement : replacements) {
+                    file = file.replaceFirst(replacement.first(), replacement.second());
                 }
             } else if (tileMatrix == null || tileMatrix.size() > 1) {
                 file = getDefaultOutputFile(file, tile);
