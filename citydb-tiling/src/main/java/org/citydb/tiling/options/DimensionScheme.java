@@ -35,14 +35,14 @@ import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SrsException;
 import org.citydb.database.util.SrsHelper;
+import org.citydb.model.encoding.PointReader;
+import org.citydb.model.encoding.PointWriter;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Point;
 import org.citydb.tiling.TileMatrix;
 import org.citydb.tiling.TilingException;
 import org.citydb.tiling.TilingScheme;
-import org.citydb.tiling.encoding.PointReader;
-import org.citydb.tiling.encoding.PointWriter;
 
 import java.sql.SQLException;
 import java.util.Optional;
