@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,34 +19,34 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.exporter;
+package org.citydb.util.tiling.options;
 
-import org.citydb.config.SerializableConfig;
-import org.citydb.query.Query;
-import org.citydb.util.tiling.Tiling;
+public enum TileMatrixOrigin {
+    TOP_LEFT("topLeft"),
+    BOTTOM_LEFT("bottomLeft");
 
-import java.util.Optional;
+    private final String value;
 
-@SerializableConfig(name = "exportOptions")
-public class ExportOptions extends org.citydb.operation.exporter.ExportOptions {
-    private Query query;
-    private Tiling tiling;
-
-    public Optional<Query> getQuery() {
-        return Optional.ofNullable(query);
+    TileMatrixOrigin(String value) {
+        this.value = value;
     }
 
-    public ExportOptions setQuery(Query query) {
-        this.query = query;
-        return this;
+    public String toValue() {
+        return value;
     }
 
-    public Optional<Tiling> getTiling() {
-        return Optional.ofNullable(tiling);
+    public static TileMatrixOrigin fromValue(String value) {
+        for (TileMatrixOrigin v : TileMatrixOrigin.values()) {
+            if (v.value.equals(value)) {
+                return v;
+            }
+        }
+
+        return null;
     }
 
-    public ExportOptions setTiling(Tiling tiling) {
-        this.tiling = tiling;
-        return this;
+    @Override
+    public String toString() {
+        return value;
     }
 }

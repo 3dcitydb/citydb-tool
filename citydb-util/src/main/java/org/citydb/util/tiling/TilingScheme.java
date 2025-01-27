@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,15 +19,15 @@
  * limitations under the License.
  */
 
-package org.citydb.tiling;
+package org.citydb.util.tiling;
 
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
-import org.citydb.tiling.options.DimensionScheme;
-import org.citydb.tiling.options.MatrixScheme;
+import org.citydb.util.tiling.options.DimensionScheme;
+import org.citydb.util.tiling.options.MatrixScheme;
 
 @JSONType(serializeFeatures = JSONWriter.Feature.WriteClassName,
         typeKey = "type",

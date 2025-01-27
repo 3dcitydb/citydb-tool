@@ -1,5 +1,6 @@
 dependencies {
     api project(':citydb-database')
     api project(':citydb-model')
+    api 'org.apache.commons:commons-csv:1.13.0'
     implementation project(':citydb-config')
 }

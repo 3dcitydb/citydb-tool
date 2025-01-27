@@ -25,11 +25,11 @@ import org.citydb.cli.common.Option;
 import org.citydb.database.srs.SrsUnit;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
-import org.citydb.tiling.Tiling;
-import org.citydb.tiling.options.Dimension;
-import org.citydb.tiling.options.DimensionScheme;
-import org.citydb.tiling.options.MatrixScheme;
-import org.citydb.tiling.options.TileMatrixOrigin;
+import org.citydb.util.tiling.Tiling;
+import org.citydb.util.tiling.options.Dimension;
+import org.citydb.util.tiling.options.DimensionScheme;
+import org.citydb.util.tiling.options.MatrixScheme;
+import org.citydb.util.tiling.options.TileMatrixOrigin;
 import picocli.CommandLine;
 
 import java.util.Arrays;

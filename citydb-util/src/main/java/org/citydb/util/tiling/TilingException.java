@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,34 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.tiling.options;
+package org.citydb.util.tiling;
 
-public enum TileMatrixOrigin {
-    TOP_LEFT("topLeft"),
-    BOTTOM_LEFT("bottomLeft");
+public class TilingException extends Exception {
 
-    private final String value;
-
-    TileMatrixOrigin(String value) {
-        this.value = value;
+    public TilingException() {
+        super();
     }
 
-    public String toValue() {
-        return value;
+    public TilingException(String message) {
+        super(message);
     }
 
-    public static TileMatrixOrigin fromValue(String value) {
-        for (TileMatrixOrigin v : TileMatrixOrigin.values()) {
-            if (v.value.equals(value)) {
-                return v;
-            }
-        }
-
-        return null;
+    public TilingException(Throwable cause) {
+        super(cause);
     }
 
-    @Override
-    public String toString() {
-        return value;
+    public TilingException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,23 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.tiling;
+package org.citydb.util.csv;
 
-public class TilingException extends Exception {
+public class IdListException extends Exception {
 
-    public TilingException() {
+    public IdListException() {
         super();
     }
 
-    public TilingException(String message) {
+    public IdListException(String message) {
         super(message);
     }
 
-    public TilingException(Throwable cause) {
+    public IdListException(Throwable cause) {
         super(cause);
     }
 
-    public TilingException(String message, Throwable cause) {
+    public IdListException(String message, Throwable cause) {
         super(message, cause);
     }
 }

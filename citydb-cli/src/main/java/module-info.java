@@ -8,7 +8,7 @@ module org.citydb.cli {
     requires transitive org.citydb.operation;
     requires transitive org.citydb.plugin;
     requires transitive org.citydb.query;
-    requires transitive org.citydb.tiling;
+    requires transitive org.citydb.util;
     requires transitive info.picocli;
 
     exports org.citydb.cli;

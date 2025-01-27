@@ -36,11 +36,11 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.common.Predicate;
 import org.citydb.query.filter.literal.BBoxLiteral;
 import org.citydb.query.filter.literal.PropertyRef;
-import org.citydb.tiling.Tile;
-import org.citydb.tiling.TileMatrix;
-import org.citydb.tiling.Tiling;
-import org.citydb.tiling.TilingException;
-import org.citydb.tiling.options.MatrixScheme;
+import org.citydb.util.tiling.Tile;
+import org.citydb.util.tiling.TileMatrix;
+import org.citydb.util.tiling.Tiling;
+import org.citydb.util.tiling.TilingException;
+import org.citydb.util.tiling.options.MatrixScheme;
 
 import java.nio.file.Path;
 import java.util.ArrayList;

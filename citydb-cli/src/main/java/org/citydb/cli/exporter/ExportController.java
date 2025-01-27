@@ -55,9 +55,9 @@ import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.util.QueryHelper;
-import org.citydb.tiling.Tile;
-import org.citydb.tiling.TileIterator;
-import org.citydb.tiling.Tiling;
+import org.citydb.util.tiling.Tile;
+import org.citydb.util.tiling.TileIterator;
+import org.citydb.util.tiling.Tiling;
 import picocli.CommandLine;
 
 import java.nio.file.Path;

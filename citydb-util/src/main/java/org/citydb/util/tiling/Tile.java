@@ -1,17 +1,10 @@
 /*
- * 3D City Database - The Open Source CityGML Database
+ * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2013 - 2024
- * Chair of Geoinformatics
- * Technical University of Munich, Germany
- * https://www.lrg.tum.de/gis/
- *
- * The 3D City Database is jointly developed with the following
- * cooperation partners:
- *
- * Virtual City Systems, Berlin <https://vc.systems/>
- * M.O.S.S. Computer Grafik Systeme GmbH, Taufkirchen <http://www.moss.de/>
+ * Copyright 2022-2025
+ * virtualcitysystems GmbH, Germany
+ * https://vc.systems/
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.tiling;
+package org.citydb.util.tiling;
 
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
