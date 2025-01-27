@@ -99,6 +99,7 @@ public abstract class ExportController implements Command {
     @ConfigOption
     private Config config;
 
+    protected static final int ARG_GROUP_ORDER = 1;
     protected final Logger logger = LoggerManager.getInstance().getLogger(ExportController.class);
     protected final CommandHelper helper = CommandHelper.newInstance();
     private final Object lock = new Object();

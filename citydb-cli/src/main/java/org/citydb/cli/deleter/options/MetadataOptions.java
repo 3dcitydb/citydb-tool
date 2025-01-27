@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,8 +19,9 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.common;
+package org.citydb.cli.deleter.options;
 
+import org.citydb.cli.common.Option;
 import picocli.CommandLine;
 
 public class MetadataOptions implements Option {

@@ -38,9 +38,16 @@ import java.time.OffsetDateTime;
 import java.util.Collections;
 
 public class FeatureImporter extends DatabaseImporter {
+    private final String updatingPerson;
+    private final String reasonForUpdate;
+    private final String lineage;
 
     public FeatureImporter(ImportHelper helper) throws SQLException {
         super(Table.FEATURE, helper);
+        updatingPerson = helper.getOptions().getUpdatingPerson()
+                .orElse(helper.getAdapter().getConnectionDetails().getUser());
+        reasonForUpdate = helper.getOptions().getReasonForUpdate().orElse(null);
+        lineage = helper.getOptions().getLineage().orElse(null);
     }
 
     @Override
@@ -72,9 +79,9 @@ public class FeatureImporter extends DatabaseImporter {
         }
 
         stmt.setObject(7, feature.getLastModificationDate().orElse(now));
-        stmt.setString(8, feature.getUpdatingPerson().orElse(null));
-        stmt.setString(9, feature.getReasonForUpdate().orElse(null));
-        stmt.setString(10, feature.getLineage().orElse(null));
+        stmt.setString(8, feature.getUpdatingPerson().orElse(updatingPerson));
+        stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
+        stmt.setString(10, feature.getLineage().orElse(lineage));
         stmt.setObject(11, feature.getCreationDate().orElse(now));
 
         OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);

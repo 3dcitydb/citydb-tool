@@ -98,7 +98,7 @@ public class CityJSONExportCommand extends ExportController {
             description = "Use CityGML default values for material properties (default: ${DEFAULT-VALUE}).")
     private boolean useMaterialDefaults;
 
-    @CommandLine.ArgGroup(exclusive = false,
+    @CommandLine.ArgGroup(exclusive = false, order = ARG_GROUP_ORDER,
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
     private UpgradeOptions upgradeOptions;
 

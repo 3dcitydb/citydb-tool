@@ -27,6 +27,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.importer.duplicate.DuplicateController;
 import org.citydb.cli.importer.filter.Filter;
+import org.citydb.cli.importer.options.MetadataOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
@@ -88,6 +89,10 @@ public abstract class ImportController implements Command {
     @CommandLine.Mixin
     protected TransformOptions transformOptions;
 
+    @CommandLine.ArgGroup(exclusive = false, order = 1,
+            heading = "Metadata options:%n")
+    private MetadataOptions metadataOptions;
+
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
@@ -95,6 +100,7 @@ public abstract class ImportController implements Command {
     @ConfigOption
     private Config config;
 
+    protected static final int ARG_GROUP_ORDER = 2;
     protected final Logger logger = LoggerManager.getInstance().getLogger(ImportController.class);
     protected final CommandHelper helper = CommandHelper.newInstance();
     private final Object lock = new Object();
@@ -287,16 +293,30 @@ public abstract class ImportController implements Command {
             importOptions.setTempDirectory(tempDirectory.toString());
         }
 
+        if (threadsOptions.getNumberOfThreads() != null) {
+            importOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
+        }
+
+        if (metadataOptions != null) {
+            if (metadataOptions.getLineage() != null) {
+                importOptions.setLineage(metadataOptions.getLineage());
+            }
+
+            if (metadataOptions.getUpdatingPerson() != null) {
+                importOptions.setUpdatingPerson(metadataOptions.getUpdatingPerson());
+            }
+
+            if (metadataOptions.getReasonForUpdate() != null) {
+                importOptions.setReasonForUpdate(metadataOptions.getReasonForUpdate());
+            }
+        }
+
         importOptions.setMode(switch (mode) {
             case skip -> ImportMode.SKIP_EXISTING;
             case delete -> ImportMode.DELETE_EXISTING;
             case terminate -> ImportMode.TERMINATE_EXISTING;
             default -> ImportMode.IMPORT_ALL;
         });
-
-        if (threadsOptions.getNumberOfThreads() != null) {
-            importOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
-        }
 
         if (transformOptions != null) {
             importOptions.setAffineTransform(transformOptions.getTransformationMatrix());

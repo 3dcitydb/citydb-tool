@@ -38,6 +38,9 @@ public class ImportOptions {
     private String tempDirectory;
     private int numberOfThreads;
     private int batchSize = DEFAULT_BATCH_SIZE;
+    private String updatingPerson;
+    private String reasonForUpdate;
+    private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
 
@@ -65,6 +68,33 @@ public class ImportOptions {
 
     public ImportOptions setBatchSize(int batchSize) {
         this.batchSize = batchSize;
+        return this;
+    }
+
+    public Optional<String> getUpdatingPerson() {
+        return Optional.ofNullable(updatingPerson);
+    }
+
+    public ImportOptions setUpdatingPerson(String updatingPerson) {
+        this.updatingPerson = updatingPerson;
+        return this;
+    }
+
+    public Optional<String> getReasonForUpdate() {
+        return Optional.ofNullable(reasonForUpdate);
+    }
+
+    public ImportOptions setReasonForUpdate(String reasonForUpdate) {
+        this.reasonForUpdate = reasonForUpdate;
+        return this;
+    }
+
+    public Optional<String> getLineage() {
+        return Optional.ofNullable(lineage);
+    }
+
+    public ImportOptions setLineage(String lineage) {
+        this.lineage = lineage;
         return this;
     }
 

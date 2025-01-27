@@ -46,6 +46,7 @@ import java.util.Map;
 
 public class ImportHelper {
     private final DatabaseAdapter adapter;
+    private final ImportOptions options;
     private final ReferenceManager referenceManager;
     private final ImportLogger logger;
     private final Connection connection;
@@ -64,6 +65,7 @@ public class ImportHelper {
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
                  ImportLogger logger, Importer.TransactionMode transactionMode) throws SQLException {
         this.adapter = adapter;
+        this.options = options;
         this.referenceManager = referenceManager;
         this.logger = logger;
         this.transactionMode = transactionMode;
@@ -80,6 +82,10 @@ public class ImportHelper {
 
     public DatabaseAdapter getAdapter() {
         return adapter;
+    }
+
+    public ImportOptions getOptions() {
+        return options;
     }
 
     public SchemaMapping getSchemaMapping() {

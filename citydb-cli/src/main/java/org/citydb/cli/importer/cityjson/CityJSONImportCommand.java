@@ -46,7 +46,7 @@ public class CityJSONImportCommand extends ImportController {
                     "(default: ${DEFAULT-VALUE}).")
     private boolean mapUnknownObjects;
 
-    @CommandLine.ArgGroup(exclusive = false,
+    @CommandLine.ArgGroup(exclusive = false, order = ARG_GROUP_ORDER,
             heading = "Filter options:%n")
     private FilterOptions filterOptions;
 
