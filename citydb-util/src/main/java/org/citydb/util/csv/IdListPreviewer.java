@@ -90,7 +90,7 @@ public class IdListPreviewer {
 
             consumer.accept(" ".repeat(widths[0]) + IntStream.range(0, columns)
                     .mapToObj(i -> center(getColumnIndex(i, selectedIndex == i), widths[i + 1], "-"))
-                    .collect(Collectors.joining("|")));
+                    .collect(Collectors.joining("+")));
 
             if (header > 0) {
                 consumer.accept(" ".repeat(widths[0]) + IntStream.range(0, columns)
