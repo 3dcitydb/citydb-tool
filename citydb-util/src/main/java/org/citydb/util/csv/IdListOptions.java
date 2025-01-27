@@ -139,7 +139,7 @@ public class IdListOptions {
         return IdListPreviewer.newInstance().preview(file, this, consumer, numberOfRecords);
     }
 
-    public CSVFormat toCSVFormat() {
+    CSVFormat toCSVFormat() {
         CSVFormat.Builder builder = CSVFormat.DEFAULT.builder()
                 .setDelimiter(getDelimiter())
                 .setQuote(getQuote().charAt(0))
