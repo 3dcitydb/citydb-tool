@@ -38,6 +38,7 @@ import org.citydb.logging.LoggerManager;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.query.Query;
+import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
@@ -45,7 +46,6 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.filter.operation.BooleanExpression;
 import org.citydb.query.filter.operation.Operators;
-import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -194,11 +194,11 @@ public class DeleteCommand implements Command {
                     deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
 
             if (mode == Mode.terminate) {
-                BooleanExpression nonTerminated = QueryHelper.terminationDateIsNull();
+                BooleanExpression isActive = QueryHelper.isActive();
                 query.setFilter(Filter.of(query.getFilter()
                         .map(Filter::getExpression)
-                        .map(expression -> (BooleanExpression) Operators.and(expression, nonTerminated))
-                        .orElse(nonTerminated)));
+                        .map(expression -> (BooleanExpression) Operators.and(expression, isActive))
+                        .orElse(isActive)));
             }
 
             return query;

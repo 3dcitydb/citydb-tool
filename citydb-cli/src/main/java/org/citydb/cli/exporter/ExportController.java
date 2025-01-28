@@ -50,11 +50,11 @@ import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.query.Query;
+import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.query.util.QueryHelper;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileIterator;
 import org.citydb.util.tiling.Tiling;
@@ -239,7 +239,7 @@ public abstract class ExportController implements Command {
         try {
             return queryOptions != null ?
                     queryOptions.getQuery() :
-                    exportOptions.getQuery().orElseGet(QueryHelper::getNonTerminatedTopLevelFeatures);
+                    exportOptions.getQuery().orElseGet(QueryHelper::getActiveTopLevelFeatures);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }

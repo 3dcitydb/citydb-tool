@@ -23,9 +23,9 @@ package org.citydb.cli.exporter.options;
 
 import org.citydb.cli.common.*;
 import org.citydb.query.Query;
+import org.citydb.query.QueryHelper;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.query.util.QueryHelper;
 import picocli.CommandLine;
 
 public class QueryOptions implements Option {
@@ -57,7 +57,7 @@ public class QueryOptions implements Option {
             query.setFilter(filterOptions.getFilter());
             query.setFilterSrs(filterOptions.getFilterCrs());
         } else {
-            query.setFilter(Filter.of(QueryHelper.terminationDateIsNull()));
+            query.setFilter(Filter.of(QueryHelper.isActive()));
         }
 
         if (sortingOptions != null) {
