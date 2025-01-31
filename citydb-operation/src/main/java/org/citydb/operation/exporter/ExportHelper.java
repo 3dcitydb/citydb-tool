@@ -167,8 +167,11 @@ public class ExportHelper {
     Feature exportFeature(long id, long sequenceId) throws ExportException {
         try {
             Feature feature = tableHelper.getOrCreateExporter(FeatureHierarchyExporter.class).doExport(id);
-            feature.getDescriptor().ifPresent(descriptor -> descriptor.setSequenceId(sequenceId));
-            postprocessor.process(feature);
+            if (feature != null) {
+                feature.getDescriptor().ifPresent(descriptor -> descriptor.setSequenceId(sequenceId));
+                postprocessor.process(feature);
+            }
+
             return feature;
         } catch (Exception e) {
             throw new ExportException("Failed to export feature (ID: " + id + ").", e);
@@ -181,7 +184,10 @@ public class ExportHelper {
         try {
             ImplicitGeometry implicitGeometry = tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
                     .doExport(id);
-            postprocessor.process(implicitGeometry);
+            if (implicitGeometry != null) {
+                postprocessor.process(implicitGeometry);
+            }
+
             return implicitGeometry;
         } catch (Exception e) {
             throw new ExportException("Failed to export implicit geometry (ID: " + id + ").", e);

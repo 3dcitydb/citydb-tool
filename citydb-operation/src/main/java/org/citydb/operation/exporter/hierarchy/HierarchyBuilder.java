@@ -148,28 +148,31 @@ public class HierarchyBuilder {
     }
 
     public Hierarchy build() {
-        helper.lookupAndPut(hierarchy.getFeature(rootId));
+        Feature root = hierarchy.getFeature(rootId);
+        if (root != null) {
+            helper.lookupAndPut(root);
 
-        Iterator<PropertyStub> iterator = propertyStubs.iterator();
-        while (iterator.hasNext()) {
-            PropertyStub propertyStub = iterator.next();
-            hierarchy.addProperty(propertyStub.getDescriptor().getId(),
-                    propertyBuilder.build(propertyStub, hierarchy));
-            iterator.remove();
-        }
+            Iterator<PropertyStub> iterator = propertyStubs.iterator();
+            while (iterator.hasNext()) {
+                PropertyStub propertyStub = iterator.next();
+                hierarchy.addProperty(propertyStub.getDescriptor().getId(),
+                        propertyBuilder.build(propertyStub, hierarchy));
+                iterator.remove();
+            }
 
-        for (Property<?> property : hierarchy.getProperties().values()) {
-            long parentId = property.getDescriptor().map(PropertyDescriptor::getParentId).orElse(0L);
-            if (parentId != 0) {
-                Attribute attribute = hierarchy.getProperty(parentId, Attribute.class);
-                if (attribute != null) {
-                    attribute.addProperty(property);
-                }
-            } else {
-                long featureId = property.getDescriptor().map(PropertyDescriptor::getFeatureId).orElse(0L);
-                Feature feature = hierarchy.getFeature(featureId);
-                if (feature != null) {
-                    feature.addProperty(property);
+            for (Property<?> property : hierarchy.getProperties().values()) {
+                long parentId = property.getDescriptor().map(PropertyDescriptor::getParentId).orElse(0L);
+                if (parentId != 0) {
+                    Attribute attribute = hierarchy.getProperty(parentId, Attribute.class);
+                    if (attribute != null) {
+                        attribute.addProperty(property);
+                    }
+                } else {
+                    long featureId = property.getDescriptor().map(PropertyDescriptor::getFeatureId).orElse(0L);
+                    Feature feature = hierarchy.getFeature(featureId);
+                    if (feature != null) {
+                        feature.addProperty(property);
+                    }
                 }
             }
         }
