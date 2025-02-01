@@ -21,6 +21,7 @@
 
 package org.citydb.io.citygml.adapter.construction;
 
+import org.citydb.core.time.TimeHelper;
 import org.citydb.io.citygml.adapter.gml.CodeAdapter;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.builder.ModelBuilder;
@@ -34,8 +35,6 @@ import org.citydb.model.property.Attribute;
 import org.citydb.model.property.DataType;
 import org.citygml4j.core.model.construction.ConstructionEvent;
 
-import java.time.ZoneOffset;
-
 public class ConstructionEventAdapter implements ModelBuilder<ConstructionEvent, Attribute>, ModelSerializer<Attribute, ConstructionEvent> {
 
     @Override
@@ -44,7 +43,7 @@ public class ConstructionEventAdapter implements ModelBuilder<ConstructionEvent,
 
         if (source.getDateOfEvent() != null) {
             target.addProperty(Attribute.of(Name.of("dateOfEvent", Namespaces.CONSTRUCTION), DataType.TIMESTAMP)
-                    .setTimeStamp(source.getDateOfEvent().atStartOfDay().atOffset(ZoneOffset.UTC)));
+                    .setTimeStamp(TimeHelper.toDateTime(source.getDateOfEvent())));
         }
 
         if (source.getDescription() != null) {

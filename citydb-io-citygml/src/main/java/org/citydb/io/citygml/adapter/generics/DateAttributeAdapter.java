@@ -21,6 +21,7 @@
 
 package org.citydb.io.citygml.adapter.generics;
 
+import org.citydb.core.time.TimeHelper;
 import org.citydb.io.citygml.adapter.core.AbstractGenericAttributeAdapter;
 import org.citydb.io.citygml.annotation.DatabaseType;
 import org.citydb.io.citygml.builder.ModelBuildException;
@@ -32,15 +33,13 @@ import org.citydb.model.property.Attribute;
 import org.citydb.model.property.DataType;
 import org.citygml4j.core.model.generics.DateAttribute;
 
-import java.time.ZoneOffset;
-
 @DatabaseType(name = "DateAttribute", namespace = Namespaces.GENERICS)
 public class DateAttributeAdapter extends AbstractGenericAttributeAdapter<DateAttribute> {
 
     @Override
     public void build(DateAttribute source, Attribute target, ModelBuilderHelper helper) throws ModelBuildException {
         if (source.getValue() != null) {
-            target.setTimeStamp(source.getValue().atStartOfDay().atOffset(ZoneOffset.UTC));
+            target.setTimeStamp(TimeHelper.toDateTime(source.getValue()));
         }
 
         target.setDataType(DataType.TIMESTAMP);

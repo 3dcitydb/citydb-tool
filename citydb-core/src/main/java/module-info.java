@@ -13,5 +13,6 @@ module org.citydb.core {
     exports org.citydb.core.file.input;
     exports org.citydb.core.file.output;
     exports org.citydb.core.function;
+    exports org.citydb.core.time;
     exports org.citydb.core.tuple;
 }

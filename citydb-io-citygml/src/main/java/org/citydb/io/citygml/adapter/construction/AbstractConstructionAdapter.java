@@ -21,6 +21,7 @@
 
 package org.citydb.io.citygml.adapter.construction;
 
+import org.citydb.core.time.TimeHelper;
 import org.citydb.io.citygml.adapter.core.AbstractOccupiedSpaceAdapter;
 import org.citydb.io.citygml.adapter.core.OccupancyAdapter;
 import org.citydb.io.citygml.builder.ModelBuildException;
@@ -35,8 +36,6 @@ import org.citydb.model.property.DataType;
 import org.citygml4j.core.model.construction.*;
 import org.citygml4j.core.model.core.OccupancyProperty;
 
-import java.time.ZoneOffset;
-
 public abstract class AbstractConstructionAdapter<T extends AbstractConstruction> extends AbstractOccupiedSpaceAdapter<T> {
 
     @Override
@@ -50,12 +49,12 @@ public abstract class AbstractConstructionAdapter<T extends AbstractConstruction
 
         if (source.getDateOfConstruction() != null) {
             target.addAttribute(Attribute.of(Name.of("dateOfConstruction", Namespaces.CONSTRUCTION), DataType.TIMESTAMP)
-                    .setTimeStamp(source.getDateOfConstruction().atStartOfDay().atOffset(ZoneOffset.UTC)));
+                    .setTimeStamp(TimeHelper.toDateTime(source.getDateOfConstruction())));
         }
 
         if (source.getDateOfDemolition() != null) {
             target.addAttribute(Attribute.of(Name.of("dateOfDemolition", Namespaces.CONSTRUCTION), DataType.TIMESTAMP)
-                    .setTimeStamp(source.getDateOfDemolition().atStartOfDay().atOffset(ZoneOffset.UTC)));
+                    .setTimeStamp(TimeHelper.toDateTime(source.getDateOfDemolition())));
         }
 
         if (source.isSetConstructionEvents()) {
