@@ -76,8 +76,7 @@ public class Exporter {
             helpers = ConcurrentHashMap.newKeySet();
             service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
                     options.getNumberOfThreads() :
-                    Math.max(2, Runtime.getRuntime().availableProcessors()),
-                    1000);
+                    Math.max(2, Runtime.getRuntime().availableProcessors()), 1000);
 
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
