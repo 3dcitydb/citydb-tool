@@ -37,7 +37,7 @@ public class QueryHelper {
     }
 
     public static Query getValidTopLevelFeatures(ValidityTime time) {
-        return new Query().setFilter(Filter.of(isInvalid(time)));
+        return new Query().setFilter(Filter.of(isValid(time)));
     }
 
     public static BooleanExpression isValid(ValidityTime time) {

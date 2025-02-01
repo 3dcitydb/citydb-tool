@@ -195,7 +195,7 @@ public class DeleteCommand implements Command {
                     deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
 
             if (mode == Mode.terminate) {
-                BooleanExpression isValid = QueryHelper.isValid(ValidityTime.DATABASE_TIME);
+                BooleanExpression isValid = QueryHelper.isValid(ValidityTime.DATABASE);
                 query.setFilter(Filter.of(query.getFilter()
                         .map(Filter::getExpression)
                         .map(expression -> (BooleanExpression) Operators.and(expression, isValid))

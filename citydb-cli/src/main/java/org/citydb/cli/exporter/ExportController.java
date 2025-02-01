@@ -241,7 +241,7 @@ public abstract class ExportController implements Command {
             return queryOptions != null ?
                     queryOptions.getQuery() :
                     exportOptions.getQuery().orElseGet(() ->
-                            QueryHelper.getValidTopLevelFeatures(ValidityTime.DATABASE_TIME));
+                            QueryHelper.getValidTopLevelFeatures(ValidityTime.DATABASE));
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }

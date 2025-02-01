@@ -58,7 +58,7 @@ public class QueryOptions implements Option {
             query.setFilter(filterOptions.getFilter());
             query.setFilterSrs(filterOptions.getFilterCrs());
         } else {
-            query.setFilter(Filter.of(QueryHelper.isValid(ValidityTime.DATABASE_TIME)));
+            query.setFilter(Filter.of(QueryHelper.isValid(ValidityTime.DATABASE)));
         }
 
         if (sortingOptions != null) {
