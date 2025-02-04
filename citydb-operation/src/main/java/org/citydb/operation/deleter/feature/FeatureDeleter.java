@@ -51,7 +51,7 @@ public class FeatureDeleter extends DatabaseDeleter {
             helper.getOptions().getLineage().ifPresent(lineage ->
                     stmt.append(", lineage = '").append(lineage).append("'"));
 
-            stmt.append(" where id = ? and termination_date is null");
+            stmt.append(" where id = ?");
             return connection.prepareStatement(stmt.toString());
         } else {
             return connection.prepareCall("{call citydb_pkg.delete_feature(?, ?)}");
@@ -69,7 +69,7 @@ public class FeatureDeleter extends DatabaseDeleter {
                     .orElse(helper.getAdapter().getConnectionDetails().getUser());
 
             for (long id : ids) {
-                OffsetDateTime now = OffsetDateTime.now();
+                OffsetDateTime now = OffsetDateTime.now().withNano(0);
                 stmt.setObject(1, helper.getOptions().getTerminationDate().orElse(now));
                 stmt.setObject(2, now);
                 stmt.setString(3, updatingPerson);
