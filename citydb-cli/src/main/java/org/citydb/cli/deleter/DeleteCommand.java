@@ -34,7 +34,7 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
-import org.citydb.database.schema.ValidityTime;
+import org.citydb.database.schema.ValidityReference;
 import org.citydb.logging.LoggerManager;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
@@ -195,7 +195,7 @@ public class DeleteCommand implements Command {
                     deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
 
             if (mode == Mode.terminate) {
-                BooleanExpression isValid = QueryHelper.isValid(ValidityTime.DATABASE);
+                BooleanExpression isValid = QueryHelper.isValid(ValidityReference.DATABASE);
                 query.setFilter(Filter.of(query.getFilter()
                         .map(Filter::getExpression)
                         .map(expression -> (BooleanExpression) Operators.and(expression, isValid))

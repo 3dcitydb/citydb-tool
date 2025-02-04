@@ -21,7 +21,7 @@
 
 package org.citydb.query;
 
-import org.citydb.database.schema.ValidityTime;
+import org.citydb.database.schema.ValidityReference;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.literal.PropertyRef;
 import org.citydb.query.filter.literal.TimestampLiteral;
@@ -36,40 +36,40 @@ public class QueryHelper {
         return new Query();
     }
 
-    public static Query getValidTopLevelFeatures(ValidityTime time) {
-        return new Query().setFilter(Filter.of(isValid(time)));
+    public static Query getValidTopLevelFeatures(ValidityReference reference) {
+        return new Query().setFilter(Filter.of(isValid(reference)));
     }
 
-    public static BooleanExpression isValid(ValidityTime time) {
-        return PropertyRef.of(time.to()).isNull();
+    public static BooleanExpression isValid(ValidityReference reference) {
+        return PropertyRef.of(reference.to()).isNull();
     }
 
-    public static BooleanExpression wasValidAt(OffsetDateTime timestamp, ValidityTime time) {
-        return wasValidAt(timestamp, time, false);
+    public static BooleanExpression wasValidAt(OffsetDateTime timestamp, ValidityReference reference) {
+        return wasValidAt(timestamp, reference, false);
     }
 
-    public static BooleanExpression wasValidAt(OffsetDateTime timestamp, ValidityTime time, boolean lenient) {
-        return wasValidBetween(timestamp, timestamp, time, lenient);
+    public static BooleanExpression wasValidAt(OffsetDateTime timestamp, ValidityReference reference, boolean lenient) {
+        return wasValidBetween(timestamp, timestamp, reference, lenient);
     }
 
-    public static BooleanExpression wasValidBetween(OffsetDateTime lowerBound, OffsetDateTime upperBound, ValidityTime time) {
-        return wasValidBetween(lowerBound, upperBound, time, false);
+    public static BooleanExpression wasValidBetween(OffsetDateTime lowerBound, OffsetDateTime upperBound, ValidityReference reference) {
+        return wasValidBetween(lowerBound, upperBound, reference, false);
     }
 
-    public static BooleanExpression wasValidBetween(OffsetDateTime lowerBound, OffsetDateTime upperBound, ValidityTime time, boolean lenient) {
-        PropertyRef from = PropertyRef.of(time.from());
-        PropertyRef to = PropertyRef.of(time.to());
+    public static BooleanExpression wasValidBetween(OffsetDateTime lowerBound, OffsetDateTime upperBound, ValidityReference reference, boolean lenient) {
+        PropertyRef from = PropertyRef.of(reference.from());
+        PropertyRef to = PropertyRef.of(reference.to());
         return Operators.and(lenient ?
                         from.isNull().or(from.le(TimestampLiteral.of(upperBound))) :
                         from.le(TimestampLiteral.of(upperBound)),
-                isValid(time).or(to.gt(TimestampLiteral.of(lowerBound))));
+                isValid(reference).or(to.gt(TimestampLiteral.of(lowerBound))));
     }
 
-    public static BooleanExpression isInvalid(ValidityTime time) {
-        return PropertyRef.of(time.to()).isNotNull();
+    public static BooleanExpression isInvalid(ValidityReference reference) {
+        return PropertyRef.of(reference.to()).isNotNull();
     }
 
-    public static BooleanExpression wasInvalidAt(OffsetDateTime timestamp, ValidityTime time) {
-        return PropertyRef.of(time.to()).le(TimestampLiteral.of(timestamp));
+    public static BooleanExpression wasInvalidAt(OffsetDateTime timestamp, ValidityReference reference) {
+        return PropertyRef.of(reference.to()).le(TimestampLiteral.of(timestamp));
     }
 }

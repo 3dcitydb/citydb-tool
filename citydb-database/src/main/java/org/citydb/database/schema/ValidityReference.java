@@ -29,7 +29,7 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.function.Function;
 
-public enum ValidityTime {
+public enum ValidityReference {
     DATABASE("database", "creationDate", "terminationDate", Feature::getCreationDate, Feature::getTerminationDate),
     REAL_WORLD("realWorld", "validFrom", "validTo", Feature::getValidFrom, Feature::getValidTo);
 
@@ -39,8 +39,8 @@ public enum ValidityTime {
     private final Function<Feature, Optional<OffsetDateTime>> fromTime;
     private final Function<Feature, Optional<OffsetDateTime>> toTime;
 
-    ValidityTime(String value, String from, String to, Function<Feature, Optional<OffsetDateTime>> fromTime,
-                 Function<Feature, Optional<OffsetDateTime>> toTime) {
+    ValidityReference(String value, String from, String to, Function<Feature, Optional<OffsetDateTime>> fromTime,
+                      Function<Feature, Optional<OffsetDateTime>> toTime) {
         this.value = value;
         this.from = Name.of(from, Namespaces.CORE);
         this.to = Name.of(to, Namespaces.CORE);
@@ -68,8 +68,8 @@ public enum ValidityTime {
         return value;
     }
 
-    public static ValidityTime fromValue(String value) {
-        for (ValidityTime v : ValidityTime.values()) {
+    public static ValidityReference fromValue(String value) {
+        for (ValidityReference v : ValidityReference.values()) {
             if (v.value.equals(value)) {
                 return v;
             }

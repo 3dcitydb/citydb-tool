@@ -38,7 +38,7 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.schema.ValidityTime;
+import org.citydb.database.schema.ValidityReference;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
@@ -241,7 +241,7 @@ public abstract class ExportController implements Command {
             return queryOptions != null ?
                     queryOptions.getQuery() :
                     exportOptions.getQuery().orElseGet(() ->
-                            QueryHelper.getValidTopLevelFeatures(ValidityTime.DATABASE));
+                            QueryHelper.getValidTopLevelFeatures(ValidityReference.DATABASE));
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
