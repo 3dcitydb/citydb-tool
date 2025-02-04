@@ -55,7 +55,10 @@ import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
+import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
+import org.citydb.query.filter.operation.BooleanExpression;
+import org.citydb.query.filter.operation.Operators;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileIterator;
 import org.citydb.util.tiling.Tiling;
@@ -88,6 +91,10 @@ public abstract class ExportController implements Command {
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
     protected QueryOptions queryOptions;
+
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Time-based feature history options:%n")
+    protected ValidityOptions validityOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Tiling options:%n")
@@ -238,10 +245,18 @@ public abstract class ExportController implements Command {
 
     protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
         try {
-            return queryOptions != null ?
+            Query query = queryOptions != null ?
                     queryOptions.getQuery() :
-                    exportOptions.getQuery().orElseGet(() ->
-                            QueryHelper.getValidTopLevelFeatures(ValidityReference.DATABASE));
+                    exportOptions.getQuery().orElseGet(Query::new);
+            BooleanExpression validity = validityOptions != null ?
+                    validityOptions.getValidityFilterExpression() :
+                    QueryHelper.isValid(ValidityReference.DATABASE);
+
+            return validity != null ?
+                    query.setFilter(query.getFilter()
+                            .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
+                            .orElse(Filter.of(validity))) :
+                    query;
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -283,6 +298,10 @@ public abstract class ExportController implements Command {
                         .setExportAppearances(queryOptions.getAppearanceOptions().isProcessAppearances())
                         .setThemes(queryOptions.getAppearanceOptions().getThemes());
             }
+        }
+
+        if (validityOptions != null) {
+            exportOptions.setValidityOptions(validityOptions.getExportValidityOptions());
         }
 
         return exportOptions;

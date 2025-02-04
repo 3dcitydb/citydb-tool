@@ -22,10 +22,7 @@
 package org.citydb.cli.exporter.options;
 
 import org.citydb.cli.common.*;
-import org.citydb.database.schema.ValidityReference;
 import org.citydb.query.Query;
-import org.citydb.query.QueryHelper;
-import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
 import picocli.CommandLine;
 
@@ -57,8 +54,6 @@ public class QueryOptions implements Option {
         if (filterOptions != null) {
             query.setFilter(filterOptions.getFilter());
             query.setFilterSrs(filterOptions.getFilterCrs());
-        } else {
-            query.setFilter(Filter.of(QueryHelper.isValid(ValidityReference.DATABASE)));
         }
 
         if (sortingOptions != null) {
