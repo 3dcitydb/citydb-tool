@@ -32,6 +32,7 @@ import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
 import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.options.LodOptions;
+import org.citydb.operation.exporter.options.ValidityOptions;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -50,6 +51,7 @@ public class ExportOptions {
     private SrsReference targetSrs;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
+    private ValidityOptions validityOptions;
     private LodOptions lodOptions;
     private AppearanceOptions appearanceOptions;
 
@@ -99,6 +101,15 @@ public class ExportOptions {
 
     public ExportOptions setAffineTransform(Matrix3x4 affineTransform) {
         this.affineTransform = affineTransform;
+        return this;
+    }
+
+    public Optional<ValidityOptions> getValidityOptions() {
+        return Optional.ofNullable(validityOptions);
+    }
+
+    public ExportOptions setValidityOptions(ValidityOptions validityOptions) {
+        this.validityOptions = validityOptions;
         return this;
     }
 

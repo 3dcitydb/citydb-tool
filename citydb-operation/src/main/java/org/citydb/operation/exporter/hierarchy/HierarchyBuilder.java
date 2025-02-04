@@ -23,6 +23,7 @@ package org.citydb.operation.exporter.hierarchy;
 
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.Attribute;
+import org.citydb.model.property.DataType;
 import org.citydb.model.property.Property;
 import org.citydb.model.property.PropertyDescriptor;
 import org.citydb.operation.exporter.ExportException;
@@ -37,6 +38,7 @@ import org.citydb.operation.exporter.property.PropertyExporter;
 import org.citydb.operation.exporter.property.PropertyStub;
 import org.citydb.operation.exporter.util.LodFilter;
 import org.citydb.operation.exporter.util.TableHelper;
+import org.citydb.operation.exporter.util.ValidityFilter;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -45,16 +47,18 @@ import java.util.*;
 public class HierarchyBuilder {
     private final long rootId;
     private final ExportHelper helper;
+    private final ValidityFilter validityFilter;
     private final LodFilter lodFilter;
     private final TableHelper tableHelper;
     private final PropertyBuilder propertyBuilder;
     private final Hierarchy hierarchy = new Hierarchy();
-    private final List<PropertyStub> propertyStubs = new ArrayList<>();
+    private final Map<Long, List<PropertyStub>> propertyStubs = new HashMap<>();
     private final boolean exportAppearances;
 
     private HierarchyBuilder(long rootId, ExportHelper helper) {
         this.rootId = rootId;
         this.helper = helper;
+        validityFilter = helper.getValidityFilter();
         lodFilter = helper.getLodFilter();
         tableHelper = helper.getTableHelper();
         propertyBuilder = new PropertyBuilder(helper);
@@ -73,6 +77,7 @@ public class HierarchyBuilder {
         Set<Long> appearanceIds = new HashSet<>();
         Set<Long> addressIds = new HashSet<>();
         Set<Long> implicitGeometryIds = new HashSet<>();
+        Map<Long, Integer> referees = new HashMap<>();
 
         while (rs.next()) {
             long featureId = rs.getLong("val_feature_id");
@@ -109,15 +114,32 @@ public class HierarchyBuilder {
                 PropertyStub propertyStub = tableHelper.getOrCreateExporter(PropertyExporter.class)
                         .doExport(parentFeatureId, rs);
                 if (propertyStub != null) {
-                    propertyStubs.add(propertyStub);
+                    propertyStubs.computeIfAbsent(parentFeatureId, v -> new ArrayList<>()).add(propertyStub);
+                    if (propertyStub.getDataType() == DataType.FEATURE_PROPERTY) {
+                        referees.merge(featureId, 1, Integer::sum);
+                    }
                 }
             }
         }
 
         if (!featureIds.isEmpty()) {
-            tableHelper.getOrCreateExporter(FeatureExporter.class)
-                    .doExport(featureIds)
-                    .forEach(hierarchy::addFeature);
+            Set<Long> removedFeatureIds = new HashSet<>();
+            for (Map.Entry<Long, Feature> entry : tableHelper.getOrCreateExporter(FeatureExporter.class)
+                    .doExport(featureIds).entrySet()) {
+                long featureId = entry.getKey();
+                Feature feature = entry.getValue();
+                if (!removedFeatureIds.contains(featureId)) {
+                    if (featureId != rootId && !validityFilter.filter(feature)) {
+                        removeFeature(featureId, removedFeatureIds, referees);
+                    } else {
+                        hierarchy.addFeature(featureId, feature);
+                    }
+                }
+            }
+
+            if (!removedFeatureIds.isEmpty()) {
+                hierarchy.getFeatures().keySet().removeAll(removedFeatureIds);
+            }
         }
 
         if (!geometryIds.isEmpty()) {
@@ -152,12 +174,14 @@ public class HierarchyBuilder {
         if (root != null) {
             helper.lookupAndPut(root);
 
-            Iterator<PropertyStub> iterator = propertyStubs.iterator();
-            while (iterator.hasNext()) {
-                PropertyStub propertyStub = iterator.next();
-                hierarchy.addProperty(propertyStub.getDescriptor().getId(),
-                        propertyBuilder.build(propertyStub, hierarchy));
-                iterator.remove();
+            for (List<PropertyStub> propertyStubs : this.propertyStubs.values()) {
+                Iterator<PropertyStub> iterator = propertyStubs.iterator();
+                while (iterator.hasNext()) {
+                    PropertyStub propertyStub = iterator.next();
+                    hierarchy.addProperty(propertyStub.getDescriptor().getId(),
+                            propertyBuilder.build(propertyStub, hierarchy));
+                    iterator.remove();
+                }
             }
 
             for (Property<?> property : hierarchy.getProperties().values()) {
@@ -178,5 +202,20 @@ public class HierarchyBuilder {
         }
 
         return hierarchy;
+    }
+
+    private void removeFeature(long featureId, Set<Long> removedFeatureIds, Map<Long, Integer> referees) {
+        removedFeatureIds.add(featureId);
+        List<PropertyStub> propertyStubs = this.propertyStubs.remove(featureId);
+        if (propertyStubs != null) {
+            for (PropertyStub propertyStub : propertyStubs) {
+                if (propertyStub.getDataType() == DataType.FEATURE_PROPERTY) {
+                    long nestedFeatureId = propertyStub.getFeatureId();
+                    if (referees.merge(nestedFeatureId, -1, Integer::sum) == 0) {
+                        removeFeature(nestedFeatureId, removedFeatureIds, referees);
+                    }
+                }
+            }
+        }
     }
 }
