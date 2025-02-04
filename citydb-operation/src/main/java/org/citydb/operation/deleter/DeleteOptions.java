@@ -37,10 +37,11 @@ public class DeleteOptions {
     private DeleteMode mode = DeleteMode.DELETE;
     private int numberOfThreads;
     private int batchSize = DEFAULT_BATCH_SIZE;
+    private boolean terminateWithSubFeatures = true;
+    private OffsetDateTime terminationDate;
     private String updatingPerson;
     private String reasonForUpdate;
     private String lineage;
-    private OffsetDateTime terminationDate;
 
     public DeleteMode getMode() {
         return mode != null ? mode : DeleteMode.DELETE;
@@ -69,6 +70,24 @@ public class DeleteOptions {
         return this;
     }
 
+    public boolean isTerminateWithSubFeatures() {
+        return terminateWithSubFeatures;
+    }
+
+    public DeleteOptions setTerminateWithSubFeatures(boolean terminateWithSubFeatures) {
+        this.terminateWithSubFeatures = terminateWithSubFeatures;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getTerminationDate() {
+        return Optional.ofNullable(terminationDate);
+    }
+
+    public DeleteOptions setTerminationDate(OffsetDateTime terminationDate) {
+        this.terminationDate = terminationDate;
+        return this;
+    }
+
     public Optional<String> getUpdatingPerson() {
         return Optional.ofNullable(updatingPerson);
     }
@@ -93,15 +112,6 @@ public class DeleteOptions {
 
     public DeleteOptions setLineage(String lineage) {
         this.lineage = lineage;
-        return this;
-    }
-
-    public Optional<OffsetDateTime> getTerminationDate() {
-        return Optional.ofNullable(terminationDate);
-    }
-
-    public DeleteOptions setTerminationDate(OffsetDateTime terminationDate) {
-        this.terminationDate = terminationDate;
         return this;
     }
 }
