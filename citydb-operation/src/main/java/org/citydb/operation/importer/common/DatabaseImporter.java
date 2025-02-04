@@ -38,6 +38,7 @@ import org.citydb.operation.importer.util.TableHelper;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 
 public abstract class DatabaseImporter {
     protected final Table table;
@@ -74,6 +75,10 @@ public abstract class DatabaseImporter {
         if (reference != null) {
             helper.getOrCreateReferenceCache(type).putReference(reference, id);
         }
+    }
+
+    protected OffsetDateTime getImportTime() {
+        return helper.getImportTime();
     }
 
     protected FileLocator getFileLocator(ExternalFile file) {

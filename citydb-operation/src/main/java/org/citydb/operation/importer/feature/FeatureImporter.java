@@ -62,7 +62,7 @@ public class FeatureImporter extends DatabaseImporter {
         long featureId = nextSequenceValue(Sequence.FEATURE);
         int objectClassId = schemaMapping.getFeatureType(feature.getFeatureType()).getId();
         String objectId = feature.getObjectId().orElse(null);
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime importTime = getImportTime();
 
         stmt.setLong(1, featureId);
         stmt.setInt(2, objectClassId);
@@ -78,11 +78,11 @@ public class FeatureImporter extends DatabaseImporter {
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 
-        stmt.setObject(7, feature.getLastModificationDate().orElse(now));
+        stmt.setObject(7, feature.getLastModificationDate().orElse(importTime));
         stmt.setString(8, feature.getUpdatingPerson().orElse(updatingPerson));
         stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
         stmt.setString(10, feature.getLineage().orElse(lineage));
-        stmt.setObject(11, feature.getCreationDate().orElse(now));
+        stmt.setObject(11, feature.getCreationDate().orElse(importTime));
 
         OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);
         if (terminationDate != null) {

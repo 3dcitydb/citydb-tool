@@ -39,6 +39,7 @@ import org.citydb.operation.importer.util.*;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -59,6 +60,7 @@ public class ImportHelper {
     private final Importer.TransactionMode transactionMode;
     private final int batchSize;
 
+    private OffsetDateTime importTime;
     private SequenceValues sequenceValues;
     private int batchCounter;
 
@@ -100,6 +102,10 @@ public class ImportHelper {
         return tableHelper;
     }
 
+    public OffsetDateTime getImportTime() {
+        return importTime;
+    }
+
     public SequenceValues getSequenceValues() {
         return sequenceValues;
     }
@@ -123,6 +129,7 @@ public class ImportHelper {
                 transformer.transform(feature);
             }
 
+            importTime = feature.getCreationDate().orElse(OffsetDateTime.now().withNano(0));
             generateSequenceValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
