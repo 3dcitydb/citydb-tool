@@ -36,6 +36,7 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.common.Predicate;
 import org.citydb.query.filter.literal.BBoxLiteral;
 import org.citydb.query.filter.literal.PropertyRef;
+import org.citydb.query.filter.operation.Operators;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileMatrix;
 import org.citydb.util.tiling.Tiling;
@@ -122,7 +123,7 @@ public class TilingHelper {
             Predicate bboxFilter = PropertyRef.of("envelope", Namespaces.CORE)
                     .intersects(BBoxLiteral.of(tile.getExtent()));
             return Query.of(query).setFilter(query.getFilter()
-                    .map(filter -> Filter.of(bboxFilter.and(filter.getExpression())))
+                    .map(filter -> Filter.of(Operators.and(bboxFilter, filter.getExpression())))
                     .orElse(Filter.of(bboxFilter)));
         } else {
             return query;
