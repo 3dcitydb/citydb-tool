@@ -99,7 +99,7 @@ public abstract class DatabaseAdapter {
         return databaseMetadata;
     }
 
-    private DatabaseVersion getCityDBVersion(Connection connection) throws SQLException {
+    private DatabaseVersion getCityDBVersion(Connection connection) throws DatabaseException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(schemaAdapter.getCityDBVersion())) {
             if (rs.next()) {
@@ -108,12 +108,14 @@ public abstract class DatabaseAdapter {
                         rs.getInt("minor_revision"),
                         rs.getString("version"));
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.", e);
         }
 
-        throw new SQLException("Failed to retrieve the version of the 3DCityDB.");
+        throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.");
     }
 
-    private SpatialReference getDatabaseSrs(Connection connection) throws SQLException {
+    private SpatialReference getDatabaseSrs(Connection connection) throws DatabaseException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(schemaAdapter.getDatabaseSrs())) {
             if (rs.next()) {
@@ -123,8 +125,10 @@ public abstract class DatabaseAdapter {
                         rs.getString("srs_name"),
                         rs.getString("wktext"));
             }
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to retrieve the spatial reference system of the 3DCityDB.", e);
         }
 
-        throw new SQLException("Failed to retrieve the spatial reference system of the 3DCityDB.");
+        throw new DatabaseException("Failed to retrieve the spatial reference system of the 3DCityDB.");
     }
 }
