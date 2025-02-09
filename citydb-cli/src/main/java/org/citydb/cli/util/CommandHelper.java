@@ -191,7 +191,12 @@ public class CommandHelper {
         Level level = LoggerManager.getInstance().logConsole().getLogLevel();
         if (level.isMoreSpecificThan(Level.INFO)) {
             while (e != null) {
-                logger.error(e);
+                String cause = logger.getMessageFactory().newMessage(e).getFormattedMessage();
+                if (!cause.equals(message)) {
+                    logger.error(e);
+                }
+
+                message = cause;
                 e = e.getCause();
             }
         }

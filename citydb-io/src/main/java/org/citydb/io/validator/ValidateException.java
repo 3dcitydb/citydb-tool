@@ -24,7 +24,6 @@ package org.citydb.io.validator;
 public class ValidateException extends Exception {
 
     public ValidateException() {
-        super();
     }
 
     public ValidateException(String message) {

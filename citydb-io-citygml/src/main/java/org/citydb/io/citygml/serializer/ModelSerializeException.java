@@ -24,7 +24,6 @@ package org.citydb.io.citygml.serializer;
 public class ModelSerializeException extends Exception {
 
     public ModelSerializeException() {
-        super();
     }
 
     public ModelSerializeException(String message) {

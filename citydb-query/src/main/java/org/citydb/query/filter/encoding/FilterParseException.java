@@ -24,7 +24,6 @@ package org.citydb.query.filter.encoding;
 public class FilterParseException extends Exception {
 
     public FilterParseException() {
-        super();
     }
 
     public FilterParseException(String message) {

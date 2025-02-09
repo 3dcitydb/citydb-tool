@@ -24,7 +24,6 @@ package org.citydb.io.writer;
 public class WriteException extends Exception {
 
     public WriteException() {
-        super();
     }
 
     public WriteException(String message) {

@@ -24,7 +24,6 @@ package org.citydb.database.srs;
 public class SrsException extends Exception {
 
     public SrsException() {
-        super();
     }
 
     public SrsException(String message) {

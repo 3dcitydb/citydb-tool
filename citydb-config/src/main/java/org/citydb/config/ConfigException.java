@@ -24,7 +24,6 @@ package org.citydb.config;
 public class ConfigException extends Exception {
 
     public ConfigException() {
-        super();
     }
 
     public ConfigException(String message) {

@@ -24,7 +24,6 @@ package org.citydb.util.tiling;
 public class TilingException extends Exception {
 
     public TilingException() {
-        super();
     }
 
     public TilingException(String message) {

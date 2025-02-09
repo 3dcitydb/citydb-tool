@@ -24,7 +24,6 @@ package org.citydb.operation.importer;
 public class ImportException extends Exception {
 
     public ImportException() {
-        super();
     }
 
     public ImportException(String message) {

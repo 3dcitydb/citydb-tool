@@ -24,7 +24,6 @@ package org.citydb.database.adapter;
 public class DatabaseAdapterException extends Exception {
 
     public DatabaseAdapterException() {
-        super();
     }
 
     public DatabaseAdapterException(String message) {

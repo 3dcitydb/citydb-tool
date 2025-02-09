@@ -24,7 +24,6 @@ package org.citydb.database.schema;
 public class SchemaException extends Exception {
 
     public SchemaException() {
-        super();
     }
 
     public SchemaException(String message) {

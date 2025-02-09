@@ -24,7 +24,6 @@ package org.citydb.cli;
 public class ExecutionException extends Exception {
 
     public ExecutionException() {
-        super();
     }
 
     public ExecutionException(String message) {

@@ -24,7 +24,6 @@ package org.citydb.io;
 public class IOAdapterException extends Exception {
 
     public IOAdapterException() {
-        super();
     }
 
     public IOAdapterException(String message) {

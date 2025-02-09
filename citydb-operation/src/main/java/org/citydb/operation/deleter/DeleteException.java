@@ -24,7 +24,6 @@ package org.citydb.operation.deleter;
 public class DeleteException extends Exception {
 
     public DeleteException() {
-        super();
     }
 
     public DeleteException(String message) {

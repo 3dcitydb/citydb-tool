@@ -24,7 +24,6 @@ package org.citydb.query.builder;
 public class QueryBuildException extends Exception {
 
     public QueryBuildException() {
-        super();
     }
 
     public QueryBuildException(String message) {

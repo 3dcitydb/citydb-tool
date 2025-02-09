@@ -24,7 +24,6 @@ package org.citydb.io.citygml.builder;
 public class ModelBuildException extends Exception {
 
     public ModelBuildException() {
-        super();
     }
 
     public ModelBuildException(String message) {

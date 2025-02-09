@@ -24,7 +24,6 @@ package org.citydb.query.builder.schema;
 public class SchemaPathException extends Exception {
 
     public SchemaPathException() {
-        super();
     }
 
     public SchemaPathException(String message) {

@@ -24,7 +24,6 @@ package org.citydb.plugin;
 public class PluginException extends Exception {
 
     public PluginException() {
-        super();
     }
 
     public PluginException(String message) {

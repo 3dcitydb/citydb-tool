@@ -24,7 +24,6 @@ package org.citydb.io.reader;
 public class ReadException extends Exception {
 
     public ReadException() {
-        super();
     }
 
     public ReadException(String message) {

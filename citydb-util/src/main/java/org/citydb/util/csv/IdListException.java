@@ -24,7 +24,6 @@ package org.citydb.util.csv;
 public class IdListException extends Exception {
 
     public IdListException() {
-        super();
     }
 
     public IdListException(String message) {

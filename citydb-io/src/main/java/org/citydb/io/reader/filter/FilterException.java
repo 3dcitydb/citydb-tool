@@ -24,7 +24,6 @@ package org.citydb.io.reader.filter;
 public class FilterException extends Exception {
 
     public FilterException() {
-        super();
     }
 
     public FilterException(String message) {
