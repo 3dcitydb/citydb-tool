@@ -44,32 +44,24 @@ public class QueryHelper {
         return PropertyRef.of(reference.to()).isNull();
     }
 
-    public static BooleanExpression wasValidAt(OffsetDateTime timestamp, ValidityReference reference) {
-        return wasValidAt(timestamp, reference, false);
+    public static BooleanExpression validAt(OffsetDateTime timestamp, ValidityReference reference) {
+        return validAt(timestamp, reference, false);
     }
 
-    public static BooleanExpression wasValidAt(OffsetDateTime timestamp, ValidityReference reference, boolean lenient) {
-        return wasValidBetween(timestamp, timestamp, reference, lenient);
-    }
-
-    public static BooleanExpression wasValidBetween(OffsetDateTime lowerBound, OffsetDateTime upperBound, ValidityReference reference) {
-        return wasValidBetween(lowerBound, upperBound, reference, false);
-    }
-
-    public static BooleanExpression wasValidBetween(OffsetDateTime lowerBound, OffsetDateTime upperBound, ValidityReference reference, boolean lenient) {
+    public static BooleanExpression validAt(OffsetDateTime timestamp, ValidityReference reference, boolean lenient) {
         PropertyRef from = PropertyRef.of(reference.from());
         PropertyRef to = PropertyRef.of(reference.to());
         return Operators.and(lenient ?
-                        from.isNull().or(from.le(TimestampLiteral.of(upperBound))) :
-                        from.le(TimestampLiteral.of(upperBound)),
-                isValid(reference).or(to.gt(TimestampLiteral.of(lowerBound))));
+                        from.isNull().or(from.le(TimestampLiteral.of(timestamp))) :
+                        from.le(TimestampLiteral.of(timestamp)),
+                isValid(reference).or(to.gt(TimestampLiteral.of(timestamp))));
     }
 
     public static BooleanExpression isInvalid(ValidityReference reference) {
         return PropertyRef.of(reference.to()).isNotNull();
     }
 
-    public static BooleanExpression wasInvalidAt(OffsetDateTime timestamp, ValidityReference reference) {
+    public static BooleanExpression invalidAt(OffsetDateTime timestamp, ValidityReference reference) {
         return PropertyRef.of(reference.to()).le(TimestampLiteral.of(timestamp));
     }
 }

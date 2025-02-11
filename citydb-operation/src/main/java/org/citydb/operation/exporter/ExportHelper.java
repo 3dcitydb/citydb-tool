@@ -35,10 +35,8 @@ import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.exporter.feature.FeatureHierarchyExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.options.LodOptions;
-import org.citydb.operation.exporter.util.LodFilter;
-import org.citydb.operation.exporter.util.Postprocessor;
-import org.citydb.operation.exporter.util.SurfaceDataMapper;
-import org.citydb.operation.exporter.util.TableHelper;
+import org.citydb.operation.exporter.options.ValidityOptions;
+import org.citydb.operation.exporter.util.*;
 import org.citydb.sqlbuilder.query.Selection;
 import org.citydb.sqlbuilder.schema.Column;
 
@@ -54,6 +52,7 @@ public class ExportHelper {
     private final Connection connection;
     private final SchemaMapping schemaMapping;
     private final SpatialReference targetSrs;
+    private final ValidityFilter validityFilter;
     private final LodFilter lodFilter;
     private final Postprocessor postprocessor;
     private final TableHelper tableHelper;
@@ -72,6 +71,7 @@ public class ExportHelper {
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         targetSrs = adapter.getGeometryAdapter().getSpatialReference(options.getTargetSrs().orElse(null))
                 .orElse(adapter.getDatabaseMetadata().getSpatialReference());
+        validityFilter = new ValidityFilter(options.getValidityOptions().orElseGet(ValidityOptions::new));
         lodFilter = new LodFilter(options.getLodOptions().orElseGet(LodOptions::new));
         postprocessor = new Postprocessor(this);
         tableHelper = new TableHelper(this);
@@ -91,6 +91,10 @@ public class ExportHelper {
 
     public Connection getConnection() {
         return connection;
+    }
+
+    public ValidityFilter getValidityFilter() {
+        return validityFilter;
     }
 
     public LodFilter getLodFilter() {

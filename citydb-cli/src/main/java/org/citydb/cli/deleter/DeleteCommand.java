@@ -24,10 +24,7 @@ package org.citydb.cli.deleter;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
-import org.citydb.cli.common.ConnectionOptions;
-import org.citydb.cli.common.IndexOptions;
+import org.citydb.cli.common.*;
 import org.citydb.cli.deleter.options.MetadataOptions;
 import org.citydb.cli.deleter.options.QueryOptions;
 import org.citydb.cli.util.CommandHelper;
@@ -84,6 +81,10 @@ public class DeleteCommand implements Command {
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Query and filter options:%n")
     private QueryOptions queryOptions;
+
+    @CommandLine.ArgGroup(exclusive = false,
+            heading = "Time-based feature history options:%n")
+    protected ValidityOptions validityOptions;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Database connection options:%n")
@@ -192,17 +193,16 @@ public class DeleteCommand implements Command {
         try {
             Query query = queryOptions != null ?
                     queryOptions.getQuery() :
-                    deleteOptions.getQuery().orElseGet(QueryHelper::getAllTopLevelFeatures);
+                    deleteOptions.getQuery().orElseGet(Query::new);
+            BooleanExpression validity = validityOptions != null ?
+                    validityOptions.getValidityFilterExpression() :
+                    QueryHelper.isValid(ValidityReference.DATABASE);
 
-            if (mode == Mode.terminate) {
-                BooleanExpression isValid = QueryHelper.isValid(ValidityReference.DATABASE);
-                query.setFilter(Filter.of(query.getFilter()
-                        .map(Filter::getExpression)
-                        .map(expression -> (BooleanExpression) Operators.and(expression, isValid))
-                        .orElse(isValid)));
-            }
-
-            return query;
+            return validity != null ?
+                    query.setFilter(query.getFilter()
+                            .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
+                            .orElse(Filter.of(validity))) :
+                    query;
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
