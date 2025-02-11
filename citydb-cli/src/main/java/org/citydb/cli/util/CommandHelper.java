@@ -28,6 +28,8 @@ import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.core.CoreConstants;
+import org.citydb.core.version.Version;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -98,6 +100,14 @@ public class CommandHelper {
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
             databaseManager.logDatabaseMetadata(Level.INFO);
+
+            Version version = databaseManager.getAdapter().getDatabaseMetadata().getVersion();
+            if (DatabaseConstants.VERSION_SUPPORT.getPolicies().stream()
+                    .anyMatch(policy -> policy.getUpperBound().compareTo(version) > 0)) {
+                logger.warn("The {} version {} is out of date. Consider upgrading.",
+                        DatabaseConstants.CITYDB_SHORT_NAME, version);
+            }
+
             return databaseManager;
         } catch (DatabaseException | SQLException e) {
             throw new ExecutionException("Failed to connect to the database.", e);

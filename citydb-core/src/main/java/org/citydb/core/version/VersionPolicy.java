@@ -78,13 +78,9 @@ public class VersionPolicy {
     }
 
     private String toVersionString(Version version) {
-        if (allowNewerRevisions) {
-            return lowerBound.compareTo(upperBound, true) == 0 && version.getRevision() > 0 ?
-                    version.toVersionString() + "+" :
-                    version.toVersionString(true) + ".+";
-        } else {
-            return version.toVersionString();
-        }
+        return allowNewerRevisions ?
+                version.toVersionString() + "+" :
+                version.toVersionString();
     }
 
     @Override

@@ -381,7 +381,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     @Override
     public String[] getVersion() {
-        return new String[]{CliConstants.APP_NAME + ", version " + CliConstants.APP_VERSION,
-                "(C) " + CliConstants.APP_COPYRIGHT_YEAR + " " + CliConstants.APP_VENDOR};
+        return new String[]{CliConstants.APP_NAME + " version " + CliConstants.APP_VERSION,
+                "Supported " + DatabaseConstants.CITYDB_SHORT_NAME + " versions: " + DatabaseConstants.VERSION_SUPPORT,
+                "(C) " + CliConstants.APP_COPYRIGHT_YEAR + " " + CliConstants.APP_VENDOR + "\n"};
     }
 }

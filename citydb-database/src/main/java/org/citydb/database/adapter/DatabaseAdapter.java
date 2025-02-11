@@ -22,6 +22,7 @@
 package org.citydb.database.adapter;
 
 import org.citydb.core.version.Version;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.Pool;
 import org.citydb.database.connection.ConnectionDetails;
@@ -103,10 +104,17 @@ public abstract class DatabaseAdapter {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(schemaAdapter.getCityDBVersion())) {
             if (rs.next()) {
-                return Version.of(rs.getInt("major_version"),
+                Version version = Version.of(rs.getInt("major_version"),
                         rs.getInt("minor_version"),
                         rs.getInt("minor_revision"),
                         rs.getString("version"));
+
+                if (!DatabaseConstants.VERSION_SUPPORT.isSupported(version)) {
+                    throw new DatabaseException("The " + DatabaseConstants.CITYDB_SHORT_NAME + " version " + version +
+                            " is not supported. Supported versions are " + DatabaseConstants.VERSION_SUPPORT + ".");
+                }
+
+                return version;
             }
         } catch (SQLException e) {
             throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.", e);

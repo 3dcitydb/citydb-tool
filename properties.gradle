@@ -1,6 +1,9 @@
 ext {
     date = new Date()
 
+    citydbName = '3D City Database'
+    citydbShortName = '3DCityDB'
+
     appName = 'citydb-tool'
     appCliCommand = 'citydb'
     appDescription = 'Command-line tool for the 3D City Database'

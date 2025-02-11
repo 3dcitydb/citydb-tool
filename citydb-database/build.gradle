@@ -1,3 +1,5 @@
+import org.apache.tools.ant.filters.ReplaceTokens
+
 def geotools_version = '32.1'
 
 dependencies {
@@ -11,4 +13,15 @@ dependencies {
     implementation 'org.apache.tomcat:tomcat-jdbc:11.0.2'
     implementation "org.geotools:gt-epsg-wkt:$geotools_version"
     implementation "org.geotools:gt-epsg-extension:$geotools_version"
+}
+
+processResources {
+    outputs.upToDateWhen { false }
+    filteringCharset = 'ISO-8859-1'
+    filesMatching('**/database.properties') {
+        filter(ReplaceTokens, tokens: [
+                citydbName: citydbName,
+                citydbShortName: citydbShortName
+        ])
+    }
 }
