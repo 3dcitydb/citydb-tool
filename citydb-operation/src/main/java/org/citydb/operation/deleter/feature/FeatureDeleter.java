@@ -21,7 +21,7 @@
 
 package org.citydb.operation.deleter.feature;
 
-import org.citydb.database.schema.Table;
+import com.alibaba.fastjson2.JSONObject;
 import org.citydb.operation.deleter.DeleteException;
 import org.citydb.operation.deleter.DeleteHelper;
 import org.citydb.operation.deleter.common.DatabaseDeleter;
@@ -30,32 +30,27 @@ import org.citydb.operation.deleter.options.DeleteMode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.OffsetDateTime;
 
 public class FeatureDeleter extends DatabaseDeleter {
+    private final JSONObject metadata = new JSONObject();
 
     public FeatureDeleter(DeleteHelper helper) throws SQLException {
         super(helper);
+        helper.getOptions().getReasonForUpdate().ifPresent(reasonForUpdate ->
+                metadata.put("reason_for_update", reasonForUpdate));
+        helper.getOptions().getLineage().ifPresent(lineage ->
+                metadata.put("lineage", lineage));
+        metadata.put("updating_person", helper.getOptions().getUpdatingPerson()
+                .orElseGet(helper.getAdapter().getConnectionDetails()::getUser));
     }
 
     @Override
     protected PreparedStatement getDeleteStatement(Connection connection) throws SQLException {
-        if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
-            StringBuilder stmt = new StringBuilder("update ")
-                    .append(helper.getTableHelper().getPrefixedTableName(Table.FEATURE))
-                    .append(" set termination_date = ?, last_modification_date = ?, updating_person = ?");
-
-            helper.getOptions().getReasonForUpdate().ifPresent(reasonForUpdate ->
-                    stmt.append(", reason_for_update = '").append(reasonForUpdate).append("'"));
-
-            helper.getOptions().getLineage().ifPresent(lineage ->
-                    stmt.append(", lineage = '").append(lineage).append("'"));
-
-            stmt.append(" where id = ?");
-            return connection.prepareStatement(stmt.toString());
-        } else {
-            return connection.prepareCall("{call citydb_pkg.delete_feature(?, ?)}");
-        }
+        return helper.getOptions().getMode() == DeleteMode.TERMINATE ?
+                connection.prepareCall("{call citydb_pkg.terminate_feature(?, ?, ?, ?)}") :
+                connection.prepareCall("{call citydb_pkg.delete_feature(?, ?)}");
     }
 
     public void deleteFeature(long id) throws DeleteException, SQLException {
@@ -65,19 +60,14 @@ public class FeatureDeleter extends DatabaseDeleter {
     @Override
     protected void executeBatch(Long[] ids) throws SQLException {
         if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
-            String updatingPerson = helper.getOptions().getUpdatingPerson()
-                    .orElse(helper.getAdapter().getConnectionDetails().getUser());
+            metadata.put("termination_date", helper.getOptions().getTerminationDate()
+                    .orElseGet(() -> OffsetDateTime.now().withNano(0)));
 
-            for (long id : ids) {
-                OffsetDateTime now = OffsetDateTime.now().withNano(0);
-                stmt.setObject(1, helper.getOptions().getTerminationDate().orElse(now));
-                stmt.setObject(2, now);
-                stmt.setString(3, updatingPerson);
-                stmt.setLong(4, id);
-                stmt.addBatch();
-            }
-
-            stmt.executeBatch();
+            stmt.setArray(1, helper.getConnection().createArrayOf("bigint", ids));
+            stmt.setString(2, helper.getAdapter().getConnectionDetails().getSchema());
+            stmt.setObject(3, metadata.toString(), Types.OTHER);
+            stmt.setBoolean(4, helper.getOptions().isTerminateWithSubFeatures());
+            stmt.execute();
         } else {
             stmt.setArray(1, helper.getConnection().createArrayOf("bigint", ids));
             stmt.setString(2, helper.getAdapter().getConnectionDetails().getSchema());
