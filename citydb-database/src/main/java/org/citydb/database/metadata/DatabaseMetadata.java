@@ -21,10 +21,11 @@
 
 package org.citydb.database.metadata;
 
+import org.citydb.core.version.Version;
 import org.citydb.database.srs.SpatialReference;
 
 public class DatabaseMetadata {
-    private final DatabaseVersion version;
+    private final Version version;
     private final SpatialReference spatialReference;
     private final String vendorProductName;
     private final String vendorProductVersion;
@@ -32,7 +33,7 @@ public class DatabaseMetadata {
     private final int vendorMinorVersion;
 
     private DatabaseMetadata(
-            DatabaseVersion version, SpatialReference spatialReference, String vendorProductName,
+            Version version, SpatialReference spatialReference, String vendorProductName,
             String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
         this.version = version;
         this.spatialReference = spatialReference;
@@ -43,13 +44,13 @@ public class DatabaseMetadata {
     }
 
     public static DatabaseMetadata of(
-            DatabaseVersion version, SpatialReference spatialReference, String vendorProductName,
+            Version version, SpatialReference spatialReference, String vendorProductName,
             String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
         return new DatabaseMetadata(version, spatialReference, vendorProductName, vendorProductVersion,
                 vendorMajorVersion, vendorMinorVersion);
     }
 
-    public DatabaseVersion getVersion() {
+    public Version getVersion() {
         return version;
     }
 

@@ -21,11 +21,11 @@
 
 package org.citydb.database.adapter;
 
+import org.citydb.core.version.Version;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.Pool;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.metadata.DatabaseMetadata;
-import org.citydb.database.metadata.DatabaseVersion;
 import org.citydb.database.schema.SchemaException;
 import org.citydb.database.srs.SpatialReference;
 
@@ -99,11 +99,11 @@ public abstract class DatabaseAdapter {
         return databaseMetadata;
     }
 
-    private DatabaseVersion getCityDBVersion(Connection connection) throws DatabaseException {
+    private Version getCityDBVersion(Connection connection) throws DatabaseException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(schemaAdapter.getCityDBVersion())) {
             if (rs.next()) {
-                return DatabaseVersion.of(rs.getInt("major_version"),
+                return Version.of(rs.getInt("major_version"),
                         rs.getInt("minor_version"),
                         rs.getInt("minor_revision"),
                         rs.getString("version"));
