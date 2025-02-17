@@ -22,8 +22,13 @@
 package org.citydb.core.version;
 
 import java.util.Objects;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Version implements Comparable<Version> {
+    private static final Pattern versionPattern = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+).*?");
+
     private final int major;
     private final int minor;
     private final int revision;
@@ -44,6 +49,21 @@ public class Version implements Comparable<Version> {
 
     public static Version of(int major, int minor, int revision) {
         return new Version(major, minor, revision, major + "." + minor + "." + revision);
+    }
+
+    public static Optional<Version> parse(String version) {
+        if (version != null) {
+            Matcher matcher = versionPattern.matcher(version.trim());
+            if (matcher.matches()) {
+                return Optional.of(new Version(
+                        Integer.parseInt(matcher.group(1)),
+                        Integer.parseInt(matcher.group(2)),
+                        Integer.parseInt(matcher.group(3)),
+                        version));
+            }
+        }
+
+        return Optional.empty();
     }
 
     public int getMajor() {

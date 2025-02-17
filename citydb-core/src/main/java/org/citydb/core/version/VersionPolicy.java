@@ -21,7 +21,13 @@
 
 package org.citydb.core.version;
 
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class VersionPolicy {
+    private static final Pattern policyPattern = Pattern.compile("^(\\d+)\\.(\\d+)(?:\\.(\\d+)(\\+)?)?$");
+
     private final Version lowerBound;
     private final Version upperBound;
     private final boolean allowNewerRevisions;
@@ -47,6 +53,29 @@ public class VersionPolicy {
 
     public static VersionPolicyBuilder from(int major, int minor, int revision) {
         return new VersionPolicyBuilder(Version.of(major, minor, revision));
+    }
+
+    public static Optional<VersionPolicy> parse(String policy) {
+        if (policy != null) {
+            String[] parts = policy.split("-");
+            if (parts.length < 3) {
+                Matcher matcher = policyPattern.matcher(parts.length == 2 ? parts[1].trim() : parts[0].trim());
+                if (matcher.matches()) {
+                    String revision = matcher.group(3);
+                    Version upperBound = Version.of(
+                            Integer.parseInt(matcher.group(1)),
+                            Integer.parseInt(matcher.group(2)),
+                            revision != null ? Integer.parseInt(revision) : 0);
+                    Version lowerBound = parts.length == 2 ? Version.parse(parts[0]).orElse(null) : upperBound;
+                    if (lowerBound != null) {
+                        return Optional.of(new VersionPolicy(lowerBound, upperBound,
+                                revision == null || matcher.group(4) != null));
+                    }
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     public VersionPolicy allowNewerRevisions() {

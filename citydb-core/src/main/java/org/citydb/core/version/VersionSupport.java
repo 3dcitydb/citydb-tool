@@ -44,6 +44,21 @@ public class VersionSupport {
         return of(policies != null ? List.of(policies) : Collections.emptyList());
     }
 
+    public static Optional<VersionSupport> parse(String versionSupport) {
+        if (versionSupport != null) {
+            String[] parts = versionSupport.split(",");
+            Set<VersionPolicy> policies = Arrays.stream(parts)
+                    .map(VersionPolicy::parse)
+                    .flatMap(Optional::stream)
+                    .collect(Collectors.toSet());
+            if (policies.size() == parts.length) {
+                return Optional.of(new VersionSupport(policies));
+            }
+        }
+
+        return Optional.empty();
+    }
+
     public Set<VersionPolicy> getPolicies() {
         return new HashSet<>(policies);
     }
