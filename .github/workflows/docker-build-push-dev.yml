@@ -88,54 +88,7 @@ jobs:
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-      - name: Extract metadata (tags, labels) for docker image
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}
-          tags: |
-            # Latest tag for PR, PR number only
-            type=ref,event=pr,prefix=3dcitydb-pr-,suffix=${{ matrix.variant }}
-            # Tag for with commit sha appended
-            type=ref,event=pr,prefix=3dcitydb-pr-,suffix=-{{sha}}${{ matrix.variant }}
-          labels: |
-            maintainer=Bruno Willenborg
-            maintainer.email=b.willenborg(at)tum.de
-            maintainer.organization=Chair of Geoinformatics, Technical University of Munich (TUM)
-            org.opencontainers.image.authors=Bruno Willenborg
-            org.opencontainers.image.vendor=3DCityDB Steering Committee
-            org.opencontainers.image.title=3D City Database PostgreSQL/PostGIS Docker image
-            org.opencontainers.image.description=Development Docker image for the 3D City Database based on PostgreSQL and PostGIS
-            org.opencontainers.image.url=https://github.com/3dcitydb/
-            org.opencontainers.image.documentation=https://3dcitydb.github.io/3dcitydb-mkdocs/3dcitydb/docker/
-            org.opencontainers.image.source=https://github.com/3dcitydb/3dcitydb
-      - name: Build and push image
-        id: docker_build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            BASEIMAGE_TAG=${{ matrix.baseimage-tag }}${{ matrix.variant }}
-            CITYDB_VERSION=${{ steps.short-sha.outputs.sha }}
-
       - name: Print image names
         run: |
-          echo "${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}${{ matrix.variant }}"
-          echo "${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}-${{ steps.short-sha.outputs.sha }}${{ matrix.variant }}"
+          echo "${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}"
+          echo "${{ env.REGISTRY }}/${{ env.OWNER_LC }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}-${{ steps.short-sha.outputs.sha }}"
