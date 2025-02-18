@@ -27,7 +27,7 @@ import picocli.CommandLine;
 @CommandLine.Command(
         name = "index",
         scope = CommandLine.ScopeType.INHERIT,
-        description = "Perform index operations on the database.",
+        description = "Perform index operations.",
         synopsisSubcommandLabel = "SUBCOMMAND",
         subcommands = {
                 CommandLine.HelpCommand.class,
