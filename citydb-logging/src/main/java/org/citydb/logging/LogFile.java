@@ -27,25 +27,20 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 public class LogFile {
+    private final LoggerManager manager;
     private boolean enabled;
     private Level logLevel = Level.INFO;
-    private String logPattern = "[%d{HH:mm:ss} %p] %m%n";
-    private Path path = Path.of("citydb.log");
-    private String filePattern = "-%d{yyyy-MM-dd}";
+    private String logPattern = LogConstants.DEFAULT_LOG_PATTERN;
+    private Path path = Path.of(LogConstants.DEFAULT_LOG_FILE);
+    private String rollingFileSuffix = LogConstants.DEFAULT_ROLLING_FILE_SUFFIX;
     private boolean useLogRotation;
 
-    private final LoggerManager loggerManager;
-
-    protected LogFile(LoggerManager loggerManager) {
-        this.loggerManager = loggerManager;
-    }
-
-    public LoggerManager configure() {
-        return loggerManager.updateConfigurations();
+    LogFile(LoggerManager manager) {
+        this.manager = manager;
     }
 
     public boolean isEnabled() {
-        return this.enabled;
+        return enabled;
     }
 
     public LogFile setEnabled(boolean enabled) {
@@ -80,12 +75,12 @@ public class LogFile {
         return this;
     }
 
-    public String getFilePattern() {
-        return filePattern;
+    public String getRollingFileSuffix() {
+        return rollingFileSuffix;
     }
 
-    public LogFile setFilePattern(String filePattern) {
-        this.filePattern = Objects.requireNonNull(filePattern, "The file pattern must not be null.");
+    public LogFile setRollingFileSuffix(String rollingFileSuffix) {
+        this.rollingFileSuffix = Objects.requireNonNull(rollingFileSuffix, "The rolling file suffix must not be null.");
         return this;
     }
 
@@ -96,5 +91,9 @@ public class LogFile {
     public LogFile setUseLogRotation(boolean useLogRotation) {
         this.useLogRotation = useLogRotation;
         return this;
+    }
+
+    public void reconfigure() {
+        manager.reconfigure();
     }
 }

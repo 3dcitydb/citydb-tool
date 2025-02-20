@@ -37,6 +37,7 @@ import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
 import org.citydb.core.CoreConstants;
 import org.citydb.database.DatabaseConstants;
+import org.citydb.logging.LogConstants;
 import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
@@ -249,11 +250,11 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                         manager.logConsole().getLogPattern() + "%ex{0}" :
                         manager.logConsole().getLogPattern())
                 .setEnabled(true)
-                .configure();
+                .reconfigure();
 
         if (logFile != null) {
             if (Files.isDirectory(logFile)) {
-                logFile = logFile.resolve(manager.logFile().getPath());
+                logFile = logFile.resolve(LogConstants.DEFAULT_LOG_FILE);
             }
 
             logger.debug("Writing log messages to {}.", logFile.toAbsolutePath());
@@ -261,7 +262,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     .setLogLevel(logLevel.level)
                     .setPath(logFile)
                     .setEnabled(true)
-                    .configure();
+                    .reconfigure();
         }
     }
 

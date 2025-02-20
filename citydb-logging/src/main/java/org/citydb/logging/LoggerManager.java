@@ -24,65 +24,70 @@ package org.citydb.logging;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.config.builder.api.*;
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
 
-import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 
 public class LoggerManager {
     private static final LoggerManager instance = new LoggerManager();
-    private final LogConsole logConsole = new LogConsole(this);
-    private final LogFile logFile = new LogFile(this);
+    private final LogConsole logConsole;
+    private final LogFile logFile;
+    private final Map<String, String> patterns = new HashMap<>();
 
     private LoggerManager() {
-        logConsole().setEnabled(true).configure();
+        logConsole = new LogConsole(this).setEnabled(true);
+        logFile = new LogFile(this).setEnabled(false);
+        withLogPattern(LogConstants.PLAIN_MARKER, "%m%n").reconfigure();
     }
 
     public static LoggerManager getInstance() {
         return instance;
     }
 
-    protected LoggerManager updateConfigurations() {
+    public LoggerManager withLogPattern(Marker marker, String pattern) {
+        Objects.requireNonNull(marker, "The log marker must not be null.");
+        Objects.requireNonNull(pattern, "The log pattern must not be null.");
+        patterns.put(marker.getName(), pattern);
+        return this;
+    }
+
+    public void reconfigure() {
         ConfigurationBuilder<BuiltConfiguration> builder = ConfigurationBuilderFactory.newConfigurationBuilder();
         RootLoggerComponentBuilder rootLogger = builder.newRootLogger(Level.ALL);
 
-        // configure console log
         if (logConsole.isEnabled()) {
             String CONSOLE_LOGGER_NAME = "LOG_CONSOLE";
 
             rootLogger.add(builder.newAppenderRef(CONSOLE_LOGGER_NAME)
                     .addAttribute("level", logConsole.getLogLevel().name()));
 
-            LayoutComponentBuilder patternLayoutBuilder = builder.newLayout("PatternLayout")
-                    .addAttribute("pattern", logConsole.getLogPattern());
-
             builder.add(builder.newAppender(CONSOLE_LOGGER_NAME, "CONSOLE")
                     .addAttribute("target", ConsoleAppender.Target.SYSTEM_OUT)
-                    .add(patternLayoutBuilder));
+                    .add(getLayoutComponentBuilder(logConsole.getLogPattern(), builder)));
         }
 
-        // config file log
         if (logFile.isEnabled()) {
             String FILE_LOGGER_NAME = "LOG_FILE";
-            Path filePath = logFile.getPath().toAbsolutePath();
+            String fileName = logFile.getPath().toAbsolutePath().toString();
 
             rootLogger.add(builder.newAppenderRef(FILE_LOGGER_NAME)
                     .addAttribute("level", logFile.getLogLevel().name()));
 
-            LayoutComponentBuilder patternLayoutBuilder = builder.newLayout("PatternLayout")
-                    .addAttribute("pattern", logFile.getLogPattern());
-
             AppenderComponentBuilder appenderComponentBuilder = builder
                     .newAppender(FILE_LOGGER_NAME, logFile.isUseLogRotation() ? "RollingFile" : "File")
-                    .addAttribute("fileName", filePath)
+                    .addAttribute("fileName", fileName)
                     .addAttribute("append", logFile.isUseLogRotation())
-                    .add(patternLayoutBuilder);
+                    .add(getLayoutComponentBuilder(logFile.getLogPattern(), builder));
 
             if (logFile.isUseLogRotation()) {
                 appenderComponentBuilder
-                        .addAttribute("filePattern", filePath + logFile.getFilePattern() + ".gz")
+                        .addAttribute("filePattern", buildRollingFilePattern(fileName))
                         .add(builder.newLayout("TimeBasedTriggeringPolicy"));
             }
 
@@ -90,7 +95,6 @@ public class LoggerManager {
         }
 
         Configurator.reconfigure(builder.add(rootLogger).build());
-        return this;
     }
 
     public Logger getLogger() {
@@ -115,5 +119,22 @@ public class LoggerManager {
 
     public LogFile logFile() {
         return logFile;
+    }
+
+    private LayoutComponentBuilder getLayoutComponentBuilder(String defaultPattern, ConfigurationBuilder<BuiltConfiguration> builder) {
+        ComponentBuilder<?> selector = builder.newComponent("MarkerPatternSelector")
+                .addAttribute("defaultPattern", defaultPattern);
+        patterns.forEach((key, pattern) -> selector.addComponent(builder.newComponent("PatternMatch")
+                .addAttribute("key", key)
+                .addAttribute("pattern", pattern)));
+        return builder.newLayout("PatternLayout").addComponent(selector);
+    }
+
+    private String buildRollingFilePattern(String fileName) {
+        String suffix = logFile.getRollingFileSuffix();
+        int index = fileName.lastIndexOf('.');
+        return index != -1 ?
+                fileName.substring(0, index) + suffix + fileName.substring(index) + ".gz" :
+                fileName + suffix + ".gz";
     }
 }

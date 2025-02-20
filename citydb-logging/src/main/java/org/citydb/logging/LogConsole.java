@@ -26,22 +26,17 @@ import org.apache.logging.log4j.Level;
 import java.util.Objects;
 
 public class LogConsole {
+    private final LoggerManager manager;
     private boolean enabled;
     private Level logLevel = Level.INFO;
-    private String logPattern = "[%d{HH:mm:ss} %p] %m%n";
+    private String logPattern = LogConstants.DEFAULT_LOG_PATTERN;
 
-    private final LoggerManager loggerManager;
-
-    protected LogConsole(LoggerManager loggerManager) {
-        this.loggerManager = loggerManager;
-    }
-
-    public LoggerManager configure() {
-        return loggerManager.updateConfigurations();
+    LogConsole(LoggerManager manager) {
+        this.manager = manager;
     }
 
     public boolean isEnabled() {
-        return this.enabled;
+        return enabled;
     }
 
     public LogConsole setEnabled(boolean enabled) {
@@ -65,5 +60,9 @@ public class LogConsole {
     public LogConsole setLogPattern(String logPattern) {
         this.logPattern = Objects.requireNonNull(logPattern, "The log pattern must not be null.");
         return this;
+    }
+
+    public void reconfigure() {
+        manager.reconfigure();
     }
 }
