@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.adapter.core;
 
-import org.citydb.io.citygml.adapter.appearance.AbstractAppearancePropertyAdapter;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.ModelBuilderHelper;
 import org.citydb.io.citygml.serializer.ModelSerializeException;

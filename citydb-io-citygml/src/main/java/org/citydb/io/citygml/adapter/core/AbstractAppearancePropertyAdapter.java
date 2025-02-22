@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.io.citygml.adapter.appearance;
+package org.citydb.io.citygml.adapter.core;
 
 import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.serializer.ModelSerializer;
