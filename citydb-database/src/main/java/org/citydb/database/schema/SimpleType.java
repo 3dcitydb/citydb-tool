@@ -28,7 +28,6 @@ public enum SimpleType implements ColumnType {
     INTEGER("integer"),
     DOUBLE("double"),
     STRING("string"),
-    URI("uri"),
     TIMESTAMP("timestamp"),
     ARRAY("array"),
     BOOLEAN_ARRAY("booleanArray"),

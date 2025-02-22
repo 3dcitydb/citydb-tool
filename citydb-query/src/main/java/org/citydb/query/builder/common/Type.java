@@ -54,7 +54,7 @@ public enum Type {
                 case BOOLEAN -> Type.BOOLEAN;
                 case INTEGER -> Type.INTEGER;
                 case DOUBLE -> Type.DOUBLE;
-                case STRING, URI -> Type.STRING;
+                case STRING -> Type.STRING;
                 case TIMESTAMP -> Type.TIMESTAMP;
                 case ARRAY, BOOLEAN_ARRAY, INTEGER_ARRAY, DOUBLE_ARRAY, STRING_ARRAY -> Type.ARRAY;
             };
