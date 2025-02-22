@@ -36,6 +36,7 @@ public enum DataType implements DataTypeProvider {
     CODE("Code", Namespaces.CORE),
     CONSTRUCTION_EVENT("ConstructionEvent", Namespaces.CONSTRUCTION),
     DOUBLE("Double", Namespaces.CORE),
+    DURATION("Duration", Namespaces.CORE),
     ELEVATION("Elevation", Namespaces.CONSTRUCTION),
     EXTERNAL_REFERENCE("ExternalReference", Namespaces.CORE),
     FEATURE_PROPERTY("FeatureProperty", Namespaces.CORE),
@@ -58,6 +59,7 @@ public enum DataType implements DataTypeProvider {
     TIMESERIES_COMPONENT("TimeseriesComponent", Namespaces.DYNAMIZER),
     TIMESTAMP("Timestamp", Namespaces.CORE),
     TIME_PAIR_VALUE("TimePairValue", Namespaces.DYNAMIZER),
+    TIME_POSITION("TimePosition", Namespaces.CORE),
     TRANSACTION("Transaction", Namespaces.VERSIONING),
     URI("URI", Namespaces.CORE);
 
