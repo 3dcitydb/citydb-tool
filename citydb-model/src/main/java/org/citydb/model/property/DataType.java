@@ -58,8 +58,8 @@ public enum DataType implements DataTypeProvider {
     STRING_OR_REF("StringOrRef", Namespaces.CORE),
     TIMESERIES_COMPONENT("TimeseriesComponent", Namespaces.DYNAMIZER),
     TIMESTAMP("Timestamp", Namespaces.CORE),
-    TIME_PAIR_VALUE("TimePairValue", Namespaces.DYNAMIZER),
     TIME_POSITION("TimePosition", Namespaces.CORE),
+    TIME_VALUE_PAIR("TimeValuePair", Namespaces.DYNAMIZER),
     TRANSACTION("Transaction", Namespaces.VERSIONING),
     URI("URI", Namespaces.CORE);
 
