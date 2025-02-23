@@ -32,13 +32,31 @@ import static java.time.temporal.ChronoField.*;
 public class TimeHelper {
     public static final DateTimeFormatter DATE_TIME_FORMATTER = dateTimeFormatter(0, 0, 0);
     public static final DateTimeFormatter VALIDITY_TIME_FORMATTER = dateTimeFormatter(23, 59, 59);
+    public static final OffsetDateTime LOCAL_TIME_BASE_DATE = OffsetDateTime.of(
+            LocalDateTime.of(1, 1, 1, 0, 0, 0), ZoneOffset.UTC);
+
+    public static OffsetDateTime toDateTime(LocalTime time) {
+        return toDateTime(time.atOffset(ZoneOffset.UTC));
+    }
+
+    public static OffsetDateTime toDateTime(OffsetTime time) {
+        time = time.withOffsetSameInstant(ZoneOffset.UTC);
+        return LOCAL_TIME_BASE_DATE.plusHours(time.getHour())
+                .plusMinutes(time.getMinute())
+                .plusSeconds(time.getSecond())
+                .plusNanos(time.getNano());
+    }
 
     public static OffsetDateTime toDateTime(LocalDate date) {
-        return date.atStartOfDay().atOffset(ZoneOffset.UTC);
+        return toDateTime(date.atStartOfDay());
     }
 
     public static OffsetDateTime toDateTime(LocalDateTime dateTime) {
         return dateTime.atOffset(ZoneOffset.UTC);
+    }
+
+    public static OffsetDateTime toDateTime(Duration duration) {
+        return LOCAL_TIME_BASE_DATE.plus(duration);
     }
 
     public static OffsetDateTime toValidityTime(LocalDate date) {
