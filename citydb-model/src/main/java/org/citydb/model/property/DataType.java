@@ -31,11 +31,13 @@ import java.util.Map;
 public enum DataType implements DataTypeProvider {
     ADDRESS_PROPERTY("AddressProperty", Namespaces.CORE),
     APPEARANCE_PROPERTY("AppearanceProperty", Namespaces.CORE),
+    ATTRIBUTE_REFERENCE("AttributeReference", Namespaces.DYNAMIZER),
     BOOLEAN("Boolean", Namespaces.CORE),
     CITY_OBJECT_RELATION("CityObjectRelation", Namespaces.CORE),
     CODE("Code", Namespaces.CORE),
     CONSTRUCTION_EVENT("ConstructionEvent", Namespaces.CONSTRUCTION),
     DOUBLE("Double", Namespaces.CORE),
+    DURATION("Duration", Namespaces.CORE),
     ELEVATION("Elevation", Namespaces.CONSTRUCTION),
     EXTERNAL_REFERENCE("ExternalReference", Namespaces.CORE),
     FEATURE_PROPERTY("FeatureProperty", Namespaces.CORE),
@@ -57,7 +59,8 @@ public enum DataType implements DataTypeProvider {
     STRING_OR_REF("StringOrRef", Namespaces.CORE),
     TIMESERIES_COMPONENT("TimeseriesComponent", Namespaces.DYNAMIZER),
     TIMESTAMP("Timestamp", Namespaces.CORE),
-    TIME_PAIR_VALUE("TimePairValue", Namespaces.DYNAMIZER),
+    TIME_POSITION("TimePosition", Namespaces.CORE),
+    TIME_VALUE_PAIR("TimeValuePair", Namespaces.DYNAMIZER),
     TRANSACTION("Transaction", Namespaces.VERSIONING),
     URI("URI", Namespaces.CORE);
 

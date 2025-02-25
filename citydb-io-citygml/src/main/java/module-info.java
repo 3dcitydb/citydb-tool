@@ -14,6 +14,7 @@ module org.citydb.io.citygml {
     exports org.citydb.io.citygml.adapter.cityobjectgroup;
     exports org.citydb.io.citygml.adapter.construction;
     exports org.citydb.io.citygml.adapter.core;
+    exports org.citydb.io.citygml.adapter.dynamizer;
     exports org.citydb.io.citygml.adapter.generics;
     exports org.citydb.io.citygml.adapter.geometry.builder;
     exports org.citydb.io.citygml.adapter.geometry.serializer;
