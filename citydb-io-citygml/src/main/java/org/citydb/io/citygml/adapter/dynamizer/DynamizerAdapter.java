@@ -51,7 +51,8 @@ public class DynamizerAdapter extends AbstractFeatureWithLifespanAdapter<Dynamiz
         super.build(source, target, helper);
 
         if (source.getAttributeRef() != null) {
-            target.addAttribute(Attribute.of(Name.of("attributeRef", Namespaces.DYNAMIZER), DataType.STRING)
+            target.addAttribute(Attribute.of(Name.of("attributeRef", Namespaces.DYNAMIZER),
+                            DataType.ATTRIBUTE_REFERENCE)
                     .setStringValue(source.getAttributeRef()));
         }
 

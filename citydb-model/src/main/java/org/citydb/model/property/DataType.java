@@ -31,6 +31,7 @@ import java.util.Map;
 public enum DataType implements DataTypeProvider {
     ADDRESS_PROPERTY("AddressProperty", Namespaces.CORE),
     APPEARANCE_PROPERTY("AppearanceProperty", Namespaces.CORE),
+    ATTRIBUTE_REFERENCE("AttributeReference", Namespaces.DYNAMIZER),
     BOOLEAN("Boolean", Namespaces.CORE),
     CITY_OBJECT_RELATION("CityObjectRelation", Namespaces.CORE),
     CODE("Code", Namespaces.CORE),
