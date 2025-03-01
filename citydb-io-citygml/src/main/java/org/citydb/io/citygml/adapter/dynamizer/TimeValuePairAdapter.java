@@ -42,37 +42,34 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
     @Override
     public void build(TimeValuePair source, Attribute target, ModelBuilderHelper helper) throws ModelBuildException {
         if (source.getTimestamp() != null) {
-            helper.addAttribute(Name.of("timestamp", Namespaces.DYNAMIZER), source.getTimestamp(), target,
-                    TimePositionAdapter.class);
+            helper.getOrCreateBuilder(TimePositionAdapter.class).build(source.getTimestamp(), target, helper);
         }
 
         if (source.isSetIntValue()) {
-            target.addProperty(Attribute.of(Name.of("intValue", Namespaces.DYNAMIZER), DataType.INTEGER)
-                    .setIntValue(source.getIntValue()));
+            target.setIntValue(source.getIntValue())
+                    .setDataType(DataType.TIME_INTEGER);
         } else if (source.isSetDoubleValue()) {
-            target.addProperty(Attribute.of(Name.of("doubleValue", Namespaces.DYNAMIZER), DataType.DOUBLE)
-                    .setDoubleValue(source.getDoubleValue()));
+            target.setDoubleValue(source.getDoubleValue())
+                    .setDataType(DataType.TIME_DOUBLE);
         } else if (source.isSetStringValue()) {
-            target.addProperty(Attribute.of(Name.of("stringValue", Namespaces.DYNAMIZER), DataType.STRING)
-                    .setStringValue(source.getStringValue()));
+            target.setStringValue(source.getStringValue())
+                    .setDataType(DataType.TIME_STRING);
         } else if (source.isSetGeometryValue()) {
             helper.addGeometry(Name.of("geometryValue", Namespaces.DYNAMIZER),
-                    source.getGeometryValue(), Lod.NONE, target);
+                    source.getGeometryValue(), Lod.NONE, target.setDataType(DataType.TIME_GEOMETRY));
         } else if (source.isSetUriValue()) {
-            target.addProperty(Attribute.of(Name.of("uriValue", Namespaces.DYNAMIZER), DataType.URI)
-                    .setURI(source.getUriValue()));
+            target.setURI(source.getUriValue())
+                    .setDataType(DataType.TIME_URI);
         } else if (source.isSetBoolValue()) {
-            target.addProperty(Attribute.of(Name.of("boolValue", Namespaces.DYNAMIZER), DataType.BOOLEAN)
-                    .setIntValue(source.getBoolValue() ? 1 : 0));
+            target.setIntValue(source.getBoolValue() ? 1 : 0)
+                    .setDataType(DataType.TIME_BOOLEAN);
         } else if (source.isSetImplicitGeometryValue()) {
             helper.addImplicitGeometry(Name.of("implicitGeometryValue", Namespaces.DYNAMIZER),
-                    source.getImplicitGeometryValue(), Lod.NONE, target);
+                    source.getImplicitGeometryValue(), Lod.NONE, target.setDataType(DataType.TIME_IMPLICIT_GEOMETRY));
         } else if (source.isSetAppearanceValue()) {
             helper.addAppearance(Name.of("appearanceValue", Namespaces.DYNAMIZER),
-                    source.getAppearanceValue(), target);
+                    source.getAppearanceValue(), target.setDataType(DataType.TIME_APPEARANCE));
         }
-
-        target.setDataType(DataType.TIME_VALUE_PAIR);
     }
 
     @Override
@@ -82,54 +79,42 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
 
     @Override
     public void serialize(Attribute source, TimeValuePair target, ModelSerializerHelper helper) throws ModelSerializeException {
-        Attribute timestamp = source.getProperties()
-                .getFirst(Name.of("timestamp", Namespaces.DYNAMIZER), Attribute.class)
-                .orElse(null);
-        if (timestamp != null) {
-            target.setTimestamp(helper.getAttribute(timestamp, TimePositionAdapter.class));
-        }
+        target.setTimestamp(helper.getAttribute(source, TimePositionAdapter.class));
 
-        source.getProperties().getFirst(Name.of("intValue", Namespaces.DYNAMIZER), Attribute.class)
-                .flatMap(Attribute::getIntValue)
-                .ifPresent(value -> target.setIntValue(value.intValue()));
-
-        source.getProperties().getFirst(Name.of("doubleValue", Namespaces.DYNAMIZER), Attribute.class)
-                .flatMap(Attribute::getDoubleValue)
-                .ifPresent(target::setDoubleValue);
-
-        source.getProperties().getFirst(Name.of("stringValue", Namespaces.DYNAMIZER), Attribute.class)
-                .flatMap(Attribute::getStringValue)
-                .ifPresent(target::setStringValue);
-
-        GeometryProperty geometryValue = source.getProperties()
-                .getFirst(Name.of("geometryValue", Namespaces.DYNAMIZER), GeometryProperty.class)
-                .orElse(null);
-        if (geometryValue != null) {
-            target.setGeometryValue(helper.getGeometryProperty(geometryValue, GeometryPropertyAdapter.class));
-        }
-
-        source.getProperties().getFirst(Name.of("uriValue", Namespaces.DYNAMIZER), Attribute.class)
-                .flatMap(Attribute::getURI)
-                .ifPresent(target::setUriValue);
-
-        source.getProperties().getFirst(Name.of("boolValue", Namespaces.DYNAMIZER), Attribute.class)
-                .flatMap(Attribute::getIntValue)
-                .ifPresent(value -> target.setBoolValue(value == 1));
-
-        ImplicitGeometryProperty implicitGeometryValue = source.getProperties()
-                .getFirst(Name.of("implicitGeometryValue", Namespaces.DYNAMIZER), ImplicitGeometryProperty.class)
-                .orElse(null);
-        if (implicitGeometryValue != null) {
-            target.setImplicitGeometryValue(helper.getImplicitGeometryProperty(implicitGeometryValue,
-                    ImplicitGeometryPropertyAdapter.class));
-        }
-
-        AppearanceProperty appearanceValue = source.getProperties()
-                .getFirst(Name.of("appearanceValue", Namespaces.DYNAMIZER), AppearanceProperty.class)
-                .orElse(null);
-        if (appearanceValue != null) {
-            target.setAppearanceValue(helper.getAppearanceProperty(appearanceValue,
-                    AbstractAppearancePropertyAdapter.class));
+        DataType dataType = DataType.of(source.getDataType().orElse(null));
+        if (dataType == DataType.TIME_INTEGER) {
+            source.getIntValue().ifPresent(value -> target.setIntValue(value.intValue()));
+        } else if (dataType == DataType.TIME_DOUBLE) {
+            source.getDoubleValue().ifPresent(target::setDoubleValue);
+        } else if (dataType == DataType.TIME_STRING) {
+            source.getStringValue().ifPresent(target::setStringValue);
+        } else if (dataType == DataType.TIME_GEOMETRY) {
+            GeometryProperty geometryValue = source.getProperties()
+                    .getFirst(Name.of("geometryValue", Namespaces.DYNAMIZER), GeometryProperty.class)
+                    .orElse(null);
+            if (geometryValue != null) {
+                target.setGeometryValue(helper.getGeometryProperty(geometryValue, GeometryPropertyAdapter.class));
+            }
+        } else if (dataType == DataType.TIME_URI) {
+            source.getURI().ifPresent(target::setUriValue);
+        } else if (dataType == DataType.TIME_BOOLEAN) {
+            source.getIntValue().ifPresent(value -> target.setBoolValue(value == 1));
+        } else if (dataType == DataType.TIME_IMPLICIT_GEOMETRY) {
+            ImplicitGeometryProperty implicitGeometryValue = source.getProperties()
+                    .getFirst(Name.of("implicitGeometryValue", Namespaces.DYNAMIZER), ImplicitGeometryProperty.class)
+                    .orElse(null);
+            if (implicitGeometryValue != null) {
+                target.setImplicitGeometryValue(helper.getImplicitGeometryProperty(implicitGeometryValue,
+                        ImplicitGeometryPropertyAdapter.class));
+            }
+        } else if (dataType == DataType.TIME_APPEARANCE) {
+            AppearanceProperty appearanceValue = source.getProperties()
+                    .getFirst(Name.of("appearanceValue", Namespaces.DYNAMIZER), AppearanceProperty.class)
+                    .orElse(null);
+            if (appearanceValue != null) {
+                target.setAppearanceValue(helper.getAppearanceProperty(appearanceValue,
+                        AbstractAppearancePropertyAdapter.class));
+            }
         }
     }
 }

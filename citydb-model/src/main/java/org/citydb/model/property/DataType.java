@@ -59,8 +59,15 @@ public enum DataType implements DataTypeProvider {
     STRING_OR_REF("StringOrRef", Namespaces.CORE),
     TIMESERIES_COMPONENT("TimeseriesComponent", Namespaces.DYNAMIZER),
     TIMESTAMP("Timestamp", Namespaces.CORE),
+    TIME_APPEARANCE("TimeAppearance", Namespaces.DYNAMIZER),
+    TIME_BOOLEAN("TimeBoolean", Namespaces.DYNAMIZER),
+    TIME_DOUBLE("TimeDouble", Namespaces.DYNAMIZER),
+    TIME_GEOMETRY("TimeGeometry", Namespaces.DYNAMIZER),
+    TIME_IMPLICIT_GEOMETRY("TimeImplicitGeometry", Namespaces.DYNAMIZER),
+    TIME_INTEGER("TimeInteger", Namespaces.DYNAMIZER),
     TIME_POSITION("TimePosition", Namespaces.CORE),
-    TIME_VALUE_PAIR("TimeValuePair", Namespaces.DYNAMIZER),
+    TIME_STRING("TimeString", Namespaces.DYNAMIZER),
+    TIME_URI("TimeURI", Namespaces.DYNAMIZER),
     TRANSACTION("Transaction", Namespaces.VERSIONING),
     URI("URI", Namespaces.CORE);
 
