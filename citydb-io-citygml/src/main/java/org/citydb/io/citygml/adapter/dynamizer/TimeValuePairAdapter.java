@@ -55,7 +55,7 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
             target.setStringValue(source.getStringValue())
                     .setDataType(DataType.TIME_STRING);
         } else if (source.isSetGeometryValue()) {
-            helper.addGeometry(Name.of("geometryValue", Namespaces.DYNAMIZER),
+            helper.addGeometry(Name.of("value", Namespaces.DYNAMIZER),
                     source.getGeometryValue(), Lod.NONE, target.setDataType(DataType.TIME_GEOMETRY));
         } else if (source.isSetUriValue()) {
             target.setURI(source.getUriValue())
@@ -64,10 +64,10 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
             target.setIntValue(source.getBoolValue() ? 1 : 0)
                     .setDataType(DataType.TIME_BOOLEAN);
         } else if (source.isSetImplicitGeometryValue()) {
-            helper.addImplicitGeometry(Name.of("implicitGeometryValue", Namespaces.DYNAMIZER),
+            helper.addImplicitGeometry(Name.of("value", Namespaces.DYNAMIZER),
                     source.getImplicitGeometryValue(), Lod.NONE, target.setDataType(DataType.TIME_IMPLICIT_GEOMETRY));
         } else if (source.isSetAppearanceValue()) {
-            helper.addAppearance(Name.of("appearanceValue", Namespaces.DYNAMIZER),
+            helper.addAppearance(Name.of("value", Namespaces.DYNAMIZER),
                     source.getAppearanceValue(), target.setDataType(DataType.TIME_APPEARANCE));
         }
     }
@@ -90,7 +90,7 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
             source.getStringValue().ifPresent(target::setStringValue);
         } else if (dataType == DataType.TIME_GEOMETRY) {
             GeometryProperty geometryValue = source.getProperties()
-                    .getFirst(Name.of("geometryValue", Namespaces.DYNAMIZER), GeometryProperty.class)
+                    .getFirst(Name.of("value", Namespaces.DYNAMIZER), GeometryProperty.class)
                     .orElse(null);
             if (geometryValue != null) {
                 target.setGeometryValue(helper.getGeometryProperty(geometryValue, GeometryPropertyAdapter.class));
@@ -101,7 +101,7 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
             source.getIntValue().ifPresent(value -> target.setBoolValue(value == 1));
         } else if (dataType == DataType.TIME_IMPLICIT_GEOMETRY) {
             ImplicitGeometryProperty implicitGeometryValue = source.getProperties()
-                    .getFirst(Name.of("implicitGeometryValue", Namespaces.DYNAMIZER), ImplicitGeometryProperty.class)
+                    .getFirst(Name.of("value", Namespaces.DYNAMIZER), ImplicitGeometryProperty.class)
                     .orElse(null);
             if (implicitGeometryValue != null) {
                 target.setImplicitGeometryValue(helper.getImplicitGeometryProperty(implicitGeometryValue,
@@ -109,7 +109,7 @@ public class TimeValuePairAdapter implements ModelBuilder<TimeValuePair, Attribu
             }
         } else if (dataType == DataType.TIME_APPEARANCE) {
             AppearanceProperty appearanceValue = source.getProperties()
-                    .getFirst(Name.of("appearanceValue", Namespaces.DYNAMIZER), AppearanceProperty.class)
+                    .getFirst(Name.of("value", Namespaces.DYNAMIZER), AppearanceProperty.class)
                     .orElse(null);
             if (appearanceValue != null) {
                 target.setAppearanceValue(helper.getAppearanceProperty(appearanceValue,
