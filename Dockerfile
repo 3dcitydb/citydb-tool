@@ -17,7 +17,7 @@ COPY . /build
 
 # Build
 RUN set -x && \
-    apt-get update && apt-get install git -y && \
+    apt update && apt install git -y && \
     chmod u+x ./gradlew && ./gradlew installDist
 
 # Runtime stage ###############################################################
