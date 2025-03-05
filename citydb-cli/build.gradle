@@ -4,6 +4,10 @@ plugins {
     id 'application'
 }
 
+configurations {
+    citydb
+}
+
 dependencies {
     api project(':citydb-database')
     api project(':citydb-io')
@@ -16,6 +20,7 @@ dependencies {
     implementation project(':citydb-database-postgres')
     implementation project(':citydb-io-citygml')
     implementation project(':citydb-logging')
+    citydb 'org.citydb:3dcitydb:5.0.0-beta.4'
 }
 
 processResources {
@@ -57,7 +62,7 @@ distributions {
                 from processLicense
             }
             into('3dcitydb') {
-                from "$rootDir/resources/3dcitydb"
+                from zipTree(configurations.citydb.singleFile)
             }
             into('samples') {
                 from "$rootDir/resources/samples"
@@ -67,12 +72,4 @@ distributions {
             }
         }
     }
-}
-
-tasks.register('buildBundle', Zip) {
-    group = 'distribution'
-    dependsOn installDist
-    from "$projectDir/build/install/$appName"
-    destinationDirectory = distZip.destinationDirectory.get()
-    archiveFileName = appName + '-' + project.version + '.zip'
 }

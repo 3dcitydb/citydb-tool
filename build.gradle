@@ -141,11 +141,15 @@ subprojects {
         }
         repositories {
             maven {
-                url = project.hasProperty('gitLab_maven_url') ? project.property('gitLab_maven_url') : System.getenv('GITLAB_MAVEN_URL')
+                url = project.hasProperty('gitLab_maven_url') ?
+                        project.property('gitLab_maven_url') :
+                        System.getenv('GITLAB_MAVEN_URL')
                 name = 'gitlab-maven'
                 credentials(HttpHeaderCredentials) {
                     name = 'Private-Token'
-                    value = project.hasProperty('gitLab_private_token') ? project.property('gitLab_private_token') : System.getenv('GITLAB_PRIVATE_TOKEN')
+                    value = project.hasProperty('gitLab_private_token') ?
+                            project.property('gitLab_private_token') :
+                            System.getenv('GITLAB_PRIVATE_TOKEN')
                 }
                 authentication {
                     header(HttpHeaderAuthentication)
