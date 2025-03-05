@@ -154,3 +154,7 @@ subprojects {
         }
     }
 }
+
+tasks.register('updateSubmodules', Exec) {
+    commandLine 'git', 'submodule', 'update', '--init', '--remote', "$rootDir/resources/3dcitydb"
+}

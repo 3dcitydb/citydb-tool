@@ -1,6 +1,7 @@
 .gradle/
 gradle.properties
 build/
+resources/3dcitydb/
 
 # Eclipse
 .classpath

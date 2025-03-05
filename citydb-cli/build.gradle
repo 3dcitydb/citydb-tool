@@ -48,6 +48,14 @@ application {
     }
 }
 
+tasks.register('buildCityDB', GradleBuild) {
+    dependsOn(':updateSubmodules')
+    tasks = ['clean', 'installDist']
+    dir = "$rootDir/resources/3dcitydb"
+    outputs.dir "$dir/build/install/3dcitydb"
+    outputs.upToDateWhen { false }
+}
+
 distributions {
     main {
         distributionBaseName = appName
@@ -57,7 +65,7 @@ distributions {
                 from processLicense
             }
             into('3dcitydb') {
-                from "$rootDir/resources/3dcitydb"
+                from buildCityDB
             }
             into('samples') {
                 from "$rootDir/resources/samples"

@@ -1,6 +1,5 @@
 # Git and GitHub
 .github/
-.git/
 .gitignore
 .gitattributes
 
