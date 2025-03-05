@@ -29,8 +29,8 @@ import org.citydb.io.reader.ReadOptions;
 import org.citygml4j.xml.CityGMLContext;
 import org.citygml4j.xml.module.citygml.CityGMLModules;
 import org.citygml4j.xml.module.citygml.CoreModule;
-import org.citygml4j.xml.reader.CityGMLReader;
 import org.citygml4j.xml.reader.*;
+import org.citygml4j.xml.reader.CityGMLReader;
 import org.citygml4j.xml.transform.TransformerPipeline;
 import org.xmlobjects.xml.TextContent;
 

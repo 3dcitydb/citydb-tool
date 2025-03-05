@@ -23,11 +23,11 @@ package org.citydb.io.citygml.adapter.geometry.builder;
 
 import org.citydb.io.citygml.adapter.appearance.builder.AppearanceHelper;
 import org.citydb.io.citygml.builder.ModelBuildException;
+import org.citydb.model.geometry.*;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Polygon;
 import org.citydb.model.geometry.Surface;
 import org.citydb.model.geometry.TriangulatedSurface;
-import org.citydb.model.geometry.*;
 import org.xmlobjects.gml.model.GMLObject;
 import org.xmlobjects.gml.model.base.AbstractGML;
 import org.xmlobjects.gml.model.basictypes.Sign;
