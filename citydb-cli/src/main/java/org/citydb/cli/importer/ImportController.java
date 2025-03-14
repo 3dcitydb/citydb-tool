@@ -189,8 +189,8 @@ public abstract class ImportController implements Command {
                                         logger.info("{} features processed.", count);
                                     }
                                 } else {
-                                    reader.cancel();
                                     abort(feature, e);
+                                    reader.cancel();
                                 }
                             });
                         }
