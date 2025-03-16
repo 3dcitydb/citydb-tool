@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [1.0.0] - tba
+## [1.0.0] - 2025-03-17
 
 This is the initial release of citydb-tool.
 
