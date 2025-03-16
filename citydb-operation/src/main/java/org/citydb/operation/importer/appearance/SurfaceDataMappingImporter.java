@@ -21,6 +21,7 @@
 
 package org.citydb.operation.importer.appearance;
 
+import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.operation.importer.ImportException;
@@ -57,25 +58,29 @@ public class SurfaceDataMappingImporter extends DatabaseImporter {
             stmt.setLong(2, entry.getKey());
 
             if (mapping.hasMaterialMapping()) {
-                stmt.setObject(3, mapping.getMaterialMapping().toString(), Types.OTHER);
+                stmt.setObject(3, mapping.getMaterialMapping()
+                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
             } else {
                 stmt.setNull(3, Types.OTHER);
             }
 
             if (mapping.hasTextureMapping()) {
-                stmt.setObject(4, mapping.getTextureMapping().toString(), Types.OTHER);
+                stmt.setObject(4, mapping.getTextureMapping()
+                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
             } else {
                 stmt.setNull(4, Types.OTHER);
             }
 
             if (mapping.hasWorldToTextureMapping()) {
-                stmt.setObject(5, mapping.getWorldToTextureMapping().toString(), Types.OTHER);
+                stmt.setObject(5, mapping.getWorldToTextureMapping()
+                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
             } else {
                 stmt.setNull(5, Types.OTHER);
             }
 
             if (mapping.hasGeoreferencedTextureMapping()) {
-                stmt.setObject(6, mapping.getGeoreferencedTextureMapping().toString(), Types.OTHER);
+                stmt.setObject(6, mapping.getGeoreferencedTextureMapping()
+                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
             } else {
                 stmt.setNull(6, Types.OTHER);
             }
