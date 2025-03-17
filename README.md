@@ -36,22 +36,26 @@ To show the help message and all available commands of the citydb-tool, simply t
 This will print the following usage information:
 
 ```
-Usage: citydb [-hV] [-L=<level>] [--log-file=<file>] [--pid-file=<file>]
-              [@<filename>...] COMMAND
+Usage: citydb [OPTIONS] COMMAND
 Command-line interface for the 3D City Database.
-      [@<filename>...]      One or more argument files containing options.
-  -L, --log-level=<level>   Log level: fatal, error, warn, info, debug, trace
-                              (default: info).
-      --log-file=<file>     Write log messages to this file.
-      --pid-file=<file>     Create a file containing the process ID.
-  -h, --help                Show this help message and exit.
-  -V, --version             Print version information and exit.
+      [@<filename>...]       One or more argument files containing options.
+      --config-file=<file>   Load configuration from this file.
+  -L, --log-level=<level>    Log level: fatal, error, warn, info, debug, trace
+                               (default: info).
+      --log-file=<file>      Write log messages to this file.
+      --pid-file=<file>      Create a file containing the process ID.
+      --plugins=<dir>        Load plugins from this directory.
+      --use-plugins=<plugin[=true|false][,<plugin[=true|false]...]
+                             Enable or disable plugins with a matching fully
+                               qualified class name (default: true).
+  -h, --help                 Show this help message and exit.
+  -V, --version              Print version information and exit.
 Commands:
   help    Display help information about the specified command.
   import  Import data in a supported format.
   export  Export data in a supported format.
   delete  Delete features from the database.
-  index   Perform index operations on the database.
+  index   Perform index operations.
 ```
 
 To get help about a specific command of the citydb-tool, enter the following and replace `COMMAND` with the name of
@@ -89,6 +93,7 @@ container, mount a host folder to `/data` inside the container.
         [-e CITYDB_SCHEMA=theCityDBSchemaName] \
         [-e CITYDB_USERNAME=theUsername] \
         [-e CITYDB_PASSWORD=theSecretPass] \
+        [-e CITYDB_CONN_PROPS=connProperties] \
         [-v /my/data/:/data] \
     3dcitydb/citydb-tool[:TAG] COMMAND
 
