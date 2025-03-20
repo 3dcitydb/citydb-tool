@@ -92,7 +92,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     private Path pluginsDirectory;
 
     @CommandLine.Option(names = "--use-plugins", scope = CommandLine.ScopeType.INHERIT, split = ",",
-            paramLabel = "<plugin[=true|false]", mapFallbackValue = "true",
+            paramLabel = "<plugin[=true|false]>", mapFallbackValue = "true",
             description = "Enable or disable plugins with a matching fully qualified class name " +
                     "(default: ${MAP-FALLBACK-VALUE}).")
     private Map<String, Boolean> usePlugins;
