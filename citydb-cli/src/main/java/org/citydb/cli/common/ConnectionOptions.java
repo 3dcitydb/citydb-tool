@@ -53,7 +53,7 @@ public class ConnectionOptions implements Option {
             description = "Password to use when connecting to the 3DCityDB. Leave empty to be prompted.")
     private String password;
 
-    @CommandLine.Option(names = "--db-property", split = ",", paramLabel = "<key=value>",
+    @CommandLine.Option(names = "--db-property", split = ",", paramLabel = "<property=value>",
             description = "Database-specific connection properties.")
     private Map<String, String> properties;
 
