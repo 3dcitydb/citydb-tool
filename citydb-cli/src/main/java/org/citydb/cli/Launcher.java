@@ -91,7 +91,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             description = "Load plugins from this directory.")
     private Path pluginsDirectory;
 
-    @CommandLine.Option(names = "--use-plugins", scope = CommandLine.ScopeType.INHERIT, split = ",",
+    @CommandLine.Option(names = "--use-plugin", scope = CommandLine.ScopeType.INHERIT, split = ",",
             paramLabel = "<plugin[=true|false]>", mapFallbackValue = "true",
             description = "Enable or disable plugins with a matching fully qualified class name " +
                     "(default: ${MAP-FALLBACK-VALUE}).")
