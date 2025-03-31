@@ -29,7 +29,6 @@ import java.util.List;
 
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
-    private boolean resolveGeometryReferences = true;
     private boolean resolveCrossLodReferences = true;
     private boolean createCityObjectRelations = true;
     private boolean useLod4AsLod3;
@@ -37,15 +36,6 @@ public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
     private boolean mapLod1MultiSurfaces;
     private boolean includeXALSource;
     private List<String> xslTransforms;
-
-    public boolean isResolveGeometryReferences() {
-        return resolveGeometryReferences;
-    }
-
-    public CityGMLFormatOptions setResolveGeometryReferences(boolean resolveGeometryReferences) {
-        this.resolveGeometryReferences = resolveGeometryReferences;
-        return this;
-    }
 
     public boolean isResolveCrossLodReferences() {
         return resolveCrossLodReferences;

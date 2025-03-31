@@ -54,7 +54,6 @@ public class Preprocessor {
     private final ReferenceResolver referenceResolver = DefaultReferenceResolver.newInstance();
     private final ImplicitGeometryResolver implicitGeometryResolver = new ImplicitGeometryResolver();
 
-    private boolean resolveGeometryReferences = true;
     private boolean resolveCrossLodReferences = true;
     private int numberOfThreads;
     private Throwable exception;
@@ -83,11 +82,6 @@ public class Preprocessor {
 
     public Preprocessor mapLod1MultiSurfaces(boolean mapLod1MultiSurfaces) {
         propertiesProcessor.mapLod1MultiSurfaces(mapLod1MultiSurfaces);
-        return this;
-    }
-
-    public Preprocessor resolveGeometryReferences(boolean resolveGeometryReferences) {
-        this.resolveGeometryReferences = resolveGeometryReferences;
         return this;
     }
 
@@ -145,10 +139,8 @@ public class Preprocessor {
                                 cityObjectGroups.add(group);
                             } else {
                                 feature.accept(collector);
-                                if (resolveGeometryReferences) {
-                                    globalReferenceResolver.processGeometryReferences(feature,
-                                            (int) chunk.getLocalProperties().get("featureId"));
-                                }
+                                globalReferenceResolver.processGeometryReferences(feature,
+                                        (int) chunk.getLocalProperties().get("featureId"));
                             }
                         } catch (Throwable e) {
                             shouldRun = false;
@@ -170,9 +162,7 @@ public class Preprocessor {
                 }
             }
 
-            if (shouldRun
-                    && resolveGeometryReferences
-                    && globalReferenceResolver.hasReferences()) {
+            if (shouldRun && globalReferenceResolver.hasReferences()) {
                 try (CityGMLReader reader = factory.createReader(file, inputFactory,
                         "CityObjectGroup", "Appearance")) {
                     while (shouldRun && reader.hasNext()) {
@@ -219,7 +209,7 @@ public class Preprocessor {
         referenceResolver.resolveReferences(feature);
         implicitGeometryResolver.resolveImplicitGeometries(feature);
 
-        if (resolveGeometryReferences && globalReferenceResolver.hasReferences()) {
+        if (globalReferenceResolver.hasReferences()) {
             globalReferenceResolver.resolveGeometryReferences(feature, featureId);
         }
 

@@ -86,7 +86,6 @@ public class CityGMLReader implements FeatureReader {
         factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options, formatOptions);
         filter = options.getFilter().orElseGet(Filter::acceptAll);
         preprocessor = new Preprocessor()
-                .resolveGeometryReferences(formatOptions.isResolveGeometryReferences())
                 .resolveCrossLodReferences(formatOptions.isResolveCrossLodReferences())
                 .createCityObjectRelations(formatOptions.isCreateCityObjectRelations())
                 .useLod4AsLod3(formatOptions.isUseLod4AsLod3())
