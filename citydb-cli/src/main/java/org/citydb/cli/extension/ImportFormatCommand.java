@@ -21,8 +21,8 @@
 
 package org.citydb.cli.extension;
 
-import org.citydb.cli.common.Command;
+import org.citydb.cli.importer.ImportController;
 import org.citydb.plugin.Extension;
 
-public interface ImportFormatCommand extends Extension, Command {
+public abstract class ImportFormatCommand extends ImportController implements Extension {
 }
