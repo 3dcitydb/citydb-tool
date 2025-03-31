@@ -28,7 +28,6 @@ import picocli.CommandLine;
         name = "index",
         scope = CommandLine.ScopeType.INHERIT,
         description = "Perform index operations.",
-        synopsisSubcommandLabel = "SUBCOMMAND",
         subcommands = {
                 CommandLine.HelpCommand.class,
                 IndexStatusCommand.class,

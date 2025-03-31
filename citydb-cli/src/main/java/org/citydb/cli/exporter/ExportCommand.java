@@ -32,7 +32,6 @@ import picocli.CommandLine;
         name = "export",
         scope = CommandLine.ScopeType.INHERIT,
         description = "Export data in a supported format.",
-        synopsisSubcommandLabel = "COMMAND",
         subcommands = {
                 CommandLine.HelpCommand.class
         })

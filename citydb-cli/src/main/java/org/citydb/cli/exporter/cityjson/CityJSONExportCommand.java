@@ -61,7 +61,7 @@ public class CityJSONExportCommand extends ExportController {
     private CityJSONVersion version;
 
     @CommandLine.Option(names = "--no-json-lines", negatable = true, defaultValue = "true",
-            description = "Write output as CityJSON Sequence in JSON Lines format (default: ${DEFAULT-VALUE}). " +
+            description = "Write output as CityJSON Text Sequence in JSON lines format (default: ${DEFAULT-VALUE}). " +
                     "This option requires CityJSON 1.1 or later.")
     private boolean jsonLines;
 
@@ -237,6 +237,11 @@ public class CityJSONExportCommand extends ExportController {
         if (jsonLines && prettyPrint != null) {
             throw new CommandLine.ParameterException(commandLine,
                     "Error: --json-lines and --pretty-print are mutually exclusive (specify only one)");
+        }
+
+        if (!transformCoordinates && version != CityJSONVersion.v1_0) {
+            throw new CommandLine.ParameterException(commandLine,
+                    "Error: --no-transform-coordinates can only be used with CityJSON 1.0");
         }
     }
 }
