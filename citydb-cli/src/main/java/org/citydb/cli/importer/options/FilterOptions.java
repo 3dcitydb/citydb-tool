@@ -21,7 +21,6 @@
 
 package org.citydb.cli.importer.options;
 
-import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.Option;
 import org.citydb.cli.common.TypeNameOptions;
 import picocli.CommandLine;
@@ -38,9 +37,6 @@ public class FilterOptions implements Option {
 
     @CommandLine.ArgGroup(exclusive = false)
     private CountLimitOptions countLimitOptions;
-
-    @CommandLine.ArgGroup(exclusive = false)
-    private AppearanceOptions appearanceOptions;
 
     public org.citydb.io.reader.options.FilterOptions getImportFilterOptions() {
         org.citydb.io.reader.options.FilterOptions options = new org.citydb.io.reader.options.FilterOptions();
@@ -64,10 +60,6 @@ public class FilterOptions implements Option {
         return options;
     }
 
-    public AppearanceOptions getAppearanceOptions() {
-        return appearanceOptions;
-    }
-
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (bboxOptions != null) {
@@ -76,10 +68,6 @@ public class FilterOptions implements Option {
 
         if (countLimitOptions != null) {
             countLimitOptions.preprocess(commandLine);
-        }
-
-        if (appearanceOptions != null) {
-            appearanceOptions.preprocess(commandLine);
         }
     }
 }

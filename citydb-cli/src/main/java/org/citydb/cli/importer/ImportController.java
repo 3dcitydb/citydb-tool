@@ -27,6 +27,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.importer.duplicate.DuplicateController;
 import org.citydb.cli.importer.filter.Filter;
+import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.cli.importer.options.MetadataOptions;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
@@ -41,7 +42,6 @@ import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.filter.FilterException;
-import org.citydb.io.reader.options.FilterOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
@@ -51,7 +51,6 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ImportController implements Command {
@@ -72,7 +71,7 @@ public abstract class ImportController implements Command {
             description = "Import mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
     private Mode mode;
 
-    @CommandLine.Mixin
+    @CommandLine.ArgGroup(exclusive = false)
     protected ThreadsOptions threadsOptions;
 
     @CommandLine.Option(names = "--preview",
@@ -86,12 +85,16 @@ public abstract class ImportController implements Command {
             description = "Compute and overwrite extents of features.")
     protected Boolean computeEnvelopes;
 
-    @CommandLine.Mixin
+    @CommandLine.ArgGroup(exclusive = false)
     protected TransformOptions transformOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = 1,
             heading = "Metadata options:%n")
     private MetadataOptions metadataOptions;
+
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Filter options:%n")
+    private FilterOptions filterOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
@@ -109,8 +112,6 @@ public abstract class ImportController implements Command {
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
 
     protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
-
-    protected abstract Optional<FilterOptions> getFilterOptions() throws ExecutionException;
 
     @Override
     public Integer call() throws ExecutionException {
@@ -132,14 +133,15 @@ public abstract class ImportController implements Command {
         }
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        ImportOptions importOptions = getImportOptions();
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
-        Filter filter = getFilter(databaseManager.getAdapter());
+
+        Filter filter = getFilter(importOptions, databaseManager.getAdapter());
         readOptions.setFilter(filter);
 
-        ImportOptions importOptions = getImportOptions();
-        ImportMode importMode = importOptions.getMode();
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
+        ImportMode importMode = importOptions.getMode();
         IndexOptions.Mode indexMode = indexOptions.getMode();
 
         if (indexMode != IndexOptions.Mode.keep) {
@@ -239,9 +241,9 @@ public abstract class ImportController implements Command {
         }
     }
 
-    protected Filter getFilter(DatabaseAdapter adapter) throws ExecutionException {
+    protected Filter getFilter(ImportOptions importOptions, DatabaseAdapter adapter) throws ExecutionException {
         try {
-            FilterOptions filterOptions = getFilterOptions().orElse(null);
+            org.citydb.io.reader.options.FilterOptions filterOptions = importOptions.getFilterOptions().orElse(null);
             return filterOptions != null && !filterOptions.isEmpty() ?
                     Filter.of(filterOptions, adapter) :
                     Filter.acceptAll();
@@ -266,7 +268,7 @@ public abstract class ImportController implements Command {
             readOptions.setTempDirectory(tempDirectory.toString());
         }
 
-        if (threadsOptions.getNumberOfThreads() != null) {
+        if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {
             readOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
@@ -293,7 +295,7 @@ public abstract class ImportController implements Command {
             importOptions.setTempDirectory(tempDirectory.toString());
         }
 
-        if (threadsOptions.getNumberOfThreads() != null) {
+        if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {
             importOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
@@ -320,6 +322,10 @@ public abstract class ImportController implements Command {
 
         if (transformOptions != null) {
             importOptions.setAffineTransform(transformOptions.getTransformationMatrix());
+        }
+
+        if (filterOptions != null) {
+            importOptions.setFilterOptions(filterOptions.getImportFilterOptions());
         }
 
         return importOptions;

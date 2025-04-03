@@ -79,13 +79,13 @@ public abstract class ExportController implements Command {
             description = "Store temporary files in this directory.")
     protected Path tempDirectory;
 
-    @CommandLine.Mixin
+    @CommandLine.ArgGroup(exclusive = false)
     protected ThreadsOptions threadsOptions;
 
-    @CommandLine.Mixin
+    @CommandLine.ArgGroup(exclusive = false)
     protected CrsOptions crsOptions;
 
-    @CommandLine.Mixin
+    @CommandLine.ArgGroup(exclusive = false)
     protected TransformOptions transformOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
@@ -276,11 +276,11 @@ public abstract class ExportController implements Command {
             throw new ExecutionException("Failed to get export options from config.", e);
         }
 
-        if (threadsOptions.getNumberOfThreads() != null) {
+        if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {
             exportOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
-        if (crsOptions.getTargetSrs() != null) {
+        if (crsOptions != null && crsOptions.getTargetSrs() != null) {
             exportOptions.setTargetSrs(crsOptions.getTargetSrs());
         }
 
@@ -323,7 +323,7 @@ public abstract class ExportController implements Command {
             writeOptions.setTempDirectory(tempDirectory.toString());
         }
 
-        if (threadsOptions.getNumberOfThreads() != null) {
+        if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {
             writeOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
@@ -331,7 +331,7 @@ public abstract class ExportController implements Command {
             writeOptions.setEncoding(outputFileOptions.getEncoding());
         }
 
-        if (crsOptions.getName() != null) {
+        if (crsOptions != null && crsOptions.getName() != null) {
             writeOptions.setSrsName(crsOptions.getName());
         } else if (writeOptions.getSrsName().isEmpty()) {
             SrsReference targetSrs = exportOptions.getTargetSrs().orElse(null);

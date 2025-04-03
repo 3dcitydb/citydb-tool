@@ -22,9 +22,9 @@
 package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.UpgradeOptions;
 import org.citydb.cli.importer.ImportController;
-import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.io.IOAdapter;
@@ -36,7 +36,6 @@ import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
 import java.util.Arrays;
-import java.util.Optional;
 
 @CommandLine.Command(
         name = "citygml",
@@ -50,13 +49,12 @@ public class CityGMLImportCommand extends ImportController {
             description = "Apply XSLT stylesheets to transform input.")
     private String[] stylesheets;
 
+    @CommandLine.ArgGroup(exclusive = false)
+    private AppearanceOptions appearanceOptions;
+
     @CommandLine.ArgGroup(exclusive = false, order = ARG_GROUP_ORDER,
             heading = "Upgrade options for CityGML 2.0 and 1.0:%n")
     private UpgradeOptions upgradeOptions;
-
-    @CommandLine.ArgGroup(exclusive = false, order = ARG_GROUP_ORDER + 1,
-            heading = "Filter options:%n")
-    private FilterOptions filterOptions;
 
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
@@ -94,21 +92,13 @@ public class CityGMLImportCommand extends ImportController {
             }
         }
 
-        if (filterOptions != null
-                && filterOptions.getAppearanceOptions() != null) {
+        if (appearanceOptions != null) {
             getAppearanceOptions(options)
-                    .setReadAppearances(filterOptions.getAppearanceOptions().isProcessAppearances())
-                    .setThemes(filterOptions.getAppearanceOptions().getThemes());
+                    .setReadAppearances(appearanceOptions.isProcessAppearances())
+                    .setThemes(appearanceOptions.getThemes());
         }
 
         return options;
-    }
-
-    @Override
-    protected Optional<org.citydb.io.reader.options.FilterOptions> getFilterOptions() {
-        return filterOptions != null ?
-                Optional.of(filterOptions.getImportFilterOptions()) :
-                Optional.empty();
     }
 
     private org.citydb.io.citygml.reader.options.AppearanceOptions getAppearanceOptions(FormatOptions<?> formatOptions) {
