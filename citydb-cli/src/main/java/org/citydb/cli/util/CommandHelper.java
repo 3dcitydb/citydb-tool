@@ -36,15 +36,21 @@ import org.citydb.database.DatabaseOptions;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.schema.Index;
+import org.citydb.database.schema.ValidityReference;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.logging.LoggerManager;
+import org.citydb.operation.exporter.options.ValidityOptions;
 import org.citydb.plugin.PluginManager;
 import org.citydb.query.Query;
+import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
+import org.citydb.query.filter.Filter;
+import org.citydb.query.filter.operation.BooleanExpression;
+import org.citydb.query.filter.operation.Operators;
 import org.citydb.sqlbuilder.common.SqlObject;
 
 import java.io.IOException;
@@ -140,6 +146,29 @@ public class CommandHelper {
         } catch (IOException e) {
             throw new ExecutionException("Failed to build database query executor.", e);
         }
+    }
+
+    public Query setValidityFilter(Query query, ValidityOptions validityOptions) {
+        BooleanExpression validity;
+        if (validityOptions != null) {
+            validity = switch (validityOptions.getMode()) {
+                case VALID -> validityOptions.getAt()
+                        .map(at -> QueryHelper.validAt(at, validityOptions.getReference(), validityOptions.isLenient()))
+                        .orElseGet(() -> QueryHelper.isValid(validityOptions.getReference()));
+                case INVALID -> validityOptions.getAt()
+                        .map(at -> QueryHelper.invalidAt(at, validityOptions.getReference()))
+                        .orElseGet(() -> QueryHelper.isInvalid(validityOptions.getReference()));
+                case ALL -> null;
+            };
+        } else {
+            validity = QueryHelper.isValid(ValidityReference.DATABASE);
+        }
+
+        return validity != null ?
+                query.setFilter(query.getFilter()
+                        .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
+                        .orElseGet(() -> Filter.of(validity))) :
+                query;
     }
 
     public String getFormattedSql(SqlObject object, DatabaseAdapter adapter) {

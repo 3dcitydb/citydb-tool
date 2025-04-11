@@ -38,7 +38,6 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.schema.ValidityReference;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
@@ -51,14 +50,10 @@ import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.query.Query;
-import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
-import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.query.filter.operation.BooleanExpression;
-import org.citydb.query.filter.operation.Operators;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileIterator;
 import org.citydb.util.tiling.Tiling;
@@ -248,15 +243,8 @@ public abstract class ExportController implements Command {
             Query query = queryOptions != null ?
                     queryOptions.getQuery() :
                     exportOptions.getQuery().orElseGet(Query::new);
-            BooleanExpression validity = validityOptions != null ?
-                    validityOptions.getValidityFilterExpression() :
-                    QueryHelper.isValid(ValidityReference.DATABASE);
 
-            return validity != null ?
-                    query.setFilter(query.getFilter()
-                            .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
-                            .orElse(Filter.of(validity))) :
-                    query;
+            return helper.setValidityFilter(query, exportOptions.getValidityOptions().orElse(null));
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }

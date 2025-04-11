@@ -34,8 +34,10 @@ public class DeleteOptions {
     public static final int DEFAULT_BATCH_SIZE = 1000;
 
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
-    private DeleteMode mode = DeleteMode.DELETE;
+    private DeleteMode mode = DeleteMode.TERMINATE;
+    @JSONField(serialize = false, deserialize = false)
     private int numberOfThreads;
+    @JSONField(serialize = false, deserialize = false)
     private int batchSize = DEFAULT_BATCH_SIZE;
     private boolean terminateWithSubFeatures = true;
     private OffsetDateTime terminationDate;

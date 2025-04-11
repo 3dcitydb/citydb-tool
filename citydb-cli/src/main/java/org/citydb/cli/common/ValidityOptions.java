@@ -24,8 +24,6 @@ package org.citydb.cli.common;
 import org.citydb.core.time.TimeHelper;
 import org.citydb.database.schema.ValidityReference;
 import org.citydb.operation.exporter.options.ValidityMode;
-import org.citydb.query.QueryHelper;
-import org.citydb.query.filter.operation.BooleanExpression;
 import picocli.CommandLine;
 
 import java.time.OffsetDateTime;
@@ -53,23 +51,6 @@ public class ValidityOptions implements Option {
     private boolean lenient;
 
     private OffsetDateTime at;
-
-    public BooleanExpression getValidityFilterExpression() {
-        ValidityReference reference = switch (this.reference) {
-            case database -> ValidityReference.DATABASE;
-            case real_world -> ValidityReference.REAL_WORLD;
-        };
-
-        return switch (mode) {
-            case valid -> at != null ?
-                    QueryHelper.validAt(at, reference, lenient) :
-                    QueryHelper.isValid(reference);
-            case invalid -> at != null ?
-                    QueryHelper.invalidAt(at, reference) :
-                    QueryHelper.isInvalid(reference);
-            case all -> null;
-        };
-    }
 
     public org.citydb.operation.exporter.options.ValidityOptions getExportValidityOptions() {
         return new org.citydb.operation.exporter.options.ValidityOptions()

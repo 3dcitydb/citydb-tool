@@ -31,19 +31,14 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
-import org.citydb.database.schema.ValidityReference;
 import org.citydb.logging.LoggerManager;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.query.Query;
-import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
-import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.query.filter.operation.BooleanExpression;
-import org.citydb.query.filter.operation.Operators;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -198,15 +193,8 @@ public class DeleteCommand implements Command {
             Query query = queryOptions != null ?
                     queryOptions.getQuery() :
                     deleteOptions.getQuery().orElseGet(Query::new);
-            BooleanExpression validity = validityOptions != null ?
-                    validityOptions.getValidityFilterExpression() :
-                    QueryHelper.isValid(ValidityReference.DATABASE);
 
-            return validity != null ?
-                    query.setFilter(query.getFilter()
-                            .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
-                            .orElse(Filter.of(validity))) :
-                    query;
+            return helper.setValidityFilter(query, deleteOptions.getValidityOptions().orElse(null));
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -250,6 +238,10 @@ public class DeleteCommand implements Command {
             if (metadataOptions.getReasonForUpdate() != null) {
                 deleteOptions.setReasonForUpdate(metadataOptions.getReasonForUpdate());
             }
+        }
+
+        if (validityOptions != null) {
+            deleteOptions.setValidityOptions(validityOptions.getExportValidityOptions());
         }
 
         return deleteOptions;

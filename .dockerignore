@@ -13,7 +13,6 @@
 Dockerfile*
 
 # Unused resources
-resources/3dcitydb
 resources/javadoc
 resources/license
 resources/samples

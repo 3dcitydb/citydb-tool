@@ -22,6 +22,7 @@
 package org.citydb.cli.deleter;
 
 import org.citydb.config.SerializableConfig;
+import org.citydb.operation.exporter.options.ValidityOptions;
 import org.citydb.query.Query;
 
 import java.util.Optional;
@@ -29,6 +30,7 @@ import java.util.Optional;
 @SerializableConfig(name = "deleteOptions")
 public class DeleteOptions extends org.citydb.operation.deleter.DeleteOptions {
     private Query query;
+    private ValidityOptions validityOptions;
 
     public Optional<Query> getQuery() {
         return Optional.ofNullable(query);
@@ -36,6 +38,15 @@ public class DeleteOptions extends org.citydb.operation.deleter.DeleteOptions {
 
     public DeleteOptions setQuery(Query query) {
         this.query = query;
+        return this;
+    }
+
+    public Optional<ValidityOptions> getValidityOptions() {
+        return Optional.ofNullable(validityOptions);
+    }
+
+    public DeleteOptions setValidityOptions(ValidityOptions validityOptions) {
+        this.validityOptions = validityOptions;
         return this;
     }
 }
