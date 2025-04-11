@@ -81,6 +81,8 @@ subprojects {
     }
 
     javadoc {
+        def module = project.name
+
         options {
             title = "$project.name $project.version"
             header = title
@@ -102,7 +104,7 @@ subprojects {
                 from("$rootDir/resources/javadoc/overview.html") {
                     filteringCharset = 'UTF-8'
                     filter(ReplaceTokens, tokens: [
-                            name: name,
+                            name: module,
                             version: version,
                             appName: appName,
                     ])
