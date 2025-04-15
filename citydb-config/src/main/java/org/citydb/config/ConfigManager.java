@@ -62,8 +62,8 @@ public class ConfigManager {
     public void write(Object config, Path outputFile) throws IOException {
         Objects.requireNonNull(config, "The config object must not be null.");
         outputFile = Objects.requireNonNull(outputFile, "The output file must not be null.")
-                .normalize()
-                .toAbsolutePath();
+                .toAbsolutePath()
+                .normalize();
 
         Files.writeString(outputFile, JSON.toJSONString(config, JSONWriter.Feature.FieldBased,
                 JSONWriter.Feature.PrettyFormatWith2Space));

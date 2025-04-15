@@ -39,7 +39,7 @@ public class CoreConstants {
             workingDirEnv = ".";
         }
 
-        APP_HOME = Paths.get(appHomeEnv).normalize().toAbsolutePath();
-        WORKING_DIR = Paths.get(workingDirEnv).normalize().toAbsolutePath();
+        APP_HOME = Paths.get(appHomeEnv).toAbsolutePath().normalize();
+        WORKING_DIR = Paths.get(workingDirEnv).toAbsolutePath().normalize();
     }
 }

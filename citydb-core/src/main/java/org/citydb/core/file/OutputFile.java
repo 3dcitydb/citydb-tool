@@ -32,7 +32,7 @@ public abstract class OutputFile implements AutoCloseable {
 
     protected OutputFile(Path file, FileType fileType) {
         Objects.requireNonNull(file, "The file path must not be null.");
-        this.file = file.normalize().toAbsolutePath();
+        this.file = file.toAbsolutePath().normalize();
         this.fileType = Objects.requireNonNull(fileType, "The file type must not be null.");
     }
 

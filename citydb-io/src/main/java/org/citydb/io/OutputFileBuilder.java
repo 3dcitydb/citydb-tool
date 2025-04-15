@@ -70,7 +70,7 @@ public class OutputFileBuilder {
     }
 
     public OutputFile newOutputFile(Path file) throws IOException {
-        file = CoreConstants.WORKING_DIR.resolve(file).normalize().toAbsolutePath();
+        file = CoreConstants.WORKING_DIR.resolve(file).toAbsolutePath().normalize();
         Path parent = file.getParent();
         if (!Files.exists(parent)) {
             Files.createDirectories(parent);

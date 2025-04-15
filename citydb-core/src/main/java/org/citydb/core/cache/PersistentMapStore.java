@@ -177,8 +177,8 @@ public class PersistentMapStore implements AutoCloseable {
 
             long n = ThreadLocalRandom.current().nextLong() ^ System.currentTimeMillis();
             Path backingFile = tempDirectory.resolve("cache-" + Long.toUnsignedString(n) + ".tmp")
-                    .normalize()
-                    .toAbsolutePath();
+                    .toAbsolutePath()
+                    .normalize();
 
             Files.deleteIfExists(backingFile);
             return backingFile;

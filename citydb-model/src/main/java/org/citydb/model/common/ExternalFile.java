@@ -43,8 +43,8 @@ public class ExternalFile implements Referencable, Serializable {
 
     private ExternalFile(Path path) {
         this.path = Objects.requireNonNull(path, "The path must not be null.")
-                .normalize()
-                .toAbsolutePath();
+                .toAbsolutePath()
+                .normalize();
         uri = null;
         createAndSetObjectId();
     }

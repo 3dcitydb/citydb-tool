@@ -125,7 +125,7 @@ public class InputFiles {
             } else {
                 // construct a pattern from the path and the truncated elements
                 String pattern = !elements.isEmpty() ?
-                        ("glob:" + path.normalize().toAbsolutePath() + File.separator +
+                        ("glob:" + path.toAbsolutePath().normalize() + File.separator +
                                 String.join(File.separator, elements)).replace("\\", "\\\\") :
                         defaultPattern;
 
@@ -133,7 +133,7 @@ public class InputFiles {
                 PathMatcher matcher = FileSystems.getDefault().getPathMatcher(pattern);
                 try (Stream<Path> stream = Files.walk(path, FileVisitOption.FOLLOW_LINKS)) {
                     stream.filter(Files::isRegularFile)
-                            .filter(p -> matcher.matches(p.normalize().toAbsolutePath()))
+                            .filter(p -> matcher.matches(p.toAbsolutePath().normalize()))
                             .filter(p -> filter == null || filter.test(p))
                             .forEach(p -> detect(p, inputFiles, defaultPattern, false));
                 }
@@ -199,7 +199,7 @@ public class InputFiles {
              Stream<Path> stream = Files.walk(fileSystem.getPath("/"))) {
             PathMatcher matcher = fileSystem.getPathMatcher(pattern);
             stream.filter(Files::isRegularFile)
-                    .filter(p -> matcher.matches(p.normalize().toAbsolutePath()))
+                    .filter(p -> matcher.matches(p.toAbsolutePath().normalize()))
                     .filter(p -> filter == null || filter.test(p))
                     .forEach(p -> {
                         MediaType mediaType = getMediaType(p);

@@ -41,8 +41,8 @@ public class FileLocator {
 
     private FileLocator(Path path) {
         this.path = Objects.requireNonNull(path, "The path must not be null.")
-                .normalize()
-                .toAbsolutePath();
+                .toAbsolutePath()
+                .normalize();
         url = null;
     }
 

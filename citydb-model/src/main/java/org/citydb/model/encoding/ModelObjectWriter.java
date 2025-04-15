@@ -90,8 +90,8 @@ public class ModelObjectWriter {
     private void writeObject(Serializable object, Path outputFile) throws IOException {
         Objects.requireNonNull(object, "The model object must not be null.");
         outputFile = Objects.requireNonNull(outputFile, "The output file must not be null.")
-                .normalize()
-                .toAbsolutePath();
+                .toAbsolutePath()
+                .normalize();
 
         try (ObjectOutputStream stream = new ObjectOutputStream(new BufferedOutputStream(
                 Files.newOutputStream(outputFile)))) {
