@@ -15,7 +15,7 @@ dependencies {
     api project(':citydb-plugin')
     api project(':citydb-query')
     api project(':citydb-util')
-    api 'info.picocli:picocli:4.7.6'
+    api 'info.picocli:picocli:4.7.7'
     implementation project(':citydb-config')
     implementation project(':citydb-database-postgres')
     implementation project(':citydb-io-citygml')
