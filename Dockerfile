@@ -1,4 +1,4 @@
-# 3DCityDB Importer/Exporter Dockerfile #######################################
+# citydb-tool Dockerfile ######################################################
 #   Official website    https://www.3dcitydb.org
 #   GitHub              https://github.com/3dcitydb/citydb-tool
 ###############################################################################

@@ -31,7 +31,7 @@ public class OutputFileOptions implements Option {
     private Path file;
 
     @CommandLine.Option(names = "--output-encoding",
-            description = "Encoding to use for output file.")
+            description = "Encoding to use for the output file.")
     private String encoding;
 
     public Path getFile() {
