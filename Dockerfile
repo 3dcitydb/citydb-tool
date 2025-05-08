@@ -17,7 +17,7 @@ COPY . /build
 
 # Build
 RUN set -x && \
-    chmod u+x ./gradlew && ./gradlew installDist
+    chmod u+x ./gradlew && ./gradlew installDockerDist
 
 # Runtime stage ###############################################################
 # Base image
@@ -28,7 +28,7 @@ ARG CITYDB_TOOL_VERSION
 ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 
 # Copy from builder
-COPY --from=builder /build/citydb-cli/build/install/citydb-tool /opt/citydb-tool
+COPY --from=builder /build/citydb-cli/build/install/citydb-tool-docker /opt/citydb-tool
 
 # Put start script in path
 RUN set -x && \

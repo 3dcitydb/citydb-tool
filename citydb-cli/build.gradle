@@ -72,4 +72,12 @@ distributions {
             }
         }
     }
+
+    docker {
+        distributionBaseName = "$appName-docker"
+        contents {
+            with distributions.main.contents
+            exclude ('*.bat')
+        }
+    }
 }
