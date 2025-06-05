@@ -40,7 +40,7 @@ public class DatabaseConstants {
     public static final String ENV_CITYDB_CONN_PROPS = "CITYDB_CONN_PROPS";
 
     public static final VersionSupport VERSION_SUPPORT = VersionSupport.of(
-            VersionPolicy.at(5, 0)
+            VersionPolicy.from(5, 0, 0).to(5, 1)
     );
 
     static {
