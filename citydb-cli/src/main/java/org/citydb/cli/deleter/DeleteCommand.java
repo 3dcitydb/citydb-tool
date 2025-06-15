@@ -249,16 +249,9 @@ public class DeleteCommand implements Command {
 
     @Override
     public void preprocess(CommandLine commandLine) {
-        if (commitAfter != null) {
-            if (preview) {
-                throw new CommandLine.ParameterException(commandLine,
-                        "Error: --preview and --commit are mutually exclusive (specify only one)");
-            }
-
-            if (commitAfter <= 0) {
-                throw new CommandLine.ParameterException(commandLine,
-                        "Error: The number for --commit must be a positive integer but was '" + commitAfter + "'");
-            }
+        if (commitAfter != null && commitAfter <= 0) {
+            throw new CommandLine.ParameterException(commandLine,
+                    "Error: The number for --commit must be a positive integer but was '" + commitAfter + "'");
         }
     }
 

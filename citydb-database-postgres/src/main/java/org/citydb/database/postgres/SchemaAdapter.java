@@ -217,7 +217,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     protected String getDatabaseSrs() {
         return "select srid, coord_ref_sys_kind, coord_ref_sys_name, srs_name, wktext " +
-                "from citydb_pkg.db_metadata()";
+                "from citydb_pkg.db_metadata('" + adapter.getConnectionDetails().getSchema() + "')";
     }
 
     @Override
