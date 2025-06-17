@@ -24,7 +24,6 @@ package org.citydb.operation.importer.property;
 import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.RelationType;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.PropertyDescriptor;
@@ -48,10 +47,8 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
                 "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
-                "val_lod, val_implicitgeom_id, val_implicitgeom_refpoint, val_array, " +
-                "val_relation_type) " +
-                "values (" + String.join(",", Collections.nCopies(10, "?")) + ", " +
-                RelationType.CONTAINS.getDatabaseValue() + ")";
+                "val_lod, val_implicitgeom_id, val_implicitgeom_refpoint, val_array) " +
+                "values (" + String.join(",", Collections.nCopies(10, "?")) + ")";
     }
 
     public PropertyDescriptor doImport(ImplicitGeometryProperty property, long featureId) throws ImportException, SQLException {

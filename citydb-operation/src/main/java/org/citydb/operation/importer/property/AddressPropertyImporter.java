@@ -24,7 +24,6 @@ package org.citydb.operation.importer.property;
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.address.Address;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.RelationType;
 import org.citydb.model.property.AddressProperty;
 import org.citydb.model.property.PropertyDescriptor;
 import org.citydb.operation.importer.ImportException;
@@ -46,9 +45,8 @@ public class AddressPropertyImporter extends PropertyImporter {
     protected String getInsertStatement() {
         return "insert into " + tableHelper.getPrefixedTableName(table) +
                 "(id, feature_id, parent_id, datatype_id, namespace_id, name, " +
-                "val_address_id, val_relation_type) " +
-                "values (" + String.join(",", Collections.nCopies(7, "?")) + ", " +
-                RelationType.CONTAINS.getDatabaseValue() + ")";
+                "val_address_id) " +
+                "values (" + String.join(",", Collections.nCopies(7, "?")) + ")";
     }
 
     public PropertyDescriptor doImport(AddressProperty property, long featureId) throws ImportException, SQLException {
