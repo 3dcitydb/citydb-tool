@@ -23,7 +23,6 @@ package org.citydb.operation.exporter.util;
 
 import org.citydb.model.common.Matrix4x4;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.RelationType;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
@@ -31,6 +30,7 @@ import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
+import org.citydb.model.property.RelationType;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportHelper;

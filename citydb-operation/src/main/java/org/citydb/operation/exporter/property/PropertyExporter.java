@@ -22,9 +22,9 @@
 package org.citydb.operation.exporter.property;
 
 import org.citydb.model.common.Name;
-import org.citydb.model.common.RelationType;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.PropertyDescriptor;
+import org.citydb.model.property.RelationType;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.common.DatabaseExporter;

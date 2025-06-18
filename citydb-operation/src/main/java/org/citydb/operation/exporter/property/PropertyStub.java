@@ -22,11 +22,11 @@
 package org.citydb.operation.exporter.property;
 
 import org.citydb.model.common.Name;
-import org.citydb.model.common.RelationType;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.ArrayValue;
 import org.citydb.model.property.DataType;
 import org.citydb.model.property.PropertyDescriptor;
+import org.citydb.model.property.RelationType;
 
 import java.time.OffsetDateTime;
 

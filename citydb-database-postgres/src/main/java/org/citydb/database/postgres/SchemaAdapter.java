@@ -26,7 +26,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.srs.SpatialReferenceType;
-import org.citydb.model.common.RelationType;
+import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.BooleanLiteral;

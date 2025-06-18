@@ -24,7 +24,6 @@ package org.citydb.operation.exporter.hierarchy;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Reference;
-import org.citydb.model.common.RelationType;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;

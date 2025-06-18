@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.model.common;
+package org.citydb.model.property;
 
 import java.util.Arrays;
 import java.util.HashMap;

@@ -21,7 +21,10 @@
 
 package org.citydb.model.property;
 
-import org.citydb.model.common.*;
+import org.citydb.model.common.Child;
+import org.citydb.model.common.InlineOrByReferenceProperty;
+import org.citydb.model.common.Name;
+import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 
 import java.util.Objects;
