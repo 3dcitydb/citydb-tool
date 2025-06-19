@@ -94,7 +94,8 @@ public class SchemaMappingBuilder {
                                     Name.of(typeName, namespace.getURI()),
                                     rs.getInt("is_abstract") != 0,
                                     superTypeId,
-                                    object));
+                                    object,
+                                    adapter));
                         } else {
                             throw new SchemaException("Failed to parse JSON schema of data type (ID: " + id + ").");
                         }
@@ -138,7 +139,8 @@ public class SchemaMappingBuilder {
                                     rs.getInt("is_abstract") != 0,
                                     rs.getInt("is_toplevel") != 0,
                                     superTypeId,
-                                    object));
+                                    object,
+                                    adapter));
                         } else {
                             throw new SchemaException("Failed to parse JSON schema of feature type (ID: " + id + ").");
                         }

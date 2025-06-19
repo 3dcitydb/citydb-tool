@@ -23,6 +23,7 @@ package org.citydb.database.schema;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
@@ -41,7 +42,8 @@ public class DataType extends Type<DataType> implements ValueObject {
         this.value = value;
     }
 
-    static DataType of(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object) throws SchemaException {
+    static DataType of(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object,
+                       DatabaseAdapter adapter) throws SchemaException {
         String identifier = object.getString("identifier");
         String tableName = object.getString("table");
         String description = object.getString("description");
@@ -65,7 +67,7 @@ public class DataType extends Type<DataType> implements ValueObject {
 
         try {
             return new DataType(id, identifier, name, table, description, isAbstract, superTypeId,
-                    propertiesArray != null ? Type.buildProperties(propertiesArray) : null,
+                    propertiesArray != null ? Type.buildProperties(propertiesArray, adapter) : null,
                     valueObject != null ? Value.of(valueObject) : null,
                     joinObject != null ? Join.of(joinObject) : null,
                     joinTableObject != null ? JoinTable.of(joinTableObject) : null);

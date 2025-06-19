@@ -23,6 +23,7 @@ package org.citydb.database.schema;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
@@ -41,7 +42,8 @@ public class FeatureType extends Type<FeatureType> {
         this.isTopLevel = isTopLevel;
     }
 
-    static FeatureType of(int id, Name name, boolean isAbstract, boolean isTopLevel, Integer superTypeId, JSONObject object) throws SchemaException {
+    static FeatureType of(int id, Name name, boolean isAbstract, boolean isTopLevel, Integer superTypeId,
+                          JSONObject object, DatabaseAdapter adapter) throws SchemaException {
         String identifier = object.getString("identifier");
         String tableName = object.getString("table");
         String description = object.getString("description");
@@ -64,7 +66,7 @@ public class FeatureType extends Type<FeatureType> {
 
         try {
             return new FeatureType(id, identifier, name, table, description, isAbstract, isTopLevel, superTypeId,
-                    propertiesArray != null ? Type.buildProperties(propertiesArray) : null,
+                    propertiesArray != null ? Type.buildProperties(propertiesArray, adapter) : null,
                     joinObject != null ? Join.of(joinObject) : null,
                     joinTableObject != null ? JoinTable.of(joinTableObject) : null);
         } catch (SchemaException e) {

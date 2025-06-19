@@ -22,7 +22,10 @@
 package org.citydb.database.schema;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.version.Version;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
+import org.citydb.model.common.Namespaces;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -36,6 +39,7 @@ public class Property implements ValueObject, Typeable, Joinable {
     private final Value value;
     private final String typeIdentifier;
     private final String targetIdentifier;
+    private final RelationType relationType;
     private final JoinTable joinTable;
     private DataType type;
     private FeatureType targetFeature;
@@ -44,18 +48,19 @@ public class Property implements ValueObject, Typeable, Joinable {
     private Join join;
 
     private Property(Name name, String description, Integer parentIndex, Value value, String typeIdentifier,
-                     String targetIdentifier, Join join, JoinTable joinTable) {
+                     String targetIdentifier, RelationType relationType, Join join, JoinTable joinTable) {
         this.name = name;
         this.description = description;
         this.parentIndex = parentIndex;
         this.value = value;
         this.typeIdentifier = typeIdentifier;
         this.targetIdentifier = targetIdentifier;
+        this.relationType = relationType;
         this.join = join;
         this.joinTable = joinTable;
     }
 
-    static Property of(JSONObject object) throws SchemaException {
+    static Property of(JSONObject object, DatabaseAdapter adapter) throws SchemaException {
         String propertyName = object.getString("name");
         String description = object.getString("description");
         String namespace = object.getString("namespace");
@@ -72,26 +77,29 @@ public class Property implements ValueObject, Typeable, Joinable {
             throw new SchemaException("No namespace defined for the property.");
         } else if (valueObject != null && typeIdentifier != null) {
             throw new SchemaException("A property must not define both a value and a type.");
-        } else if ("core:FeatureProperty".equals(typeIdentifier) && targetIdentifier == null) {
-            throw new SchemaException("A feature property must define a target feature.");
-        } else if ("core:GeometryProperty".equals(typeIdentifier) && targetIdentifier == null) {
-            throw new SchemaException("A geometry property must define a target geometry.");
         } else if (joinObject != null && joinTableObject != null) {
             throw new SchemaException("A property must not define both a join and a join table.");
         }
 
         if (typeIdentifier != null && targetIdentifier == null) {
-            targetIdentifier = switch (typeIdentifier) {
-                case "core:AddressProperty" -> "core:Address";
-                case "core:AppearanceProperty" -> "app:Appearance";
-                case "core:ImplicitGeometryProperty" -> "core:ImplicitGeometry";
-                default -> null;
-            };
+            switch (typeIdentifier) {
+                case "core:FeatureProperty" ->
+                        throw new SchemaException("A feature property must define a target feature.");
+                case "core:GeometryProperty" ->
+                        throw new SchemaException("A geometry property must define a target geometry.");
+                case "core:AddressProperty" -> targetIdentifier = "core:Address";
+                case "core:AppearanceProperty" -> targetIdentifier = "app:Appearance";
+                case "core:ImplicitGeometryProperty" -> targetIdentifier = "core:ImplicitGeometry";
+            }
         }
+
+        RelationType relationType = "core:FeatureProperty".equals(typeIdentifier) ?
+                getRelationType(propertyName, namespace, object, adapter) :
+                null;
 
         return new Property(Name.of(propertyName, namespace), description, parentIndex,
                 valueObject != null ? Value.of(valueObject) : null,
-                typeIdentifier, targetIdentifier,
+                typeIdentifier, targetIdentifier, relationType,
                 joinObject != null ? Join.of(joinObject) : null,
                 joinTableObject != null ? JoinTable.of(joinTableObject) : null);
     }
@@ -127,6 +135,10 @@ public class Property implements ValueObject, Typeable, Joinable {
         return Optional.ofNullable(targetGeometry);
     }
 
+    public Optional<RelationType> getRelationType() {
+        return Optional.ofNullable(relationType);
+    }
+
     public Map<Name, Property> getProperties() {
         return properties != null ? properties : Collections.emptyMap();
     }
@@ -152,6 +164,44 @@ public class Property implements ValueObject, Typeable, Joinable {
     @Override
     public Optional<JoinTable> getJoinTable() {
         return Optional.ofNullable(joinTable);
+    }
+
+    private static RelationType getRelationType(String name, String namespace, JSONObject object, DatabaseAdapter adapter) throws SchemaException {
+        if (adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0) {
+            return switch (namespace) {
+                case Namespaces.CORE -> switch (name) {
+                    case "generalizesTo", "relatedTo" -> RelationType.RELATES;
+                    default -> RelationType.CONTAINS;
+                };
+                case Namespaces.DYNAMIZER -> name.equals("sensorLocation") ?
+                        RelationType.RELATES :
+                        RelationType.CONTAINS;
+                case Namespaces.TRANSPORTATION -> switch (name) {
+                    case "predecessor", "successor" -> RelationType.RELATES;
+                    default -> RelationType.CONTAINS;
+                };
+                case Namespaces.CITY_OBJECT_GROUP -> switch (name) {
+                    case "parent", "groupMember" -> RelationType.RELATES;
+                    default -> RelationType.CONTAINS;
+                };
+                case Namespaces.VERSIONING -> switch (name) {
+                    case "versionMember", "oldFeature", "newFeature" -> RelationType.RELATES;
+                    default -> RelationType.CONTAINS;
+                };
+                default -> RelationType.CONTAINS;
+            };
+        } else {
+            String relationTypeName = object.getString("relationType");
+            RelationType relationType = RelationType.of(relationTypeName);
+
+            if (relationTypeName == null) {
+                throw new SchemaException("A feature property must define a relation type.");
+            } else if (relationType == null) {
+                throw new SchemaException("The relation type " + relationTypeName + " is unsupported.");
+            }
+
+            return relationType;
+        }
     }
 
     void postprocess(Map<Name, Property> properties, SchemaMapping schemaMapping) throws SchemaException {

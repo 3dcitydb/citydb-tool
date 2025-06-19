@@ -19,23 +19,33 @@
  * limitations under the License.
  */
 
-package org.citydb.model.property;
+package org.citydb.database.schema;
+
+import java.util.Locale;
 
 public enum RelationType {
-    RELATES(0),
-    CONTAINS(1);
+    RELATES("relates"), CONTAINS("contains");
 
-    private final int value;
+    private final String name;
 
-    RelationType(int value) {
-        this.value = value;
+    RelationType(String name) {
+        this.name = name;
     }
 
-    public int getDatabaseValue() {
-        return value;
+    public static RelationType of(String name) {
+        return name != null ? switch (name.toLowerCase(Locale.ROOT)) {
+            case "relates" -> RelationType.RELATES;
+            case "contains" -> RelationType.CONTAINS;
+            default -> null;
+        } : null;
     }
 
-    public static RelationType fromDatabaseValue(int value) {
-        return value == 1 ? CONTAINS : RELATES;
+    public String getName() {
+        return name;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }
