@@ -21,6 +21,7 @@
 
 package org.citydb.database.adapter;
 
+import org.citydb.core.version.Version;
 import org.citydb.database.schema.*;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.util.IndexHelper;
@@ -73,6 +74,8 @@ public abstract class SchemaAdapter {
     public abstract TempTableHelper getTempTableHelper();
 
     protected abstract String getCityDBVersion();
+
+    protected abstract String getSchemaExists(String schemaName, Version version);
 
     protected abstract String getDatabaseSrs();
 

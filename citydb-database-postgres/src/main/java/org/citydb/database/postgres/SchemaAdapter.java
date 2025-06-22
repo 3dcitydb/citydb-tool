@@ -216,6 +216,19 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
+    protected String getSchemaExists(String schemaName, Version version) {
+        if (version.compareTo(Version.of(5, 1, 0)) < 0) {
+            return "select coalesce(( " +
+                    "select 1 from information_schema.schemata s " +
+                    "join information_schema.tables t on t.table_schema = s.schema_name " +
+                    "where s.schema_name = '" + schemaName + "' and t.table_name = 'feature'" +
+                    "limit 1), 0)";
+        } else {
+            return "select citydb_pkg.schema_exists('" + schemaName + "')";
+        }
+    }
+
+    @Override
     protected String getDatabaseSrs() {
         return "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
                 "from citydb_pkg.db_metadata('" + adapter.getConnectionDetails().getSchema() + "')";

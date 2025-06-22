@@ -64,8 +64,16 @@ public abstract class DatabaseAdapter {
         }
 
         try (Connection connection = pool.getConnection()) {
+            Version version = getCityDBVersion(connection);
+
+            if (!connectionDetails.getSchema().equals(schemaAdapter.getDefaultSchema())
+                    && !schemaExists(connectionDetails.getSchema(), version, connection)) {
+                throw new DatabaseException("The requested schema '" + connectionDetails.getSchema() +
+                        "' is not a 3DCityDB schema.");
+            }
+
             DatabaseMetaData vendorMetadata = connection.getMetaData();
-            databaseMetadata = DatabaseMetadata.of(getCityDBVersion(connection),
+            databaseMetadata = DatabaseMetadata.of(version,
                     getDatabaseSrs(connection),
                     vendorMetadata.getDatabaseProductName(),
                     vendorMetadata.getDatabaseProductVersion(),
@@ -121,6 +129,15 @@ public abstract class DatabaseAdapter {
         }
 
         throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.");
+    }
+
+    private boolean schemaExists(String schemaName, Version version, Connection connection) throws DatabaseException {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(schemaAdapter.getSchemaExists(schemaName, version))) {
+            return rs.next() && rs.getBoolean(1);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to verify whether '" + schemaName + "' is a 3DCityDB schema.", e);
+        }
     }
 
     private SpatialReference getDatabaseSrs(Connection connection) throws DatabaseException {
