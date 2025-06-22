@@ -22,6 +22,7 @@
 package org.citydb.database.postgres;
 
 import org.citydb.core.concurrent.LazyCheckedInitializer;
+import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
@@ -216,15 +217,20 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     @Override
     protected String getDatabaseSrs() {
-        return "select srid, coord_ref_sys_kind, coord_ref_sys_name, srs_name, wktext " +
+        return "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
                 "from citydb_pkg.db_metadata('" + adapter.getConnectionDetails().getSchema() + "')";
     }
 
     @Override
     protected String getSpatialReference(int srid) {
-        return "select split_part(srtext, '[', 1) as coord_ref_sys_kind, " +
-                "split_part(srtext, '\"', 2) as coord_ref_sys_name, " +
-                "srtext as wktext from spatial_ref_sys where srid = " + srid;
+        if (adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0) {
+            return "select split_part(srtext, '\"', 2) as coord_ref_sys_name, " +
+                    "split_part(srtext, '[', 1) as coord_ref_sys_kind, " +
+                    "srtext as wktext from spatial_ref_sys where srid = " + srid;
+        } else {
+            return "select coord_ref_sys_name, coord_ref_sys_kind, wktext " +
+                    "from citydb_pkg.get_coord_ref_sys_info(" + srid + ")";
+        }
     }
 
     @Override
