@@ -125,6 +125,7 @@ public class DeleteCommand implements Command {
         }
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        logger.info("{} features in the database.", mode == Mode.terminate ? "Terminating" : "Deleting");
 
         if (preview) {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
