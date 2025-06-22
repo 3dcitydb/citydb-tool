@@ -68,6 +68,7 @@ public class Property implements ValueObject, Typeable, Joinable {
         JSONObject valueObject = object.getJSONObject("value");
         String typeIdentifier = object.getString("type");
         String targetIdentifier = object.getString("target");
+        String relationTypeName = object.getString("relationType");
         JSONObject joinObject = object.getJSONObject("join");
         JSONObject joinTableObject = object.getJSONObject("joinTable");
 
@@ -94,7 +95,7 @@ public class Property implements ValueObject, Typeable, Joinable {
         }
 
         RelationType relationType = "core:FeatureProperty".equals(typeIdentifier) ?
-                getRelationType(propertyName, namespace, object, adapter) :
+                getRelationType(propertyName, namespace, relationTypeName, adapter) :
                 null;
 
         return new Property(Name.of(propertyName, namespace), description, parentIndex,
@@ -166,8 +167,10 @@ public class Property implements ValueObject, Typeable, Joinable {
         return Optional.ofNullable(joinTable);
     }
 
-    private static RelationType getRelationType(String name, String namespace, JSONObject object, DatabaseAdapter adapter) throws SchemaException {
-        if (adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0) {
+    private static RelationType getRelationType(String name, String namespace, String relationTypeName, DatabaseAdapter adapter) throws SchemaException {
+        if (adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0
+                && relationTypeName == null
+                && Namespaces.isCityDBNamespace(namespace)) {
             return switch (namespace) {
                 case Namespaces.CORE -> switch (name) {
                     case "generalizesTo", "relatedTo" -> RelationType.RELATES;
@@ -191,9 +194,7 @@ public class Property implements ValueObject, Typeable, Joinable {
                 default -> RelationType.CONTAINS;
             };
         } else {
-            String relationTypeName = object.getString("relationType");
             RelationType relationType = RelationType.of(relationTypeName);
-
             if (relationTypeName == null) {
                 throw new SchemaException("A feature property must define a relation type.");
             } else if (relationType == null) {
