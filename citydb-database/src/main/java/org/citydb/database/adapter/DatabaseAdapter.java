@@ -75,6 +75,7 @@ public abstract class DatabaseAdapter {
             DatabaseMetaData vendorMetadata = connection.getMetaData();
             databaseMetadata = DatabaseMetadata.of(version,
                     getDatabaseSrs(connection),
+                    isChangelogEnabled(connectionDetails.getSchema(), connection),
                     vendorMetadata.getDatabaseProductName(),
                     vendorMetadata.getDatabaseProductVersion(),
                     vendorMetadata.getDatabaseMajorVersion(),
@@ -155,5 +156,14 @@ public abstract class DatabaseAdapter {
         }
 
         throw new DatabaseException("Failed to retrieve the spatial reference system of the 3DCityDB.");
+    }
+
+    private boolean isChangelogEnabled(String schemaName, Connection connection) throws DatabaseException {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(schemaAdapter.getChangelogEnabled(schemaName))) {
+            return rs.next() && rs.getBoolean(1);
+        } catch (SQLException e) {
+            throw new DatabaseException("Failed to verify whether the changelog is enabled for the 3DCityDB.", e);
+        }
     }
 }

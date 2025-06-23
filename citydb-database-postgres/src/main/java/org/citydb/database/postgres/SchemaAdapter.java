@@ -259,6 +259,16 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         };
     }
 
+    @Override
+    protected String getChangelogEnabled(String schemaName) {
+        return "select exists ( " +
+                "select 1 from information_schema.triggers s " +
+                "where s.trigger_schema = '" + schemaName + "' " +
+                "and event_object_table = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
+                "and trigger_name = 'feature_changelog_trigger'" +
+                ")";
+    }
+
     private String readFeatureHierarchyQuery() throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
                 SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {

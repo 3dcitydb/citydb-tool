@@ -27,16 +27,18 @@ import org.citydb.database.srs.SpatialReference;
 public class DatabaseMetadata {
     private final Version version;
     private final SpatialReference spatialReference;
+    private final boolean changelogEnabled;
     private final String vendorProductName;
     private final String vendorProductVersion;
     private final int vendorMajorVersion;
     private final int vendorMinorVersion;
 
     private DatabaseMetadata(
-            Version version, SpatialReference spatialReference, String vendorProductName,
-            String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
+            Version version, SpatialReference spatialReference, boolean changelogEnabled,
+            String vendorProductName, String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
         this.version = version;
         this.spatialReference = spatialReference;
+        this.changelogEnabled = changelogEnabled;
         this.vendorProductName = vendorProductName;
         this.vendorProductVersion = vendorProductVersion;
         this.vendorMajorVersion = vendorMajorVersion;
@@ -44,10 +46,10 @@ public class DatabaseMetadata {
     }
 
     public static DatabaseMetadata of(
-            Version version, SpatialReference spatialReference, String vendorProductName,
-            String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
-        return new DatabaseMetadata(version, spatialReference, vendorProductName, vendorProductVersion,
-                vendorMajorVersion, vendorMinorVersion);
+            Version version, SpatialReference spatialReference, boolean changelogEnabled,
+            String vendorProductName, String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
+        return new DatabaseMetadata(version, spatialReference, changelogEnabled, vendorProductName,
+                vendorProductVersion, vendorMajorVersion, vendorMinorVersion);
     }
 
     public Version getVersion() {
@@ -56,6 +58,10 @@ public class DatabaseMetadata {
 
     public SpatialReference getSpatialReference() {
         return spatialReference;
+    }
+
+    public boolean isChangelogEnabled() {
+        return changelogEnabled;
     }
 
     public String getVendorProductName() {

@@ -136,6 +136,8 @@ public class DatabaseManager {
             consumer.accept("SRID: " + adapter.getDatabaseMetadata().getSpatialReference().getSRID());
             consumer.accept("SRS name: " + adapter.getDatabaseMetadata().getSpatialReference().getName());
             consumer.accept("SRS URI: " + adapter.getDatabaseMetadata().getSpatialReference().getIdentifier());
+            consumer.accept("Changelog: " + (adapter.getDatabaseMetadata().isChangelogEnabled() ?
+                    "Enabled" : "Disabled"));
         }
     }
 }
