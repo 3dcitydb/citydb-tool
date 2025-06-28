@@ -56,11 +56,11 @@ subprojects {
 
     extraJavaModuleInfo {
         failOnMissingModuleInfo.set(false)
-        module('tomcat-jdbc-11.0.5.jar', 'org.apache.tomcat.jdbc', '11.0.5') {
+        module('org.apache.tomcat:tomcat-jdbc', 'org.apache.tomcat.jdbc') {
             requires('java.sql')
             requires('java.management')
             requires('org.apache.tomcat.juli')
-            exports('org.apache.tomcat.jdbc.pool')
+            exportAllPackages()
         }
     }
 
