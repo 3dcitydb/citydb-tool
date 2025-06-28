@@ -72,6 +72,17 @@ public class PersistentMapStore implements AutoCloseable {
         }
     }
 
+    public void withStableVersion(MapAction action) throws MapStoreException {
+        if (action != null && store != null) {
+            MVStore.TxCounter version = store.registerVersionUsage();
+            try {
+                action.run();
+            } finally {
+                store.deregisterVersionUsage(version);
+            }
+        }
+    }
+
     public boolean isClosed() {
         return store == null || store.isClosed();
     }
@@ -94,6 +105,11 @@ public class PersistentMapStore implements AutoCloseable {
         if (store == null) {
             throw new IllegalStateException("Cache store is closed.");
         }
+    }
+
+    @FunctionalInterface
+    public interface MapAction {
+        void run() throws MapStoreException;
     }
 
     public static class Builder {

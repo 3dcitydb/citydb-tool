@@ -96,22 +96,24 @@ public class ReferenceManager {
             if (shouldRun
                     && store.hasMap(type.ordinal() + "r")
                     && store.hasMap(type.ordinal() + "t")) {
-                Map<String, Long> targets = store.getOrCreateMap(type.ordinal() + "t");
-                Map<Long, String> references = store.getOrCreateMap(type.ordinal() + "r");
-                Map<Long, Long> resolved = new HashMap<>();
+                store.withStableVersion(() -> {
+                    Map<String, Long> targets = store.getOrCreateMap(type.ordinal() + "t");
+                    Map<Long, String> references = store.getOrCreateMap(type.ordinal() + "r");
+                    Map<Long, Long> resolved = new HashMap<>();
 
-                Iterator<Map.Entry<Long, String>> iterator = references.entrySet().iterator();
-                while (shouldRun && iterator.hasNext()) {
-                    Map.Entry<Long, String> reference = iterator.next();
-                    Long targetId = targets.get(reference.getValue());
-                    if (targetId != null) {
-                        resolved.put(reference.getKey(), targetId);
-                        if (!iterator.hasNext() || resolved.size() == batchSize) {
-                            update(resolved, type);
-                            resolved.clear();
+                    Iterator<Map.Entry<Long, String>> iterator = references.entrySet().iterator();
+                    while (shouldRun && iterator.hasNext()) {
+                        Map.Entry<Long, String> reference = iterator.next();
+                        Long targetId = targets.get(reference.getValue());
+                        if (targetId != null) {
+                            resolved.put(reference.getKey(), targetId);
+                            if (!iterator.hasNext() || resolved.size() == batchSize) {
+                                update(resolved, type);
+                                resolved.clear();
+                            }
                         }
                     }
-                }
+                });
             }
         }
     }
