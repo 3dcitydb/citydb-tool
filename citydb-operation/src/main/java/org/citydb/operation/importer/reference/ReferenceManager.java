@@ -96,7 +96,7 @@ public class ReferenceManager {
             if (shouldRun
                     && store.hasMap(type.ordinal() + "r")
                     && store.hasMap(type.ordinal() + "t")) {
-                store.withStableVersion(() -> {
+                store.withCurrentVersion(() -> {
                     Map<String, Long> targets = store.getOrCreateMap(type.ordinal() + "t");
                     Map<Long, String> references = store.getOrCreateMap(type.ordinal() + "r");
                     Map<Long, Long> resolved = new HashMap<>();

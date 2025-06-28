@@ -72,7 +72,17 @@ public class PersistentMapStore implements AutoCloseable {
         }
     }
 
-    public void withStableVersion(MapAction action) throws MapStoreException {
+    public void withCurrentVersion(Runnable action) {
+        if (action != null) {
+            try {
+                withCurrentVersionOrThrow((Action<Exception>) action::run);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to execute map action.", e);
+            }
+        }
+    }
+
+    public <E extends Exception> void withCurrentVersionOrThrow(Action<E> action) throws E {
         if (action != null && store != null) {
             MVStore.TxCounter version = store.registerVersionUsage();
             try {
@@ -108,8 +118,8 @@ public class PersistentMapStore implements AutoCloseable {
     }
 
     @FunctionalInterface
-    public interface MapAction {
-        void run() throws MapStoreException;
+    public interface Action<E extends Exception> {
+        void run() throws E;
     }
 
     public static class Builder {
