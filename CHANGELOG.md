@@ -8,6 +8,7 @@
 ### Fixed
 - Fixed support for time-based validity options in the JSON configuration.
 - Fixed `count` methods in `SqlHelper` to produce correct SQL statements.
+- Resolved `MVStoreException: Chunk not found` errors when resolving references during imports.
 
 ## [1.0.0] - 2025-03-17
 
