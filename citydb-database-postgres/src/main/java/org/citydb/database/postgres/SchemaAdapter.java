@@ -221,7 +221,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
             return "select coalesce(( " +
                     "select 1 from information_schema.schemata s " +
                     "join information_schema.tables t on t.table_schema = s.schema_name " +
-                    "where s.schema_name = '" + schemaName + "' and t.table_name = 'feature'" +
+                    "where s.schema_name = '" + schemaName + "' and t.table_name = 'database_srs'" +
                     "limit 1), 0)";
         } else {
             return "select citydb_pkg.schema_exists('" + schemaName + "')";
