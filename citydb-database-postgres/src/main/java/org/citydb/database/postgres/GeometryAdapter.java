@@ -64,7 +64,7 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
             Geometry<?> geometry = getGeometry(geometryObject);
             return geometry != null ? geometry.getEnvelope() : null;
         } else {
-            return boxParser.parse(geometryObject.toString());
+            return geometryObject != null ? boxParser.parse(geometryObject.toString()) : null;
         }
     }
 
