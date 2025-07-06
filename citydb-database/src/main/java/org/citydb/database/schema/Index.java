@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class Index {
+    public static final Index APPEARANCE_THEME = Index.normal("appearance_theme_inx", Table.APPEARANCE.getName(), "theme");
     public static final Index FEATURE_OBJECTID = Index.normal("feature_objectid_inx", Table.FEATURE.getName(), "objectid");
     public static final Index FEATURE_IDENTIFIER = Index.normal("feature_identifier_inx", Table.FEATURE.getName(), List.of("identifier", "identifier_codespace"));
     public static final Index FEATURE_ENVELOPE = Index.spatial("feature_envelope_spx", Table.FEATURE.getName(), "envelope");
