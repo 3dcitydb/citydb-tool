@@ -35,6 +35,7 @@ import java.util.Set;
 
 public class IndexHelper {
     public static final Set<Index> DEFAULT_INDEXES = new LinkedHashSet<>(List.of(
+            Index.APPEARANCE_THEME,
             Index.FEATURE_IDENTIFIER,
             Index.FEATURE_ENVELOPE,
             Index.FEATURE_CREATION_DATE,
