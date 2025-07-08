@@ -64,9 +64,13 @@ public class TextureImageImporter extends DatabaseImporter {
         stmt.setString(4, textureImage.getMimeType().orElse(null));
         stmt.setString(5, textureImage.getMimeTypeCodeSpace().orElse(null));
 
-        addBatch();
+        stmt.execute();
         cacheTarget(CacheType.TEXTURE_IMAGE, textureImage.getObjectId().orElse(null), texImageId);
 
         return texImageId;
+    }
+
+    @Override
+    public void executeBatch() throws SQLException {
     }
 }
