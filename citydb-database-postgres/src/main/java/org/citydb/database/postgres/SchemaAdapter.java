@@ -274,7 +274,10 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
-                    .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema());
+                    .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema())
+                    .replace("@JSON@", adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0 ?
+                            "json" :
+                            "jsonb");
         }
     }
 
