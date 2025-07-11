@@ -53,6 +53,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final LazyCheckedInitializer<String, IOException> featureHierarchyQuery;
     private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
     private final OperationHelper operationHelper;
+    private final StatisticsHelper statisticsHelper;
     private final TempTableHelper tempTableHelper;
 
     SchemaAdapter(DatabaseAdapter adapter) {
@@ -60,6 +61,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         featureHierarchyQuery = LazyCheckedInitializer.of(this::readFeatureHierarchyQuery);
         recursiveImplicitGeometryQuery = LazyCheckedInitializer.of(this::readRecursiveImplicitGeometryQuery);
         operationHelper = new OperationHelper(this);
+        statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
     }
 
@@ -203,6 +205,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public OperationHelper getOperationHelper() {
         return operationHelper;
+    }
+
+    @Override
+    public StatisticsHelper getStatisticsHelper() {
+        return statisticsHelper;
     }
 
     @Override
