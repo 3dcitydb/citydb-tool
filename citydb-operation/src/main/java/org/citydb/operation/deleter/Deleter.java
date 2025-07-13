@@ -147,6 +147,8 @@ public class Deleter {
             } else {
                 result.completeExceptionally(new DeleteException("Illegal to delete data outside a session."));
             }
+        } else {
+            result.cancel(true);
         }
 
         return result;

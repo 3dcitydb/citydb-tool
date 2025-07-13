@@ -122,6 +122,8 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
                     countLatch.decrement();
                 }
             });
+        } else {
+            result.cancel(true);
         }
 
         return result;

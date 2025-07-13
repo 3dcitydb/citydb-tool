@@ -148,6 +148,8 @@ public class Importer {
             } else {
                 result.completeExceptionally(new ImportException("Illegal to import data outside a session."));
             }
+        } else {
+            result.cancel(true);
         }
 
         return result;

@@ -128,6 +128,8 @@ public class Exporter {
             } else {
                 result.completeExceptionally(new ExportException("Illegal to export data outside a session."));
             }
+        } else {
+            result.cancel(true);
         }
 
         return result;
