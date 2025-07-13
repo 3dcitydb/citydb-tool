@@ -30,13 +30,14 @@ import java.sql.Statement;
 import java.util.*;
 
 public abstract class StatisticsHelper {
+    public static final String NULL_THEME = "<none>";
     protected final DatabaseAdapter adapter;
 
     protected StatisticsHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
     }
 
-    public enum Validity {
+    public enum FeatureScope {
         ALL,
         VALID,
         TERMINATED
@@ -52,13 +53,13 @@ public abstract class StatisticsHelper {
     public record SurfaceDataInfo(boolean hasMaterials, boolean hasTextures, boolean hasGeoreferencedTextures) {
     }
 
-    public Map<FeatureType, Long> getFeatureCount(Validity validity) throws SQLException {
+    public Map<FeatureType, Long> getFeatureCount(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getFeatureCount(validity, connection);
+            return getFeatureCount(scope, connection);
         }
     }
 
-    public Map<FeatureType, Long> getFeatureCount(Validity validity, Connection connection) throws SQLException {
+    public Map<FeatureType, Long> getFeatureCount(FeatureScope scope, Connection connection) throws SQLException {
         Table feature = Table.of(org.citydb.database.schema.Table.FEATURE.getName(), getSchema());
         Column objectClassId = feature.column("objectclass_id");
         Column terminationDate = feature.column("termination_date");
@@ -68,7 +69,7 @@ public abstract class StatisticsHelper {
                 .from(feature)
                 .groupBy(objectClassId);
 
-        switch (validity) {
+        switch (scope) {
             case VALID -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
@@ -85,13 +86,13 @@ public abstract class StatisticsHelper {
         return featureCount;
     }
 
-    public Map<FeatureType, FeatureInfo> getFeatureCountAndExtent(Validity validity) throws DatabaseException, SQLException {
+    public Map<FeatureType, FeatureInfo> getFeatureCountAndExtent(FeatureScope scope) throws DatabaseException, SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getFeatureCountAndExtent(validity, connection);
+            return getFeatureCountAndExtent(scope, connection);
         }
     }
 
-    public Map<FeatureType, FeatureInfo> getFeatureCountAndExtent(Validity validity, Connection connection) throws DatabaseException, SQLException {
+    public Map<FeatureType, FeatureInfo> getFeatureCountAndExtent(FeatureScope scope, Connection connection) throws DatabaseException, SQLException {
         Table feature = Table.of(org.citydb.database.schema.Table.FEATURE.getName(), getSchema());
         Column objectClassId = feature.column("objectclass_id");
         Column terminationDate = feature.column("termination_date");
@@ -102,7 +103,7 @@ public abstract class StatisticsHelper {
                 .from(feature)
                 .groupBy(objectClassId);
 
-        switch (validity) {
+        switch (scope) {
             case VALID -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
@@ -124,13 +125,13 @@ public abstract class StatisticsHelper {
         return featureCount;
     }
 
-    public Map<String, Long> getFeatureCountByLod(Validity validity) throws SQLException {
+    public Map<String, Long> getFeatureCountByLod(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getFeatureCountByLod(validity, connection);
+            return getFeatureCountByLod(scope, connection);
         }
     }
 
-    public Map<String, Long> getFeatureCountByLod(Validity validity, Connection connection) throws SQLException {
+    public Map<String, Long> getFeatureCountByLod(FeatureScope scope, Connection connection) throws SQLException {
         Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
         Column lod = property.column("val_lod");
 
@@ -140,8 +141,8 @@ public abstract class StatisticsHelper {
                 .where(lod.isNotNull())
                 .groupBy(lod);
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, select, property.column("feature_id"), Joins.INNER_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
         }
 
         Map<String, Long> featureCount = new HashMap<>();
@@ -155,13 +156,13 @@ public abstract class StatisticsHelper {
         return featureCount;
     }
 
-    public Map<GeometryType, Long> getGeometryCount(Validity validity) throws SQLException {
+    public Map<GeometryType, Long> getGeometryCount(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getGeometryCount(validity, connection);
+            return getGeometryCount(scope, connection);
         }
     }
 
-    public Map<GeometryType, Long> getGeometryCount(Validity validity, Connection connection) throws SQLException {
+    public Map<GeometryType, Long> getGeometryCount(FeatureScope scope, Connection connection) throws SQLException {
         Table geometryData = Table.of(org.citydb.database.schema.Table.GEOMETRY_DATA.getName(), getSchema());
         Column type = getGeometryType(geometryData);
 
@@ -170,8 +171,8 @@ public abstract class StatisticsHelper {
                 .from(geometryData)
                 .groupBy(type);
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, select, geometryData.column("feature_id"), Joins.LEFT_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, geometryData.column("feature_id"), Joins.LEFT_JOIN);
         }
 
         Map<GeometryType, Long> geometryCount = new EnumMap<>(GeometryType.class);
@@ -206,13 +207,13 @@ public abstract class StatisticsHelper {
         }
     }
 
-    public Set<String> getLods(Validity validity) throws SQLException {
+    public Set<String> getLods(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getLods(validity, connection);
+            return getLods(scope, connection);
         }
     }
 
-    public Set<String> getLods(Validity validity, Connection connection) throws SQLException {
+    public Set<String> getLods(FeatureScope scope, Connection connection) throws SQLException {
         Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
         Column lod = property.column("val_lod");
 
@@ -222,8 +223,8 @@ public abstract class StatisticsHelper {
                 .from(property)
                 .where(lod.isNotNull());
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, select, property.column("feature_id"), Joins.INNER_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
         }
 
         Set<String> lods = new HashSet<>();
@@ -237,13 +238,13 @@ public abstract class StatisticsHelper {
         return lods;
     }
 
-    public Map<String, Long> getAppearanceCountByTheme(Validity validity) throws SQLException {
+    public Map<String, Long> getAppearanceCountByTheme(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getAppearanceCountByTheme(validity, connection);
+            return getAppearanceCountByTheme(scope, connection);
         }
     }
 
-    public Map<String, Long> getAppearanceCountByTheme(Validity validity, Connection connection) throws SQLException {
+    public Map<String, Long> getAppearanceCountByTheme(FeatureScope scope, Connection connection) throws SQLException {
         Table appearance = Table.of(org.citydb.database.schema.Table.APPEARANCE.getName(), getSchema());
         Column theme = appearance.column("theme");
 
@@ -252,28 +253,29 @@ public abstract class StatisticsHelper {
                 .from(appearance)
                 .groupBy(theme);
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, select, appearance.column("feature_id"), Joins.LEFT_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, appearance.column("feature_id"), Joins.LEFT_JOIN);
         }
 
         Map<String, Long> appearanceCount = new HashMap<>();
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(select.toSql())) {
             while (rs.next()) {
-                appearanceCount.put(rs.getString(1), rs.getLong(2));
+                String name = rs.getString(1);
+                appearanceCount.put(name != null ? name : NULL_THEME, rs.getLong(2));
             }
         }
 
         return appearanceCount;
     }
 
-    public Set<String> getThemes(Validity validity) throws SQLException {
+    public Set<String> getThemes(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getThemes(validity, connection);
+            return getThemes(scope, connection);
         }
     }
 
-    public Set<String> getThemes(Validity validity, Connection connection) throws SQLException {
+    public Set<String> getThemes(FeatureScope scope, Connection connection) throws SQLException {
         Table appearance = Table.of(org.citydb.database.schema.Table.APPEARANCE.getName(), getSchema());
 
         Select select = Select.newInstance()
@@ -281,28 +283,29 @@ public abstract class StatisticsHelper {
                 .select(appearance.column("theme"))
                 .from(appearance);
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, select, appearance.column("feature_id"), Joins.LEFT_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, appearance.column("feature_id"), Joins.LEFT_JOIN);
         }
 
         Set<String> themes = new HashSet<>();
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(select.toSql())) {
             while (rs.next()) {
-                themes.add(rs.getString(1));
+                String theme = rs.getString(1);
+                themes.add(theme != null ? theme : NULL_THEME);
             }
         }
 
         return themes;
     }
 
-    public SurfaceDataInfo hasSurfaceData(Validity validity) throws SQLException {
+    public SurfaceDataInfo hasSurfaceData(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return hasSurfaceData(validity, connection);
+            return hasSurfaceData(scope, connection);
         }
     }
 
-    public SurfaceDataInfo hasSurfaceData(Validity validity, Connection connection) throws SQLException {
+    public SurfaceDataInfo hasSurfaceData(FeatureScope scope, Connection connection) throws SQLException {
         Table geometryData = Table.of(org.citydb.database.schema.Table.GEOMETRY_DATA.getName(), getSchema());
         Table surfaceDataMapping = Table.of(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING.getName(),
                 getSchema());
@@ -313,8 +316,8 @@ public abstract class StatisticsHelper {
                 .join(geometryData).on(geometryData.column("id").eq(surfaceDataMapping.column("geometry_data_id")))
                 .fetch(1);
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, template, geometryData.column("feature_id"), Joins.LEFT_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, template, geometryData.column("feature_id"), Joins.LEFT_JOIN);
         }
 
         Select select = Select.newInstance()
@@ -344,13 +347,13 @@ public abstract class StatisticsHelper {
         }
     }
 
-    public Map<FeatureType, Long> getSurfaceDataCount(Validity validity) throws SQLException {
+    public Map<FeatureType, Long> getSurfaceDataCount(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getSurfaceDataCount(validity, connection);
+            return getSurfaceDataCount(scope, connection);
         }
     }
 
-    public Map<FeatureType, Long> getSurfaceDataCount(Validity validity, Connection connection) throws SQLException {
+    public Map<FeatureType, Long> getSurfaceDataCount(FeatureScope scope, Connection connection) throws SQLException {
         Table surfaceData = Table.of(org.citydb.database.schema.Table.SURFACE_DATA.getName(), getSchema());
         Column objectClassId = surfaceData.column("objectclass_id");
 
@@ -359,7 +362,7 @@ public abstract class StatisticsHelper {
                 .from(surfaceData)
                 .groupBy(objectClassId);
 
-        if (validity != Validity.ALL) {
+        if (scope != FeatureScope.ALL) {
             Table mapping = Table.of(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING.getName(), getSchema());
             Table geometryData = Table.of(org.citydb.database.schema.Table.GEOMETRY_DATA.getName(), getSchema());
 
@@ -368,7 +371,7 @@ public abstract class StatisticsHelper {
                     .from(mapping)
                     .join(geometryData).on(geometryData.column("id").eq(mapping.column("geometry_data_id")));
 
-            joinFeatures(validity, inner, geometryData.column("feature_id"), Joins.LEFT_JOIN);
+            joinFeatures(scope, inner, geometryData.column("feature_id"), Joins.LEFT_JOIN);
             select.where(surfaceData.column("id").in(inner));
         }
 
@@ -384,13 +387,13 @@ public abstract class StatisticsHelper {
         return surfaceDataCount;
     }
 
-    public boolean hasGlobalAppearances(Validity validity) throws SQLException {
+    public boolean hasGlobalAppearances(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return hasGlobalAppearances(validity, connection);
+            return hasGlobalAppearances(scope, connection);
         }
     }
 
-    public boolean hasGlobalAppearances(Validity validity, Connection connection) throws SQLException {
+    public boolean hasGlobalAppearances(FeatureScope scope, Connection connection) throws SQLException {
         Table appearance = Table.of(org.citydb.database.schema.Table.APPEARANCE.getName(), getSchema());
 
         Select select = Select.newInstance()
@@ -406,13 +409,13 @@ public abstract class StatisticsHelper {
         }
     }
 
-    public Map<String, Set<DataType>> getGenericAttributes(Validity validity) throws SQLException {
+    public Map<String, Set<DataType>> getGenericAttributes(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getGenericAttributes(validity, connection);
+            return getGenericAttributes(scope, connection);
         }
     }
 
-    public Map<String, Set<DataType>> getGenericAttributes(Validity validity, Connection connection) throws SQLException {
+    public Map<String, Set<DataType>> getGenericAttributes(FeatureScope scope, Connection connection) throws SQLException {
         Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
 
         Select select = Select.newInstance()
@@ -422,8 +425,8 @@ public abstract class StatisticsHelper {
                 .where(property.column("namespace_id")
                         .eq(getSchemaMapping().getNamespaceByURI(Namespaces.GENERICS).getId()));
 
-        if (validity != Validity.ALL) {
-            joinFeatures(validity, select, property.column("feature_id"), Joins.INNER_JOIN);
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
         }
 
         Map<String, Set<DataType>> genericAttributes = new IdentityHashMap<>();
@@ -440,27 +443,27 @@ public abstract class StatisticsHelper {
         return genericAttributes;
     }
 
-    public Pair<FeatureType, Long> getAddressCount(Validity validity) throws SQLException {
+    public Pair<FeatureType, Long> getAddressCount(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return getAddressCount(validity, connection);
+            return getAddressCount(scope, connection);
         }
     }
 
-    public Pair<FeatureType, Long> getAddressCount(Validity validity, Connection connection) throws SQLException {
+    public Pair<FeatureType, Long> getAddressCount(FeatureScope scope, Connection connection) throws SQLException {
         Table address = Table.of(org.citydb.database.schema.Table.ADDRESS.getName(), getSchema());
 
         Select select = Select.newInstance()
                 .select(Function.of("count", address.column("id")))
                 .from(address);
 
-        if (validity != Validity.ALL) {
+        if (scope != FeatureScope.ALL) {
             Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
 
             Select inner = Select.newInstance()
                     .select(property.column("val_address_id"))
                     .from(property);
 
-            joinFeatures(validity, inner, property.column("feature_id"), Joins.INNER_JOIN);
+            joinFeatures(scope, inner, property.column("feature_id"), Joins.INNER_JOIN);
             select.where(address.column("id").in(inner));
         }
 
@@ -477,13 +480,13 @@ public abstract class StatisticsHelper {
         }
     }
 
-    private void joinFeatures(Validity validity, Select select, Column column, String joinType) {
+    private void joinFeatures(FeatureScope scope, Select select, Column column, String joinType) {
         Table feature = Table.of(org.citydb.database.schema.Table.FEATURE.getName(), getSchema());
         Column terminationDate = feature.column("termination_date");
 
         select.join(Join.of(joinType, feature.column("id"), Operators.EQUAL_TO, column));
 
-        switch (validity) {
+        switch (scope) {
             case VALID -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
