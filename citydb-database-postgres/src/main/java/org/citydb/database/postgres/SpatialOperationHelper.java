@@ -21,8 +21,10 @@
 
 package org.citydb.database.postgres;
 
+import org.citydb.sqlbuilder.function.Cast;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
+import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.literal.StringLiteral;
 import org.citydb.sqlbuilder.operation.BinaryComparisonOperation;
@@ -34,66 +36,72 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public Function extent(ScalarExpression operand) {
-        return Function.of("st_3dextent", operand);
+        return Function.of("st_3dextent", cast(operand));
     }
 
     @Override
     public Function transform(ScalarExpression operand, int srid) {
-        return Function.of("st_transform", operand, IntegerLiteral.of(srid));
+        return Function.of("st_transform", cast(operand), IntegerLiteral.of(srid));
     }
 
     @Override
     public BooleanExpression bbox(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return BinaryComparisonOperation.of(leftOperand, "&&", rightOperand);
+        return BinaryComparisonOperation.of(cast(leftOperand), "&&", cast(rightOperand));
     }
 
     @Override
     public BooleanExpression contains(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_contains", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_contains", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression crosses(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_crosses", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_crosses", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression disjoint(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_disjoint", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_disjoint", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression equals(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_equals", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_equals", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression intersects(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_intersects", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_intersects", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression overlaps(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_overlaps", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_overlaps", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression touches(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_touches", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_touches", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression within(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_within", leftOperand, rightOperand), TRUE);
+        return Operators.eq(Function.of("st_within", cast(leftOperand), cast(rightOperand)), TRUE);
     }
 
     @Override
     public BooleanExpression dWithin(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
-        return Operators.eq(Function.of("st_dwithin", leftOperand, rightOperand, distance), TRUE);
+        return Operators.eq(Function.of("st_dwithin", cast(leftOperand), cast(rightOperand), distance), TRUE);
     }
 
     @Override
     public BooleanExpression beyond(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
-        return Operators.ne(Function.of("st_dwithin", leftOperand, rightOperand, distance), TRUE);
+        return Operators.ne(Function.of("st_dwithin", cast(leftOperand), cast(rightOperand), distance), TRUE);
+    }
+
+    private ScalarExpression cast(ScalarExpression expression) {
+        return expression instanceof Placeholder ?
+                Cast.of(expression, "geometry") :
+                expression;
     }
 }
