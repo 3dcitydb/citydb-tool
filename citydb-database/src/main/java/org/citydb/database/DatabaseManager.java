@@ -129,8 +129,7 @@ public class DatabaseManager {
     public void printDatabaseMetadata(Consumer<String> consumer) {
         if (isConnected()) {
             consumer.accept("3D City Database: " + adapter.getDatabaseMetadata().getVersion());
-            consumer.accept("DBMS: " + adapter.getDatabaseMetadata().getVendorProductName() + " " +
-                    adapter.getDatabaseMetadata().getVendorProductVersion());
+            consumer.accept("DBMS: " + adapter.getDatabaseMetadata().getVendorProductString());
             consumer.accept("Connection: " + adapter.getConnectionDetails().toConnectString());
             consumer.accept("Schema: " + adapter.getConnectionDetails().getSchema());
             consumer.accept("SRID: " + adapter.getDatabaseMetadata().getSpatialReference().getSRID());

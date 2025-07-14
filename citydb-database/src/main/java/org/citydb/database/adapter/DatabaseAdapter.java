@@ -78,7 +78,9 @@ public abstract class DatabaseAdapter {
             databaseMetadata = DatabaseMetadata.of(version,
                     getDatabaseSrs(connection),
                     isChangelogEnabled(connectionDetails.getSchema(), connection),
-                    connection.getMetaData());
+                    connection.getMetaData(),
+                    schemaAdapter::getVendorProductString,
+                    schemaAdapter.getDatabaseProperties(version, connection));
         }
 
         try {

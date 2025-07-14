@@ -24,6 +24,7 @@ package org.citydb.database.postgres;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.srs.SpatialReferenceType;
@@ -43,13 +44,17 @@ import org.citydb.sqlbuilder.util.PlainText;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
+    protected static final String PROPERTY_POSTGIS = "postgis";
+    protected static final String PROPERTY_POSTGIS_SFCGAL = "postgis_sfcgal";
+
     private final LazyCheckedInitializer<String, IOException> featureHierarchyQuery;
     private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
     private final OperationHelper operationHelper;
@@ -267,6 +272,43 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 "and event_object_table = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
                 "and trigger_name = 'feature_changelog_trigger'" +
                 ")";
+    }
+
+    @Override
+    protected List<DatabaseProperty> getDatabaseProperties(Version version, Connection connection) throws SQLException {
+        List<DatabaseProperty> properties = new ArrayList<>();
+        if (version.compareTo(Version.of(5, 1, 0)) < 0) {
+            properties.add(getDatabaseProperty(PROPERTY_POSTGIS, "PostGIS",
+                    Select.newInstance().select(Function.of("postgis_lib_version")), connection));
+            properties.add(getDatabaseProperty(PROPERTY_POSTGIS_SFCGAL, "SFCGAL",
+                    Select.newInstance().select(Function.of("postgis_sfcgal_version")), connection));
+        } else {
+            try (Statement stmt = connection.createStatement();
+                 ResultSet rs = stmt.executeQuery("select id, name, value from citydb_pkg.db_properties()")) {
+                while (rs.next()) {
+                    String id = rs.getString(1);
+                    String name = rs.getString(2);
+                    if (id != null && name != null) {
+                        properties.add(DatabaseProperty.of(id, name, rs.getString(3)));
+                    }
+                }
+            }
+        }
+
+        return properties;
+    }
+
+    private DatabaseProperty getDatabaseProperty(String id, String name, Select value, Connection connection) {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(value.toSql())) {
+            if (rs.next()) {
+                return DatabaseProperty.of(id, name, rs.getString(1));
+            }
+        } catch (SQLException e) {
+            //
+        }
+
+        return DatabaseProperty.of(id, name);
     }
 
     private String readFeatureHierarchyQuery() throws IOException {
