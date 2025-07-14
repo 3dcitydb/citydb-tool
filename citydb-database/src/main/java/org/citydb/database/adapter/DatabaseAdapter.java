@@ -30,7 +30,10 @@ import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.schema.SchemaException;
 import org.citydb.database.srs.SpatialReference;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -72,14 +75,10 @@ public abstract class DatabaseAdapter {
                         "' is not a 3DCityDB schema.");
             }
 
-            DatabaseMetaData vendorMetadata = connection.getMetaData();
             databaseMetadata = DatabaseMetadata.of(version,
                     getDatabaseSrs(connection),
                     isChangelogEnabled(connectionDetails.getSchema(), connection),
-                    vendorMetadata.getDatabaseProductName(),
-                    vendorMetadata.getDatabaseProductVersion(),
-                    vendorMetadata.getDatabaseMajorVersion(),
-                    vendorMetadata.getDatabaseMinorVersion());
+                    connection.getMetaData());
         }
 
         try {

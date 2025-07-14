@@ -24,6 +24,9 @@ package org.citydb.database.metadata;
 import org.citydb.core.version.Version;
 import org.citydb.database.srs.SpatialReference;
 
+import java.sql.DatabaseMetaData;
+import java.sql.SQLException;
+
 public class DatabaseMetadata {
     private final Version version;
     private final SpatialReference spatialReference;
@@ -34,22 +37,19 @@ public class DatabaseMetadata {
     private final int vendorMinorVersion;
 
     private DatabaseMetadata(
-            Version version, SpatialReference spatialReference, boolean changelogEnabled,
-            String vendorProductName, String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
+            Version version, SpatialReference spatialReference, boolean changelogEnabled, DatabaseMetaData metadata) throws SQLException {
         this.version = version;
         this.spatialReference = spatialReference;
         this.changelogEnabled = changelogEnabled;
-        this.vendorProductName = vendorProductName;
-        this.vendorProductVersion = vendorProductVersion;
-        this.vendorMajorVersion = vendorMajorVersion;
-        this.vendorMinorVersion = vendorMinorVersion;
+        this.vendorProductName = metadata.getDatabaseProductName();
+        this.vendorProductVersion = metadata.getDatabaseProductVersion();
+        this.vendorMajorVersion = metadata.getDatabaseMajorVersion();
+        this.vendorMinorVersion = metadata.getDatabaseMinorVersion();
     }
 
     public static DatabaseMetadata of(
-            Version version, SpatialReference spatialReference, boolean changelogEnabled,
-            String vendorProductName, String vendorProductVersion, int vendorMajorVersion, int vendorMinorVersion) {
-        return new DatabaseMetadata(version, spatialReference, changelogEnabled, vendorProductName,
-                vendorProductVersion, vendorMajorVersion, vendorMinorVersion);
+            Version version, SpatialReference spatialReference, boolean changelogEnabled, DatabaseMetaData metadata) throws SQLException {
+        return new DatabaseMetadata(version, spatialReference, changelogEnabled, metadata);
     }
 
     public Version getVersion() {
