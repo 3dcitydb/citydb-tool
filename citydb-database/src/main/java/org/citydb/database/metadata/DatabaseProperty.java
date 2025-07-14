@@ -22,6 +22,7 @@
 package org.citydb.database.metadata;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class DatabaseProperty {
     private final String id;
@@ -50,8 +51,8 @@ public class DatabaseProperty {
         return name;
     }
 
-    public String getValue() {
-        return value;
+    public Optional<String> getValue() {
+        return Optional.ofNullable(value);
     }
 
     @Override
