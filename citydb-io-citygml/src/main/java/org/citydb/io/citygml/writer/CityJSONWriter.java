@@ -131,6 +131,8 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
                     countLatch.decrement();
                 }
             });
+        } else {
+            result.cancel(true);
         }
 
         return result;

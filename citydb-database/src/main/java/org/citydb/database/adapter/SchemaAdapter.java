@@ -22,6 +22,8 @@
 package org.citydb.database.adapter;
 
 import org.citydb.core.version.Version;
+import org.citydb.database.metadata.DatabaseMetadata;
+import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.*;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.util.*;
@@ -29,8 +31,13 @@ import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
@@ -102,5 +109,20 @@ public abstract class SchemaAdapter {
 
     public String getCreateIndex(Index index) {
         return getCreateIndex(index, false);
+    }
+
+    protected String getVendorProductString(DatabaseMetadata metadata) {
+        String productString = metadata.getVendorProductName() + " " + metadata.getVendorProductVersion();
+        if (metadata.hasProperties()) {
+            productString += " (" + metadata.getProperties().values().stream()
+                    .map(DatabaseProperty::toString)
+                    .collect(Collectors.joining(", ")) + ")";
+        }
+
+        return productString;
+    }
+
+    protected List<DatabaseProperty> getDatabaseProperties(Version version, Connection connection) throws SQLException {
+        return Collections.emptyList();
     }
 }
