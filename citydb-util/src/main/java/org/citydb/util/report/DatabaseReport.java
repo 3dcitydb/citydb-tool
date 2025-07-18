@@ -1,8 +1,27 @@
+/*
+ * citydb-tool - Command-line tool for the 3D City Database
+ * https://www.3dcitydb.org/
+ *
+ * Copyright 2022-2025
+ * virtualcitysystems GmbH, Germany
+ * https://vc.systems/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.citydb.util.report;
 
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import org.citydb.core.time.TimeHelper;
 import org.citydb.core.tuple.Pair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseSize;
@@ -12,13 +31,11 @@ import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.util.StatisticsHelper;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
-import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.GeometryType;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 public class DatabaseReport {
     private final ReportOptions options;
@@ -34,6 +51,7 @@ public class DatabaseReport {
     private final Map<String, String> codeLists = new TreeMap<>();
     private final Map<String, Envelope> extents = new TreeMap<>();
     private final Map<String, String> modules = new TreeMap<>();
+    private final Envelope extent;
 
     private long addressCount;
     private long implicitGeometryCount;
@@ -42,11 +60,13 @@ public class DatabaseReport {
     private boolean hasGeoreferencedTextures;
     private boolean hasGlobalAppearances;
     private DatabaseSize databaseSize;
+    private Envelope wgs84Extent;
 
     DatabaseReport(ReportOptions options, DatabaseAdapter adapter) {
         this.options = options;
         this.adapter = adapter;
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
+        extent = Envelope.empty().setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID());
     }
 
     public static DatabaseReport build(ReportOptions options, DatabaseAdapter adapter) throws DatabaseReportException {
@@ -68,6 +88,8 @@ public class DatabaseReport {
                 this.features.merge(name, info.count(), Long::sum);
                 extents.merge(name, info.extent(), Envelope::include);
             });
+
+            extents.values().forEach(extent::include);
         }
     }
 
@@ -104,12 +126,20 @@ public class DatabaseReport {
         return addressCount > 0;
     }
 
+    public long getAddressCount() {
+        return addressCount;
+    }
+
     void setAddressCount(long addressCount) {
         this.addressCount = addressCount > 0 ? addressCount : 0;
     }
 
     public boolean hasImplicitGeometries() {
         return implicitGeometryCount > 0;
+    }
+
+    public long getImplicitGeometryCount() {
+        return implicitGeometryCount;
     }
 
     void setImplicitGeometryCount(long implicitGeometryCount) {
@@ -228,12 +258,32 @@ public class DatabaseReport {
         }
     }
 
+    public Map<String, String> getModules() {
+        return modules;
+    }
+
     public Optional<DatabaseSize> getDatabaseSize() {
         return Optional.ofNullable(databaseSize);
     }
 
     void setDatabaseSize(DatabaseSize databaseSize) {
         this.databaseSize = databaseSize;
+    }
+
+    public Envelope getExtent() {
+        return extent;
+    }
+
+    void setWgs84Extent(Envelope wgs84Extent) {
+        this.wgs84Extent = wgs84Extent != null ?
+                wgs84Extent.force2D() :
+                null;
+    }
+
+    public Envelope getWgs84Extent() {
+        return wgs84Extent != null ?
+                wgs84Extent :
+                Envelope.empty().force2D();
     }
 
     private String getQName(Name name) {
@@ -245,197 +295,10 @@ public class DatabaseReport {
     }
 
     public JSONObject toJSON() {
-        JSONObject report = new JSONObject();
-
-        report.fluentPut("metadata", buildMetadata())
-                .fluentPut("summary", buildSummary())
-                .fluentPut("database", buildDatabase());
-
-        if (!features.isEmpty()) {
-            report.put("features", buildFeatures());
-        }
-
-        if (!geometries.isEmpty()) {
-            report.put("geometries", buildGeometries());
-        }
-
-        if (!appearances.isEmpty()) {
-            report.put("appearances", buildAppearances());
-        }
-
-        if (options.isIncludeGenericAttributes()) {
-            report.put("genericAttributes", genericAttributes);
-        }
-
-        if (!ades.isEmpty()) {
-            report.put("extensions", buildExtensions());
-        }
-
-        if (!codeLists.isEmpty()) {
-            report.put("codeLists", buildCodeLists());
-        }
-
-        if (!modules.isEmpty()) {
-            report.put("modules", modules);
-        }
-
-        return report;
+        return new ReportJsonBuilder(this, options, adapter).build();
     }
 
-    private JSONObject buildMetadata() {
-        String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
-                .format(TimeHelper.DATE_TIME_FORMATTER);
-        String featureScope = options.isOnlyPropertiesOfValidFeatures() ? "valid" : "all";
-
-        return new JSONObject()
-                .fluentPut("reportGenerated", timestamp)
-                .fluentPut("featureScope", featureScope);
-    }
-
-    private JSONObject buildSummary() {
-        JSONObject summary = new JSONObject();
-        List<String> topLevelFeatures = features.keySet().stream()
-                .filter(name -> schemaMapping.getFeatureType(PrefixedName.of(name)).isTopLevel())
-                .toList();
-        List<Double> extent = extents.values().stream()
-                .reduce(Envelope::include)
-                .map(envelope -> List.of(
-                        envelope.getLowerCorner().getX(),
-                        envelope.getLowerCorner().getY(),
-                        envelope.getLowerCorner().getZ(),
-                        envelope.getUpperCorner().getX(),
-                        envelope.getUpperCorner().getY(),
-                        envelope.getUpperCorner().getZ()))
-                .orElse(null);
-
-        summary.fluentPut("topLevelFeatures", topLevelFeatures)
-                .fluentPut("lods", new ArrayList<>(lods.keySet()))
-                .fluentPut("themes", new ArrayList<>(appearances.keySet()))
-                .fluentPut("crs", buildCrs())
-                .fluentPut("extent", extent)
-                .fluentPut("hasFeatures", !features.isEmpty())
-                .fluentPut("hasTerminatedFeatures", !terminatedFeatures.isEmpty())
-                .fluentPut("hasAddresses", addressCount > 0)
-                .fluentPut("hasGeometries", !geometries.isEmpty())
-                .fluentPut("hasImplicitGeometries", implicitGeometryCount > 0)
-                .fluentPut("hasAppearances", !appearances.isEmpty())
-                .fluentPut("hasGlobalAppearances", hasGlobalAppearances)
-                .fluentPut("hasMaterials", hasMaterials)
-                .fluentPut("hasTextures", hasTextures)
-                .fluentPut("hasGeoreferencedTextures", hasGeoreferencedTextures);
-
-        if (options.isIncludeGenericAttributes()) {
-            summary.put("hasGenericAttributes", !genericAttributes.isEmpty());
-        }
-
-        return summary.fluentPut("hasExtensions", !ades.isEmpty())
-                .fluentPut("hasCodeLists", !codeLists.isEmpty());
-    }
-
-    private JSONObject buildDatabase() {
-        JSONObject database = new JSONObject();
-        String product = adapter.getDatabaseMetadata().getVendorProductName() + " " +
-                adapter.getDatabaseMetadata().getVendorProductVersion();
-
-        database.fluentPut("version", adapter.getDatabaseMetadata().getVersion().toString())
-                .fluentPut("product", product)
-                .fluentPut("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled())
-                .fluentPut("connection", buildDatabaseConnection());
-
-        if (options.isIncludeDatabaseSize() && databaseSize != null) {
-            database.put("size", buildDatabaseSize());
-        }
-
-        return database;
-    }
-
-    private JSONObject buildFeatures() {
-        JSONObject features = new JSONObject();
-        long featureCount = sum(this.features.values());
-        long topLevelFeatureCount = this.features.entrySet().stream()
-                .filter(e -> schemaMapping.getFeatureType(PrefixedName.of(e.getKey())).isTopLevel())
-                .mapToLong(Map.Entry::getValue).sum();
-        long terminatedFeatureCount = sum(terminatedFeatures.values());
-
-        return features.fluentPut("featureCount", featureCount)
-                .fluentPut("topLevelFeatureCount", topLevelFeatureCount)
-                .fluentPut("terminatedFeatureCount", terminatedFeatureCount)
-                .fluentPut("addressCount", addressCount)
-                .fluentPut("byType", this.features)
-                .fluentPut("byLod", lods);
-    }
-
-    private JSONObject buildGeometries() {
-        JSONObject geometries = new JSONObject();
-        long geometryCount = sum(this.geometries.values());
-
-        return geometries.fluentPut("geometryCount", geometryCount)
-                .fluentPut("implicitGeometryCount", implicitGeometryCount)
-                .fluentPut("byType", this.geometries);
-    }
-
-    private JSONObject buildAppearances() {
-        JSONObject appearances = new JSONObject();
-        long appearanceCount = sum(this.appearances.values());
-
-        return appearances.fluentPut("appearanceCount", appearanceCount)
-                .fluentPut("hasGlobalAppearances", hasGlobalAppearances)
-                .fluentPut("hasMaterials", hasMaterials)
-                .fluentPut("hasTextures", hasTextures)
-                .fluentPut("hasGeoreferencedTextures", hasGeoreferencedTextures)
-                .fluentPut("byTheme", this.appearances);
-    }
-
-    private JSONArray buildExtensions() {
-        JSONArray extensions = new JSONArray();
-        ades.forEach((k, v) -> extensions.add(new JSONObject()
-                .fluentPut("name", k)
-                .fluentPut("description", v.first())
-                .fluentPut("extent", v.second())));
-
-        return extensions;
-    }
-
-    private JSONArray buildCodeLists() {
-        JSONArray codeLists = new JSONArray();
-        this.codeLists.forEach((k, v) -> codeLists.add(new JSONObject()
-                .fluentPut("identifier", k)
-                .fluentPut("type", v)));
-
-        return codeLists;
-    }
-
-    private JSONObject buildCrs() {
-        return new JSONObject()
-                .fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                .fluentPut("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
-                .fluentPut("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
-    }
-
-    private JSONObject buildDatabaseConnection() {
-        return new JSONObject()
-                .fluentPut("host", adapter.getConnectionDetails().getHost())
-                .fluentPut("port", adapter.getConnectionDetails().getPort())
-                .fluentPut("database", adapter.getConnectionDetails().getDatabase())
-                .fluentPut("schema", adapter.getConnectionDetails().getSchema())
-                .fluentPut("user", adapter.getConnectionDetails().getUser());
-    }
-
-    private JSONObject buildDatabaseSize() {
-        JSONObject size = new JSONObject();
-        Map<String, Long> byTable = databaseSize.getTableSizes().entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> e.getKey().toString(),
-                        Map.Entry::getValue,
-                        (k1, k2) -> k1,
-                        TreeMap::new));
-
-        return size.fluentPut("databaseSize", databaseSize.getDatabaseSize())
-                .fluentPut("schemaSize", databaseSize.getSchemaSize())
-                .fluentPut("byTable", byTable);
-    }
-
-    private long sum(Collection<Long> values) {
-        return values.stream().mapToLong(Long::longValue).sum();
+    public void print(Consumer<String> consumer) {
+        new ReportTextFormatter(options).format(toJSON(), consumer);
     }
 }
