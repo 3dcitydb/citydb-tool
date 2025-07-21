@@ -22,6 +22,7 @@
 package org.citydb.util.report;
 
 import org.citydb.core.concurrent.CountLatch;
+import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.tuple.Pair;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -78,7 +79,9 @@ public class DatabaseReportBuilder {
         }
 
         DatabaseReport execute() throws DatabaseReportException {
-            service = Executors.newFixedThreadPool(10);
+            service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
+                    options.getNumberOfThreads() :
+                    4);
             countLatch = new CountLatch();
 
             DatabaseReport report = new DatabaseReport(options, adapter);

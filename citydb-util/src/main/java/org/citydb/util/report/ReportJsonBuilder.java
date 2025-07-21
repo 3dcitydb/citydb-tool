@@ -27,7 +27,6 @@ import org.citydb.core.time.TimeHelper;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseSize;
-import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.Envelope;
@@ -39,38 +38,37 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ReportJsonBuilder {
-    private final DatabaseReport report;
-    private final ReportOptions options;
-    private final DatabaseAdapter adapter;
-    private final SchemaMapping schemaMapping;
 
-    ReportJsonBuilder(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
-        this.report = report;
-        this.options = options;
-        this.adapter = adapter;
-        schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
+    protected ReportJsonBuilder() {
     }
 
-    JSONObject build() {
+    public static ReportJsonBuilder newInstance() {
+        return new ReportJsonBuilder();
+    }
+
+    public JSONObject build(DatabaseReport report) {
+        ReportOptions options = report.getOptions();
+        DatabaseAdapter adapter = report.getAdapter();
+
         JSONObject jsonReport = new JSONObject();
-        jsonReport.fluentPut("metadata", buildMetadata())
-                .fluentPut("summary", buildSummary())
-                .fluentPut("database", buildDatabase())
-                .fluentPut("features", buildFeatures())
-                .fluentPut("geometries", buildGeometries())
-                .fluentPut("appearances", buildAppearances())
-                .fluentPut("extensions", buildExtensions())
-                .fluentPut("codeLists", buildCodeLists())
+        jsonReport.fluentPut("metadata", buildMetadata(options))
+                .fluentPut("summary", buildSummary(report, adapter))
+                .fluentPut("database", buildDatabase(report, options, adapter))
+                .fluentPut("features", buildFeatures(report, adapter))
+                .fluentPut("geometries", buildGeometries(report))
+                .fluentPut("appearances", buildAppearances(report))
+                .fluentPut("extensions", buildExtensions(report))
+                .fluentPut("codeLists", buildCodeLists(report))
                 .fluentPut("modules", new JSONObject(report.getModules()));
 
         if (options.isIncludeGenericAttributes()) {
-            jsonReport.put("genericAttributes", buildGenericAttributes());
+            jsonReport.put("genericAttributes", buildGenericAttributes(report));
         }
 
         return jsonReport;
     }
 
-    private JSONObject buildMetadata() {
+    private JSONObject buildMetadata(ReportOptions options) {
         String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
                 .format(TimeHelper.DATE_TIME_FORMATTER);
         String featureScope = options.isOnlyPropertiesOfValidFeatures() ? "valid" : "all";
@@ -81,27 +79,28 @@ public class ReportJsonBuilder {
                 .fluentPut("genericAttributesProcessed", options.isIncludeGenericAttributes());
     }
 
-    private JSONObject buildSummary() {
+    private JSONObject buildSummary(DatabaseReport report, DatabaseAdapter adapter) {
         JSONObject summary = new JSONObject();
         List<String> topLevelFeatures = report.getFeatures().keySet().stream()
-                .filter(name -> schemaMapping.getFeatureType(PrefixedName.of(name)).isTopLevel())
+                .filter(name -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(name))
+                        .isTopLevel())
                 .toList();
 
         return summary.fluentPut("topLevelFeatures", topLevelFeatures)
                 .fluentPut("lods", new JSONArray(report.getLods().keySet()))
                 .fluentPut("themes", new JSONArray(report.getAppearances().keySet()))
-                .fluentPut("crs", buildCrs())
+                .fluentPut("crs", buildCrs(adapter))
                 .fluentPut("extent", convertExtent(report.getExtent(), 4))
                 .fluentPut("wgs84Extent", convertExtent(report.getWgs84Extent(), 6));
     }
 
-    private JSONObject buildDatabase() {
+    private JSONObject buildDatabase(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
         JSONObject database = new JSONObject();
         database.fluentPut("type", DatabaseConstants.CITYDB_NAME)
                 .fluentPut("version", adapter.getDatabaseMetadata().getVersion().toString())
-                .fluentPut("dbms", buildDbms())
+                .fluentPut("dbms", buildDbms(adapter))
                 .fluentPut("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled())
-                .fluentPut("connection", buildDatabaseConnection());
+                .fluentPut("connection", buildDatabaseConnection(adapter));
 
         DatabaseSize databaseSize = report.getDatabaseSize().orElse(null);
         if (options.isIncludeDatabaseSize() && databaseSize != null) {
@@ -111,19 +110,19 @@ public class ReportJsonBuilder {
         return database;
     }
 
-    private JSONObject buildDbms() {
+    private JSONObject buildDbms(DatabaseAdapter adapter) {
         JSONObject dbms = new JSONObject();
         dbms.fluentPut("type", adapter.getDatabaseMetadata().getVendorProductName())
                 .fluentPut("version", adapter.getDatabaseMetadata().getVendorProductVersion());
 
         if (adapter.getDatabaseMetadata().hasProperties()) {
-            dbms.put("properties", buildDbmsProperties());
+            dbms.put("properties", buildDbmsProperties(adapter));
         }
 
         return dbms;
     }
 
-    private JSONObject buildDbmsProperties() {
+    private JSONObject buildDbmsProperties(DatabaseAdapter adapter) {
         JSONObject properties = new JSONObject();
         adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> {
             properties.putObject(id)
@@ -134,11 +133,12 @@ public class ReportJsonBuilder {
         return properties;
     }
 
-    private JSONObject buildFeatures() {
+    private JSONObject buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
         JSONObject features = new JSONObject();
         long featureCount = sum(report.getFeatures().values());
         long topLevelFeatureCount = report.getFeatures().entrySet().stream()
-                .filter(e -> schemaMapping.getFeatureType(PrefixedName.of(e.getKey())).isTopLevel())
+                .filter(e -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(e.getKey()))
+                        .isTopLevel())
                 .mapToLong(Map.Entry::getValue).sum();
         long terminatedFeatureCount = sum(report.getTerminatedFeatures().values());
 
@@ -150,7 +150,7 @@ public class ReportJsonBuilder {
                 .fluentPut("byLod", new JSONObject(report.getLods()));
     }
 
-    private JSONObject buildGeometries() {
+    private JSONObject buildGeometries(DatabaseReport report) {
         JSONObject geometries = new JSONObject();
         long geometryCount = sum(report.getGeometries().values());
 
@@ -159,7 +159,7 @@ public class ReportJsonBuilder {
                 .fluentPut("byType", new JSONObject(report.getGeometries()));
     }
 
-    private JSONObject buildAppearances() {
+    private JSONObject buildAppearances(DatabaseReport report) {
         JSONObject appearances = new JSONObject();
         long appearanceCount = sum(report.getAppearances().values());
 
@@ -171,13 +171,13 @@ public class ReportJsonBuilder {
                 .fluentPut("byTheme", new JSONObject(report.getAppearances()));
     }
 
-    private JSONObject buildGenericAttributes() {
+    private JSONObject buildGenericAttributes(DatabaseReport report) {
         JSONObject genericAttributes = new JSONObject();
         report.getGenericAttributes().forEach((name, types) -> genericAttributes.put(name, new JSONArray(types)));
         return genericAttributes;
     }
 
-    private JSONArray buildExtensions() {
+    private JSONArray buildExtensions(DatabaseReport report) {
         JSONArray extensions = new JSONArray();
         report.getADEs().forEach((name, value) -> extensions.add(new JSONObject()
                 .fluentPut("name", name)
@@ -187,7 +187,7 @@ public class ReportJsonBuilder {
         return extensions;
     }
 
-    private JSONArray buildCodeLists() {
+    private JSONArray buildCodeLists(DatabaseReport report) {
         JSONArray codeLists = new JSONArray();
         report.getCodeLists().forEach((idenifier, type) -> codeLists.add(new JSONObject()
                 .fluentPut("identifier", idenifier)
@@ -196,14 +196,14 @@ public class ReportJsonBuilder {
         return codeLists;
     }
 
-    private JSONObject buildCrs() {
+    private JSONObject buildCrs(DatabaseAdapter adapter) {
         return new JSONObject()
                 .fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
                 .fluentPut("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
                 .fluentPut("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
     }
 
-    private JSONObject buildDatabaseConnection() {
+    private JSONObject buildDatabaseConnection(DatabaseAdapter adapter) {
         return new JSONObject()
                 .fluentPut("host", adapter.getConnectionDetails().getHost())
                 .fluentPut("port", adapter.getConnectionDetails().getPort())

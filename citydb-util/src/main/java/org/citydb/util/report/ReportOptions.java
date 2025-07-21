@@ -21,13 +21,22 @@
 
 package org.citydb.util.report;
 
+import org.citydb.config.SerializableConfig;
+
+@SerializableConfig(name = "reportOptions")
 public class ReportOptions {
+    private int numberOfThreads;
     private boolean onlyPropertiesOfValidFeatures;
     private boolean includeGenericAttributes;
     private boolean includeDatabaseSize;
 
-    public static ReportOptions defaults() {
-        return new ReportOptions();
+    public int getNumberOfThreads() {
+        return numberOfThreads;
+    }
+
+    public ReportOptions setNumberOfThreads(int numberOfThreads) {
+        this.numberOfThreads = numberOfThreads;
+        return this;
     }
 
     public boolean isOnlyPropertiesOfValidFeatures() {

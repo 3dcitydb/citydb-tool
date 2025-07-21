@@ -73,6 +73,14 @@ public class DatabaseReport {
         return new DatabaseReportBuilder().build(options, adapter);
     }
 
+    ReportOptions getOptions() {
+        return options;
+    }
+
+    DatabaseAdapter getAdapter() {
+        return adapter;
+    }
+
     public boolean hasFeatures() {
         return !features.isEmpty();
     }
@@ -295,10 +303,10 @@ public class DatabaseReport {
     }
 
     public JSONObject toJSON() {
-        return new ReportJsonBuilder(this, options, adapter).build();
+        return new ReportJsonBuilder().build(this);
     }
 
     public void print(Consumer<String> consumer) {
-        new ReportTextFormatter(options).format(toJSON(), consumer);
+        new ReportTextBuilder().build(this, consumer);
     }
 }

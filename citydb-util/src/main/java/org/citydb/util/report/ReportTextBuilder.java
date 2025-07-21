@@ -30,55 +30,104 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public class ReportTextFormatter {
-    private final ReportOptions options;
+public class ReportTextBuilder {
+    private String titlePrefix = "=== ";
+    private String titleSuffix = " ===";
+    private String listMarker = "  - ";
+    private String quote = "\"";
+    private boolean withSectionSpacing;
+    private boolean withEndOfReport = true;
 
-    ReportTextFormatter(ReportOptions options) {
-        this.options = options;
+    protected ReportTextBuilder() {
     }
 
-    void format(JSONObject report, Consumer<String> consumer) {
+    public static ReportTextBuilder newInstance() {
+        return new ReportTextBuilder();
+    }
+
+    public ReportTextBuilder withTitlePrefix(String titlePrefix) {
+        this.titlePrefix = titlePrefix != null ? titlePrefix : this.titlePrefix;
+        return this;
+    }
+
+    public ReportTextBuilder withTitleSuffix(String titleSuffix) {
+        this.titleSuffix = titleSuffix != null ? titleSuffix : this.titleSuffix;
+        return this;
+    }
+
+    public ReportTextBuilder withListMarker(String listMarker) {
+        this.listMarker = listMarker != null ? listMarker : this.listMarker;
+        return this;
+    }
+
+    public ReportTextBuilder withQuote(String quote) {
+        this.quote = quote != null ? quote : this.quote;
+        return this;
+    }
+
+    public ReportTextBuilder withSectionSpacing(boolean withSectionSpacing) {
+        this.withSectionSpacing = withSectionSpacing;
+        return this;
+    }
+
+    public ReportTextBuilder withAddEndOfReport(boolean withEndOfReport) {
+        this.withEndOfReport = withEndOfReport;
+        return this;
+    }
+
+    public void build(DatabaseReport report, Consumer<String> consumer) {
+        JSONObject jsonReport = report.toJSON();
+        ReportOptions options = report.getOptions();
+
         consumer.accept(getTitle("Overview"));
-        formatSummary(getJSONObject(report, "summary"), consumer);
+        buildSummary(getJSONObject(jsonReport, "summary"), consumer);
 
         if (options.isIncludeDatabaseSize()) {
-            consumer.accept("");
+            addSectionSpacing(consumer);
             consumer.accept(getTitle("Database Size"));
-            formatDatabaseSize(getJSONObject(getJSONObject(report, "database"), "size"), consumer);
+            buildDatabaseSize(getJSONObject(getJSONObject(jsonReport, "database"), "size"), consumer);
         }
 
-        consumer.accept("");
+        addSectionSpacing(consumer);
         consumer.accept(getTitle("Feature Statistics"));
-        formatFeatures(getJSONObject(report, "features"), consumer);
-        consumer.accept("");
+        buildFeatures(getJSONObject(jsonReport, "features"), consumer);
+
+        addSectionSpacing(consumer);
         consumer.accept(getTitle("Geometry Statistics"));
-        formatGeometries(getJSONObject(report, "geometries"), consumer);
-        consumer.accept("");
+        buildGeometries(getJSONObject(jsonReport, "geometries"), consumer);
+
+        addSectionSpacing(consumer);
         consumer.accept(getTitle("Appearance Statistics"));
-        formatAppearances(getJSONObject(report, "appearances"), consumer);
-        consumer.accept("");
+        buildAppearances(getJSONObject(jsonReport, "appearances"), consumer);
+
+        addSectionSpacing(consumer);
         consumer.accept(getTitle("Extensions"));
-        formatExtensions(getJSONArray(report, "extensions"), consumer);
-        consumer.accept("");
+        buildExtensions(getJSONArray(jsonReport, "extensions"), consumer);
+
+        addSectionSpacing(consumer);
         consumer.accept(getTitle("Codelists"));
-        formatCodelists(getJSONArray(report, "codeLists"), consumer);
+        buildCodelists(getJSONArray(jsonReport, "codeLists"), consumer);
 
         if (options.isIncludeGenericAttributes()) {
-            consumer.accept("");
+            addSectionSpacing(consumer);
             consumer.accept(getTitle("Generic Attributes"));
-            formatGenericAttributes(getJSONObject(report, "genericAttributes"), consumer);
+            buildGenericAttributes(getJSONObject(jsonReport, "genericAttributes"), consumer);
+        }
+
+        if (withEndOfReport) {
+            buildEndOfReport(consumer);
         }
     }
 
-    private void formatSummary(JSONObject summary, Consumer<String> consumer) {
+    private void buildSummary(JSONObject summary, Consumer<String> consumer) {
         consumer.accept("Top-level features: " + join(getJSONArray(summary, "topLevelFeatures"), String.class));
-        consumer.accept("Levels of detail: " + join(getJSONArray(summary, "lods"), "\"", String.class));
-        consumer.accept("Themes: " + join(getJSONArray(summary, "themes"), "\"", String.class));
+        consumer.accept("Levels of detail: " + quoteAndJoin(getJSONArray(summary, "lods"), String.class));
+        consumer.accept("Themes: " + quoteAndJoin(getJSONArray(summary, "themes"), String.class));
         consumer.accept("Extent: " + join(getJSONArray(summary, "extent"), Double.class));
         consumer.accept("WGS84 extent: " + join(getJSONArray(summary, "wgs84Extent"), Double.class));
     }
 
-    private void formatDatabaseSize(JSONObject databaseSize, Consumer<String> consumer) {
+    private void buildDatabaseSize(JSONObject databaseSize, Consumer<String> consumer) {
         Map<String, Long> tableSizes = getJSONObject(databaseSize, "byTable").to(new TypeReference<>() {
         }.getType());
 
@@ -87,10 +136,10 @@ public class ReportTextFormatter {
         consumer.accept("Content Tables (by size):");
         tableSizes.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                .forEach(e -> consumer.accept(getListItem(e.getKey()) + ": " + DatabaseSize.formatSize(e.getValue())));
+                .forEach(e -> consumer.accept(getListItem(e.getKey() + ": " + DatabaseSize.formatSize(e.getValue()))));
     }
 
-    private void formatFeatures(JSONObject features, Consumer<String> consumer) {
+    private void buildFeatures(JSONObject features, Consumer<String> consumer) {
         consumer.accept("Total features: " + features.getIntValue("featureCount"));
         consumer.accept("Top-level features: " + features.getIntValue("topLevelFeatureCount"));
         consumer.accept("Terminated features: " + features.getIntValue("terminatedFeatureCount"));
@@ -99,7 +148,7 @@ public class ReportTextFormatter {
         JSONObject byType = getJSONObject(features, "byType");
         if (!byType.isEmpty()) {
             consumer.accept("Feature types:");
-            byType.forEach((type, count) -> consumer.accept(getListItem(type) + ": " + count));
+            byType.forEach((type, count) -> consumer.accept(getListItem(type + ": " + count)));
         } else {
             consumer.accept("Feature types: none");
         }
@@ -107,26 +156,26 @@ public class ReportTextFormatter {
         JSONObject byLod = getJSONObject(features, "byLod");
         if (!byLod.isEmpty()) {
             consumer.accept("Level of detail:");
-            byLod.forEach((lod, count) -> consumer.accept(getListItem(lod, "\"") + ": " + count));
+            byLod.forEach((lod, count) -> consumer.accept(getListItem(quote(lod) + ": " + count)));
         } else {
             consumer.accept("Levels of detail: none");
         }
     }
 
-    private void formatGeometries(JSONObject geometries, Consumer<String> consumer) {
+    private void buildGeometries(JSONObject geometries, Consumer<String> consumer) {
         consumer.accept("Total geometries: " + geometries.getIntValue("geometryCount"));
         consumer.accept("Implicit geometries: " + geometries.getIntValue("implicitGeometryCount"));
 
         JSONObject byType = getJSONObject(geometries, "byType");
         if (!byType.isEmpty()) {
             consumer.accept("Geometry types:");
-            byType.forEach((type, count) -> consumer.accept(getListItem(type) + ": " + count));
+            byType.forEach((type, count) -> consumer.accept(getListItem(type + ": " + count)));
         } else {
             consumer.accept("Geometry types: none");
         }
     }
 
-    private void formatAppearances(JSONObject appearances, Consumer<String> consumer) {
+    private void buildAppearances(JSONObject appearances, Consumer<String> consumer) {
         consumer.accept("Total appearances: " + appearances.getIntValue("appearanceCount"));
         consumer.accept("Global appearances: " + getBoolean(appearances, "hasGlobalAppearances"));
         consumer.accept("Materials: " + getBoolean(appearances, "hasMaterials"));
@@ -136,34 +185,39 @@ public class ReportTextFormatter {
         JSONObject byType = getJSONObject(appearances, "byTheme");
         if (!byType.isEmpty()) {
             consumer.accept("Themes:");
-            byType.forEach((theme, count) -> consumer.accept(getListItem(theme, "\"") + ": " + count));
+            byType.forEach((theme, count) -> consumer.accept(getListItem(quote(theme) + ": " + count)));
         } else {
             consumer.accept("Themes: none");
         }
     }
 
-    private void formatExtensions(JSONArray extensions, Consumer<String> consumer) {
+    private void buildExtensions(JSONArray extensions, Consumer<String> consumer) {
         consumer.accept("Total extensions: " + extensions.size());
         extensions.stream()
                 .filter(JSONObject.class::isInstance)
                 .map(JSONObject.class::cast)
-                .forEach(extension -> consumer.accept(getListItem(extension.getString("name"), "\"") + ": " +
-                        extension.getString("version")));
+                .forEach(extension -> consumer.accept(getListItem(quote(extension.getString("name") + ": " +
+                        extension.getString("version")))));
     }
 
-    private void formatCodelists(JSONArray codeLists, Consumer<String> consumer) {
+    private void buildCodelists(JSONArray codeLists, Consumer<String> consumer) {
         consumer.accept("Total codelists: " + codeLists.size());
         codeLists.stream()
                 .filter(JSONObject.class::isInstance)
                 .map(JSONObject.class::cast)
-                .forEach(codeList -> consumer.accept(getListItem(codeList.getString("type")) + ": " +
-                        codeList.getString("identifier")));
+                .forEach(codeList -> consumer.accept(getListItem(codeList.getString("type") + ": " +
+                        codeList.getString("identifier"))));
     }
 
-    private void formatGenericAttributes(JSONObject genericAttributes, Consumer<String> consumer) {
+    private void buildGenericAttributes(JSONObject genericAttributes, Consumer<String> consumer) {
         consumer.accept("Total attributes: " + genericAttributes.size());
         genericAttributes.forEach((name, types) ->
-                consumer.accept(getListItem(name, "\"") + ": " + join((JSONArray) types, String.class)));
+                consumer.accept(getListItem(quote(name) + ": " + join((JSONArray) types, String.class))));
+    }
+
+    private void buildEndOfReport(Consumer<String> consumer) {
+        addSectionSpacing(consumer);
+        consumer.accept(getTitle("End of Report"));
     }
 
     private JSONObject getJSONObject(JSONObject parent, String key) {
@@ -176,31 +230,41 @@ public class ReportTextFormatter {
         return array != null ? array : new JSONArray();
     }
 
-    private String getTitle(String title) {
-        return "=== " + title + " ===";
-    }
-
-    private String getListItem(String title) {
-        return getListItem(title, "");
-    }
-
-    private String getListItem(String title, String quote) {
-        return "- " + quote + title + quote;
-    }
-
     private String getBoolean(JSONObject object, String key) {
         return object.getBooleanValue(key) ? "yes" : "no";
     }
 
-    private String join(JSONArray array, Class<?> type) {
-        return join(array, "", type);
+    private void addSectionSpacing(Consumer<String> consumer) {
+        if (withSectionSpacing) {
+            consumer.accept("");
+        }
     }
 
-    private String join(JSONArray array, String quote, Class<?> type) {
+    private String getTitle(String title) {
+        return titlePrefix + title + titleSuffix;
+    }
+
+    private String getListItem(String value) {
+        return listMarker + value;
+    }
+
+    private String quote(String value) {
+        return quote + value + quote;
+    }
+
+    private String join(JSONArray array, Class<?> type) {
+        return join(array, type, false);
+    }
+
+    private String quoteAndJoin(JSONArray array, Class<?> type) {
+        return join(array, type, true);
+    }
+
+    private String join(JSONArray array, Class<?> type, boolean quote) {
         return !array.isEmpty() ?
                 String.join(", ", array.toJavaList(type).stream()
                         .map(String::valueOf)
-                        .map(v -> quote + v + quote)
+                        .map(v -> quote ? quote(v) : v)
                         .toList()) :
                 "none";
     }
