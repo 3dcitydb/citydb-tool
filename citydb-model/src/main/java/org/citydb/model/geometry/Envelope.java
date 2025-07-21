@@ -223,12 +223,17 @@ public class Envelope extends Child implements SpatialObject {
     }
 
     public boolean isEmpty() {
-        return lowerCorner.getX() == Double.MAX_VALUE
+        boolean isEmpty = lowerCorner.getX() == Double.MAX_VALUE
                 && lowerCorner.getY() == Double.MAX_VALUE
-                && lowerCorner.getZ() == Double.MAX_VALUE
                 && upperCorner.getX() == -Double.MAX_VALUE
-                && upperCorner.getY() == -Double.MAX_VALUE
-                && upperCorner.getZ() == -Double.MAX_VALUE;
+                && upperCorner.getY() == -Double.MAX_VALUE;
+
+        if (getVertexDimension() == 3) {
+            isEmpty &= lowerCorner.getZ() == Double.MAX_VALUE
+                    && upperCorner.getZ() == -Double.MAX_VALUE;
+        }
+
+        return isEmpty;
     }
 
     public Polygon convertToPolygon() {

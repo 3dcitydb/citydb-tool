@@ -57,7 +57,7 @@ public class DatabaseMetadata {
                 property -> property.getId().toLowerCase(Locale.ROOT),
                 property -> property,
                 (v1, v2) -> v1,
-                TreeMap::new)));
+                LinkedHashMap::new)));
     }
 
     public static DatabaseMetadata of(
