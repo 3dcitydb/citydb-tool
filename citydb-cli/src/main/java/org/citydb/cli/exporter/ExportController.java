@@ -126,7 +126,7 @@ public abstract class ExportController implements Command {
         IOAdapterManager ioManager = helper.createIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
         OutputFileBuilder builder = OutputFileBuilder.newInstance()
-                .tempDirectory(helper.resolveDirectory(tempDirectory))
+                .tempDirectory(helper.resolvePath(tempDirectory))
                 .defaultFileExtension(ioManager.getFileExtensions(ioAdapter).stream()
                         .findFirst()
                         .orElse(null));

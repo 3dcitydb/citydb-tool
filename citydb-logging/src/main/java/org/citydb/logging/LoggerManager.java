@@ -68,7 +68,7 @@ public class LoggerManager {
                     .addAttribute("level", logConsole.getLogLevel().name()));
 
             builder.add(builder.newAppender(CONSOLE_LOGGER_NAME, "CONSOLE")
-                    .addAttribute("target", ConsoleAppender.Target.SYSTEM_OUT)
+                    .addAttribute("target", ConsoleAppender.Target.SYSTEM_ERR)
                     .add(getLayoutComponentBuilder(logConsole.getLogPattern(), builder)));
         }
 
