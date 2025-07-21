@@ -83,7 +83,7 @@ public class InfoCommand implements Command {
                 if (writeToStdout) {
                     logger.info("Writing JSON report to standard output.");
                 } else {
-                    logger.info("Writing report as JSON file {}.", file);
+                    logger.info("Writing report to JSON file {}.", file);
                 }
 
                 try (OutputStream stream = writeToStdout ? System.out : Files.newOutputStream(file)) {
