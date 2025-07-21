@@ -133,7 +133,7 @@ public class ReportTextBuilder {
 
         consumer.accept("Total database: " + DatabaseSize.formatSize(databaseSize.getLongValue("databaseSize")));
         consumer.accept("Schema: " + DatabaseSize.formatSize(databaseSize.getLongValue("schemaSize")));
-        consumer.accept("Content Tables (by size):");
+        consumer.accept("Content tables by size:");
         tableSizes.entrySet().stream()
                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
                 .forEach(e -> consumer.accept(getListItem(e.getKey() + ": " + DatabaseSize.formatSize(e.getValue()))));
@@ -155,10 +155,10 @@ public class ReportTextBuilder {
 
         JSONObject byLod = getJSONObject(features, "byLod");
         if (!byLod.isEmpty()) {
-            consumer.accept("Level of detail:");
+            consumer.accept("Features by level of detail:");
             byLod.forEach((lod, count) -> consumer.accept(getListItem(quote(lod) + ": " + count)));
         } else {
-            consumer.accept("Levels of detail: none");
+            consumer.accept("Features by level of detail: none");
         }
     }
 
