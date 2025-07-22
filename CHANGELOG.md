@@ -4,6 +4,7 @@
 
 ### Changed
 - Updated and harmonized CLI options and their descriptions.
+- Texture coordinates are now processed and represented as `float` values instead of `double`.
 
 ### Fixed
 - Fixed support for time-based validity options in the JSON configuration.
