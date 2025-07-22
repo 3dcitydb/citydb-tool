@@ -101,7 +101,7 @@ public class DatabaseReportBuilder {
                         .thenAccept(report::addGeometries);
                 execute(helper::getImplicitGeometryCount)
                         .thenAccept(result -> report.setImplicitGeometryCount(result.second()));
-                execute(connection -> helper.getFeatureCountByLod(scope, connection))
+                execute(connection -> helper.getGeometryCountByLod(scope, connection))
                         .thenAccept(report::addLods);
                 execute(connection -> helper.getAppearanceCountByTheme(scope, connection))
                         .thenAccept(report::addAppearances);

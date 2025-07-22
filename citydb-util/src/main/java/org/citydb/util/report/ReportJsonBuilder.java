@@ -56,6 +56,7 @@ public class ReportJsonBuilder {
                 .fluentPut("database", buildDatabase(report, options, adapter))
                 .fluentPut("features", buildFeatures(report, adapter))
                 .fluentPut("geometries", buildGeometries(report))
+                .fluentPut("addresses", buildAddresses(report))
                 .fluentPut("appearances", buildAppearances(report))
                 .fluentPut("extensions", buildExtensions(report))
                 .fluentPut("codeLists", buildCodeLists(report))
@@ -143,9 +144,7 @@ public class ReportJsonBuilder {
         return new JSONObject().fluentPut("featureCount", featureCount)
                 .fluentPut("topLevelFeatureCount", topLevelFeatureCount)
                 .fluentPut("terminatedFeatureCount", terminatedFeatureCount)
-                .fluentPut("addressCount", report.getAddressCount())
-                .fluentPut("byType", new JSONObject(report.getActiveFeatures()))
-                .fluentPut("byLod", new JSONObject(report.getLods()));
+                .fluentPut("byType", new JSONObject(report.getActiveFeatures()));
     }
 
     private JSONObject buildGeometries(DatabaseReport report) {
@@ -153,7 +152,12 @@ public class ReportJsonBuilder {
 
         return new JSONObject().fluentPut("geometryCount", geometryCount)
                 .fluentPut("implicitGeometryCount", report.getImplicitGeometryCount())
-                .fluentPut("byType", new JSONObject(report.getGeometries()));
+                .fluentPut("byType", new JSONObject(report.getGeometries()))
+                .fluentPut("byLod", new JSONObject(report.getLods()));
+    }
+
+    private JSONObject buildAddresses(DatabaseReport report) {
+        return new JSONObject().fluentPut("addressCount", report.getAddressCount());
     }
 
     private JSONObject buildAppearances(DatabaseReport report) {

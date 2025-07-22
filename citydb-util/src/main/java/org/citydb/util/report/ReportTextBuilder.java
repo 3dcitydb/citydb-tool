@@ -97,6 +97,10 @@ public class ReportTextBuilder {
         buildGeometries(getJSONObject(jsonReport, "geometries"), consumer);
 
         addSectionSpacing(consumer);
+        consumer.accept(getTitle("Address Statistics"));
+        buildAddresses(getJSONObject(jsonReport, "addresses"), consumer);
+
+        addSectionSpacing(consumer);
         consumer.accept(getTitle("Appearance Statistics"));
         buildAppearances(getJSONObject(jsonReport, "appearances"), consumer);
 
@@ -140,10 +144,9 @@ public class ReportTextBuilder {
     }
 
     private void buildFeatures(JSONObject features, Consumer<String> consumer) {
-        consumer.accept("Total features: " + features.getIntValue("featureCount"));
-        consumer.accept("Top-level features: " + features.getIntValue("topLevelFeatureCount"));
-        consumer.accept("Terminated features: " + features.getIntValue("terminatedFeatureCount"));
-        consumer.accept("Address records: " + features.getIntValue("addressCount"));
+        consumer.accept("Total features: " + features.getLongValue("featureCount"));
+        consumer.accept("Top-level features: " + features.getLongValue("topLevelFeatureCount"));
+        consumer.accept("Terminated features: " + features.getLongValue("terminatedFeatureCount"));
 
         JSONObject byType = getJSONObject(features, "byType");
         if (!byType.isEmpty()) {
@@ -152,19 +155,11 @@ public class ReportTextBuilder {
         } else {
             consumer.accept("Feature types: none");
         }
-
-        JSONObject byLod = getJSONObject(features, "byLod");
-        if (!byLod.isEmpty()) {
-            consumer.accept("Features by level of detail:");
-            byLod.forEach((lod, count) -> consumer.accept(getListItem(quote(lod) + ": " + count)));
-        } else {
-            consumer.accept("Features by level of detail: none");
-        }
     }
 
     private void buildGeometries(JSONObject geometries, Consumer<String> consumer) {
-        consumer.accept("Total geometries: " + geometries.getIntValue("geometryCount"));
-        consumer.accept("Implicit geometries: " + geometries.getIntValue("implicitGeometryCount"));
+        consumer.accept("Total geometries: " + geometries.getLongValue("geometryCount"));
+        consumer.accept("Implicit geometries: " + geometries.getLongValue("implicitGeometryCount"));
 
         JSONObject byType = getJSONObject(geometries, "byType");
         if (!byType.isEmpty()) {
@@ -173,10 +168,22 @@ public class ReportTextBuilder {
         } else {
             consumer.accept("Geometry types: none");
         }
+
+        JSONObject byLod = getJSONObject(geometries, "byLod");
+        if (!byLod.isEmpty()) {
+            consumer.accept("Levels of detail:");
+            byLod.forEach((lod, count) -> consumer.accept(getListItem(quote(lod) + ": " + count)));
+        } else {
+            consumer.accept("Levels of detail: none");
+        }
+    }
+
+    private void buildAddresses(JSONObject addresses, Consumer<String> consumer) {
+        consumer.accept("Total addresses: " + addresses.getLongValue("addressCount"));
     }
 
     private void buildAppearances(JSONObject appearances, Consumer<String> consumer) {
-        consumer.accept("Total appearances: " + appearances.getIntValue("appearanceCount"));
+        consumer.accept("Total appearances: " + appearances.getLongValue("appearanceCount"));
         consumer.accept("Global appearances: " + getBoolean(appearances, "hasGlobalAppearances"));
         consumer.accept("Materials: " + getBoolean(appearances, "hasMaterials"));
         consumer.accept("Textures: " + getBoolean(appearances, "hasTextures"));
