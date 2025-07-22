@@ -58,8 +58,8 @@ public class SurfaceDataMapper {
                             List<TextureCoordinate> ringCoordinates = new ArrayList<>();
                             for (Object coordinates : ringArray) {
                                 if (coordinates instanceof JSONArray coordinatesArray && coordinatesArray.size() > 1) {
-                                    Double s = coordinatesArray.getDouble(0);
-                                    Double t = coordinatesArray.getDouble(1);
+                                    Float s = coordinatesArray.getFloat(0);
+                                    Float t = coordinatesArray.getFloat(1);
                                     if (s != null && t != null) {
                                         ringCoordinates.add(TextureCoordinate.of(s, t));
                                     }
