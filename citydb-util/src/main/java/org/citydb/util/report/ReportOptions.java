@@ -26,7 +26,7 @@ import org.citydb.config.SerializableConfig;
 @SerializableConfig(name = "reportOptions")
 public class ReportOptions {
     private int numberOfThreads;
-    private boolean onlyPropertiesOfValidFeatures;
+    private boolean onlyActiveFeatures;
     private boolean includeGenericAttributes;
     private boolean includeDatabaseSize;
 
@@ -39,12 +39,12 @@ public class ReportOptions {
         return this;
     }
 
-    public boolean isOnlyPropertiesOfValidFeatures() {
-        return onlyPropertiesOfValidFeatures;
+    public boolean isOnlyActiveFeatures() {
+        return onlyActiveFeatures;
     }
 
-    public ReportOptions onlyPropertiesOfValidFeatures(boolean onlyPropertiesOfValidFeatures) {
-        this.onlyPropertiesOfValidFeatures = onlyPropertiesOfValidFeatures;
+    public ReportOptions onlyActiveFeatures(boolean onlyActiveFeatures) {
+        this.onlyActiveFeatures = onlyActiveFeatures;
         return this;
     }
 

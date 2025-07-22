@@ -28,7 +28,7 @@ import java.nio.file.Path;
         name = "info",
         description = "Show database contents and summary information.")
 public class InfoCommand implements Command {
-    enum FeatureScope {all, valid}
+    enum FeatureScope {all, active}
 
     @CommandLine.Option(names = {"-o", "--output"},
             description = "Write output as a JSON file. Use '-' to write to standard output.")
@@ -38,7 +38,7 @@ public class InfoCommand implements Command {
     protected ThreadsOptions threadsOptions;
 
     @CommandLine.Option(names = {"-s", "--feature-scope"}, paramLabel = "<scope>", defaultValue = "all",
-            description = "Feature scope: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). For 'valid', " +
+            description = "Feature scope: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). For 'active', " +
                     "only properties of non-terminated features are considered.")
     private FeatureScope scope;
 
@@ -113,7 +113,7 @@ public class InfoCommand implements Command {
             reportOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
-        reportOptions.onlyPropertiesOfValidFeatures(scope == FeatureScope.valid);
+        reportOptions.onlyActiveFeatures(scope == FeatureScope.active);
 
         if (includeGenericAttributes != null) {
             reportOptions.includeGenericAttributes(includeGenericAttributes);

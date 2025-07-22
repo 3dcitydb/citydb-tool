@@ -39,7 +39,7 @@ public abstract class StatisticsHelper {
 
     public enum FeatureScope {
         ALL,
-        VALID,
+        ACTIVE,
         TERMINATED
     }
 
@@ -70,7 +70,7 @@ public abstract class StatisticsHelper {
                 .groupBy(objectClassId);
 
         switch (scope) {
-            case VALID -> select.where(terminationDate.isNull());
+            case ACTIVE -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
 
@@ -104,7 +104,7 @@ public abstract class StatisticsHelper {
                 .groupBy(objectClassId);
 
         switch (scope) {
-            case VALID -> select.where(terminationDate.isNull());
+            case ACTIVE -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
 
@@ -132,28 +132,7 @@ public abstract class StatisticsHelper {
     }
 
     public Map<String, Long> getFeatureCountByLod(FeatureScope scope, Connection connection) throws SQLException {
-        Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
-        Column lod = property.column("val_lod");
-
-        Select select = Select.newInstance()
-                .select(lod, Function.of("count", property.column("feature_id")))
-                .from(property)
-                .where(lod.isNotNull())
-                .groupBy(lod);
-
-        if (scope != FeatureScope.ALL) {
-            joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
-        }
-
-        Map<String, Long> featureCount = new HashMap<>();
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(select.toSql())) {
-            while (rs.next()) {
-                featureCount.put(rs.getString(1), rs.getLong(2));
-            }
-        }
-
-        return featureCount;
+        return getCountByLod("feature_id", scope, connection);
     }
 
     public Map<GeometryType, Long> getGeometryCount(FeatureScope scope) throws SQLException {
@@ -185,6 +164,16 @@ public abstract class StatisticsHelper {
         }
 
         return geometryCount;
+    }
+
+    public Map<String, Long> getGeometryCountByLod(FeatureScope scope) throws SQLException {
+        try (Connection connection = adapter.getPool().getConnection(true)) {
+            return getGeometryCountByLod(scope, connection);
+        }
+    }
+
+    public Map<String, Long> getGeometryCountByLod(FeatureScope scope, Connection connection) throws SQLException {
+        return getCountByLod("val_geometry_id", scope, connection);
     }
 
     public Pair<FeatureType, Long> getImplicitGeometryCount() throws SQLException {
@@ -480,6 +469,31 @@ public abstract class StatisticsHelper {
         }
     }
 
+    private Map<String, Long> getCountByLod(String propertyColumn, FeatureScope scope, Connection connection) throws SQLException {
+        Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
+        Column lod = property.column("val_lod");
+
+        Select select = Select.newInstance()
+                .select(lod, Function.of("count", property.column(propertyColumn)))
+                .from(property)
+                .where(lod.isNotNull())
+                .groupBy(lod);
+
+        if (scope != FeatureScope.ALL) {
+            joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
+        }
+
+        Map<String, Long> featureCount = new HashMap<>();
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(select.toSql())) {
+            while (rs.next()) {
+                featureCount.put(rs.getString(1), rs.getLong(2));
+            }
+        }
+
+        return featureCount;
+    }
+
     private void joinFeatures(FeatureScope scope, Select select, Column column, String joinType) {
         Table feature = Table.of(org.citydb.database.schema.Table.FEATURE.getName(), getSchema());
         Column terminationDate = feature.column("termination_date");
@@ -487,7 +501,7 @@ public abstract class StatisticsHelper {
         select.join(Join.of(joinType, feature.column("id"), Operators.EQUAL_TO, column));
 
         switch (scope) {
-            case VALID -> select.where(terminationDate.isNull());
+            case ACTIVE -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
     }

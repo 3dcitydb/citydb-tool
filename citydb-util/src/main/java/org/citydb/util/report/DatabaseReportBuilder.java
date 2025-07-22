@@ -22,7 +22,6 @@
 package org.citydb.util.report;
 
 import org.citydb.core.concurrent.CountLatch;
-import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.tuple.Pair;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -81,7 +80,7 @@ public class DatabaseReportBuilder {
         DatabaseReport execute() throws DatabaseReportException {
             service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
                     options.getNumberOfThreads() :
-                    4);
+                    Math.max(2, Runtime.getRuntime().availableProcessors()));
             countLatch = new CountLatch();
 
             DatabaseReport report = new DatabaseReport(options, adapter);
@@ -92,11 +91,11 @@ public class DatabaseReportBuilder {
                         .thenAccept(report::addTerminatedFeatures);
 
                 countLatch.await();
-                scope = options.isOnlyPropertiesOfValidFeatures() && report.hasTerminatedFeatures() ?
-                        StatisticsHelper.FeatureScope.VALID :
+                scope = options.isOnlyActiveFeatures() && report.hasTerminatedFeatures() ?
+                        StatisticsHelper.FeatureScope.ACTIVE :
                         StatisticsHelper.FeatureScope.ALL;
 
-                execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.VALID, connection))
+                execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.ACTIVE, connection))
                         .thenAccept(report::addFeatures);
                 execute(connection -> helper.getGeometryCount(scope, connection))
                         .thenAccept(report::addGeometries);

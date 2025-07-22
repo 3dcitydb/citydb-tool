@@ -71,7 +71,7 @@ public class ReportJsonBuilder {
     private JSONObject buildMetadata(ReportOptions options) {
         String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
                 .format(TimeHelper.DATE_TIME_FORMATTER);
-        String featureScope = options.isOnlyPropertiesOfValidFeatures() ? "valid" : "all";
+        String featureScope = options.isOnlyActiveFeatures() ? "valid" : "all";
 
         return new JSONObject()
                 .fluentPut("reportGenerated", timestamp)
@@ -80,13 +80,12 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildSummary(DatabaseReport report, DatabaseAdapter adapter) {
-        JSONObject summary = new JSONObject();
         List<String> topLevelFeatures = report.getFeatures().keySet().stream()
                 .filter(name -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(name))
                         .isTopLevel())
                 .toList();
 
-        return summary.fluentPut("topLevelFeatures", topLevelFeatures)
+        return new JSONObject().fluentPut("topLevelFeatures", topLevelFeatures)
                 .fluentPut("lods", new JSONArray(report.getLods().keySet()))
                 .fluentPut("themes", new JSONArray(report.getAppearances().keySet()))
                 .fluentPut("crs", buildCrs(adapter))
@@ -134,7 +133,6 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
-        JSONObject features = new JSONObject();
         long featureCount = sum(report.getFeatures().values());
         long topLevelFeatureCount = report.getFeatures().entrySet().stream()
                 .filter(e -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(e.getKey()))
@@ -142,7 +140,7 @@ public class ReportJsonBuilder {
                 .mapToLong(Map.Entry::getValue).sum();
         long terminatedFeatureCount = sum(report.getTerminatedFeatures().values());
 
-        return features.fluentPut("featureCount", featureCount)
+        return new JSONObject().fluentPut("featureCount", featureCount)
                 .fluentPut("topLevelFeatureCount", topLevelFeatureCount)
                 .fluentPut("terminatedFeatureCount", terminatedFeatureCount)
                 .fluentPut("addressCount", report.getAddressCount())
@@ -151,19 +149,17 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildGeometries(DatabaseReport report) {
-        JSONObject geometries = new JSONObject();
         long geometryCount = sum(report.getGeometries().values());
 
-        return geometries.fluentPut("geometryCount", geometryCount)
+        return new JSONObject().fluentPut("geometryCount", geometryCount)
                 .fluentPut("implicitGeometryCount", report.getImplicitGeometryCount())
                 .fluentPut("byType", new JSONObject(report.getGeometries()));
     }
 
     private JSONObject buildAppearances(DatabaseReport report) {
-        JSONObject appearances = new JSONObject();
         long appearanceCount = sum(report.getAppearances().values());
 
-        return appearances.fluentPut("appearanceCount", appearanceCount)
+        return new JSONObject().fluentPut("appearanceCount", appearanceCount)
                 .fluentPut("hasGlobalAppearances", report.hasGlobalAppearances())
                 .fluentPut("hasMaterials", report.hasMaterials())
                 .fluentPut("hasTextures", report.hasTextures())
@@ -174,6 +170,7 @@ public class ReportJsonBuilder {
     private JSONObject buildGenericAttributes(DatabaseReport report) {
         JSONObject genericAttributes = new JSONObject();
         report.getGenericAttributes().forEach((name, types) -> genericAttributes.put(name, new JSONArray(types)));
+
         return genericAttributes;
     }
 
@@ -213,7 +210,6 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildDatabaseSize(DatabaseSize databaseSize) {
-        JSONObject size = new JSONObject();
         Map<String, Long> byTable = databaseSize.getTableSizes().entrySet().stream()
                 .filter(e -> Table.CONTENT_TABLES.contains(e.getKey()))
                 .collect(Collectors.toMap(
@@ -222,7 +218,7 @@ public class ReportJsonBuilder {
                         (v1, v2) -> v1,
                         TreeMap::new));
 
-        return size.fluentPut("databaseSize", databaseSize.getDatabaseSize())
+        return new JSONObject().fluentPut("databaseSize", databaseSize.getDatabaseSize())
                 .fluentPut("schemaSize", databaseSize.getSchemaSize())
                 .fluentPut("byTable", byTable);
     }
