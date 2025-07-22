@@ -79,15 +79,15 @@ public class DatabaseReportBuilder {
 
         DatabaseReport execute() throws DatabaseReportException {
             service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
-                    options.getNumberOfThreads() :
-                    Math.max(2, Runtime.getRuntime().availableProcessors()));
+                    options.getNumberOfThreads() : 4);
             countLatch = new CountLatch();
 
             DatabaseReport report = new DatabaseReport(options, adapter);
             StatisticsHelper.FeatureScope scope;
 
             try {
-                execute(connection -> helper.getFeatureCount(StatisticsHelper.FeatureScope.TERMINATED, connection))
+                execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.TERMINATED,
+                        connection))
                         .thenAccept(report::addTerminatedFeatures);
 
                 countLatch.await();
@@ -96,7 +96,7 @@ public class DatabaseReportBuilder {
                         StatisticsHelper.FeatureScope.ALL;
 
                 execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.ACTIVE, connection))
-                        .thenAccept(report::addFeatures);
+                        .thenAccept(report::addActiveFeatures);
                 execute(connection -> helper.getGeometryCount(scope, connection))
                         .thenAccept(report::addGeometries);
                 execute(helper::getImplicitGeometryCount)

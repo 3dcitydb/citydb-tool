@@ -80,7 +80,7 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildSummary(DatabaseReport report, DatabaseAdapter adapter) {
-        List<String> topLevelFeatures = report.getFeatures().keySet().stream()
+        List<String> topLevelFeatures = report.getFeatures().stream()
                 .filter(name -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(name))
                         .isTopLevel())
                 .toList();
@@ -133,8 +133,8 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
-        long featureCount = sum(report.getFeatures().values());
-        long topLevelFeatureCount = report.getFeatures().entrySet().stream()
+        long featureCount = sum(report.getActiveFeatures().values());
+        long topLevelFeatureCount = report.getActiveFeatures().entrySet().stream()
                 .filter(e -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(e.getKey()))
                         .isTopLevel())
                 .mapToLong(Map.Entry::getValue).sum();
@@ -144,7 +144,7 @@ public class ReportJsonBuilder {
                 .fluentPut("topLevelFeatureCount", topLevelFeatureCount)
                 .fluentPut("terminatedFeatureCount", terminatedFeatureCount)
                 .fluentPut("addressCount", report.getAddressCount())
-                .fluentPut("byType", new JSONObject(report.getFeatures()))
+                .fluentPut("byType", new JSONObject(report.getActiveFeatures()))
                 .fluentPut("byLod", new JSONObject(report.getLods()));
     }
 

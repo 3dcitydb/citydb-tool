@@ -41,7 +41,7 @@ public class DatabaseReport {
     private final ReportOptions options;
     private final DatabaseAdapter adapter;
     private final SchemaMapping schemaMapping;
-    private final Map<String, Long> features = new TreeMap<>();
+    private final Map<String, Long> activeFeatures = new TreeMap<>();
     private final Map<String, Long> terminatedFeatures = new TreeMap<>();
     private final Map<String, Long> geometries = new TreeMap<>();
     private final Map<String, Long> lods = new TreeMap<>();
@@ -49,7 +49,6 @@ public class DatabaseReport {
     private final Map<String, Set<String>> genericAttributes = new TreeMap<>();
     private final Map<String, Pair<String, String>> ades = new TreeMap<>();
     private final Map<String, String> codeLists = new TreeMap<>();
-    private final Map<String, Envelope> extents = new TreeMap<>();
     private final Map<String, String> modules = new TreeMap<>();
     private final Envelope extent;
 
@@ -82,22 +81,32 @@ public class DatabaseReport {
     }
 
     public boolean hasFeatures() {
-        return !features.isEmpty();
+        return hasActiveFeatures() || (!options.isOnlyActiveFeatures() && hasTerminatedFeatures());
     }
 
-    public Map<String, Long> getFeatures() {
+    public Set<String> getFeatures() {
+        Set<String> features = new TreeSet<>(activeFeatures.keySet());
+        if (!options.isOnlyActiveFeatures()) {
+            features.addAll(terminatedFeatures.keySet());
+        }
+
         return features;
     }
 
-    void addFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
+    public boolean hasActiveFeatures() {
+        return !activeFeatures.isEmpty();
+    }
+
+    public Map<String, Long> getActiveFeatures() {
+        return activeFeatures;
+    }
+
+    void addActiveFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
         if (features != null) {
             features.forEach((type, info) -> {
-                String name = getQName(type.getName());
-                this.features.merge(name, info.count(), Long::sum);
-                extents.merge(name, info.extent(), Envelope::include);
+                activeFeatures.merge(getQName(type.getName()), info.count(), Long::sum);
+                extent.include(info.extent());
             });
-
-            extents.values().forEach(extent::include);
         }
     }
 
@@ -109,9 +118,14 @@ public class DatabaseReport {
         return terminatedFeatures;
     }
 
-    void addTerminatedFeatures(Map<FeatureType, Long> features) {
+    void addTerminatedFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
         if (features != null) {
-            features.forEach((type, count) -> terminatedFeatures.merge(getQName(type.getName()), count, Long::sum));
+            features.forEach((type, info) -> {
+                terminatedFeatures.merge(getQName(type.getName()), info.count(), Long::sum);
+                if (!options.isOnlyActiveFeatures()) {
+                    extent.include(info.extent());
+                }
+            });
         }
     }
 
