@@ -296,23 +296,17 @@ public class DatabaseReport {
     }
 
     void setWgs84Extent(Envelope wgs84Extent) {
-        this.wgs84Extent = wgs84Extent != null ?
-                wgs84Extent.force2D() :
-                null;
+        this.wgs84Extent = wgs84Extent != null ? wgs84Extent.force2D() : null;
     }
 
     public Envelope getWgs84Extent() {
-        return wgs84Extent != null ?
-                wgs84Extent :
-                Envelope.empty().force2D();
+        return wgs84Extent != null ? wgs84Extent : Envelope.empty().force2D();
     }
 
     private String getQName(Name name) {
-        String alias = schemaMapping.getNamespaceByURI(name.getNamespace()).getAlias().orElse(null);
+        String alias = schemaMapping.getNamespaceByURI(name.getNamespace()).getAlias().orElse("");
         modules.put(alias, name.getNamespace());
-        return alias != null ?
-                alias + ":" + name.getLocalName() :
-                name.getLocalName();
+        return !alias.isEmpty() ?  alias + ":" + name.getLocalName() : name.getLocalName();
     }
 
     public JSONObject toJSON() {

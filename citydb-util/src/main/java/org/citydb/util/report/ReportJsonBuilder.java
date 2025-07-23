@@ -115,7 +115,7 @@ public class ReportJsonBuilder {
 
     private JSONObject buildDbms(DatabaseAdapter adapter) {
         JSONObject dbms = new JSONObject();
-        dbms.fluentPut("type", adapter.getDatabaseMetadata().getVendorProductName())
+        dbms.fluentPut("name", adapter.getDatabaseMetadata().getVendorProductName())
                 .fluentPut("version", adapter.getDatabaseMetadata().getVendorProductVersion());
 
         if (adapter.getDatabaseMetadata().hasProperties()) {
