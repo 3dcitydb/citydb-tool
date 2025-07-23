@@ -173,8 +173,8 @@ public class AppearanceHelper {
         if (textureCoordinates != null) {
             List<Double> values = new ArrayList<>();
             textureCoordinates.forEach(textureCoordinate -> {
-                values.add(textureCoordinate.getS());
-                values.add(textureCoordinate.getT());
+                values.add((double) textureCoordinate.getS());
+                values.add((double) textureCoordinate.getT());
             });
 
             return values;

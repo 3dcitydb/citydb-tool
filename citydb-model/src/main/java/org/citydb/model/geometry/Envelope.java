@@ -214,8 +214,12 @@ public class Envelope extends Child implements SpatialObject {
     }
 
     public Envelope include(Envelope envelope) {
-        return include(envelope.lowerCorner)
-                .include(envelope.upperCorner);
+        if (!envelope.isEmpty()) {
+            include(envelope.lowerCorner)
+                    .include(envelope.upperCorner);
+        }
+
+        return this;
     }
 
     public Envelope include(Geometry<?> geometry) {
