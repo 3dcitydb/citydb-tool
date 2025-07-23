@@ -48,7 +48,7 @@ public class DatabaseReport {
     private final Map<String, Long> appearances = new TreeMap<>();
     private final Map<String, Set<String>> genericAttributes = new TreeMap<>();
     private final Map<String, Pair<String, String>> ades = new TreeMap<>();
-    private final Map<String, String> codeLists = new TreeMap<>();
+    private final Map<String, Set<String>> codeLists = new TreeMap<>();
     private final Map<String, String> modules = new TreeMap<>();
     private final Envelope extent;
 
@@ -81,15 +81,12 @@ public class DatabaseReport {
     }
 
     public boolean hasFeatures() {
-        return hasActiveFeatures() || (!options.isOnlyActiveFeatures() && hasTerminatedFeatures());
+        return hasActiveFeatures() || hasTerminatedFeatures();
     }
 
     public Set<String> getFeatures() {
         Set<String> features = new TreeSet<>(activeFeatures.keySet());
-        if (!options.isOnlyActiveFeatures()) {
-            features.addAll(terminatedFeatures.keySet());
-        }
-
+        features.addAll(terminatedFeatures.keySet());
         return features;
     }
 
@@ -270,13 +267,15 @@ public class DatabaseReport {
         return !codeLists.isEmpty();
     }
 
-    public Map<String, String> getCodeLists() {
+    public Map<String, Set<String>> getCodeLists() {
         return codeLists;
     }
 
-    void addCodeLists(Map<String, String> codeLists) {
+    void addCodeLists(Map<String, Set<String>> codeLists) {
         if (codeLists != null) {
-            this.codeLists.putAll(codeLists);
+            codeLists.forEach((type, identifiers) -> {
+                this.codeLists.computeIfAbsent(type, k -> new TreeSet<>()).addAll(identifiers);
+            });
         }
     }
 

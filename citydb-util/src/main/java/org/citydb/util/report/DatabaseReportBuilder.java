@@ -34,9 +34,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -157,18 +155,18 @@ public class DatabaseReportBuilder {
             return ades;
         }
 
-        private Map<String, String> getCodeLists(Connection connection) throws SQLException {
+        private Map<String, Set<String>> getCodeLists(Connection connection) throws SQLException {
             Table codeList = Table.of(org.citydb.database.schema.Table.CODELIST.getName(), schema);
 
             Select select = Select.newInstance()
-                    .select(codeList.columns("url", "codelist_type"))
+                    .select(codeList.columns("codelist_type", "url"))
                     .from(codeList);
 
-            Map<String, String> codeLists = new HashMap<>();
+            Map<String, Set<String>> codeLists = new HashMap<>();
             try (Statement stmt = connection.createStatement();
                  ResultSet rs = stmt.executeQuery(select.toSql())) {
                 while (rs.next()) {
-                    codeLists.put(rs.getString(1), rs.getString(2));
+                    codeLists.computeIfAbsent(rs.getString(1), k -> new HashSet<>()).add(rs.getString(2));
                 }
             }
 

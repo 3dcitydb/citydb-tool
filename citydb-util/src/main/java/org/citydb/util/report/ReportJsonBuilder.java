@@ -52,7 +52,7 @@ public class ReportJsonBuilder {
 
         JSONObject jsonReport = new JSONObject();
         jsonReport.fluentPut("metadata", buildMetadata(options))
-                .fluentPut("summary", buildSummary(report, adapter))
+                .fluentPut("summary", buildSummary(report, options, adapter))
                 .fluentPut("database", buildDatabase(report, options, adapter))
                 .fluentPut("features", buildFeatures(report, adapter))
                 .fluentPut("geometries", buildGeometries(report))
@@ -72,7 +72,7 @@ public class ReportJsonBuilder {
     private JSONObject buildMetadata(ReportOptions options) {
         String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
                 .format(TimeHelper.DATE_TIME_FORMATTER);
-        String featureScope = options.isOnlyActiveFeatures() ? "valid" : "all";
+        String featureScope = options.isOnlyActiveFeatures() ? "active" : "all";
 
         return new JSONObject()
                 .fluentPut("reportGenerated", timestamp)
@@ -80,8 +80,11 @@ public class ReportJsonBuilder {
                 .fluentPut("genericAttributesProcessed", options.isIncludeGenericAttributes());
     }
 
-    private JSONObject buildSummary(DatabaseReport report, DatabaseAdapter adapter) {
-        List<String> topLevelFeatures = report.getFeatures().stream()
+    private JSONObject buildSummary(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
+        Set<String> candidates = options.isOnlyActiveFeatures() ?
+                report.getActiveFeatures().keySet() :
+                report.getFeatures();
+        List<String> topLevelFeatures = candidates.stream()
                 .filter(name -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(name))
                         .isTopLevel())
                 .toList();
@@ -134,17 +137,37 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
-        long featureCount = sum(report.getActiveFeatures().values());
-        long topLevelFeatureCount = report.getActiveFeatures().entrySet().stream()
+        return new JSONObject().fluentPut("featureCount", buildFeatureCount(report))
+                .fluentPut("topLevelFeatureCount", buildTopLevelFeatureCount(report, adapter))
+                .fluentPut("byType", buildFeaturesByType(report));
+    }
+
+    private JSONObject buildFeatureCount(DatabaseReport report) {
+        return putFeatureCount(new JSONObject(),
+                sum(report.getActiveFeatures().values()),
+                sum(report.getTerminatedFeatures().values()));
+    }
+
+    private JSONObject buildTopLevelFeatureCount(DatabaseReport report, DatabaseAdapter adapter) {
+        long active = report.getActiveFeatures().entrySet().stream()
                 .filter(e -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(e.getKey()))
                         .isTopLevel())
                 .mapToLong(Map.Entry::getValue).sum();
-        long terminatedFeatureCount = sum(report.getTerminatedFeatures().values());
+        long terminated = report.getTerminatedFeatures().entrySet().stream()
+                .filter(e -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(e.getKey()))
+                        .isTopLevel())
+                .mapToLong(Map.Entry::getValue).sum();
 
-        return new JSONObject().fluentPut("featureCount", featureCount)
-                .fluentPut("topLevelFeatureCount", topLevelFeatureCount)
-                .fluentPut("terminatedFeatureCount", terminatedFeatureCount)
-                .fluentPut("byType", new JSONObject(report.getActiveFeatures()));
+        return putFeatureCount(new JSONObject(), active, terminated);
+    }
+
+    private JSONObject buildFeaturesByType(DatabaseReport report) {
+        JSONObject featuresByType = new JSONObject();
+        report.getFeatures().forEach(featureType -> putFeatureCount(featuresByType.putObject(featureType),
+                report.getActiveFeatures().getOrDefault(featureType, 0L),
+                report.getTerminatedFeatures().getOrDefault(featureType, 0L)));
+
+        return featuresByType;
     }
 
     private JSONObject buildGeometries(DatabaseReport report) {
@@ -188,11 +211,9 @@ public class ReportJsonBuilder {
         return extensions;
     }
 
-    private JSONArray buildCodeLists(DatabaseReport report) {
-        JSONArray codeLists = new JSONArray();
-        report.getCodeLists().forEach((idenifier, type) -> codeLists.add(new JSONObject()
-                .fluentPut("identifier", idenifier)
-                .fluentPut("type", type)));
+    private JSONObject buildCodeLists(DatabaseReport report) {
+        JSONObject codeLists = new JSONObject();
+        report.getCodeLists().forEach((type, identifiers) -> codeLists.putArray(type).addAll(identifiers));
 
         return codeLists;
     }
@@ -243,6 +264,11 @@ public class ReportJsonBuilder {
         } else {
             return Collections.emptyList();
         }
+    }
+
+    private JSONObject putFeatureCount(JSONObject parent, long active, long terminated) {
+        return parent.fluentPut("active", active)
+                .fluentPut("terminated", terminated);
     }
 
     private long sum(Collection<Long> values) {

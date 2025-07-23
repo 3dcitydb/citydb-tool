@@ -27,6 +27,7 @@ import com.alibaba.fastjson2.TypeReference;
 import org.citydb.database.metadata.DatabaseSize;
 
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -110,7 +111,7 @@ public class ReportTextBuilder {
 
         addSectionSpacing(consumer);
         consumer.accept(getTitle("Codelists"));
-        buildCodelists(getJSONArray(jsonReport, "codeLists"), consumer);
+        buildCodelists(getJSONObject(jsonReport, "codeLists"), consumer);
 
         if (options.isIncludeGenericAttributes()) {
             addSectionSpacing(consumer);
@@ -127,8 +128,8 @@ public class ReportTextBuilder {
         consumer.accept("Top-level features: " + join(getJSONArray(summary, "topLevelFeatures"), String.class));
         consumer.accept("Levels of detail: " + quoteAndJoin(getJSONArray(summary, "lods"), String.class));
         consumer.accept("Themes: " + quoteAndJoin(getJSONArray(summary, "themes"), String.class));
-        consumer.accept("Extent: " + join(getJSONArray(summary, "extent"), Double.class));
-        consumer.accept("WGS84 extent: " + join(getJSONArray(summary, "wgs84Extent"), Double.class));
+        consumer.accept("Extent: " + getExtent(getJSONArray(summary, "extent")));
+        consumer.accept("WGS84 extent: " + getExtent(getJSONArray(summary, "wgs84Extent")));
     }
 
     private void buildDatabaseSize(JSONObject databaseSize, Consumer<String> consumer) {
@@ -144,14 +145,16 @@ public class ReportTextBuilder {
     }
 
     private void buildFeatures(JSONObject features, Consumer<String> consumer) {
-        consumer.accept("Total features: " + features.getLongValue("featureCount"));
-        consumer.accept("Top-level features: " + features.getLongValue("topLevelFeatureCount"));
-        consumer.accept("Terminated features: " + features.getLongValue("terminatedFeatureCount"));
+        consumer.accept("Total features: " + getFeatureCount(getJSONObject(features, "featureCount")));
+        consumer.accept("Top-level features: " + getFeatureCount(getJSONObject(features, "topLevelFeatureCount")));
 
         JSONObject byType = getJSONObject(features, "byType");
         if (!byType.isEmpty()) {
             consumer.accept("Feature types:");
-            byType.forEach((type, count) -> consumer.accept(getListItem(type + ": " + count)));
+            byType.entrySet().stream()
+                    .filter(e -> e.getValue() instanceof JSONObject)
+                    .forEach(e -> consumer.accept(getListItem(e.getKey()) + ": " +
+                            getFeatureCount((JSONObject) e.getValue())));
         } else {
             consumer.accept("Feature types: none");
         }
@@ -207,13 +210,13 @@ public class ReportTextBuilder {
                         extension.getString("version")))));
     }
 
-    private void buildCodelists(JSONArray codeLists, Consumer<String> consumer) {
-        consumer.accept("Total codelists: " + codeLists.size());
-        codeLists.stream()
-                .filter(JSONObject.class::isInstance)
-                .map(JSONObject.class::cast)
-                .forEach(codeList -> consumer.accept(getListItem(codeList.getString("type") + ": " +
-                        codeList.getString("identifier"))));
+    private void buildCodelists(JSONObject codeLists, Consumer<String> consumer) {
+        consumer.accept("Total codelists: " + codeLists.keySet().stream()
+                .map(type -> getJSONArray(codeLists, type))
+                .mapToInt(JSONArray::size)
+                .sum());
+        codeLists.keySet().forEach(type ->
+                consumer.accept(getListItem(type) + ": " + getJSONArray(codeLists, type).size()));
     }
 
     private void buildGenericAttributes(JSONObject genericAttributes, Consumer<String> consumer) {
@@ -239,6 +242,25 @@ public class ReportTextBuilder {
 
     private String getBoolean(JSONObject object, String key) {
         return object.getBooleanValue(key) ? "yes" : "no";
+    }
+
+    private String getFeatureCount(JSONObject object) {
+        long active = object.getLongValue("active");
+        long terminated = object.getLongValue("terminated");
+        return (active + terminated) + " (" + terminated + " terminated)";
+    }
+
+    private String getExtent(JSONArray extent) {
+        if (!extent.isEmpty()) {
+            List<String> hallo = extent.toList(Double.class).stream()
+                    .map(String::valueOf)
+                    .toList();
+            int index = extent.size() / 2;
+            return "[" + String.join(", ", hallo.subList(0, index)) + "] to [" +
+                    String.join(", ", hallo.subList(index, hallo.size())) + "]";
+        } else {
+            return "none";
+        }
     }
 
     private void addSectionSpacing(Consumer<String> consumer) {
@@ -269,7 +291,7 @@ public class ReportTextBuilder {
 
     private String join(JSONArray array, Class<?> type, boolean quote) {
         return !array.isEmpty() ?
-                String.join(", ", array.toJavaList(type).stream()
+                String.join(", ", array.toList(type).stream()
                         .map(String::valueOf)
                         .map(v -> quote ? quote(v) : v)
                         .toList()) :
