@@ -43,6 +43,11 @@ public enum Table {
     APPEAR_TO_SURFACE_DATA("appear_to_surface_data", Set.of(APPEARANCE, SURFACE_DATA)),
     SURFACE_DATA_MAPPING("surface_data_mapping", Set.of(GEOMETRY_DATA, SURFACE_DATA));
 
+    public final static EnumSet<Table> CONTENT_TABLES = EnumSet.of(FEATURE, PROPERTY, ADDRESS, GEOMETRY_DATA,
+            IMPLICIT_GEOMETRY, APPEARANCE, APPEAR_TO_SURFACE_DATA, TEX_IMAGE, SURFACE_DATA, SURFACE_DATA_MAPPING);
+    public final static EnumSet<Table> METADATA_TABLES = EnumSet.of(ADE, CODELIST, DATABASE_SRS, CODELIST_ENTRY,
+            NAMESPACE, DATATYPE, OBJECTCLASS);
+
     private final static Map<String, Table> types = new HashMap<>();
     private final String name;
     private final Set<Table> dependencies;

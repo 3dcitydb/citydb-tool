@@ -26,10 +26,7 @@ import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.*;
 import org.citydb.database.srs.SpatialReferenceType;
-import org.citydb.database.util.IndexHelper;
-import org.citydb.database.util.OperationHelper;
-import org.citydb.database.util.SqlHelper;
-import org.citydb.database.util.TempTableHelper;
+import org.citydb.database.util.*;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
@@ -77,6 +74,8 @@ public abstract class SchemaAdapter {
     public abstract String getIndexExists(Index index);
 
     public abstract OperationHelper getOperationHelper();
+
+    public abstract StatisticsHelper getStatisticsHelper();
 
     public abstract TempTableHelper getTempTableHelper();
 

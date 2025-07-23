@@ -31,6 +31,7 @@ import org.citydb.cli.exporter.ExportCommand;
 import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
+import org.citydb.cli.info.InfoCommand;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
@@ -76,12 +77,16 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     private Path configFile;
 
     @CommandLine.Option(names = {"-L", "--log-level"}, scope = CommandLine.ScopeType.INHERIT, paramLabel = "<level>",
-            defaultValue = "info", description = "Log level: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
-    private LogLevel logLevel;
+            description = "Log level: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
+    private LogLevel logLevel = LogLevel.info;
 
     @CommandLine.Option(names = "--log-file", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<file>",
             description = "Write log messages to this file.")
     private Path logFile;
+
+    @CommandLine.Option(names = "--quiet", scope = CommandLine.ScopeType.INHERIT,
+            description = "Disable console log messages.")
+    private boolean quiet;
 
     @CommandLine.Option(names = "--pid-file", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<file>",
             description = "Create a file containing the process ID.")
@@ -122,6 +127,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         CommandLine cmd = new CommandLine(this);
 
         pluginManager.load(parsePluginsDirectory(args));
+        Command.addSubcommand(new InfoCommand(), cmd, pluginManager);
         Command.addSubcommand(new ImportCommand(), cmd, pluginManager);
         Command.addSubcommand(new ExportCommand(), cmd, pluginManager);
         Command.addSubcommand(new DeleteCommand(), cmd, pluginManager);
@@ -249,7 +255,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 .setLogPattern(logLevel.level.isMoreSpecificThan(Level.INFO) ?
                         manager.logConsole().getLogPattern() + "%ex{0}" :
                         manager.logConsole().getLogPattern())
-                .setEnabled(true)
+                .setEnabled(!quiet)
                 .reconfigure();
 
         if (logFile != null) {

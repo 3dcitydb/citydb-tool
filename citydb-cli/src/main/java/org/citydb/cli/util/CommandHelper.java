@@ -203,26 +203,39 @@ public class CommandHelper {
         }
     }
 
-    public void logIndexStatus(Level level, DatabaseAdapter adapter) throws ExecutionException {
-        printIndexStatus(adapter, s -> logger.log(level, s));
-    }
-
-    public void printIndexStatus(DatabaseAdapter adapter, Consumer<String> consumer) throws ExecutionException {
+    public IndexHelper.Status getIndexStatus(DatabaseAdapter adapter) throws ExecutionException {
         try {
-            String status = switch (adapter.getSchemaAdapter().getIndexHelper().existAll(IndexHelper.DEFAULT_INDEXES)) {
-                case ON -> "on";
-                case PARTIALLY_ON -> "partially on";
-                default -> "off";
-            };
-
-            consumer.accept("Database indexes are " + status + ".");
+            return adapter.getSchemaAdapter().getIndexHelper().existAll(IndexHelper.DEFAULT_INDEXES);
         } catch (SQLException e) {
             throw new ExecutionException("Failed to query status of database indexes.", e);
         }
     }
 
-    public Path resolveDirectory(Path path) {
-        return path != null ? CoreConstants.WORKING_DIR.resolve(path) : null;
+    public void logIndexStatus(Level level, DatabaseAdapter adapter) throws ExecutionException {
+        printIndexStatus(adapter, message -> logger.log(level, message));
+    }
+
+    public void logIndexStatus(Level level, IndexHelper.Status status) {
+        printIndexStatus(status, message -> logger.log(level, message));
+    }
+
+    public void printIndexStatus(DatabaseAdapter adapter, Consumer<String> consumer) throws ExecutionException {
+        printIndexStatus(getIndexStatus(adapter), consumer);
+    }
+
+    public void printIndexStatus(IndexHelper.Status status, Consumer<String> consumer) {
+        if (status != null) {
+            consumer.accept("Database indexes are " +
+                    switch (status) {
+                        case ON -> "on";
+                        case PARTIALLY_ON -> "partially on";
+                        default -> "off";
+                    } + ".");
+        }
+    }
+
+    public Path resolvePath(Path path) {
+        return path != null ? CoreConstants.WORKING_DIR.resolve(path).toAbsolutePath().normalize() : null;
     }
 
     public synchronized void logException(String message, Throwable e) {

@@ -27,6 +27,7 @@ module org.citydb.cli {
     exports org.citydb.cli.importer.duplicate;
     exports org.citydb.cli.importer.filter;
     exports org.citydb.cli.importer.options;
+    exports org.citydb.cli.info;
     exports org.citydb.cli.util;
 
     opens org.citydb.cli to info.picocli;
@@ -42,4 +43,5 @@ module org.citydb.cli {
     opens org.citydb.cli.importer.cityjson to info.picocli;
     opens org.citydb.cli.importer.options to info.picocli;
     opens org.citydb.cli.index to info.picocli;
+    opens org.citydb.cli.info to info.picocli;
 }
