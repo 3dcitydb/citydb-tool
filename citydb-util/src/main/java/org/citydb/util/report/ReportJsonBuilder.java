@@ -99,7 +99,7 @@ public class ReportJsonBuilder {
 
     private JSONObject buildDatabase(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
         JSONObject database = new JSONObject();
-        database.fluentPut("type", DatabaseConstants.CITYDB_NAME)
+        database.fluentPut("name", DatabaseConstants.CITYDB_NAME)
                 .fluentPut("version", adapter.getDatabaseMetadata().getVersion().toString())
                 .fluentPut("dbms", buildDbms(adapter))
                 .fluentPut("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled())
