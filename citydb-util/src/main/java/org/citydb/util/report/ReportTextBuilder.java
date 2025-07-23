@@ -252,12 +252,12 @@ public class ReportTextBuilder {
 
     private String getExtent(JSONArray extent) {
         if (!extent.isEmpty()) {
-            List<String> hallo = extent.toList(Double.class).stream()
+            List<String> coordinates = extent.toList(Double.class).stream()
                     .map(String::valueOf)
                     .toList();
             int index = extent.size() / 2;
-            return "[" + String.join(", ", hallo.subList(0, index)) + "] to [" +
-                    String.join(", ", hallo.subList(index, hallo.size())) + "]";
+            return "[" + String.join(", ", coordinates.subList(0, index)) + "] to [" +
+                    String.join(", ", coordinates.subList(index, coordinates.size())) + "]";
         } else {
             return "none";
         }
