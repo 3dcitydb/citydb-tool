@@ -20,7 +20,7 @@ dependencies {
     implementation project(':citydb-database-postgres')
     implementation project(':citydb-io-citygml')
     implementation project(':citydb-logging')
-    citydb 'org.citydb:3dcitydb:5.1.0-rc.0'
+    citydb 'org.citydb:3dcitydb:5.1.0-rc.2'
 }
 
 processResources {
