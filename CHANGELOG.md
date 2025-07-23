@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+- Added the `info` command to create a report and summary of the 3DCityDB contents. The report can be generated in JSON
+  format and either written to a file or printed to `stdout` for further processing.
+
 ### Changed
 - Updated and harmonized CLI options and their descriptions.
 - Texture coordinates are now processed and represented as `float` values instead of `double`.
