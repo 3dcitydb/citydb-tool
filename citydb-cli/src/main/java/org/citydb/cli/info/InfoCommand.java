@@ -57,7 +57,7 @@ public class InfoCommand implements Command {
     @ConfigOption
     private Config config;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(DeleteCommand.class);
+    private final Logger logger = LoggerManager.getInstance().getLogger(InfoCommand.class);
     private final CommandHelper helper = CommandHelper.newInstance();
 
     @Override
