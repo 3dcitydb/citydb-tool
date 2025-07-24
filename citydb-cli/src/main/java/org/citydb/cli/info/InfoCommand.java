@@ -9,8 +9,8 @@ import org.citydb.cli.common.Command;
 import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.ThreadsOptions;
-import org.citydb.cli.deleter.DeleteCommand;
 import org.citydb.cli.util.CommandHelper;
+import org.citydb.cli.util.Streams;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
@@ -86,7 +86,9 @@ public class InfoCommand implements Command {
                     logger.info("Writing report to JSON file {}.", file);
                 }
 
-                try (OutputStream stream = writeToStdout ? System.out : Files.newOutputStream(file)) {
+                try (OutputStream stream = writeToStdout ?
+                        Streams.nonClosing(System.out) :
+                        Files.newOutputStream(file)) {
                     JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormat);
                 }
             }
