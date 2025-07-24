@@ -35,9 +35,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 public class DatabaseReportBuilder {
 
@@ -66,7 +66,7 @@ public class DatabaseReportBuilder {
         private volatile boolean shouldRun = true;
         private ExecutorService service;
         private CountLatch countLatch;
-        private DatabaseReportException exception;
+        private Exception exception;
 
         ReportProcessor(ReportOptions options, DatabaseAdapter adapter) {
             this.options = Objects.requireNonNull(options, "The report options must not be null.");
@@ -77,7 +77,8 @@ public class DatabaseReportBuilder {
 
         DatabaseReport execute() throws DatabaseReportException {
             service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
-                    options.getNumberOfThreads() : 4);
+                    options.getNumberOfThreads() :
+                    Math.max(4, Runtime.getRuntime().availableProcessors()));
             countLatch = new CountLatch();
 
             DatabaseReport report = new DatabaseReport(options, adapter);
@@ -85,43 +86,33 @@ public class DatabaseReportBuilder {
 
             try {
                 execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.TERMINATED,
-                        connection))
-                        .thenAccept(report::addTerminatedFeatures);
+                        connection), report::setTerminatedFeatures);
 
                 countLatch.await();
                 scope = options.isOnlyActiveFeatures() && report.hasTerminatedFeatures() ?
                         StatisticsHelper.FeatureScope.ACTIVE :
                         StatisticsHelper.FeatureScope.ALL;
 
-                execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.ACTIVE, connection))
-                        .thenAccept(report::addActiveFeatures);
-                execute(connection -> helper.getGeometryCount(scope, connection))
-                        .thenAccept(report::addGeometries);
-                execute(helper::getImplicitGeometryCount)
-                        .thenAccept(result -> report.setImplicitGeometryCount(result.second()));
-                execute(connection -> helper.getGeometryCountByLod(scope, connection))
-                        .thenAccept(report::addLods);
-                execute(connection -> helper.getAppearanceCountByTheme(scope, connection))
-                        .thenAccept(report::addAppearances);
-                execute(connection -> helper.hasSurfaceData(scope, connection))
-                        .thenAccept(report::setSurfaceData);
-                execute(connection -> helper.hasGlobalAppearances(scope, connection))
-                        .thenAccept(report::setGlobalAppearances);
-                execute(connection -> helper.getAddressCount(scope, connection))
-                        .thenAccept(result -> report.setAddressCount(result.second()));
-                execute(this::getADEs)
-                        .thenAccept(report::addADEs);
-                execute(this::getCodeLists)
-                        .thenAccept(report::addCodeLists);
+                execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.ACTIVE,
+                        connection), report::setActiveFeatures);
+                execute(connection -> helper.getGeometryCount(scope, connection), report::setGeometries);
+                execute(helper::getImplicitGeometryCount, result -> report.setImplicitGeometryCount(result.second()));
+                execute(connection -> helper.getGeometryCountByLod(scope, connection), report::setLods);
+                execute(connection -> helper.getAppearanceCountByTheme(scope, connection), report::setAppearances);
+                execute(connection -> helper.hasSurfaceData(scope, connection), report::setSurfaceData);
+                execute(connection -> helper.hasGlobalAppearances(scope, connection), report::setGlobalAppearances);
+                execute(connection -> helper.getAddressCount(scope, connection),
+                        result -> report.setAddressCount(result.second()));
+                execute(this::getADEs, report::setADEs);
+                execute(this::getCodeLists, report::setCodeLists);
 
                 if (options.isIncludeGenericAttributes()) {
-                    execute(connection -> helper.getGenericAttributes(scope, connection))
-                            .thenAccept(report::addGenericAttributes);
+                    execute(connection -> helper.getGenericAttributes(scope, connection),
+                            report::setGenericAttributes);
                 }
 
                 if (options.isIncludeDatabaseSize()) {
-                    execute(helper::getDatabaseSize)
-                            .thenAccept(report::setDatabaseSize);
+                    execute(helper::getDatabaseSize, report::setDatabaseSize);
                 }
 
                 countLatch.await();
@@ -130,7 +121,8 @@ public class DatabaseReportBuilder {
             }
 
             if (exception != null) {
-                throw exception;
+                throw new DatabaseReportException("A database error has occurred during report generation.",
+                        exception);
             }
 
             report.setWgs84Extent(transformExtent(report.getExtent()));
@@ -185,27 +177,20 @@ public class DatabaseReportBuilder {
             return null;
         }
 
-        private <T> CompletableFuture<T> execute(Supplier<T> supplier) {
-            CompletableFuture<T> result = new CompletableFuture<>();
+        private <T> void execute(Supplier<T> supplier, Consumer<T> consumer) {
             if (shouldRun) {
                 countLatch.increment();
                 service.submit(() -> {
                     try (Connection connection = adapter.getPool().getConnection(true)) {
-                        result.complete(supplier.get(connection));
+                        consumer.accept(supplier.get(connection));
                     } catch (Exception e) {
                         shouldRun = false;
-                        result.cancel(true);
-                        exception = new DatabaseReportException("A database error has occurred during report " +
-                                "generation.", e);
+                        exception = e;
                     } finally {
                         countLatch.decrement();
                     }
                 });
-            } else {
-                result.cancel(true);
             }
-
-            return result;
         }
     }
 }

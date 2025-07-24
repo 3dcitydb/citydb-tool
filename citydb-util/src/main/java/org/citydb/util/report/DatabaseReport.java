@@ -98,7 +98,7 @@ public class DatabaseReport {
         return activeFeatures;
     }
 
-    void addActiveFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
+    void setActiveFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
         if (features != null) {
             features.forEach((type, info) -> {
                 activeFeatures.merge(getQName(type.getName()), info.count(), Long::sum);
@@ -115,7 +115,7 @@ public class DatabaseReport {
         return terminatedFeatures;
     }
 
-    void addTerminatedFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
+    void setTerminatedFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
         if (features != null) {
             features.forEach((type, info) -> {
                 terminatedFeatures.merge(getQName(type.getName()), info.count(), Long::sum);
@@ -134,7 +134,7 @@ public class DatabaseReport {
         return geometries;
     }
 
-    void addGeometries(Map<GeometryType, Long> geometries) {
+    void setGeometries(Map<GeometryType, Long> geometries) {
         if (geometries != null) {
             geometries.forEach((type, count) ->
                     this.geometries.merge(getQName(Name.of(type.getTypeName(), Namespaces.CORE)), count, Long::sum));
@@ -173,7 +173,7 @@ public class DatabaseReport {
         return lods;
     }
 
-    void addLods(Map<String, Long> lods) {
+    void setLods(Map<String, Long> lods) {
         if (lods != null) {
             lods.forEach((lod, count) -> this.lods.merge(lod, count, Long::sum));
         }
@@ -187,7 +187,7 @@ public class DatabaseReport {
         return appearances;
     }
 
-    void addAppearances(Map<String, Long> appearances) {
+    void setAppearances(Map<String, Long> appearances) {
         if (appearances != null) {
             appearances.forEach((theme, count) -> this.appearances.merge(theme, count, Long::sum));
         }
@@ -239,7 +239,7 @@ public class DatabaseReport {
         return genericAttributes;
     }
 
-    void addGenericAttributes(Map<String, Set<DataType>> genericAttributes) {
+    void setGenericAttributes(Map<String, Set<DataType>> genericAttributes) {
         if (genericAttributes != null) {
             genericAttributes.forEach((name, types) -> this.genericAttributes
                     .computeIfAbsent(name, k -> new TreeSet<>())
@@ -257,7 +257,7 @@ public class DatabaseReport {
         return ades;
     }
 
-    void addADEs(Map<String, Pair<String, String>> ades) {
+    void setADEs(Map<String, Pair<String, String>> ades) {
         if (ades != null) {
             this.ades.putAll(ades);
         }
@@ -271,7 +271,7 @@ public class DatabaseReport {
         return codeLists;
     }
 
-    void addCodeLists(Map<String, Set<String>> codeLists) {
+    void setCodeLists(Map<String, Set<String>> codeLists) {
         if (codeLists != null) {
             codeLists.forEach((type, identifiers) -> {
                 this.codeLists.computeIfAbsent(type, k -> new TreeSet<>()).addAll(identifiers);
