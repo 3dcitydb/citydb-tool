@@ -306,7 +306,7 @@ public class DatabaseReport {
     private String getQName(Name name) {
         String alias = schemaMapping.getNamespaceByURI(name.getNamespace()).getAlias().orElse("");
         modules.put(alias, name.getNamespace());
-        return !alias.isEmpty() ?  alias + ":" + name.getLocalName() : name.getLocalName();
+        return !alias.isEmpty() ? alias + ":" + name.getLocalName() : name.getLocalName();
     }
 
     public JSONObject toJSON() {
