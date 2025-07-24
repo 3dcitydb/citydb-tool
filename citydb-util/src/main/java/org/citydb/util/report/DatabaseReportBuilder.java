@@ -77,8 +77,7 @@ public class DatabaseReportBuilder {
 
         DatabaseReport execute() throws DatabaseReportException {
             service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
-                    options.getNumberOfThreads() :
-                    Math.max(4, Runtime.getRuntime().availableProcessors()));
+                    options.getNumberOfThreads() : 4);
             countLatch = new CountLatch();
 
             DatabaseReport report = new DatabaseReport(options, adapter);
