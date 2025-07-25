@@ -44,10 +44,6 @@ public class DatabaseReportBuilder {
     DatabaseReportBuilder() {
     }
 
-    static DatabaseReportBuilder newInstance() {
-        return new DatabaseReportBuilder();
-    }
-
     DatabaseReport build(ReportOptions options, DatabaseAdapter adapter) throws DatabaseReportException {
         return new ReportProcessor(options, adapter).execute();
     }
