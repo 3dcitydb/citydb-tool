@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.adapter.appearance;
 
-import org.apache.logging.log4j.Level;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.ModelBuilderHelper;
 import org.citydb.io.citygml.serializer.ModelSerializeException;
@@ -32,6 +31,7 @@ import org.citydb.model.common.Reference;
 import org.citygml4j.core.model.appearance.AbstractTexture;
 import org.citygml4j.core.model.appearance.ColorPlusOpacity;
 import org.citygml4j.core.model.core.ImplicitGeometry;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 

@@ -32,14 +32,13 @@ import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
 import org.citydb.cli.info.InfoCommand;
+import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
 import org.citydb.core.CoreConstants;
 import org.citydb.database.DatabaseConstants;
-import org.citydb.logging.LogConstants;
-import org.citydb.logging.LoggerManager;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
 import org.citydb.plugin.PluginManager;
@@ -260,7 +259,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
         if (logFile != null) {
             if (Files.isDirectory(logFile)) {
-                logFile = logFile.resolve(LogConstants.DEFAULT_LOG_FILE);
+                logFile = logFile.resolve(LoggerManager.DEFAULT_LOG_FILE);
             }
 
             logger.debug("Writing log messages to {}.", logFile.toAbsolutePath());

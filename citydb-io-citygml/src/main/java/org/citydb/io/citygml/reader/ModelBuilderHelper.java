@@ -21,8 +21,6 @@
 
 package org.citydb.io.citygml.reader;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.file.FileLocator;
 import org.citydb.core.file.InputFile;
@@ -39,7 +37,6 @@ import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.ReadOptions;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Child;
@@ -56,6 +53,9 @@ import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.StandardObjectClassifier;
 import org.citygml4j.xml.module.Module;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.xmlobjects.XMLObjects;
 import org.xmlobjects.gml.model.base.AbstractGML;
 import org.xmlobjects.gml.model.base.AbstractInlineOrByReferenceProperty;
@@ -78,7 +78,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class ModelBuilderHelper {
-    private final Logger logger = LoggerManager.getInstance().getLogger(ModelBuilderHelper.class);
+    private final Logger logger = LoggerFactory.getLogger(ModelBuilderHelper.class);
     private final InputFile file;
     private final PersistentMapStore store;
     private final CityGMLAdapterContext context;
@@ -147,7 +147,7 @@ public class ModelBuilderHelper {
 
     public void logOrThrow(Level level, String message, Throwable cause) throws ModelBuildException {
         if (!failFast) {
-            logger.log(level, message, cause);
+            logger.atLevel(level).log(message, cause);
         } else {
             throw new ModelBuildException(message, cause);
         }

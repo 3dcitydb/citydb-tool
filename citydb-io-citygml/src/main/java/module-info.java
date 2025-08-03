@@ -1,6 +1,5 @@
 module org.citydb.io.citygml {
     requires org.citydb.io;
-    requires transitive org.citydb.logging;
     requires transitive org.citygml4j.xml;
     requires transitive org.citygml4j.cityjson;
 

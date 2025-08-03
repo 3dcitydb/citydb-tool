@@ -21,13 +21,13 @@
 
 package org.citydb.operation.importer.reference;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.logging.LoggerManager;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -39,7 +39,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class ReferenceManager {
-    private final Logger logger = LoggerManager.getInstance().getLogger(ReferenceManager.class);
+    private final Logger logger = LoggerFactory.getLogger(ReferenceManager.class);
     private final DatabaseAdapter adapter;
     private final int batchSize;
 

@@ -24,10 +24,10 @@ package org.citydb.cli.index;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
-import org.citydb.logging.LoggerManager;
 import picocli.CommandLine;
 
 import java.sql.SQLException;

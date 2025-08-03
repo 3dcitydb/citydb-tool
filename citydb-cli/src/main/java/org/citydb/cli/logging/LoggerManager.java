@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,12 +19,9 @@
  * limitations under the License.
  */
 
-package org.citydb.logging;
+package org.citydb.cli.logging;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
+import org.apache.logging.log4j.*;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.config.builder.api.*;
@@ -35,6 +32,11 @@ import java.util.Map;
 import java.util.Objects;
 
 public class LoggerManager {
+    public static final String DEFAULT_LOG_PATTERN = "[%d{HH:mm:ss} %p] %m%n";
+    public static final String DEFAULT_LOG_FILE = "citydb.log";
+    public static final String DEFAULT_ROLLING_FILE_SUFFIX = "-%d{yyyy-MM-dd}";
+    public static final Marker PLAIN_MARKER = MarkerManager.getMarker("PLAIN");
+
     private static final LoggerManager instance = new LoggerManager();
     private final LogConsole logConsole;
     private final LogFile logFile;
@@ -43,7 +45,7 @@ public class LoggerManager {
     private LoggerManager() {
         logConsole = new LogConsole(this).setEnabled(true);
         logFile = new LogFile(this).setEnabled(false);
-        withLogPattern(LogConstants.PLAIN_MARKER, "%m%n").reconfigure();
+        withLogPattern(LoggerManager.PLAIN_MARKER, "%m%n").reconfigure();
     }
 
     public static LoggerManager getInstance() {
