@@ -21,9 +21,7 @@
 
 package org.citydb.io.citygml.reader.preprocess;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
-import org.citydb.logging.LoggerManager;
 import org.citygml4j.core.model.bridge.*;
 import org.citygml4j.core.model.building.AbstractBuilding;
 import org.citygml4j.core.model.building.BuildingFurniture;
@@ -69,6 +67,8 @@ import org.citygml4j.core.model.vegetation.PlantCover;
 import org.citygml4j.core.model.vegetation.SolitaryVegetationObject;
 import org.citygml4j.core.model.waterbody.WaterBody;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.model.geometry.aggregates.*;
@@ -146,7 +146,7 @@ public class DeprecatedPropertiesProcessor {
     }
 
     private class DeprecatedPropertiesWalker extends ObjectWalker {
-        private final Logger logger = LoggerManager.getInstance().getLogger(DeprecatedPropertiesWalker.class);
+        private final Logger logger = LoggerFactory.getLogger(DeprecatedPropertiesWalker.class);
 
         @Override
         public void visit(AbstractBridge bridge) {

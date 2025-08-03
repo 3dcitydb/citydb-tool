@@ -25,6 +25,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.ConnectionOptions;
+import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.core.CoreConstants;
@@ -40,7 +41,6 @@ import org.citydb.database.schema.ValidityReference;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
-import org.citydb.logging.LoggerManager;
 import org.citydb.operation.exporter.options.ValidityOptions;
 import org.citydb.plugin.PluginManager;
 import org.citydb.query.Query;
@@ -105,7 +105,7 @@ public class CommandHelper {
             logger.info("Connecting to database {}.", connectionDetails.fillAbsentValuesFromEnv().toConnectString());
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
-            databaseManager.logDatabaseMetadata(Level.INFO);
+            databaseManager.reportDatabaseMetadata(logger::info);
 
             Version version = databaseManager.getAdapter().getDatabaseMetadata().getVersion();
             if (DatabaseConstants.VERSION_SUPPORT.getPolicies().stream()

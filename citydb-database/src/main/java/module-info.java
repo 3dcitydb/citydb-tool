@@ -3,7 +3,6 @@ module org.citydb.database {
     requires org.apache.tomcat.jdbc;
     requires transitive org.citydb.core;
     requires transitive org.citydb.config;
-    requires transitive org.citydb.logging;
     requires transitive org.citydb.model;
     requires transitive org.citydb.sqlbuilder;
     requires transitive org.geotools.api;

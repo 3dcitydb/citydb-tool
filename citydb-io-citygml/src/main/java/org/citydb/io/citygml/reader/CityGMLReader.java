@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.reader;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.config.ConfigException;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
@@ -34,12 +33,13 @@ import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.filter.Filter;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.xml.reader.CityGMLChunk;
 import org.citygml4j.xml.reader.CityGMLInputFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -48,7 +48,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
 public class CityGMLReader implements FeatureReader {
-    private final Logger logger = LoggerManager.getInstance().getLogger(CityGMLReader.class);
+    private final Logger logger = LoggerFactory.getLogger(CityGMLReader.class);
     private final InputFile file;
     private final ReadOptions options;
     private final CityGMLAdapterContext context;

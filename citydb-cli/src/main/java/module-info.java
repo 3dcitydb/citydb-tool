@@ -2,7 +2,7 @@ module org.citydb.cli {
     requires org.citydb.config;
     requires org.citygml4j.core;
     requires org.citydb.io.citygml;
-    requires org.citydb.logging;
+    requires org.apache.logging.log4j.core;
     requires transitive org.citydb.database;
     requires transitive org.citydb.io;
     requires transitive org.citydb.operation;
@@ -28,6 +28,7 @@ module org.citydb.cli {
     exports org.citydb.cli.importer.filter;
     exports org.citydb.cli.importer.options;
     exports org.citydb.cli.info;
+    exports org.citydb.cli.logging;
     exports org.citydb.cli.util;
 
     opens org.citydb.cli to info.picocli;

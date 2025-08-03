@@ -23,9 +23,9 @@ package org.citydb.cli.exporter.util;
 
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.logging.LoggerManager;
 import org.citydb.core.tuple.SimplePair;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;

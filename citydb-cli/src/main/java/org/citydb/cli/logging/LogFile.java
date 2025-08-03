@@ -2,7 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2024
+ * Copyright 2022-2025
  * virtualcitysystems GmbH, Germany
  * https://vc.systems/
  *
@@ -19,19 +19,23 @@
  * limitations under the License.
  */
 
-package org.citydb.logging;
+package org.citydb.cli.logging;
 
 import org.apache.logging.log4j.Level;
 
+import java.nio.file.Path;
 import java.util.Objects;
 
-public class LogConsole {
+public class LogFile {
     private final LoggerManager manager;
     private boolean enabled;
     private Level logLevel = Level.INFO;
-    private String logPattern = LogConstants.DEFAULT_LOG_PATTERN;
+    private String logPattern = LoggerManager.DEFAULT_LOG_PATTERN;
+    private Path path = Path.of(LoggerManager.DEFAULT_LOG_FILE);
+    private String rollingFileSuffix = LoggerManager.DEFAULT_ROLLING_FILE_SUFFIX;
+    private boolean useLogRotation;
 
-    LogConsole(LoggerManager manager) {
+    LogFile(LoggerManager manager) {
         this.manager = manager;
     }
 
@@ -39,7 +43,7 @@ public class LogConsole {
         return enabled;
     }
 
-    public LogConsole setEnabled(boolean enabled) {
+    public LogFile setEnabled(boolean enabled) {
         this.enabled = enabled;
         return this;
     }
@@ -48,7 +52,7 @@ public class LogConsole {
         return logLevel;
     }
 
-    public LogConsole setLogLevel(Level logLevel) {
+    public LogFile setLogLevel(Level logLevel) {
         this.logLevel = Objects.requireNonNull(logLevel, "The log level must not be null.");
         return this;
     }
@@ -57,8 +61,35 @@ public class LogConsole {
         return logPattern;
     }
 
-    public LogConsole setLogPattern(String logPattern) {
+    public LogFile setLogPattern(String logPattern) {
         this.logPattern = Objects.requireNonNull(logPattern, "The log pattern must not be null.");
+        return this;
+    }
+
+    public Path getPath() {
+        return path;
+    }
+
+    public LogFile setPath(Path path) {
+        this.path = Objects.requireNonNull(path, "The path must not be null.");
+        return this;
+    }
+
+    public String getRollingFileSuffix() {
+        return rollingFileSuffix;
+    }
+
+    public LogFile setRollingFileSuffix(String rollingFileSuffix) {
+        this.rollingFileSuffix = Objects.requireNonNull(rollingFileSuffix, "The rolling file suffix must not be null.");
+        return this;
+    }
+
+    public boolean isUseLogRotation() {
+        return useLogRotation;
+    }
+
+    public LogFile setUseLogRotation(boolean useLogRotation) {
+        this.useLogRotation = useLogRotation;
         return this;
     }
 

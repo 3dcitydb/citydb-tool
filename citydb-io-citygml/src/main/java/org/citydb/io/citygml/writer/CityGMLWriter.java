@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.writer;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.config.ConfigException;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
@@ -32,9 +31,10 @@ import org.citydb.io.citygml.writer.util.GlobalFeatureWriter;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xmlobjects.util.xml.SAXBuffer;
 
 import java.io.IOException;
@@ -43,7 +43,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
 public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
-    private final Logger logger = LoggerManager.getInstance().getLogger(CityGMLWriter.class);
+    private final Logger logger = LoggerFactory.getLogger(CityGMLWriter.class);
     private final CityGMLChunkWriter writer;
     private final PersistentMapStore store;
     private final ExecutorService service;

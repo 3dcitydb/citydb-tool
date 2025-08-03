@@ -22,9 +22,9 @@
 package org.citydb.cli.exporter.util;
 
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.logging.LoggerManager;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 

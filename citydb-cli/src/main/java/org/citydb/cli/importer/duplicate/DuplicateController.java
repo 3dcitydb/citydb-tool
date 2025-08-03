@@ -26,12 +26,12 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.importer.ImportMode;
 import org.citydb.cli.importer.ImportOptions;
 import org.citydb.cli.importer.filter.Filter;
+import org.citydb.cli.logging.LoggerManager;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.reader.FeatureReader;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.feature.Feature;
 
 import java.io.IOException;

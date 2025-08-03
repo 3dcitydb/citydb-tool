@@ -21,19 +21,19 @@
 
 package org.citydb.query.executor;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.util.SqlHelper;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
 import org.citydb.sqlbuilder.query.Select;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -107,7 +107,7 @@ public class QueryExecutor {
     }
 
     public static class Builder {
-        private final Logger logger = LoggerManager.getInstance().getLogger(Builder.class);
+        private final Logger logger = LoggerFactory.getLogger(Builder.class);
         private final DatabaseAdapter adapter;
         private final SqlQueryBuilder builder;
         private Path tempDirectory;

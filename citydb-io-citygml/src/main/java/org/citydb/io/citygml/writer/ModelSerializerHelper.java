@@ -21,8 +21,6 @@
 
 package org.citydb.io.citygml.writer;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.io.citygml.CityGMLAdapterContext;
 import org.citydb.io.citygml.adapter.address.AddressAdapter;
@@ -40,7 +38,6 @@ import org.citydb.io.citygml.writer.util.CityGMLVersionHelper;
 import org.citydb.io.citygml.writer.util.GlobalFeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.logging.LoggerManager;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.ExternalFile;
@@ -56,6 +53,9 @@ import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.CityGMLVersion;
 import org.citygml4j.core.model.core.*;
 import org.citygml4j.core.model.core.AddressProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.xmlobjects.XMLObjects;
 import org.xmlobjects.gml.model.base.*;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
@@ -74,7 +74,7 @@ import java.io.StringReader;
 import java.util.*;
 
 public class ModelSerializerHelper {
-    private final Logger logger = LoggerManager.getInstance().getLogger(ModelSerializerHelper.class);
+    private final Logger logger = LoggerFactory.getLogger(ModelSerializerHelper.class);
     private final GlobalFeatureWriter writer;
     private final PersistentMapStore store;
     private final CityGMLAdapterContext context;
@@ -156,7 +156,7 @@ public class ModelSerializerHelper {
 
     public void logOrThrow(Level level, String message, Throwable cause) throws ModelSerializeException {
         if (!failFast) {
-            logger.log(level, message, cause);
+            logger.atLevel(level).log(message, cause);
         } else {
             throw new ModelSerializeException(message, cause);
         }

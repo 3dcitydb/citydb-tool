@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.adapter.appearance;
 
-import org.apache.logging.log4j.Level;
 import org.citydb.core.file.FileLocator;
 import org.citydb.io.citygml.annotation.DatabaseType;
 import org.citydb.io.citygml.builder.ModelBuildException;
@@ -34,6 +33,7 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Point;
 import org.citygml4j.core.model.core.TransformationMatrix2x2;
+import org.slf4j.event.Level;
 import org.xmlobjects.gml.model.geometry.DirectPosition;
 import org.xmlobjects.gml.model.geometry.primitives.PointProperty;
 

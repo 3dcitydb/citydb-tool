@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.adapter.gml;
 
-import org.apache.logging.log4j.Level;
 import org.citydb.core.time.TimeHelper;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.builder.ModelBuilder;
@@ -31,6 +30,7 @@ import org.citydb.io.citygml.serializer.ModelSerializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.DataType;
+import org.slf4j.event.Level;
 import org.xmlobjects.gml.model.base.AbstractGML;
 import org.xmlobjects.gml.model.temporal.ClockTime;
 import org.xmlobjects.gml.model.temporal.DateAndTime;
