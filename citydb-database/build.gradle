@@ -1,6 +1,6 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
-def geotools_version = '33.1'
+def geotools_version = '33.2'
 
 dependencies {
     api project(':citydb-core')
