@@ -8,6 +8,8 @@ configurations {
     citydb
 }
 
+def log4j_version = '2.25.1'
+
 dependencies {
     api project(':citydb-database')
     api project(':citydb-io')
@@ -19,9 +21,8 @@ dependencies {
     implementation project(':citydb-config')
     implementation project(':citydb-database-postgres')
     implementation project(':citydb-io-citygml')
-    implementation 'org.apache.logging.log4j:log4j-api:2.25.1'
-    implementation 'org.apache.logging.log4j:log4j-core:2.25.1'
-    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.25.1'
+    implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
+    implementation "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
     citydb 'org.citydb:3dcitydb:5.1.0-rc.2'
 }
 
