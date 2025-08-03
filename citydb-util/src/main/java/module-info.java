@@ -5,6 +5,7 @@ module org.citydb.util {
     requires transitive org.apache.commons.csv;
 
     exports org.citydb.util.csv;
+    exports org.citydb.util.process;
     exports org.citydb.util.report;
     exports org.citydb.util.tiling;
     exports org.citydb.util.tiling.options;
