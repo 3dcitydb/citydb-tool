@@ -4,11 +4,12 @@
 
 ### Added
 - Added the `info` command to create a report and summary of the 3DCityDB contents. The report can be generated in JSON
-  format and either written to a file or printed to `stdout` for further processing.
+  format and either written to a file or printed to `stdout` for further processing. [#61](https://github.com/3dcitydb/citydb-tool/pull/61)
 
 ### Changed
 - Updated and harmonized CLI options and their descriptions.
 - Texture coordinates are now processed and represented as `float` values instead of `double`.
+- Replaced the hard dependency on Apache Log4j with SLF4J as the logging abstraction for all API modules. [#62](https://github.com/3dcitydb/citydb-tool/pull/62)
 
 ### Fixed
 - Fixed support for time-based validity options in the JSON configuration.
