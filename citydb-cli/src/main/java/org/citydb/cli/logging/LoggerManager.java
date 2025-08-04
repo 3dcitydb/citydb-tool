@@ -88,9 +88,10 @@ public class LoggerManager {
                     .add(getLayoutComponentBuilder(logFile.getLogPattern(), builder));
 
             if (logFile.isUseLogRotation()) {
-                appenderComponentBuilder
+                appenderBuilder
                         .addAttribute("filePattern", buildRollingFilePattern(fileName))
-                        .add(builder.newLayout("TimeBasedTriggeringPolicy"));
+                        .addComponent(builder.newComponent("Policies")
+                                .addComponent(builder.newComponent("TimeBasedTriggeringPolicy")));
             }
 
             builder.add(appenderComponentBuilder);
