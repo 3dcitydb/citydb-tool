@@ -81,7 +81,7 @@ public class LoggerManager {
             rootLogger.add(builder.newAppenderRef(FILE_LOGGER_NAME)
                     .addAttribute("level", logFile.getLogLevel().name()));
 
-            AppenderComponentBuilder appenderComponentBuilder = builder
+            AppenderComponentBuilder appenderBuilder = builder
                     .newAppender(FILE_LOGGER_NAME, logFile.isUseLogRotation() ? "RollingFile" : "File")
                     .addAttribute("fileName", fileName)
                     .addAttribute("append", logFile.isUseLogRotation())
@@ -94,7 +94,7 @@ public class LoggerManager {
                                 .addComponent(builder.newComponent("TimeBasedTriggeringPolicy")));
             }
 
-            builder.add(appenderComponentBuilder);
+            builder.add(appenderBuilder);
         }
 
         Configurator.reconfigure(builder.add(rootLogger).build());
