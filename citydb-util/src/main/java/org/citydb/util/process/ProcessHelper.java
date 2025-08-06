@@ -23,6 +23,8 @@ package org.citydb.util.process;
 
 import org.citydb.core.CoreConstants;
 import org.citydb.core.function.CheckedConsumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -40,6 +42,7 @@ import java.util.function.Predicate;
 public class ProcessHelper {
     private static final int GRACEFUL_KILL_TIMEOUT = 2;
     private static final int SERVICE_SHUTDOWN_TIMEOUT = 2;
+    private final Logger logger = LoggerFactory.getLogger(ProcessHelper.class);
     private final ProcessBuilder builder;
     private final Map<String, String> envVariables = new HashMap<>();
 
@@ -232,6 +235,7 @@ public class ProcessHelper {
                 consumer.accept(line);
             }
         } catch (IOException e) {
+            logger.debug("Failed to read output from process.", e);
             if (Thread.currentThread().isInterrupted()) {
                 Thread.currentThread().interrupt();
             }
@@ -244,6 +248,7 @@ public class ProcessHelper {
         if (processTimeout > 0) {
             ProcessHandle exitHandle = onExit.completeOnTimeout(null, processTimeout, TimeUnit.SECONDS).join();
             if (exitHandle == null) {
+                logger.debug("Process did not exit within {} seconds. Killing process.", processTimeout);
                 processHandle.destroy();
                 exitHandle = onExit.completeOnTimeout(null, GRACEFUL_KILL_TIMEOUT, TimeUnit.SECONDS).join();
                 if (exitHandle == null) {
