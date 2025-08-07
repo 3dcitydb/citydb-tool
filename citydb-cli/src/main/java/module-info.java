@@ -3,6 +3,7 @@ module org.citydb.cli {
     requires org.citygml4j.core;
     requires org.citydb.io.citygml;
     requires org.apache.logging.log4j.core;
+    requires org.apache.logging.log4j.jul;
     requires transitive org.citydb.database;
     requires transitive org.citydb.io;
     requires transitive org.citydb.operation;
