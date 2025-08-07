@@ -32,9 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -96,10 +94,12 @@ public class ReferenceManager {
             if (shouldRun
                     && store.hasMap(type.ordinal() + "r")
                     && store.hasMap(type.ordinal() + "t")) {
+                logger.debug("Resolving local {} references...", type.getLabel());
                 store.withCurrentVersion(() -> {
                     Map<String, Long> targets = store.getOrCreateMap(type.ordinal() + "t");
                     Map<Long, String> references = store.getOrCreateMap(type.ordinal() + "r");
                     Map<Long, Long> resolved = new HashMap<>();
+                    Set<String> unresolved = new HashSet<>();
 
                     Iterator<Map.Entry<Long, String>> iterator = references.entrySet().iterator();
                     while (shouldRun && iterator.hasNext()) {
@@ -111,6 +111,9 @@ public class ReferenceManager {
                                 update(resolved, type);
                                 resolved.clear();
                             }
+                        } else if (type != CacheType.TEXTURE_IMAGE && unresolved.add(reference.getValue())) {
+                            logger.debug("Failed to resolve local {} reference: '{}'.",
+                                    type.getLabel(), reference.getValue());
                         }
                     }
                 });
