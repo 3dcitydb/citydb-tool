@@ -62,7 +62,7 @@ public class AddressImporter extends DatabaseImporter {
         stmt.setString(5, address.getStreet().orElse(null));
         stmt.setString(6, address.getHouseNumber().orElse(null));
         stmt.setString(7, address.getPoBox().orElse(null));
-        stmt.setObject(8, address.getZipCode().orElse(null));
+        stmt.setString(8, address.getZipCode().orElse(null));
         stmt.setString(9, address.getCity().orElse(null));
         stmt.setString(10, address.getState().orElse(null));
         stmt.setString(11, address.getCountry().orElse(null));

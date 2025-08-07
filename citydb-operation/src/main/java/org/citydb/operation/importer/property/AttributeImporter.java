@@ -76,7 +76,7 @@ public class AttributeImporter extends PropertyImporter {
 
         OffsetDateTime timestamp = attribute.getTimeStamp().orElse(null);
         if (timestamp != null) {
-            stmt.setObject(10, timestamp);
+            stmt.setObject(10, timestamp, Types.TIMESTAMP_WITH_TIMEZONE);
         } else {
             stmt.setNull(10, Types.TIMESTAMP_WITH_TIMEZONE);
         }

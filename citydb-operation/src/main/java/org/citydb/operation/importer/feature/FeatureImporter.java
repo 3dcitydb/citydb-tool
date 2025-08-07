@@ -78,29 +78,29 @@ public class FeatureImporter extends DatabaseImporter {
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
 
-        stmt.setObject(7, feature.getLastModificationDate().orElse(importTime));
+        stmt.setObject(7, feature.getLastModificationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
         stmt.setString(8, feature.getUpdatingPerson().orElse(updatingPerson));
         stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
         stmt.setString(10, feature.getLineage().orElse(lineage));
-        stmt.setObject(11, feature.getCreationDate().orElse(importTime));
+        stmt.setObject(11, feature.getCreationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
 
         OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);
         if (terminationDate != null) {
-            stmt.setObject(12, terminationDate);
+            stmt.setObject(12, terminationDate, Types.TIMESTAMP_WITH_TIMEZONE);
         } else {
             stmt.setNull(12, Types.TIMESTAMP_WITH_TIMEZONE);
         }
 
         OffsetDateTime validFrom = feature.getValidFrom().orElse(null);
         if (validFrom != null) {
-            stmt.setObject(13, validFrom);
+            stmt.setObject(13, validFrom, Types.TIMESTAMP_WITH_TIMEZONE);
         } else {
             stmt.setNull(13, Types.TIMESTAMP_WITH_TIMEZONE);
         }
 
         OffsetDateTime validTo = feature.getValidTo().orElse(null);
         if (validTo != null) {
-            stmt.setObject(14, validTo);
+            stmt.setObject(14, validTo, Types.TIMESTAMP_WITH_TIMEZONE);
         } else {
             stmt.setNull(14, Types.TIMESTAMP_WITH_TIMEZONE);
         }
