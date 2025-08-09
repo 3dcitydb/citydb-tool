@@ -1,5 +1,8 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 plugins {
     id 'application'
 }
@@ -58,6 +61,8 @@ application {
 }
 
 distributions {
+    def version = parseVersion("$project.version")
+
     main {
         distributionBaseName = appName
         contents {
@@ -67,6 +72,15 @@ distributions {
             }
             into('3dcitydb') {
                 from zipTree(configurations.citydb.singleFile)
+            }
+            into('json-schema') {
+                from "$rootDir/resources/json-schema"
+                filesMatching('**/*.json') {
+                    filter(ReplaceTokens, tokens: [
+                            major: version["major"],
+                            minor: version["minor"]
+                    ])
+                }
             }
             into('samples') {
                 from "$rootDir/resources/samples"
@@ -81,7 +95,21 @@ distributions {
         distributionBaseName = "$appName-docker"
         contents {
             with distributions.main.contents
-            exclude ('*.bat')
+            exclude('*.bat')
         }
     }
+}
+
+static def parseVersion(String versionString) {
+    def version = [:]
+    Matcher matcher = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+).*?").matcher(versionString)
+    if (matcher.matches()) {
+        version["major"] = matcher.group(1)
+        version["minor"] = matcher.group(2)
+        version["patch"] = matcher.group(3)
+        version["version"] = versionString
+    } else {
+        throw new GradleException("Failed to parse the version '$versionString'. Use SemVer notation.")
+    }
+    version
 }

@@ -1,0 +1,448 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/database-report.schema.json",
+  "title": "Database report schema",
+  "description": "JSON schema for the 3DCityDB database report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "metadata",
+    "summary",
+    "database",
+    "features",
+    "geometries",
+    "addresses",
+    "appearances",
+    "extensions",
+    "codeLists",
+    "modules"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reportGenerated",
+        "featureScope",
+        "genericAttributesProcessed"
+      ],
+      "properties": {
+        "reportGenerated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "featureScope": {
+          "type": "string",
+          "enum": [
+            "active",
+            "all"
+          ]
+        },
+        "genericAttributesProcessed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "topLevelFeatures",
+        "lods",
+        "themes",
+        "crs",
+        "extent",
+        "wgs84Extent"
+      ],
+      "properties": {
+        "topLevelFeatures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prefixedName"
+          }
+        },
+        "lods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "crs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "srid",
+            "identifier",
+            "name"
+          ],
+          "properties": {
+            "srid": {
+              "type": "integer"
+            },
+            "identifier": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "extent": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "wgs84Extent": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "dbms",
+        "hasChangelogEnabled",
+        "connection"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "dbms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^.*$": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "name",
+                    "value"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "hasChangelogEnabled": {
+          "type": "boolean"
+        },
+        "connection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "host",
+            "port",
+            "database",
+            "schema",
+            "user"
+          ],
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "database": {
+              "type": "string"
+            },
+            "schema": {
+              "type": "string"
+            },
+            "user": {
+              "type": "string"
+            }
+          }
+        },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "databaseSize",
+            "schemaSize",
+            "byTable"
+          ],
+          "properties": {
+            "databaseSize": {
+              "type": "integer"
+            },
+            "schemaSize": {
+              "type": "integer"
+            },
+            "byTable": {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^.*$": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "featureCount",
+        "topLevelFeatureCount",
+        "byType"
+      ],
+      "properties": {
+        "featureCount": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "active",
+            "terminated"
+          ],
+          "properties": {
+            "active": {
+              "type": "integer"
+            },
+            "terminated": {
+              "type": "integer"
+            }
+          }
+        },
+        "topLevelFeatureCount": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "active",
+            "terminated"
+          ],
+          "properties": {
+            "active": {
+              "type": "integer"
+            },
+            "terminated": {
+              "type": "integer"
+            }
+          }
+        },
+        "byType": {
+          "type": "object",
+          "additionalProperties": false,
+          "propertyNames": {
+            "$ref": "#/$defs/prefixedName"
+          },
+          "patternProperties": {
+            "^.*$": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "active",
+                "terminated"
+              ],
+              "properties": {
+                "active": {
+                  "type": "integer"
+                },
+                "terminated": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "geometries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "geometryCount",
+        "implicitGeometryCount",
+        "byType",
+        "byLod"
+      ],
+      "properties": {
+        "geometryCount": {
+          "type": "integer"
+        },
+        "implicitGeometryCount": {
+          "type": "integer"
+        },
+        "byType": {
+          "type": "object",
+          "additionalProperties": false,
+          "propertyNames": {
+            "$ref": "#/$defs/prefixedName"
+          },
+          "patternProperties": {
+            "^.*$": {
+              "type": "integer"
+            }
+          }
+        },
+        "byLod": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^.*$": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "addresses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "addressCount"
+      ],
+      "properties": {
+        "addressCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "appearances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "appearanceCount",
+        "hasGlobalAppearances",
+        "hasMaterials",
+        "hasTextures",
+        "hasGeoreferencedTextures",
+        "byTheme"
+      ],
+      "properties": {
+        "appearanceCount": {
+          "type": "integer"
+        },
+        "hasGlobalAppearances": {
+          "type": "boolean"
+        },
+        "hasMaterials": {
+          "type": "boolean"
+        },
+        "hasTextures": {
+          "type": "boolean"
+        },
+        "hasGeoreferencedTextures": {
+          "type": "boolean"
+        },
+        "byTheme": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^.*$": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "description",
+          "version"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "codeLists": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^.*$": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^.*$": {
+          "type": "string"
+        }
+      }
+    },
+    "genericAttributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^.*$": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prefixedName"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "prefixedName": {
+      "type": "string",
+      "pattern": "^([^:]+:)?[^:]+$"
+    }
+  }
+}

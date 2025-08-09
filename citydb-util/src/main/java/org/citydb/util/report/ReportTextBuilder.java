@@ -206,8 +206,8 @@ public class ReportTextBuilder {
         extensions.stream()
                 .filter(JSONObject.class::isInstance)
                 .map(JSONObject.class::cast)
-                .forEach(extension -> consumer.accept(getListItem(quote(extension.getString("name") + ": " +
-                        extension.getString("version")))));
+                .forEach(extension -> consumer.accept(getListItem(quote(extension.getString("name")) + ": " +
+                        quote(extension.getString("version")))));
     }
 
     private void buildCodelists(JSONObject codeLists, Consumer<String> consumer) {
