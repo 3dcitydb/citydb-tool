@@ -30,8 +30,8 @@ import java.nio.file.Path;
 public class InfoCommand implements Command {
     enum FeatureScope {all, active}
 
-    @CommandLine.Option(names = {"-o", "--output"},
-            description = "Write output as a JSON file. Use '-' to write to standard output.")
+    @CommandLine.Option(names = {"-o", "--output"}, paramLabel = "<file|->",
+            description = "Write output as a JSON file. Use '-' for stdout.")
     private Path file;
 
     @CommandLine.ArgGroup(exclusive = false)
