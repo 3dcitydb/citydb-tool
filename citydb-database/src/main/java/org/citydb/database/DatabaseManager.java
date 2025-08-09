@@ -118,7 +118,7 @@ public class DatabaseManager {
         return dataSource;
     }
 
-    public void reportDatabaseMetadata(Consumer<String> consumer) {
+    public void reportDatabaseInfo(Consumer<String> consumer) {
         if (isConnected()) {
             consumer.accept("3D City Database: " + adapter.getDatabaseMetadata().getVersion());
             consumer.accept("DBMS: " + adapter.getDatabaseMetadata().getVendorProductString());

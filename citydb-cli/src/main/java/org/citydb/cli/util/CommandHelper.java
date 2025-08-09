@@ -105,7 +105,7 @@ public class CommandHelper {
             logger.info("Connecting to database {}.", connectionDetails.fillAbsentValuesFromEnv().toConnectString());
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
-            databaseManager.reportDatabaseMetadata(logger::info);
+            databaseManager.reportDatabaseInfo(logger::info);
 
             Version version = databaseManager.getAdapter().getDatabaseMetadata().getVersion();
             if (DatabaseConstants.VERSION_SUPPORT.getPolicies().stream()
