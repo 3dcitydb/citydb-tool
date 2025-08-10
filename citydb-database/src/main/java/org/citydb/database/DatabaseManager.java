@@ -23,11 +23,14 @@ package org.citydb.database;
 
 import org.apache.tomcat.jdbc.pool.DataSource;
 import org.apache.tomcat.jdbc.pool.PoolProperties;
+import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.connection.PoolOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.Objects;
@@ -35,6 +38,7 @@ import java.util.Properties;
 import java.util.function.Consumer;
 
 public class DatabaseManager {
+    private final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
     private DatabaseAdapter adapter;
     private DataSource dataSource;
 
@@ -89,6 +93,13 @@ public class DatabaseManager {
         dataSource.createPool();
 
         adapter.initialize(Pool.newInstance(this), connectionDetails);
+
+        Version version = adapter.getDatabaseMetadata().getVersion();
+        if (DatabaseConstants.VERSION_SUPPORT.getPolicies().stream()
+                .anyMatch(policy -> policy.getUpperBound().compareTo(version) > 0)) {
+            logger.warn("The {} version {} is out of date. Consider upgrading.",
+                    DatabaseConstants.CITYDB_SHORT_NAME, version);
+        }
     }
 
     public void connect(ConnectionDetails connectionDetails) throws DatabaseException, SQLException {

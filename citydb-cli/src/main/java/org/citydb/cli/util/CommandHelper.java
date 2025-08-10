@@ -29,8 +29,6 @@ import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.core.CoreConstants;
-import org.citydb.core.version.Version;
-import org.citydb.database.DatabaseConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -70,34 +68,18 @@ public class CommandHelper {
         return new CommandHelper();
     }
 
-    public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
-        ConnectionDetails connectionDetails = options != null ?
-                options.toConnectionDetails() :
-                new ConnectionDetails();
+    public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
+        return connect(options, null);
+    }
 
-        DatabaseOptions databaseOptions;
+    public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
         try {
-            databaseOptions = config.get(DatabaseOptions.class);
+            return connect(options != null ?
+                    options.toConnectionDetails(config.get(DatabaseOptions.class)) :
+                    new ConnectionDetails());
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get database options from config.", e);
         }
-
-        if (databaseOptions != null) {
-            databaseOptions.getDefaultConnection().ifPresent(defaults -> connectionDetails
-                    .setHost(connectionDetails.getHost(defaults.getHost()))
-                    .setPort(connectionDetails.getPort(defaults.getPort()))
-                    .setDatabase(connectionDetails.getDatabase(defaults.getDatabase()))
-                    .setSchema(connectionDetails.getSchema(defaults.getSchema()))
-                    .setUser(connectionDetails.getUser(defaults.getUser()))
-                    .setPassword(connectionDetails.getPassword(defaults.getPassword()))
-                    .setPoolOptions(defaults.getPoolOptions().orElse(null)));
-        }
-
-        return connect(connectionDetails);
-    }
-
-    public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
-        return connect(options != null ? options.toConnectionDetails() : new ConnectionDetails());
     }
 
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
@@ -106,14 +88,6 @@ public class CommandHelper {
             DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
             databaseManager.reportDatabaseInfo(logger::info);
-
-            Version version = databaseManager.getAdapter().getDatabaseMetadata().getVersion();
-            if (DatabaseConstants.VERSION_SUPPORT.getPolicies().stream()
-                    .anyMatch(policy -> policy.getUpperBound().compareTo(version) > 0)) {
-                logger.warn("The {} version {} is out of date. Consider upgrading.",
-                        DatabaseConstants.CITYDB_SHORT_NAME, version);
-            }
-
             return databaseManager;
         } catch (DatabaseException | SQLException e) {
             throw new ExecutionException("Failed to connect to the database.", e);
