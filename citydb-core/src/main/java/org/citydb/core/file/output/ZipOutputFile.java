@@ -43,13 +43,13 @@ public class ZipOutputFile extends OutputFile {
     private final ParallelZipCreator zipCreator;
     private final Set<String> entries = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    public ZipOutputFile(String contentFile, Path zipFile, Path tempDir, int compressionLevel) throws IOException {
+    public ZipOutputFile(String contentFile, Path zipFile, Path tempDir, int compressionLevel) {
         super(zipFile, FileType.ARCHIVE);
         this.contentFile = Objects.requireNonNull(contentFile, "The content file must not be null.");
         zipCreator = new ParallelZipCreator(tempDir, compressionLevel);
     }
 
-    public ZipOutputFile(String contentFile, Path zipFile, Path tempDir) throws IOException {
+    public ZipOutputFile(String contentFile, Path zipFile, Path tempDir) {
         this(contentFile, zipFile, tempDir, Deflater.DEFAULT_COMPRESSION);
     }
 
