@@ -104,7 +104,7 @@ public abstract class ExportController implements Command {
 
     protected static final int ARG_GROUP_ORDER = 1;
     protected final Logger logger = LoggerManager.getInstance().getLogger(ExportController.class);
-    protected final CommandHelper helper = CommandHelper.newInstance();
+    protected final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -224,7 +224,6 @@ public abstract class ExportController implements Command {
                 }
             }
         } finally {
-            databaseManager.disconnect();
             logStatistics(statistics, "Export summary:", Level.INFO);
         }
 

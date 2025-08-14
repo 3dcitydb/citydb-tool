@@ -96,7 +96,7 @@ public class DeleteCommand implements Command {
     private Config config;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(DeleteCommand.class);
-    private final CommandHelper helper = CommandHelper.newInstance();
+    private final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -174,7 +174,6 @@ public class DeleteCommand implements Command {
             logger.warn("Database delete aborted due to an error.");
             throw new ExecutionException("A fatal error has occurred during delete.", e);
         } finally {
-            databaseManager.disconnect();
             if ((deleter.getState() == Deleter.State.SESSION_COMMITTED || autoCommit || preview)
                     && !deleteLogger.getStatistics().isEmpty()) {
                 logger.info(!preview ? "Delete summary:" : "Preview of features to be deleted:");

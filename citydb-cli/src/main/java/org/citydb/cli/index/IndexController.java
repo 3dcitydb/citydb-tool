@@ -36,5 +36,5 @@ public abstract class IndexController implements Command {
     @ConfigOption
     protected Config config;
 
-    protected final CommandHelper helper = CommandHelper.newInstance();
+    protected final CommandHelper helper = CommandHelper.getInstance();
 }

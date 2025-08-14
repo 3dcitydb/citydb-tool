@@ -90,9 +90,14 @@ public class DatabaseManager {
         dataSource.setLoginTimeout(connectionDetails.getPoolOptions()
                 .map(PoolOptions::getLoginTimeout)
                 .orElse(PoolOptions.DEFAULT_LOGIN_TIMEOUT));
-        dataSource.createPool();
 
-        adapter.initialize(Pool.newInstance(this), connectionDetails);
+        try {
+            dataSource.createPool();
+            adapter.initialize(Pool.newInstance(this), connectionDetails);
+        } catch (DatabaseException | SQLException e) {
+            disconnect();
+            throw e;
+        }
 
         Version version = adapter.getDatabaseMetadata().getVersion();
         if (DatabaseConstants.VERSION_SUPPORT.getPolicies().stream()
@@ -117,8 +122,11 @@ public class DatabaseManager {
     }
 
     public void disconnect() {
-        dataSource.close(true);
-        dataSource = null;
+        if (dataSource != null) {
+            dataSource.close(true);
+            dataSource = null;
+            adapter = null;
+        }
     }
 
     public DatabaseAdapter getAdapter() {

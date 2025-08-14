@@ -52,7 +52,7 @@ public class InfoCommand implements Command {
     private Config config;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(InfoCommand.class);
-    private final CommandHelper helper = CommandHelper.newInstance();
+    private final CommandHelper helper = CommandHelper.getInstance();
 
     @Override
     public Integer call() throws ExecutionException {

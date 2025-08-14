@@ -102,7 +102,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
     private final PluginManager pluginManager = PluginManager.getInstance();
-    private final CommandHelper helper = CommandHelper.newInstance();
+    private final CommandHelper helper = CommandHelper.getInstance();
     private final Config config = new Config();
     private String commandLine;
     private String subCommandName;
@@ -207,7 +207,12 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             subCommandName = commandLines.subList(1, commandLines.size()).stream()
                     .map(CommandLine::getCommandName)
                     .collect(Collectors.joining(" "));
-            exitCode = cmd.getExecutionStrategy().execute(parseResult);
+
+            try {
+                exitCode = cmd.getExecutionStrategy().execute(parseResult);
+            } finally {
+                helper.disconnect();
+            }
 
             logger.info("Total execution time: {}.", formatElapsedTime(Duration.between(start, Instant.now())));
 

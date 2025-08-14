@@ -106,7 +106,7 @@ public abstract class ImportController implements Command {
 
     protected static final int ARG_GROUP_ORDER = 2;
     protected final Logger logger = LoggerManager.getInstance().getLogger(ImportController.class);
-    protected final CommandHelper helper = CommandHelper.newInstance();
+    protected final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -218,7 +218,6 @@ public abstract class ImportController implements Command {
             logger.warn("Database import aborted due to an error.");
             throw new ExecutionException("A fatal error has occurred during import.", e);
         } finally {
-            databaseManager.disconnect();
             if (!importLogger.getStatistics().isEmpty()) {
                 logger.info(!preview ? "Import summary:" : "Preview of features to be imported:");
                 importLogger.getStatistics().logFeatureSummary(Level.INFO);

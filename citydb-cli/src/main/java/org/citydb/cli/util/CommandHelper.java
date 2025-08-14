@@ -58,14 +58,16 @@ import java.util.Collection;
 import java.util.function.Consumer;
 
 public class CommandHelper {
+    private static final CommandHelper instance = new CommandHelper();
     private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
+    private final DatabaseManager databaseManager = DatabaseManager.newInstance();
     private final PluginManager pluginManager = PluginManager.getInstance();
 
     private CommandHelper() {
     }
 
-    public static CommandHelper newInstance() {
-        return new CommandHelper();
+    public static CommandHelper getInstance() {
+        return instance;
     }
 
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
@@ -85,12 +87,17 @@ public class CommandHelper {
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
             logger.info("Connecting to database {}.", connectionDetails.fillAbsentValuesFromEnv().toConnectString());
-            DatabaseManager databaseManager = DatabaseManager.newInstance();
             databaseManager.connect(connectionDetails);
             databaseManager.reportDatabaseInfo(logger::info);
             return databaseManager;
         } catch (DatabaseException | SQLException e) {
             throw new ExecutionException("Failed to connect to the database.", e);
+        }
+    }
+
+    public void disconnect() {
+        if (databaseManager.isConnected()) {
+            databaseManager.disconnect();
         }
     }
 
