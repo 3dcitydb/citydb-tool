@@ -5,24 +5,19 @@ import com.alibaba.fastjson2.JSONWriter;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
-import org.citydb.cli.common.ConnectionOptions;
-import org.citydb.cli.common.ThreadsOptions;
+import org.citydb.cli.common.*;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
-import org.citydb.cli.util.Streams;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.util.report.DatabaseReport;
+import org.citydb.util.report.DatabaseReportException;
 import org.citydb.util.report.ReportOptions;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 @CommandLine.Command(
         name = "info",
@@ -30,9 +25,8 @@ import java.nio.file.Path;
 public class InfoCommand implements Command {
     enum FeatureScope {all, active}
 
-    @CommandLine.Option(names = {"-o", "--output"}, paramLabel = "<file|->",
-            description = "Write output as a JSON file. Use '-' for stdout.")
-    private Path file;
+    @CommandLine.Mixin
+    private JsonOutputOptions outputOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     protected ThreadsOptions threadsOptions;
@@ -68,36 +62,34 @@ public class InfoCommand implements Command {
         IndexHelper.Status status = helper.getIndexStatus(databaseManager.getAdapter());
         helper.logIndexStatus(Level.INFO, status);
 
-        boolean writeToStdout = file != null && file.toString().equals("-");
-        file = helper.resolveAgainstWorkingDir(file);
+        logger.info("Collecting database contents and summary information...");
+        if (status != IndexHelper.Status.ON) {
+            logger.warn("Generating the database report may be slower because not all indexes are enabled.");
+        }
 
+        DatabaseReport report;
         try {
-            logger.info("Collecting database contents and summary information...");
-            if (status != IndexHelper.Status.ON) {
-                logger.warn("Generating the database report may be slower because not all indexes are enabled.");
-            }
-
-            DatabaseReport report = DatabaseReport.build(reportOptions, databaseManager.getAdapter());
-
-            if (file != null) {
-                if (writeToStdout) {
-                    logger.info("Writing JSON report to standard output.");
-                } else {
-                    logger.info("Writing report to JSON file {}.", file);
-                }
-
-                try (OutputStream stream = writeToStdout ?
-                        Streams.nonClosing(System.out) :
-                        Files.newOutputStream(file)) {
-                    JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormat);
-                }
-            }
-
-            if (!writeToStdout) {
-                report.print(logger::info);
-            }
-        } catch (Exception e) {
+            report = DatabaseReport.build(reportOptions, databaseManager.getAdapter());
+        } catch (DatabaseReportException e) {
             throw new ExecutionException("Failed to create database report.", e);
+        }
+
+        if (outputOptions.isOutputSpecified()) {
+            if (outputOptions.isWriteToStdout()) {
+                logger.info("Writing JSON report to standard output.");
+            } else {
+                logger.info("Writing report to JSON file {}.", outputOptions.getFile());
+            }
+
+            try (OutputStream stream = outputOptions.openStream()) {
+                JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormat);
+            } catch (Exception e) {
+                throw new ExecutionException("Failed to write JSON report.", e);
+            }
+        }
+
+        if (!outputOptions.isWriteToStdout()) {
+            report.print(logger::info);
         }
 
         return CommandLine.ExitCode.OK;
