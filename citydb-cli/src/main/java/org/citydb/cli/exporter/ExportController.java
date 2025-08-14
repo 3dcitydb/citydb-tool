@@ -126,7 +126,7 @@ public abstract class ExportController implements Command {
         IOAdapterManager ioManager = helper.createIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
         OutputFileBuilder builder = OutputFileBuilder.newInstance()
-                .tempDirectory(helper.resolvePath(tempDirectory))
+                .tempDirectory(helper.resolveAgainstWorkingDir(tempDirectory))
                 .defaultFileExtension(ioManager.getFileExtensions(ioAdapter).stream()
                         .findFirst()
                         .orElse(null));
@@ -145,7 +145,7 @@ public abstract class ExportController implements Command {
         AtomicLong counter = new AtomicLong();
 
         try {
-            TilingHelper tilingHelper = TilingHelper.of(tiling, query, databaseManager.getAdapter());
+            TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseManager.getAdapter());
             if (tilingHelper.isUseTiling()) {
                 logger.info("Creating {} tile(s) based on provided tiling scheme.",
                         tilingHelper.getTileMatrix().size());
@@ -158,7 +158,7 @@ public abstract class ExportController implements Command {
                         SqlBuildOptions.defaults()
                                 .omitDistinct(true)
                                 .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
-                        tempDirectory,
+                        helper.resolveAgainstWorkingDir(tempDirectory),
                         databaseManager.getAdapter());
 
                 Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
@@ -308,7 +308,7 @@ public abstract class ExportController implements Command {
         }
 
         if (tempDirectory != null) {
-            writeOptions.setTempDirectory(tempDirectory.toString());
+            writeOptions.setTempDirectory(helper.resolveAgainstWorkingDir(tempDirectory));
         }
 
         if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {

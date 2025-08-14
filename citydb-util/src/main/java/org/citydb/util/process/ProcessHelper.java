@@ -21,7 +21,6 @@
 
 package org.citydb.util.process;
 
-import org.citydb.core.CoreConstants;
 import org.citydb.core.function.CheckedConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,10 +29,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -51,7 +47,7 @@ public class ProcessHelper {
     private int streamReadTimeout = 0;
     private Charset inputCharset = StandardCharsets.UTF_8;
     private Charset outputCharset = StandardCharsets.UTF_8;
-    private Path workingDir = CoreConstants.WORKING_DIR;
+    private Path workingDirectory;
 
     private ProcessHelper(ProcessBuilder builder) {
         this.builder = Objects.requireNonNull(builder, "The process builder must not be null.");
@@ -133,12 +129,12 @@ public class ProcessHelper {
         return this;
     }
 
-    public Path getWorkingDir() {
-        return workingDir;
+    public Optional<Path> getWorkingDirectory() {
+        return Optional.ofNullable(workingDirectory);
     }
 
-    public ProcessHelper setWorkingDir(Path workingDir) {
-        this.workingDir = workingDir != null ? workingDir : CoreConstants.WORKING_DIR;
+    public ProcessHelper setWorkingDirectory(Path workingDirectory) {
+        this.workingDirectory = workingDirectory;
         return this;
     }
 
@@ -162,7 +158,10 @@ public class ProcessHelper {
         Process process;
         try {
             builder.environment().putAll(envVariables);
-            builder.directory(workingDir.toFile());
+            if (workingDirectory != null) {
+                builder.directory(workingDirectory.toFile());
+            }
+
             process = builder.start();
         } catch (Exception e) {
             throw new ProcessException("Failed to start process.", e);

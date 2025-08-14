@@ -113,7 +113,7 @@ public class DeleteCommand implements Command {
         Query query = getQuery(deleteOptions);
         QueryExecutor executor = helper.getQueryExecutor(query,
                 SqlBuildOptions.defaults().omitDistinct(true),
-                tempDirectory,
+                helper.resolveAgainstWorkingDir(tempDirectory),
                 databaseManager.getAdapter());
 
         IndexOptions.Mode indexMode = indexOptions.getMode();

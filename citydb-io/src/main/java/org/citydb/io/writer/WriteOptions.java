@@ -23,7 +23,6 @@ package org.citydb.io.writer;
 
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
-import org.citydb.core.CoreConstants;
 import org.citydb.io.writer.options.OutputFormatOptions;
 
 import java.nio.file.Path;
@@ -48,9 +47,11 @@ public class WriteOptions {
     }
 
     public Optional<Path> getTempDirectory() {
-        return tempDirectory != null ?
-                Optional.of(CoreConstants.WORKING_DIR.resolve(tempDirectory)) :
-                Optional.empty();
+        return Optional.ofNullable(tempDirectory != null ? Path.of(tempDirectory) : null);
+    }
+
+    public WriteOptions setTempDirectory(Path tempDirectory) {
+        return setTempDirectory(tempDirectory != null ? tempDirectory.toString() : null);
     }
 
     public WriteOptions setTempDirectory(String tempDirectory) {

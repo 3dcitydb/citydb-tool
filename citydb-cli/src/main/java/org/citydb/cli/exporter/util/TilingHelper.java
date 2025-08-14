@@ -24,6 +24,7 @@ package org.citydb.cli.exporter.util;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.logging.LoggerManager;
+import org.citydb.cli.util.CommandHelper;
 import org.citydb.core.tuple.SimplePair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Namespaces;
@@ -61,6 +62,7 @@ public class TilingHelper {
     private final Logger logger = LoggerManager.getInstance().getLogger(TilingHelper.class);
     private final Tiling tiling;
     private final Query query;
+    private final CommandHelper helper;
     private final DatabaseAdapter adapter;
     private final boolean useTiling;
     private TileMatrix tileMatrix;
@@ -70,15 +72,16 @@ public class TilingHelper {
             Pattern.CASE_INSENSITIVE);
     private final Matcher matcher = Pattern.compile("").matcher("");
 
-    private TilingHelper(Tiling tiling, Query query, DatabaseAdapter adapter) {
+    private TilingHelper(Tiling tiling, Query query, CommandHelper helper, DatabaseAdapter adapter) {
         this.tiling = tiling;
         this.query = query;
+        this.helper = helper;
         this.adapter = adapter;
         useTiling = tiling != NO_TILING;
     }
 
-    public static TilingHelper of(Tiling tiling, Query query, DatabaseAdapter adapter) throws ExecutionException {
-        return new TilingHelper(tiling, query, adapter).buildTileMatrix();
+    public static TilingHelper of(Tiling tiling, Query query, CommandHelper helper, DatabaseAdapter adapter) throws ExecutionException {
+        return new TilingHelper(tiling, query, helper, adapter).buildTileMatrix();
     }
 
     public static Tiling noTiling() {
@@ -148,10 +151,10 @@ public class TilingHelper {
                 file = getDefaultOutputFile(file, tile);
             }
 
-            return Path.of(file);
-        } else {
-            return outputFile;
+            outputFile = Path.of(file);
         }
+
+        return helper.resolveAgainstWorkingDir(outputFile);
     }
 
     private SimplePair<String> replaceToken(String token, Tile tile) {

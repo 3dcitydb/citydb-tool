@@ -69,7 +69,7 @@ public class InfoCommand implements Command {
         helper.logIndexStatus(Level.INFO, status);
 
         boolean writeToStdout = file != null && file.toString().equals("-");
-        file = helper.resolvePath(file);
+        file = helper.resolveAgainstWorkingDir(file);
 
         try {
             logger.info("Collecting database contents and summary information...");

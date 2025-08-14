@@ -7,7 +7,6 @@ module org.citydb.core {
     requires transitive org.slf4j;
     requires transitive org.apache.tika.core;
 
-    exports org.citydb.core;
     exports org.citydb.core.cache;
     exports org.citydb.core.concurrent;
     exports org.citydb.core.file;

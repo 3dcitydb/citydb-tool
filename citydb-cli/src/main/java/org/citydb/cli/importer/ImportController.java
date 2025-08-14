@@ -23,6 +23,7 @@ package org.citydb.cli.importer;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CliConstants;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.importer.duplicate.DuplicateController;
@@ -235,6 +236,7 @@ public abstract class ImportController implements Command {
             return InputFiles.of(inputFileOptions.getFiles())
                     .withFileExtensions(ioManager.getFileExtensions(ioAdapter))
                     .withMediaType(ioManager.getMediaType(ioAdapter))
+                    .withBaseDirectory(CliConstants.WORKING_DIR)
                     .find();
         } catch (IOException e) {
             throw new ExecutionException("Failed to create list of input files.", e);
@@ -265,7 +267,7 @@ public abstract class ImportController implements Command {
         }
 
         if (tempDirectory != null) {
-            readOptions.setTempDirectory(tempDirectory.toString());
+            readOptions.setTempDirectory(helper.resolveAgainstWorkingDir(tempDirectory));
         }
 
         if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {
@@ -292,7 +294,7 @@ public abstract class ImportController implements Command {
         }
 
         if (tempDirectory != null) {
-            importOptions.setTempDirectory(tempDirectory.toString());
+            importOptions.setTempDirectory(helper.resolveAgainstWorkingDir(tempDirectory));
         }
 
         if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {

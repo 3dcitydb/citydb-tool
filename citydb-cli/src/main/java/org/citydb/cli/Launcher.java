@@ -37,7 +37,6 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
-import org.citydb.core.CoreConstants;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
@@ -234,11 +233,11 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         logger.info("Starting {}, version {}.", CliConstants.APP_NAME, CliConstants.APP_VERSION);
 
         if (pidFile != null) {
-            createPidFile();
+            createPidFile(helper.resolveAgainstWorkingDir(pidFile));
         }
 
         if (configFile != null) {
-            loadConfig();
+            loadConfig(helper.resolveAgainstWorkingDir(configFile));
         }
 
         loadPlugins();
@@ -258,11 +257,12 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 .reconfigure();
 
         if (logFile != null) {
+            logFile = helper.resolveAgainstWorkingDir(logFile);
             if (Files.isDirectory(logFile)) {
                 logFile = logFile.resolve(LoggerManager.DEFAULT_LOG_FILE);
             }
 
-            logger.debug("Writing log messages to {}.", logFile.toAbsolutePath());
+            logger.debug("Writing log messages to {}.", logFile);
             manager.logFile()
                     .setLogLevel(logLevel.level)
                     .setPath(logFile)
@@ -271,19 +271,19 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
-    private void createPidFile() throws ExecutionException {
+    private void createPidFile(Path file) throws ExecutionException {
         try {
-            logger.debug("Creating PID file at {}.", pidFile.toAbsolutePath());
-            PidFile.create(pidFile, true);
+            logger.debug("Creating PID file at {}.", file);
+            PidFile.create(file, true);
         } catch (IOException e) {
             throw new ExecutionException("Failed to create PID file.", e);
         }
     }
 
-    private void loadConfig() throws ExecutionException {
-        logger.info("Loading configuration from file {}...", configFile);
+    private void loadConfig(Path file) throws ExecutionException {
         try {
-            config.putAll(ConfigManager.newInstance().read(configFile, Config.class, Config::new));
+            logger.info("Loading configuration from file {}...", file);
+            config.putAll(ConfigManager.newInstance().read(file, Config.class, Config::new));
         } catch (Exception e) {
             throw new ExecutionException("Failed to load config file.", e);
         }
@@ -344,8 +344,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
 
         return pluginsDirectory != null ?
-                CoreConstants.WORKING_DIR.resolve(pluginsDirectory) :
-                CoreConstants.APP_HOME.resolve(CliConstants.PLUGINS_DIR);
+                CliConstants.WORKING_DIR.resolve(pluginsDirectory) :
+                CliConstants.APP_HOME.resolve(CliConstants.PLUGINS_DIR);
     }
 
     private void logException(Throwable e) {

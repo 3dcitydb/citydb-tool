@@ -23,7 +23,6 @@ package org.citydb.operation.importer;
 
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
-import org.citydb.core.CoreConstants;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
@@ -45,9 +44,11 @@ public class ImportOptions {
     private Matrix3x4 affineTransform;
 
     public Optional<Path> getTempDirectory() {
-        return tempDirectory != null ?
-                Optional.of(CoreConstants.WORKING_DIR.resolve(tempDirectory)) :
-                Optional.empty();
+        return Optional.ofNullable(tempDirectory != null ? Path.of(tempDirectory) : null);
+    }
+
+    public ImportOptions setTempDirectory(Path tempDirectory) {
+        return setTempDirectory(tempDirectory != null ? tempDirectory.toString() : null);
     }
 
     public ImportOptions setTempDirectory(String tempDirectory) {

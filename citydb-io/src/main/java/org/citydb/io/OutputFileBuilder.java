@@ -21,7 +21,6 @@
 
 package org.citydb.io;
 
-import org.citydb.core.CoreConstants;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.GZipOutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
@@ -31,6 +30,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.zip.Deflater;
 
 public class OutputFileBuilder {
@@ -70,7 +70,10 @@ public class OutputFileBuilder {
     }
 
     public OutputFile newOutputFile(Path file) throws IOException {
-        file = CoreConstants.WORKING_DIR.resolve(file).toAbsolutePath().normalize();
+        file = Objects.requireNonNull(file, "The output file must not be null.")
+                .toAbsolutePath()
+                .normalize();
+
         Path parent = file.getParent();
         if (!Files.exists(parent)) {
             Files.createDirectories(parent);

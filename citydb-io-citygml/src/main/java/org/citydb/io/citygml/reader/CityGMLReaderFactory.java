@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.reader;
 
-import org.citydb.core.CoreConstants;
 import org.citydb.core.file.InputFile;
 import org.citydb.io.citygml.reader.util.IdCreator;
 import org.citydb.io.reader.ReadException;
@@ -109,7 +108,7 @@ public class CityGMLReaderFactory {
     private TransformerPipeline getTransformer(List<String> stylesheets) throws ReadException {
         try {
             return TransformerPipeline.newInstance(stylesheets.stream()
-                    .map(CoreConstants.WORKING_DIR::resolve)
+                    .map(Path::of)
                     .map(Path::toFile)
                     .map(StreamSource::new)
                     .toArray(StreamSource[]::new));

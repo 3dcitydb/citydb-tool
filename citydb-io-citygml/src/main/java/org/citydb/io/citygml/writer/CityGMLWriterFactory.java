@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.writer;
 
-import org.citydb.core.CoreConstants;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
@@ -73,7 +72,7 @@ public class CityGMLWriterFactory {
     private TransformerPipeline getTransformer(List<String> stylesheets) throws WriteException {
         try {
             return TransformerPipeline.newInstance(stylesheets.stream()
-                    .map(CoreConstants.WORKING_DIR::resolve)
+                    .map(Path::of)
                     .map(Path::toFile)
                     .map(StreamSource::new)
                     .toArray(StreamSource[]::new));

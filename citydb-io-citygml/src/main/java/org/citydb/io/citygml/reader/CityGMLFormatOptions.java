@@ -24,6 +24,7 @@ package org.citydb.io.citygml.reader;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.citygml.reader.options.FormatOptions;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -106,6 +107,10 @@ public class CityGMLFormatOptions extends FormatOptions<CityGMLFormatOptions> {
     public CityGMLFormatOptions setXslTransforms(List<String> xslTransforms) {
         this.xslTransforms = xslTransforms;
         return this;
+    }
+
+    public CityGMLFormatOptions addXslTransform(Path xslTransform) {
+        return addXslTransform(xslTransform != null ? xslTransform.toString() : null);
     }
 
     public CityGMLFormatOptions addXslTransform(String xslTransform) {

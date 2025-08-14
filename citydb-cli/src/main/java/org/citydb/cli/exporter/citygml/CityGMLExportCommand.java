@@ -35,8 +35,6 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 import picocli.CommandLine;
 
-import java.util.Arrays;
-
 @CommandLine.Command(
         name = "citygml",
         description = "Export data in CityGML format.")
@@ -89,7 +87,9 @@ public class CityGMLExportCommand extends ExportController {
         }
 
         if (stylesheets != null) {
-            options.setXslTransforms(Arrays.asList(stylesheets));
+            for (String stylesheet : stylesheets) {
+                options.addXslTransform(helper.resolveAgainstWorkingDir(stylesheet));
+            }
         }
 
         if (upgradeOptions != null) {

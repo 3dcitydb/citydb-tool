@@ -28,6 +28,7 @@ import org.citydb.io.citygml.writer.options.AddressMode;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citygml4j.core.model.CityGMLVersion;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,6 +113,10 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
     public CityGMLFormatOptions setXslTransforms(List<String> xslTransforms) {
         this.xslTransforms = xslTransforms;
         return this;
+    }
+
+    public CityGMLFormatOptions addXslTransform(Path xslTransform) {
+        return addXslTransform(xslTransform != null ? xslTransform.toString() : null);
     }
 
     public CityGMLFormatOptions addXslTransform(String xslTransform) {

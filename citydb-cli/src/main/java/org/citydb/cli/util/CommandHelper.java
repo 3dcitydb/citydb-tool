@@ -23,12 +23,12 @@ package org.citydb.cli.util;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CliConstants;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
-import org.citydb.core.CoreConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -208,8 +208,12 @@ public class CommandHelper {
         }
     }
 
-    public Path resolvePath(Path path) {
-        return path != null ? CoreConstants.WORKING_DIR.resolve(path).toAbsolutePath().normalize() : null;
+    public Path resolveAgainstWorkingDir(String path) {
+        return path != null ? resolveAgainstWorkingDir(Path.of(path)) : null;
+    }
+
+    public Path resolveAgainstWorkingDir(Path path) {
+        return path != null ? CliConstants.WORKING_DIR.resolve(path).normalize() : null;
     }
 
     public synchronized void logException(String message, Throwable e) {

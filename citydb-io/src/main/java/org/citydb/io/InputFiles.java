@@ -27,7 +27,6 @@ import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
-import org.citydb.core.CoreConstants;
 import org.citydb.core.file.InputFile;
 import org.citydb.core.file.input.GZipInputFile;
 import org.citydb.core.file.input.RegularInputFile;
@@ -52,6 +51,7 @@ public class InputFiles {
     private final TikaConfig tikaConfig;
     private final Set<String> extensions = new HashSet<>();
     private final Set<MediaType> mediaTypes = new HashSet<>();
+    private Path baseDirectory = Path.of(".").toAbsolutePath().normalize();
     private Predicate<Path> filter;
 
     private InputFiles(Collection<String> pathsOrGlobPatterns) throws IOException {
@@ -100,6 +100,14 @@ public class InputFiles {
     public InputFiles withMediaTypes(Collection<MediaType> mediaTypes) {
         if (mediaTypes != null) {
             mediaTypes.forEach(this::withMediaType);
+        }
+
+        return this;
+    }
+
+    public InputFiles withBaseDirectory(Path baseDirectory) {
+        if (baseDirectory != null) {
+            this.baseDirectory = baseDirectory;
         }
 
         return this;
@@ -173,10 +181,10 @@ public class InputFiles {
             }
         } while (path == null && !file.isEmpty());
 
-        // resolve path against the working directory
+        // resolve path against the base directory
         path = path == null ?
-                CoreConstants.WORKING_DIR :
-                CoreConstants.WORKING_DIR.resolve(path);
+                baseDirectory :
+                baseDirectory.resolve(path);
 
         elements.addFirst(path.toAbsolutePath().toString());
         return elements;

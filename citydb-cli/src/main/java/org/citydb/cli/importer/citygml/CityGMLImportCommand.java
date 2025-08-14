@@ -35,8 +35,6 @@ import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.reader.options.InputFormatOptions;
 import picocli.CommandLine;
 
-import java.util.Arrays;
-
 @CommandLine.Command(
         name = "citygml",
         description = "Import data in CityGML format.")
@@ -75,7 +73,9 @@ public class CityGMLImportCommand extends ImportController {
         }
 
         if (stylesheets != null) {
-            options.setXslTransforms(Arrays.asList(stylesheets));
+            for (String stylesheet : stylesheets) {
+                options.addXslTransform(helper.resolveAgainstWorkingDir(stylesheet));
+            }
         }
 
         if (upgradeOptions != null) {
