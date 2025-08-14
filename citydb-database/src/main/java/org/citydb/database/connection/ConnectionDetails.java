@@ -57,7 +57,7 @@ public class ConnectionDetails {
         return description;
     }
 
-    public String getDescription(String defaultValue) {
+    public String getDescriptionOrElse(String defaultValue) {
         return description != null ? description : defaultValue;
     }
 
@@ -70,7 +70,7 @@ public class ConnectionDetails {
         return databaseName;
     }
 
-    public String getDatabaseName(String defaultValue) {
+    public String getDatabaseNameOrElse(String defaultValue) {
         return databaseName != null ? databaseName : defaultValue;
     }
 
@@ -83,7 +83,7 @@ public class ConnectionDetails {
         return user;
     }
 
-    public String getUser(String defaultValue) {
+    public String getUserOrElse(String defaultValue) {
         return user != null ? user : defaultValue;
     }
 
@@ -96,7 +96,7 @@ public class ConnectionDetails {
         return password;
     }
 
-    public String getPassword(String defaultValue) {
+    public String getPasswordOrElse(String defaultValue) {
         return password != null ? password : defaultValue;
     }
 
@@ -109,7 +109,7 @@ public class ConnectionDetails {
         return host;
     }
 
-    public String getHost(String defaultValue) {
+    public String getHostOrElse(String defaultValue) {
         return host != null ? host : defaultValue;
     }
 
@@ -122,11 +122,11 @@ public class ConnectionDetails {
         return port;
     }
 
-    public Integer getPort(Integer defaultValue) {
+    public Integer getPortOrElse(Integer defaultValue) {
         return port != null ? port : defaultValue;
     }
 
-    public Integer getPort(String defaultValue) {
+    public Integer getPortOrElse(String defaultValue) {
         if (port != null) {
             return port;
         } else {
@@ -147,7 +147,7 @@ public class ConnectionDetails {
         return database;
     }
 
-    public String getDatabase(String defaultValue) {
+    public String getDatabaseOrElse(String defaultValue) {
         return database != null ? database : defaultValue;
     }
 
@@ -160,7 +160,7 @@ public class ConnectionDetails {
         return schema;
     }
 
-    public String getSchema(String defaultValue) {
+    public String getSchemaOrElse(String defaultValue) {
         return schema != null ? schema : defaultValue;
     }
 
@@ -209,12 +209,12 @@ public class ConnectionDetails {
     }
 
     public ConnectionDetails fillAbsentValuesFromEnv() {
-        return setUser(getUser(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME)))
-                .setPassword(getPassword(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD)))
-                .setHost(getHost(System.getenv(DatabaseConstants.ENV_CITYDB_HOST)))
-                .setPort(getPort(System.getenv(DatabaseConstants.ENV_CITYDB_PORT)))
-                .setDatabase(getDatabase(System.getenv(DatabaseConstants.ENV_CITYDB_NAME)))
-                .setSchema(getSchema(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)))
+        return setUser(getUserOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME)))
+                .setPassword(getPasswordOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD)))
+                .setHost(getHostOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_HOST)))
+                .setPort(getPortOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_PORT)))
+                .setDatabase(getDatabaseOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_NAME)))
+                .setSchema(getSchemaOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)))
                 .setProperties(System.getenv(DatabaseConstants.ENV_CITYDB_CONN_PROPS));
     }
 

@@ -164,7 +164,7 @@ public class DuplicateController implements AutoCloseable {
         if (store == null) {
             try {
                 store = PersistentMapStore.builder()
-                        .tempDirectory(options.getTempDirectory())
+                        .tempDirectory(options.getTempDirectory().orElse(null))
                         .build();
                 logger.debug("Initialized duplicate feature cache at {}.", store.getBackingFile());
             } catch (IOException e) {

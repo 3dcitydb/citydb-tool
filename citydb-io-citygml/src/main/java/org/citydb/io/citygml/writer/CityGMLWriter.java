@@ -70,7 +70,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
         try {
             store = PersistentMapStore.builder()
-                    .tempDirectory(options.getTempDirectory())
+                    .tempDirectory(options.getTempDirectory().orElse(null))
                     .build();
             logger.debug("Initialized CityGML writer cache at {}.", store.getBackingFile());
         } catch (IOException e) {

@@ -62,7 +62,7 @@ public class ReferenceManager {
 
     private ReferenceManager initialize(ImportOptions options) throws IOException {
         store = PersistentMapStore.builder()
-                .tempDirectory(options.getTempDirectory())
+                .tempDirectory(options.getTempDirectory().orElse(null))
                 .build();
         logger.debug("Initialized cache for resolving references at {}.", store.getBackingFile());
 

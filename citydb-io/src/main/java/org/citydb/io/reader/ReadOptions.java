@@ -52,8 +52,10 @@ public class ReadOptions {
         return this;
     }
 
-    public Path getTempDirectory() {
-        return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
+    public Optional<Path> getTempDirectory() {
+        return tempDirectory != null ?
+                Optional.of(CoreConstants.WORKING_DIR.resolve(tempDirectory)) :
+                Optional.empty();
     }
 
     public ReadOptions setTempDirectory(String tempDirectory) {

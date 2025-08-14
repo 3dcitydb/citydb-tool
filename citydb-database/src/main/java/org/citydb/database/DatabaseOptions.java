@@ -36,6 +36,10 @@ public class DatabaseOptions {
     @JSONField(name = "defaultConnection")
     private String defaultConnectionId;
 
+    public boolean hasConnections() {
+        return connections != null && !connections.isEmpty();
+    }
+
     public Map<String, ConnectionDetails> getConnections() {
         if (connections == null) {
             connections = new HashMap<>();
@@ -49,8 +53,8 @@ public class DatabaseOptions {
         return this;
     }
 
-    public String getDefaultConnectionId() {
-        return defaultConnectionId;
+    public Optional<String> getDefaultConnectionId() {
+        return Optional.ofNullable(defaultConnectionId);
     }
 
     public DatabaseOptions setDefaultConnectionId(String defaultConnectionId) {

@@ -76,7 +76,7 @@ public class CityGMLReader implements FeatureReader {
 
         try {
             store = PersistentMapStore.builder()
-                    .tempDirectory(options.getTempDirectory())
+                    .tempDirectory(options.getTempDirectory().orElse(null))
                     .build();
             logger.debug("Initialized CityGML reader cache at {}.", store.getBackingFile());
         } catch (IOException e) {

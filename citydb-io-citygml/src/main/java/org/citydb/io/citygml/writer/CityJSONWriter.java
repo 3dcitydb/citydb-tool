@@ -77,7 +77,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
 
         try {
             store = PersistentMapStore.builder()
-                    .tempDirectory(options.getTempDirectory())
+                    .tempDirectory(options.getTempDirectory().orElse(null))
                     .build();
             logger.debug("Initialized CityJSON writer cache at {}.", store.getBackingFile());
         } catch (IOException e) {

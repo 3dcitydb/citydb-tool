@@ -47,8 +47,10 @@ public class WriteOptions {
         return this;
     }
 
-    public Path getTempDirectory() {
-        return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
+    public Optional<Path> getTempDirectory() {
+        return tempDirectory != null ?
+                Optional.of(CoreConstants.WORKING_DIR.resolve(tempDirectory)) :
+                Optional.empty();
     }
 
     public WriteOptions setTempDirectory(String tempDirectory) {

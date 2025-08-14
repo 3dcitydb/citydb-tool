@@ -44,8 +44,10 @@ public class ImportOptions {
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
 
-    public Path getTempDirectory() {
-        return tempDirectory != null ? CoreConstants.WORKING_DIR.resolve(tempDirectory) : null;
+    public Optional<Path> getTempDirectory() {
+        return tempDirectory != null ?
+                Optional.of(CoreConstants.WORKING_DIR.resolve(tempDirectory)) :
+                Optional.empty();
     }
 
     public ImportOptions setTempDirectory(String tempDirectory) {
