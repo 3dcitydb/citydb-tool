@@ -40,7 +40,6 @@ import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.operation.exporter.options.ValidityOptions;
-import org.citydb.plugin.PluginManager;
 import org.citydb.query.Query;
 import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.QueryBuildException;
@@ -55,13 +54,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class CommandHelper {
     private static final CommandHelper instance = new CommandHelper();
     private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
-    private final PluginManager pluginManager = PluginManager.getInstance();
 
     private CommandHelper() {
     }
@@ -71,14 +70,13 @@ public class CommandHelper {
     }
 
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
-        return connect(options, null);
+        return connect(options != null ? options.toConnectionDetails() : new ConnectionDetails());
     }
 
     public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
         try {
-            return connect(options != null ?
-                    options.toConnectionDetails(config.get(DatabaseOptions.class)) :
-                    new ConnectionDetails());
+            return connect(Objects.requireNonNullElseGet(options, ConnectionOptions::new)
+                    .toConnectionDetails(config.get(DatabaseOptions.class)));
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get database options from config.", e);
         }
@@ -102,7 +100,7 @@ public class CommandHelper {
     }
 
     public IOAdapterManager createIOAdapterManager() throws ExecutionException {
-        IOAdapterManager manager = IOAdapterManager.newInstance().load(pluginManager.getClassLoader());
+        IOAdapterManager manager = IOAdapterManager.newInstance().load();
         if (manager.hasExceptions()) {
             throw new ExecutionException("Failed to initialize IO adapter manager.",
                     manager.getExceptions().values().stream()

@@ -58,26 +58,29 @@ public abstract class DatabaseAdapter {
 
     public final void initialize(Pool pool, ConnectionDetails connectionDetails) throws DatabaseException, SQLException {
         this.pool = Objects.requireNonNull(pool, "The database pool must not be null.");
-        this.connectionDetails = Objects.requireNonNull(connectionDetails, "The connection details must not be null.");
+        this.connectionDetails = ConnectionDetails.of(Objects.requireNonNull(connectionDetails,
+                "The connection details must not be null."));
+
         schemaAdapter = Objects.requireNonNull(createSchemaAdapter(this), "The schema adapter must not be null.");
         geometryAdapter = Objects.requireNonNull(createGeometryAdapter(this), "The geometry adapter must not be null.");
 
-        if (connectionDetails.getSchema() == null) {
-            connectionDetails.setSchema(schemaAdapter.getDefaultSchema());
+        String defaultSchema = schemaAdapter.getDefaultSchema();
+        if (this.connectionDetails.getSchema() == null) {
+            this.connectionDetails.setSchema(defaultSchema);
+            connectionDetails.setSchema(defaultSchema);
         }
 
         try (Connection connection = pool.getConnection()) {
             Version version = getCityDBVersion(connection);
 
-            if (!connectionDetails.getSchema().equals(schemaAdapter.getDefaultSchema())
-                    && !schemaExists(connectionDetails.getSchema(), version, connection)) {
-                throw new DatabaseException("The requested schema '" + connectionDetails.getSchema() +
-                        "' is not a 3DCityDB schema.");
+            String schema = this.connectionDetails.getSchema();
+            if (!schema.equals(defaultSchema) && !schemaExists(schema, version, connection)) {
+                throw new DatabaseException("The requested schema '" + schema + "' is not a 3DCityDB schema.");
             }
 
             databaseMetadata = DatabaseMetadata.of(version,
                     getDatabaseSrs(connection),
-                    isChangelogEnabled(connectionDetails.getSchema(), connection),
+                    isChangelogEnabled(schema, connection),
                     connection.getMetaData(),
                     schemaAdapter::getVendorProductString,
                     schemaAdapter.getDatabaseProperties(version, connection));
