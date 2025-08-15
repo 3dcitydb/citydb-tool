@@ -82,7 +82,7 @@ public class InfoCommand implements Command {
             }
 
             try (OutputStream stream = outputOptions.openStream()) {
-                JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormat);
+                JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormatWith2Space);
             } catch (Exception e) {
                 throw new ExecutionException("Failed to write JSON report.", e);
             }
