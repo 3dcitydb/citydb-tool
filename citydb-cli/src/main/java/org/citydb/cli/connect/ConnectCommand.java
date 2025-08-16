@@ -69,7 +69,8 @@ public class ConnectCommand implements Command {
 
     private int doConnect(DatabaseManager databaseManager) throws ExecutionException {
         ConnectionDetails connectionDetails = Objects.requireNonNullElseGet(connectionOptions, ConnectionOptions::new)
-                .toConnectionDetails(getDatabaseOptions())
+                .toConnectionDetails()
+                .fillAbsentValuesFrom(getDefaultConnectionDetails())
                 .fillAbsentValuesFromEnv();
 
         logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
@@ -124,9 +125,10 @@ public class ConnectCommand implements Command {
         }
     }
 
-    private DatabaseOptions getDatabaseOptions() throws ExecutionException {
+    private ConnectionDetails getDefaultConnectionDetails() throws ExecutionException {
         try {
-            return config.get(DatabaseOptions.class);
+            DatabaseOptions options = config.get(DatabaseOptions.class);
+            return options != null ? options.getDefaultConnection().orElse(null) : null;
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get database options from config.", e);
         }
