@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/database-report.schema.json",
   "title": "Database report schema",
-  "description": "JSON schema for the 3DCityDB database report",
+  "description": "JSON schema for the 3DCityDB database report.",
   "type": "object",
   "additionalProperties": false,
   "required": [
