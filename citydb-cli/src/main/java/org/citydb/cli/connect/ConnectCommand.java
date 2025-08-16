@@ -70,7 +70,7 @@ public class ConnectCommand implements Command {
     private int doConnect(DatabaseManager databaseManager) throws ExecutionException {
         ConnectionDetails connectionDetails = Objects.requireNonNullElseGet(connectionOptions, ConnectionOptions::new)
                 .toConnectionDetails()
-                .fillAbsentValuesFrom(getDefaultConnectionDetails())
+                .fillAbsentValuesFrom(getConnectionDetailsFromConfig())
                 .fillAbsentValuesFromEnv();
 
         logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
@@ -125,7 +125,7 @@ public class ConnectCommand implements Command {
         }
     }
 
-    private ConnectionDetails getDefaultConnectionDetails() throws ExecutionException {
+    private ConnectionDetails getConnectionDetailsFromConfig() throws ExecutionException {
         try {
             DatabaseOptions options = config.get(DatabaseOptions.class);
             return options != null ? options.getDefaultConnection().orElse(null) : null;
