@@ -69,7 +69,7 @@ public class CommandHelper {
     }
 
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
-        return connect(options != null ? options.toConnectionDetails() : new ConnectionDetails());
+        return connect(options, null);
     }
 
     public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
@@ -78,8 +78,10 @@ public class CommandHelper {
                     options.toConnectionDetails() :
                     new ConnectionDetails();
 
-            config.ifPresent(DatabaseOptions.class, databaseOptions ->
-                    databaseOptions.getDefaultConnection().ifPresent(connectionDetails::fillAbsentValuesFrom));
+            if (config != null) {
+                config.ifPresent(DatabaseOptions.class, databaseOptions ->
+                        databaseOptions.getDefaultConnection().ifPresent(connectionDetails::fillAbsentValuesFrom));
+            }
 
             return connect(connectionDetails);
         } catch (ConfigException e) {
