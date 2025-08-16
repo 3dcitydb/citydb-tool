@@ -5,6 +5,8 @@
 ### Added
 - Introduced the `info` command for generating a summary and report of the 3DCityDB contents. Reports can be output
   in JSON format and either written to a file or printed to `stdout` for further processing. [#61](https://github.com/3dcitydb/citydb-tool/pull/61)
+- Added the `connect` command that tests whether a connection to a 3DCityDB instance can be established. The command
+  supports optional JSON output, which can either be printed to `stdout` or written to a file. [#64](https://github.com/3dcitydb/citydb-tool/pull/64)
 - Added support for XSLT/XPath 2.0 and 3.0 to the `citygml import` and `citygml export` commands.
 
 ### Changed
