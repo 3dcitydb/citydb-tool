@@ -34,6 +34,7 @@ module org.citydb.cli {
 
     opens org.citydb.cli to info.picocli;
     opens org.citydb.cli.common to info.picocli;
+    opens org.citydb.cli.connect to info.picocli;
     opens org.citydb.cli.deleter to info.picocli;
     opens org.citydb.cli.deleter.options to info.picocli;
     opens org.citydb.cli.exporter to info.picocli;

@@ -26,6 +26,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.Option;
+import org.citydb.cli.connect.ConnectCommand;
 import org.citydb.cli.deleter.DeleteCommand;
 import org.citydb.cli.exporter.ExportCommand;
 import org.citydb.cli.extension.MainCommand;
@@ -125,6 +126,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         CommandLine cmd = new CommandLine(this);
 
         pluginManager.load(parsePluginsDirectory(args));
+        Command.addSubcommand(new ConnectCommand(), cmd, pluginManager);
         Command.addSubcommand(new InfoCommand(), cmd, pluginManager);
         Command.addSubcommand(new ImportCommand(), cmd, pluginManager);
         Command.addSubcommand(new ExportCommand(), cmd, pluginManager);

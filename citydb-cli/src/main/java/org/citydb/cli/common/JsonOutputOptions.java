@@ -50,13 +50,13 @@ public class JsonOutputOptions implements Option {
     }
 
     public OutputStream openStream() throws IOException {
-        if (!isOutputSpecified()) {
+        if (isOutputSpecified()) {
+            return writeToStdout ?
+                    Streams.nonClosing(System.out) :
+                    Files.newOutputStream(file);
+        } else {
             throw new IOException("No output option specified.");
         }
-
-        return writeToStdout ?
-                Streams.nonClosing(System.out) :
-                Files.newOutputStream(file);
     }
 
     @Override

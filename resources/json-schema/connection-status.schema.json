@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/connection-status.schema.json",
+  "title": "Connection status schema",
+  "description": "JSON schema describing the connection status to a 3DCityDB.",
+  "type": "object",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "connectionStatus",
+        "connection",
+        "database"
+      ],
+      "properties": {
+        "connectionStatus": {
+          "const": "success"
+        },
+        "connection": {
+          "$ref": "#/$defs/connection"
+        },
+        "database": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version",
+            "dbms",
+            "hasChangelogEnabled",
+            "crs"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "dbms": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "version"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "properties": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^.*$": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "value"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "hasChangelogEnabled": {
+              "type": "boolean"
+            },
+            "crs": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "srid",
+                "identifier",
+                "name"
+              ],
+              "properties": {
+                "srid": {
+                  "type": "integer"
+                },
+                "identifier": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "connectionStatus",
+        "connection",
+        "error"
+      ],
+      "properties": {
+        "connectionStatus": {
+          "const": "failure"
+        },
+        "connection": {
+          "$ref": "#/$defs/connection"
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "causes"
+          ],
+          "properties": {
+            "causes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "message",
+                  "exception"
+                ],
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "exception": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "connection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "host",
+        "port",
+        "database",
+        "schema",
+        "user"
+      ],
+      "properties": {
+        "host": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "port": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "database": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "schema": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "user": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}
