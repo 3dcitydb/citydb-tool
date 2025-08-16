@@ -57,21 +57,17 @@ public class ConnectionDetails {
         return description;
     }
 
-    public String getDescriptionOrElse(String defaultValue) {
-        return description != null ? description : defaultValue;
-    }
-
     public ConnectionDetails setDescription(String description) {
         this.description = description;
         return this;
     }
 
-    public String getDatabaseName() {
-        return databaseName;
+    public ConnectionDetails setDescriptionIfAbsent(String description) {
+        return this.description == null ? setDescription(description) : this;
     }
 
-    public String getDatabaseNameOrElse(String defaultValue) {
-        return databaseName != null ? databaseName : defaultValue;
+    public String getDatabaseName() {
+        return databaseName;
     }
 
     public ConnectionDetails setDatabaseName(String databaseName) {
@@ -79,12 +75,12 @@ public class ConnectionDetails {
         return this;
     }
 
-    public String getUser() {
-        return user;
+    public ConnectionDetails setDatabaseNameIfAbsent(String databaseName) {
+        return this.databaseName == null ? setDatabaseName(databaseName) : this;
     }
 
-    public String getUserOrElse(String defaultValue) {
-        return user != null ? user : defaultValue;
+    public String getUser() {
+        return user;
     }
 
     public ConnectionDetails setUser(String user) {
@@ -92,12 +88,12 @@ public class ConnectionDetails {
         return this;
     }
 
-    public String getPassword() {
-        return password;
+    public ConnectionDetails setUserIfAbsent(String user) {
+        return this.user == null ? setUser(user) : this;
     }
 
-    public String getPasswordOrElse(String defaultValue) {
-        return password != null ? password : defaultValue;
+    public String getPassword() {
+        return password;
     }
 
     public ConnectionDetails setPassword(String password) {
@@ -105,12 +101,12 @@ public class ConnectionDetails {
         return this;
     }
 
-    public String getHost() {
-        return host;
+    public ConnectionDetails setPasswordIfAbsent(String password) {
+        return this.password == null ? setPassword(password) : this;
     }
 
-    public String getHostOrElse(String defaultValue) {
-        return host != null ? host : defaultValue;
+    public String getHost() {
+        return host;
     }
 
     public ConnectionDetails setHost(String host) {
@@ -118,24 +114,12 @@ public class ConnectionDetails {
         return this;
     }
 
+    public ConnectionDetails setHostIfAbsent(String host) {
+        return this.host == null ? setHost(host) : this;
+    }
+
     public Integer getPort() {
         return port;
-    }
-
-    public Integer getPortOrElse(Integer defaultValue) {
-        return port != null ? port : defaultValue;
-    }
-
-    public Integer getPortOrElse(String defaultValue) {
-        if (port != null) {
-            return port;
-        } else {
-            try {
-                return Integer.parseInt(defaultValue);
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
     }
 
     public ConnectionDetails setPort(Integer port) {
@@ -143,12 +127,20 @@ public class ConnectionDetails {
         return this;
     }
 
-    public String getDatabase() {
-        return database;
+    public ConnectionDetails setPortIfAbsent(Integer port) {
+        return this.port == null ? setPort(port) : this;
     }
 
-    public String getDatabaseOrElse(String defaultValue) {
-        return database != null ? database : defaultValue;
+    public ConnectionDetails setPortIfAbsent(String port) {
+        try {
+            return this.port == null ? setPort(Integer.parseInt(port)) : this;
+        } catch (NumberFormatException e) {
+            return this;
+        }
+    }
+
+    public String getDatabase() {
+        return database;
     }
 
     public ConnectionDetails setDatabase(String database) {
@@ -156,17 +148,21 @@ public class ConnectionDetails {
         return this;
     }
 
-    public String getSchema() {
-        return schema;
+    public ConnectionDetails setDatabaseIfAbsent(String database) {
+        return this.database == null ? setDatabase(database) : this;
     }
 
-    public String getSchemaOrElse(String defaultValue) {
-        return schema != null ? schema : defaultValue;
+    public String getSchema() {
+        return schema;
     }
 
     public ConnectionDetails setSchema(String schema) {
         this.schema = schema;
         return this;
+    }
+
+    public ConnectionDetails setSchemaIfAbsent(String schema) {
+        return this.schema == null ? setSchema(schema) : this;
     }
 
     public boolean hasProperties() {
@@ -186,7 +182,15 @@ public class ConnectionDetails {
         return this;
     }
 
-    private ConnectionDetails setProperties(String properties) {
+    public ConnectionDetails addPropertiesIfAbsent(Map<String, Object> properties) {
+        if (properties != null && !properties.isEmpty()) {
+            properties.forEach((key, value) -> getProperties().putIfAbsent(key, value));
+        }
+
+        return this;
+    }
+
+    private ConnectionDetails addPropertiesIfAbsent(String properties) {
         if (properties != null && !properties.isEmpty()) {
             for (String property : properties.split(",")) {
                 String[] items = property.split("=", 2);
@@ -208,14 +212,31 @@ public class ConnectionDetails {
         return this;
     }
 
+    public ConnectionDetails setPoolOptionsIfAbsent(PoolOptions poolOptions) {
+        return this.poolOptions == null ? setPoolOptions(poolOptions) : this;
+    }
+
+    public ConnectionDetails fillAbsentValuesFrom(ConnectionDetails other) {
+        return setDescriptionIfAbsent(other.description)
+                .setDatabaseIfAbsent(other.database)
+                .setUserIfAbsent(other.user)
+                .setPasswordIfAbsent(other.password)
+                .setHostIfAbsent(other.host)
+                .setPortIfAbsent(other.port)
+                .setDatabaseIfAbsent(other.database)
+                .setSchemaIfAbsent(other.schema)
+                .addPropertiesIfAbsent(other.properties)
+                .setPoolOptionsIfAbsent(other.poolOptions);
+    }
+
     public ConnectionDetails fillAbsentValuesFromEnv() {
-        return setUser(getUserOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME)))
-                .setPassword(getPasswordOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD)))
-                .setHost(getHostOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_HOST)))
-                .setPort(getPortOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_PORT)))
-                .setDatabase(getDatabaseOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_NAME)))
-                .setSchema(getSchemaOrElse(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA)))
-                .setProperties(System.getenv(DatabaseConstants.ENV_CITYDB_CONN_PROPS));
+        return setUserIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))
+                .setPasswordIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD))
+                .setHostIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_HOST))
+                .setPortIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_PORT))
+                .setDatabaseIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_NAME))
+                .setSchemaIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA))
+                .addPropertiesIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_CONN_PROPS));
     }
 
     public String toConnectString() {
