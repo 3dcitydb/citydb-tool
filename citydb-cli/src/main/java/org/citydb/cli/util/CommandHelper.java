@@ -54,7 +54,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 public class CommandHelper {
@@ -75,8 +74,14 @@ public class CommandHelper {
 
     public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
         try {
-            return connect(Objects.requireNonNullElseGet(options, ConnectionOptions::new)
-                    .toConnectionDetails(config.get(DatabaseOptions.class)));
+            ConnectionDetails connectionDetails = options != null ?
+                    options.toConnectionDetails() :
+                    new ConnectionDetails();
+
+            config.ifPresent(DatabaseOptions.class, databaseOptions ->
+                    databaseOptions.getDefaultConnection().ifPresent(connectionDetails::fillAbsentValuesFrom));
+
+            return connect(connectionDetails);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get database options from config.", e);
         }
@@ -84,7 +89,8 @@ public class CommandHelper {
 
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
-            logger.info("Connecting to database {}.", connectionDetails.fillAbsentValuesFromEnv().toConnectString());
+            connectionDetails.fillAbsentValuesFromEnv();
+            logger.info("Connecting to database {}.", connectionDetails.toConnectString());
             databaseManager.connect(connectionDetails);
             databaseManager.reportDatabaseInfo(logger::info);
             return databaseManager;

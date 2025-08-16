@@ -52,7 +52,7 @@ public class DatabaseManager {
     public void connect(ConnectionDetails connectionDetails, DatabaseAdapterManager manager) throws DatabaseException, SQLException {
         Objects.requireNonNull(connectionDetails, "The connection details must not be null.");
         connectionDetails.fillAbsentValuesFromEnv()
-                .setDatabaseName(connectionDetails.getDatabaseNameOrElse("PostgreSQL"));
+                .setDatabaseNameIfAbsent("PostgreSQL");
 
         adapter = manager.getAdapterForDatabase(connectionDetails.getDatabaseName());
         if (adapter == null) {

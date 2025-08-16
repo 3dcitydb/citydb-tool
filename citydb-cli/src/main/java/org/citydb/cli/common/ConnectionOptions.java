@@ -21,7 +21,6 @@
 
 package org.citydb.cli.common;
 
-import org.citydb.database.DatabaseOptions;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
 
@@ -97,26 +96,5 @@ public class ConnectionOptions implements Option {
                 .setProperties(properties != null ? properties.entrySet().stream()
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) :
                         null);
-    }
-
-    public ConnectionDetails toConnectionDetails(DatabaseOptions options) {
-        ConnectionDetails connectionDetails = toConnectionDetails();
-        if (options != null) {
-            options.getDefaultConnection().ifPresent(defaults -> {
-                connectionDetails.setHost(connectionDetails.getHostOrElse(defaults.getHost()))
-                        .setPort(connectionDetails.getPortOrElse(defaults.getPort()))
-                        .setDatabase(connectionDetails.getDatabaseOrElse(defaults.getDatabase()))
-                        .setSchema(connectionDetails.getSchemaOrElse(defaults.getSchema()))
-                        .setUser(connectionDetails.getUserOrElse(defaults.getUser()))
-                        .setPassword(connectionDetails.getPasswordOrElse(defaults.getPassword()))
-                        .setPoolOptions(defaults.getPoolOptions().orElse(null));
-                if (defaults.hasProperties()) {
-                    defaults.getProperties().forEach((key, value) ->
-                            connectionDetails.getProperties().putIfAbsent(key, value));
-                }
-            });
-        }
-
-        return connectionDetails;
     }
 }
