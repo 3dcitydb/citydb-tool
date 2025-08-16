@@ -219,15 +219,13 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildCrs(DatabaseAdapter adapter) {
-        return new JSONObject()
-                .fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
+        return new JSONObject().fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
                 .fluentPut("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
                 .fluentPut("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
     }
 
     private JSONObject buildDatabaseConnection(DatabaseAdapter adapter) {
-        return new JSONObject()
-                .fluentPut("host", adapter.getConnectionDetails().getHost())
+        return new JSONObject().fluentPut("host", adapter.getConnectionDetails().getHost())
                 .fluentPut("port", adapter.getConnectionDetails().getPort())
                 .fluentPut("database", adapter.getConnectionDetails().getDatabase())
                 .fluentPut("schema", adapter.getConnectionDetails().getSchema())
