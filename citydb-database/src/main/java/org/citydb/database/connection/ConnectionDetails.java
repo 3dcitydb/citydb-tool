@@ -217,16 +217,18 @@ public class ConnectionDetails {
     }
 
     public ConnectionDetails fillAbsentValuesFrom(ConnectionDetails other) {
-        return setDescriptionIfAbsent(other.description)
-                .setDatabaseIfAbsent(other.database)
-                .setUserIfAbsent(other.user)
-                .setPasswordIfAbsent(other.password)
-                .setHostIfAbsent(other.host)
-                .setPortIfAbsent(other.port)
-                .setDatabaseIfAbsent(other.database)
-                .setSchemaIfAbsent(other.schema)
-                .addPropertiesIfAbsent(other.properties)
-                .setPoolOptionsIfAbsent(other.poolOptions);
+        return other != null ?
+                setDescriptionIfAbsent(other.description)
+                        .setDatabaseIfAbsent(other.database)
+                        .setUserIfAbsent(other.user)
+                        .setPasswordIfAbsent(other.password)
+                        .setHostIfAbsent(other.host)
+                        .setPortIfAbsent(other.port)
+                        .setDatabaseIfAbsent(other.database)
+                        .setSchemaIfAbsent(other.schema)
+                        .addPropertiesIfAbsent(other.properties)
+                        .setPoolOptionsIfAbsent(other.poolOptions) :
+                this;
     }
 
     public ConnectionDetails fillAbsentValuesFromEnv() {
