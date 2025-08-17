@@ -3,11 +3,13 @@
 ## [Unreleased]
 
 ### Added
-- Added the `connect` command that tests whether a connection to a 3DCityDB instance can be established. The command
-  supports optional JSON output, which can either be printed to `stdout` or written to a file. [#64](https://github.com/3dcitydb/citydb-tool/pull/64)
-- Introduced the `info` command for generating a summary and report of the 3DCityDB contents. Reports can be output
-  in JSON format and either written to a file or printed to `stdout` for further processing. [#61](https://github.com/3dcitydb/citydb-tool/pull/61)
+- Added the `connect` command to test connections to a 3DCityDB instance. This command supports optional JSON output,
+  which can be written to `stdout` or a file. [#64](https://github.com/3dcitydb/citydb-tool/pull/64)
+- Introduced the `info` command for generating a summary report of 3DCityDB contents. Reports can be produced in JSON
+  format and written to `stdout` or a file for further processing. [#61](https://github.com/3dcitydb/citydb-tool/pull/61)
 - Added support for XSLT/XPath 2.0 and 3.0 to the `citygml import` and `citygml export` commands.
+- Added the `--output` option to the `index status` command, enabling the index status list to be written as JSON
+  to `stdout` or a file.
 
 ### Changed
 - Updated and harmonized CLI options and their descriptions.
@@ -16,7 +18,7 @@
 
 ### Fixed
 - Fixed support for time-based validity options in the JSON configuration.
-- Fixed `count` methods in `SqlHelper` to produce correct SQL statements.
+- Fixed `count` methods in `SqlHelper` to generate correct SQL statements.
 - Ensured operands are properly cast to `geometry` in `SpatialOperatorHelper` to prevent SQL exceptions.
 - Resolved `MVStoreException: Chunk not found` errors when resolving references during imports.
 
