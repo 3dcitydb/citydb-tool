@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/index-status.schema.json",
+  "title": "Index status schema",
+  "description": "JSON schema describing the status of database indexes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "indexes"
+  ],
+  "properties": {
+    "indexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "table",
+          "columns",
+          "type",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "table": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "on",
+              "off"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

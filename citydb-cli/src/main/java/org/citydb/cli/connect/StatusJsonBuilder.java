@@ -30,9 +30,9 @@ import org.citydb.database.connection.ConnectionDetails;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class ConnectionStatusBuilder {
+public class StatusJsonBuilder {
 
-    private ConnectionStatusBuilder() {
+    private StatusJsonBuilder() {
     }
 
     public static JSONObject buildSuccess(DatabaseAdapter adapter) {

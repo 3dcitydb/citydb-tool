@@ -75,16 +75,13 @@ public class InfoCommand implements Command {
         }
 
         if (outputOptions.isOutputSpecified()) {
-            if (outputOptions.isWriteToStdout()) {
-                logger.info("Writing JSON report to standard output.");
-            } else {
-                logger.info("Writing report to JSON file {}.", outputOptions.getFile());
-            }
+            logger.info("Writing database report as JSON to {}.",
+                    outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
 
             try (OutputStream stream = outputOptions.openStream()) {
                 JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormatWith2Space);
             } catch (Exception e) {
-                throw new ExecutionException("Failed to write JSON report.", e);
+                throw new ExecutionException("Failed to write database report as JSON.", e);
             }
         }
 

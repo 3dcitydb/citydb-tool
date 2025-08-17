@@ -75,11 +75,8 @@ public class ConnectCommand implements Command {
 
         logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
         if (outputOptions.isOutputSpecified()) {
-            if (outputOptions.isWriteToStdout()) {
-                logger.info("Writing connection status as JSON to standard output.");
-            } else {
-                logger.info("Writing connection status to JSON file {}.", outputOptions.getFile());
-            }
+            logger.info("Writing connection status as JSON to {}.",
+                    outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
         }
 
         try {
@@ -95,10 +92,11 @@ public class ConnectCommand implements Command {
     private void handleSuccess(DatabaseManager databaseManager) throws ExecutionException {
         logger.info("Connection successfully established.");
         if (outputOptions.isOutputSpecified()) {
-            writeJson(ConnectionStatusBuilder.buildSuccess(databaseManager.getAdapter()));
+            writeJson(StatusJsonBuilder.buildSuccess(databaseManager.getAdapter()));
         }
 
         if (!outputOptions.isWriteToStdout()) {
+            logger.info("Database details:");
             databaseManager.reportDatabaseInfo(logger::info);
         }
     }
@@ -109,7 +107,7 @@ public class ConnectCommand implements Command {
                 logger.error("Failed to connect to the database.");
             }
 
-            writeJson(ConnectionStatusBuilder.buildFailure(connectionDetails, e));
+            writeJson(StatusJsonBuilder.buildFailure(connectionDetails, e));
         }
 
         if (!outputOptions.isWriteToStdout()) {
