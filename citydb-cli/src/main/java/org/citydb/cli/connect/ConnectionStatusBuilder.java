@@ -48,11 +48,17 @@ public class ConnectionStatusBuilder {
     }
 
     private static JSONObject buildDatabaseConnection(ConnectionDetails connectionDetails) {
-        return new JSONObject().fluentPut("host", connectionDetails.getHost())
+        JSONObject connection = new JSONObject().fluentPut("host", connectionDetails.getHost())
                 .fluentPut("port", connectionDetails.getPort())
                 .fluentPut("database", connectionDetails.getDatabase())
                 .fluentPut("schema", connectionDetails.getSchema())
                 .fluentPut("user", connectionDetails.getUser());
+
+        if (connectionDetails.hasProperties()) {
+            connection.put("properties", connectionDetails.getProperties());
+        }
+
+        return connection;
     }
 
     private static JSONObject buildDatabase(DatabaseAdapter adapter) {

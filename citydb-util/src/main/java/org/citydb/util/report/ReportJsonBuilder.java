@@ -75,7 +75,7 @@ public class ReportJsonBuilder {
         String featureScope = options.isOnlyActiveFeatures() ? "active" : "all";
 
         return new JSONObject()
-                .fluentPut("reportGenerated", timestamp)
+                .fluentPut("generatedAt", timestamp)
                 .fluentPut("featureScope", featureScope)
                 .fluentPut("genericAttributesProcessed", options.isIncludeGenericAttributes());
     }
@@ -225,11 +225,17 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildDatabaseConnection(DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("host", adapter.getConnectionDetails().getHost())
+        JSONObject connection = new JSONObject().fluentPut("host", adapter.getConnectionDetails().getHost())
                 .fluentPut("port", adapter.getConnectionDetails().getPort())
                 .fluentPut("database", adapter.getConnectionDetails().getDatabase())
                 .fluentPut("schema", adapter.getConnectionDetails().getSchema())
                 .fluentPut("user", adapter.getConnectionDetails().getUser());
+
+        if (adapter.getConnectionDetails().hasProperties()) {
+            connection.put("properties", adapter.getConnectionDetails().getProperties());
+        }
+
+        return connection;
     }
 
     private JSONObject buildDatabaseSize(DatabaseSize databaseSize) {

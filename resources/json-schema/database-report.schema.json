@@ -22,12 +22,12 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "reportGenerated",
+        "generatedAt",
         "featureScope",
         "genericAttributesProcessed"
       ],
       "properties": {
-        "reportGenerated": {
+        "generatedAt": {
           "type": "string",
           "format": "date-time"
         },
@@ -194,6 +194,15 @@
             },
             "user": {
               "type": "string"
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^.*$": {
+                  "type": "string"
+                }
+              }
             }
           }
         },
