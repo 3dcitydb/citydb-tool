@@ -1,7 +1,7 @@
 dependencies {
     api 'com.alibaba.fastjson2:fastjson2:2.0.58'
     api 'org.slf4j:slf4j-api:2.0.17'
-    api 'org.apache.tika:tika-core:3.2.1'
+    api 'org.apache.tika:tika-core:3.2.2'
     implementation 'org.apache.commons:commons-compress:1.28.0'
     implementation 'com.h2database:h2-mvstore:2.3.232'
 }
