@@ -29,6 +29,7 @@ import org.citydb.database.util.StatisticsHelper;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
+import org.citydb.util.report.options.FeatureScope;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -84,7 +85,7 @@ public class DatabaseReportBuilder {
                         connection), report::setTerminatedFeatures);
 
                 countLatch.await();
-                scope = options.isOnlyActiveFeatures() && report.hasTerminatedFeatures() ?
+                scope = options.getFeatureScope() == FeatureScope.ACTIVE && report.hasTerminatedFeatures() ?
                         StatisticsHelper.FeatureScope.ACTIVE :
                         StatisticsHelper.FeatureScope.ALL;
 

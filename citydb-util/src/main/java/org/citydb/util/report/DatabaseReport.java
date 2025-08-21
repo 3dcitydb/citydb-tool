@@ -33,6 +33,7 @@ import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.GeometryType;
+import org.citydb.util.report.options.FeatureScope;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -118,8 +119,9 @@ public class DatabaseReport {
     void setTerminatedFeatures(Map<FeatureType, StatisticsHelper.FeatureInfo> features) {
         if (features != null) {
             features.forEach((type, info) -> {
-                terminatedFeatures.merge(getQName(type.getName()), info.count(), Long::sum);
-                if (!options.isOnlyActiveFeatures()) {
+                boolean allFeatures = options.getFeatureScope() == FeatureScope.ALL;
+                terminatedFeatures.merge(getQName(type.getName(), allFeatures), info.count(), Long::sum);
+                if (allFeatures) {
                     extent.include(info.extent());
                 }
             });
@@ -304,8 +306,15 @@ public class DatabaseReport {
     }
 
     private String getQName(Name name) {
+        return getQName(name, true);
+    }
+
+    private String getQName(Name name, boolean registerModule) {
         String alias = schemaMapping.getNamespaceByURI(name.getNamespace()).getAlias().orElse("");
-        modules.put(alias, name.getNamespace());
+        if (registerModule) {
+            modules.put(alias, name.getNamespace());
+        }
+
         return !alias.isEmpty() ? alias + ":" + name.getLocalName() : name.getLocalName();
     }
 

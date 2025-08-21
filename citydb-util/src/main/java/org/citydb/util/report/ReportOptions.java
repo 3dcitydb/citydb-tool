@@ -21,12 +21,16 @@
 
 package org.citydb.util.report;
 
+import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
+import org.citydb.util.report.options.FeatureScope;
 
 @SerializableConfig(name = "reportOptions")
 public class ReportOptions {
     private int numberOfThreads;
-    private boolean onlyActiveFeatures;
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
+    private FeatureScope featureScope = FeatureScope.ALL;
     private boolean includeGenericAttributes;
     private boolean includeDatabaseSize;
 
@@ -39,12 +43,12 @@ public class ReportOptions {
         return this;
     }
 
-    public boolean isOnlyActiveFeatures() {
-        return onlyActiveFeatures;
+    public FeatureScope getFeatureScope() {
+        return featureScope != null ? featureScope : FeatureScope.ALL;
     }
 
-    public ReportOptions onlyActiveFeatures(boolean onlyActiveFeatures) {
-        this.onlyActiveFeatures = onlyActiveFeatures;
+    public ReportOptions setFeatureScope(FeatureScope featureScope) {
+        this.featureScope = featureScope;
         return this;
     }
 

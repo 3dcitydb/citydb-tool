@@ -36,6 +36,7 @@ import org.citydb.database.util.IndexHelper;
 import org.citydb.util.report.DatabaseReport;
 import org.citydb.util.report.DatabaseReportException;
 import org.citydb.util.report.ReportOptions;
+import org.citydb.util.report.options.FeatureScope;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
@@ -44,7 +45,7 @@ import java.io.OutputStream;
         name = "info",
         description = "Show database contents and summary information.")
 public class InfoCommand implements Command {
-    enum FeatureScope {all, active}
+    enum Scope {all, active}
 
     @CommandLine.Mixin
     private JsonOutputOptions outputOptions;
@@ -55,7 +56,7 @@ public class InfoCommand implements Command {
     @CommandLine.Option(names = {"-s", "--feature-scope"}, paramLabel = "<scope>", defaultValue = "all",
             description = "Feature scope: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). For 'active', " +
                     "only properties of non-terminated features are considered.")
-    private FeatureScope scope;
+    private Scope scope;
 
     @CommandLine.Option(names = "--include-generic-attributes",
             description = "Include generic attributes and their data types.")
@@ -125,7 +126,7 @@ public class InfoCommand implements Command {
             reportOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
-        reportOptions.onlyActiveFeatures(scope == FeatureScope.active);
+        reportOptions.setFeatureScope(scope == Scope.active ? FeatureScope.ACTIVE : FeatureScope.ALL);
 
         if (includeGenericAttributes != null) {
             reportOptions.includeGenericAttributes(includeGenericAttributes);

@@ -30,6 +30,7 @@ import org.citydb.database.metadata.DatabaseSize;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.Envelope;
+import org.citydb.util.report.options.FeatureScope;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -72,16 +73,15 @@ public class ReportJsonBuilder {
     private JSONObject buildMetadata(ReportOptions options) {
         String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
                 .format(TimeHelper.DATE_TIME_FORMATTER);
-        String featureScope = options.isOnlyActiveFeatures() ? "active" : "all";
 
         return new JSONObject()
                 .fluentPut("generatedAt", timestamp)
-                .fluentPut("featureScope", featureScope)
+                .fluentPut("featureScope", options.getFeatureScope().toValue())
                 .fluentPut("genericAttributesProcessed", options.isIncludeGenericAttributes());
     }
 
     private JSONObject buildSummary(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
-        Set<String> candidates = options.isOnlyActiveFeatures() ?
+        Set<String> candidates = options.getFeatureScope() == FeatureScope.ACTIVE ?
                 report.getActiveFeatures().keySet() :
                 report.getFeatures();
         List<String> topLevelFeatures = candidates.stream()

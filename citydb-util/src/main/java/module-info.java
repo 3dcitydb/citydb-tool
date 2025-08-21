@@ -7,6 +7,7 @@ module org.citydb.util {
     exports org.citydb.util.csv;
     exports org.citydb.util.process;
     exports org.citydb.util.report;
+    exports org.citydb.util.report.options;
     exports org.citydb.util.tiling;
     exports org.citydb.util.tiling.options;
 }
