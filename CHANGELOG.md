@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-08-24
+
 ### Added
 - Added the `connect` command to test connections to a 3DCityDB instance. This command supports optional JSON output,
   which can be written to `stdout` or a file. [#64](https://github.com/3dcitydb/citydb-tool/pull/64)
@@ -26,5 +28,6 @@
 
 This is the initial release of citydb-tool.
 
-[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.0.0..HEAD
+[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.1.0..HEAD
+[1.1.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.1.0
 [1.0.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.0.0

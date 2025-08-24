@@ -2,7 +2,7 @@
 
 # citydb-tool
 
-3D City Database 5.0 CLI to import/export city model data and to run database operations.
+3D City Database v5 CLI to import/export city model data and to run database operations.
 
 ## License
 
@@ -11,7 +11,7 @@ See the `LICENSE` file for more details.
 
 ## Latest release
 
-The latest stable release of citydb-tool is `1.0.0`.
+The latest stable release of citydb-tool is `1.1.0`.
 
 Download the latest citydb-tool release as ZIP package
 [here](https://github.com/3dcitydb/citydb-tool/releases/latest). Previous releases are available from the
@@ -43,19 +43,22 @@ Command-line interface for the 3D City Database.
   -L, --log-level=<level>    Log level: fatal, error, warn, info, debug, trace
                                (default: info).
       --log-file=<file>      Write log messages to this file.
+      --quiet                Disable console log messages.
       --pid-file=<file>      Create a file containing the process ID.
       --plugins=<dir>        Load plugins from this directory.
-      --use-plugins=<plugin[=true|false][,<plugin[=true|false]...]
+      --use-plugin=<plugin[=true|false]>[,<plugin[=true|false]>...]
                              Enable or disable plugins with a matching fully
                                qualified class name (default: true).
   -h, --help                 Show this help message and exit.
   -V, --version              Print version information and exit.
 Commands:
-  help    Display help information about the specified command.
-  import  Import data in a supported format.
-  export  Export data in a supported format.
-  delete  Delete features from the database.
-  index   Perform index operations.
+  help     Display help information about the specified command.
+  connect  Test connection to the database.
+  info     Show database contents and summary information.
+  import   Import data in a supported format.
+  export   Export data in a supported format.
+  delete   Delete features from the database.
+  index    Perform index operations.
 ```
 
 To get help about a specific command of the citydb-tool, enter the following and replace `COMMAND` with the name of
@@ -82,7 +85,7 @@ common architectures (`amd64`, `arm64`) can can be pulled with:
 ### Synopsis
 
 The Docker image exposes the commands of the `citydb-tool`, as described
-in the [usage section](https://github.com/3dcitydb/citydb-tool#usage).
+in the [usage section](https://github.com/3dcitydb/citydb-tool#using).
 The environment variables listed below can be used to specify a 3DCityDB v5 connection. To exchange data with the
 container, mount a host folder to `/data` inside the container.
 
