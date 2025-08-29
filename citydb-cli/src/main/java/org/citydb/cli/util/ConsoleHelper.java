@@ -23,33 +23,36 @@ package org.citydb.cli.util;
 
 import org.citydb.cli.ExecutionException;
 
+import java.io.BufferedReader;
 import java.io.Console;
-import java.util.Scanner;
+import java.io.InputStreamReader;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class ConsoleInputHelper {
+public class ConsoleHelper {
     public static final int DEFAULT_TIMEOUT = 60;
+    private static final BufferedReader stdinReader =
+            new BufferedReader(new InputStreamReader(System.in));
 
-    public static String readPasswordFromConsole(String prompt) throws ExecutionException {
-        return readPasswordFromConsole(prompt, DEFAULT_TIMEOUT);
+    public static String readPassword(String prompt) throws ExecutionException {
+        return readPassword(prompt, DEFAULT_TIMEOUT);
     }
 
-    public static String readPasswordFromConsole(String prompt, int timeout) throws ExecutionException {
-        return readInputFromConsole(prompt, true, timeout);
+    public static String readPassword(String prompt, int timeout) throws ExecutionException {
+        return readInput(prompt, true, timeout);
     }
 
-    public static String readInputFromConsole(String prompt) throws ExecutionException {
-        return readInputFromConsole(prompt, false);
+    public static String readInput(String prompt) throws ExecutionException {
+        return readInput(prompt, DEFAULT_TIMEOUT);
     }
 
-    public static String readInputFromConsole(String prompt, boolean hideInput) throws ExecutionException {
-        return readInputFromConsole(prompt, hideInput, DEFAULT_TIMEOUT);
+    public static String readInput(String prompt, int timeout) throws ExecutionException {
+        return readInput(prompt, false, timeout);
     }
 
-    public static String readInputFromConsole(String prompt, boolean hideInput, int timeout) throws ExecutionException {
+    private static String readInput(String prompt, boolean hideInput, int timeout) throws ExecutionException {
         Console console = System.console();
         if (console != null) {
             if (hideInput) {
@@ -62,7 +65,7 @@ public class ConsoleInputHelper {
             ExecutorService service = Executors.newSingleThreadExecutor();
             try {
                 System.out.print(prompt);
-                return service.submit(() -> new Scanner(System.in).nextLine())
+                return service.submit(stdinReader::readLine)
                         .get(timeout, TimeUnit.SECONDS);
             } catch (TimeoutException e) {
                 throw new ExecutionException("Input timed out after " + timeout + " seconds.", e);

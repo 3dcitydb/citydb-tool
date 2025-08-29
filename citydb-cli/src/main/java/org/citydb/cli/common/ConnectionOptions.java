@@ -21,7 +21,7 @@
 
 package org.citydb.cli.common;
 
-import org.citydb.cli.util.ConsoleInputHelper;
+import org.citydb.cli.util.ConsoleHelper;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
@@ -109,7 +109,7 @@ public class ConnectionOptions implements Option {
             }
 
             String prompt = String.format("Enter password for %s: ", username);
-            password = ConsoleInputHelper.readPasswordFromConsole(prompt);
+            password = ConsoleHelper.readPassword(prompt);
         }
     }
 }
