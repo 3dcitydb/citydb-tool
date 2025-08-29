@@ -44,17 +44,16 @@ import org.citydb.plugin.Plugin;
 import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
-import java.io.Console;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @CommandLine.Command(
@@ -197,12 +196,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 if (command instanceof Command) {
                     ((Command) command).preprocess(commandLine);
                 }
-
-                CommandLine.Model.OptionSpec password = commandLine.getParseResult().matchedOption("--db-password");
-                if (password != null && password.getValue().equals("")) {
-                    password.setValue(readPassword(commandLine.getParseResult().matchedOptionValue("--db-username",
-                            System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))));
-                }
             }
 
             commandLine = CliConstants.APP_COMMAND + " " + String.join(" ", args);
@@ -313,26 +306,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     .forEach(e -> logger.error(e.getMessage(), e.getCause()));
 
             throw new ExecutionException("Failed to load plugins.");
-        }
-    }
-
-    private String readPassword(String user) throws ExecutionException {
-        String prompt = "Enter password for " + user;
-        Console console = System.console();
-        if (console != null) {
-            char[] input = console.readPassword(prompt + ": ");
-            return input != null ? new String(input) : null;
-        } else {
-            ExecutorService service = Executors.newFixedThreadPool(1);
-            try {
-                System.out.print(prompt + " (will timeout in 60s): ");
-                return service.submit(() -> new Scanner(System.in).nextLine())
-                        .get(60, TimeUnit.SECONDS);
-            } catch (Throwable e) {
-                throw new ExecutionException("Failed to read password from console.", e);
-            } finally {
-                service.shutdown();
-            }
         }
     }
 

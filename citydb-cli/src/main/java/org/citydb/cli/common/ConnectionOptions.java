@@ -21,6 +21,8 @@
 
 package org.citydb.cli.common;
 
+import org.citydb.cli.util.ConsoleInputHelper;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
 
@@ -96,5 +98,18 @@ public class ConnectionOptions implements Option {
                 .setProperties(properties != null ? properties.entrySet().stream()
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) :
                         null);
+    }
+
+    @Override
+    public void preprocess(CommandLine commandLine) throws Exception {
+        if (password != null && password.isEmpty()) {
+            String username = user != null ? user : System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME);
+            if (username == null || username.isBlank()) {
+                username = "<username>";
+            }
+
+            String prompt = String.format("Enter password for %s: ", username);
+            password = ConsoleInputHelper.readPasswordFromConsole(prompt);
+        }
     }
 }
