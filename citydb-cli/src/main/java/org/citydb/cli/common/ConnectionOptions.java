@@ -21,6 +21,7 @@
 
 package org.citydb.cli.common;
 
+import org.citydb.cli.ExecutionException;
 import org.citydb.cli.util.ConsoleHelper;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.connection.ConnectionDetails;
@@ -103,6 +104,11 @@ public class ConnectionOptions implements Option {
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (password != null && password.isEmpty()) {
+            if (!ConsoleHelper.hasInteractiveConsole()) {
+                throw new ExecutionException("No console available. Supply the password as argument or " +
+                        DatabaseConstants.ENV_CITYDB_PASSWORD + " environment variable.");
+            }
+
             String username = user != null ? user : System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME);
             if (username == null || username.isBlank()) {
                 username = "<username>";

@@ -23,57 +23,33 @@ package org.citydb.cli.util;
 
 import org.citydb.cli.ExecutionException;
 
-import java.io.BufferedReader;
 import java.io.Console;
-import java.io.InputStreamReader;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class ConsoleHelper {
-    public static final int DEFAULT_TIMEOUT = 60;
-    private static final BufferedReader stdinReader =
-            new BufferedReader(new InputStreamReader(System.in));
 
-    public static String readPassword(String prompt) throws ExecutionException {
-        return readPassword(prompt, DEFAULT_TIMEOUT);
+    public static boolean hasInteractiveConsole() {
+        return System.console() != null;
     }
 
-    public static String readPassword(String prompt, int timeout) throws ExecutionException {
-        return readInput(prompt, true, timeout);
+    public static String readPassword(String prompt) throws ExecutionException {
+        return readInput(prompt, true);
     }
 
     public static String readInput(String prompt) throws ExecutionException {
-        return readInput(prompt, DEFAULT_TIMEOUT);
+        return readInput(prompt, false);
     }
 
-    public static String readInput(String prompt, int timeout) throws ExecutionException {
-        return readInput(prompt, false, timeout);
-    }
-
-    private static String readInput(String prompt, boolean hideInput, int timeout) throws ExecutionException {
+    private static String readInput(String prompt, boolean hideInput) throws ExecutionException {
         Console console = System.console();
-        if (console != null) {
-            if (hideInput) {
-                char[] input = console.readPassword(prompt);
-                return input != null ? new String(input) : null;
-            } else {
-                return console.readLine(prompt);
-            }
+        if (console == null) {
+            throw new ExecutionException("No console available. Input cannot be read interactively.");
+        }
+
+        if (hideInput) {
+            char[] input = console.readPassword(prompt);
+            return input != null ? new String(input) : null;
         } else {
-            ExecutorService service = Executors.newSingleThreadExecutor();
-            try {
-                System.out.print(prompt);
-                return service.submit(stdinReader::readLine)
-                        .get(timeout, TimeUnit.SECONDS);
-            } catch (TimeoutException e) {
-                throw new ExecutionException("Input timed out after " + timeout + " seconds.", e);
-            } catch (Exception e) {
-                throw new ExecutionException("Failed to read input from console.", e);
-            } finally {
-                service.shutdownNow();
-            }
+            return console.readLine(prompt);
         }
     }
 }
