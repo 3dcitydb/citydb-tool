@@ -31,8 +31,16 @@ public class ConsoleHelper {
         return System.console() != null;
     }
 
+    public static String readPassword() throws ExecutionException {
+        return readInput("", true);
+    }
+
     public static String readPassword(String prompt) throws ExecutionException {
         return readInput(prompt, true);
+    }
+
+    public static String readInput() throws ExecutionException {
+        return readInput("", false);
     }
 
     public static String readInput(String prompt) throws ExecutionException {
