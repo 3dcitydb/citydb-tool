@@ -14,6 +14,7 @@ module org.citydb.cli {
 
     exports org.citydb.cli;
     exports org.citydb.cli.common;
+    exports org.citydb.cli.connect;
     exports org.citydb.cli.deleter;
     exports org.citydb.cli.deleter.options;
     exports org.citydb.cli.exporter;
