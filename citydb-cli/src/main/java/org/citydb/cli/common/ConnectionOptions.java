@@ -103,7 +103,8 @@ public class ConnectionOptions implements Option {
 
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
-        if (password != null && password.isEmpty()) {
+        CommandLine.Model.OptionSpec password = commandLine.getParseResult().matchedOption("--db-password");
+        if (password != null && password.getValue().equals("")) {
             if (!ConsoleHelper.hasInteractiveConsole()) {
                 throw new ExecutionException("No console available. Supply the password as argument or " +
                         DatabaseConstants.ENV_CITYDB_PASSWORD + " environment variable.");
@@ -115,7 +116,7 @@ public class ConnectionOptions implements Option {
             }
 
             String prompt = String.format("Enter password for %s: ", username);
-            password = ConsoleHelper.readPassword(prompt);
+            this.password = ConsoleHelper.readPassword(prompt);
         }
     }
 }
