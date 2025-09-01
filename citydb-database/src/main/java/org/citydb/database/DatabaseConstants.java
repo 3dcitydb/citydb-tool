@@ -38,6 +38,8 @@ public class DatabaseConstants {
     public static final String ENV_CITYDB_USERNAME = "CITYDB_USERNAME";
     public static final String ENV_CITYDB_PASSWORD = "CITYDB_PASSWORD";
     public static final String ENV_CITYDB_CONN_PROPS = "CITYDB_CONN_PROPS";
+    public static final String ENV_CITYDB_ADMIN_USERNAME = "CITYDB_ADMIN_USERNAME";
+    public static final String ENV_CITYDB_ADMIN_PASSWORD = "CITYDB_ADMIN_PASSWORD";
 
     public static final VersionSupport VERSION_SUPPORT = VersionSupport.of(
             VersionPolicy.from(5, 0, 0).to(5, 1)

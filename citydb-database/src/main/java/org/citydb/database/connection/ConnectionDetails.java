@@ -38,6 +38,7 @@ public class ConnectionDetails {
     private String schema;
     private Map<String, Object> properties;
     private PoolOptions poolOptions;
+    private AdminOptions adminOptions;
 
     public static ConnectionDetails of(ConnectionDetails other) {
         return new ConnectionDetails()
@@ -50,7 +51,8 @@ public class ConnectionDetails {
                 .setDatabase(other.database)
                 .setSchema(other.schema)
                 .setProperties(other.properties != null ? new HashMap<>(other.properties) : null)
-                .setPoolOptions(other.poolOptions != null ? PoolOptions.of(other.poolOptions) : null);
+                .setPoolOptions(other.poolOptions != null ? PoolOptions.of(other.poolOptions) : null)
+                .setAdminOptions(other.adminOptions != null ? AdminOptions.of(other.adminOptions) : null);
     }
 
     public String getDescription() {
@@ -216,6 +218,42 @@ public class ConnectionDetails {
         return this.poolOptions == null ? setPoolOptions(poolOptions) : this;
     }
 
+    public Optional<AdminOptions> getAdminOptions() {
+        return Optional.ofNullable(adminOptions);
+    }
+
+    public ConnectionDetails setAdminOptions(AdminOptions adminOptions) {
+        this.adminOptions = adminOptions;
+        return this;
+    }
+
+    public ConnectionDetails setAdminOptionsIfAbsent(AdminOptions adminOptions) {
+        return this.adminOptions == null ? setAdminOptions(adminOptions) : this;
+    }
+
+    private ConnectionDetails fillAbsentAdminOptionsFrom(AdminOptions other) {
+        if (adminOptions != null) {
+            adminOptions.fillAbsentValuesFrom(other);
+        } else if (other != null && other.hasValues()) {
+            adminOptions = AdminOptions.of(other);
+        }
+
+        return this;
+    }
+
+    private ConnectionDetails fillAbsentAdminOptionsFromEnv() {
+        if (adminOptions != null) {
+            adminOptions.fillAbsentValuesFromEnv();
+        } else {
+            AdminOptions adminOptions = new AdminOptions().fillAbsentValuesFromEnv();
+            if (adminOptions.hasValues()) {
+                this.adminOptions = adminOptions;
+            }
+        }
+
+        return this;
+    }
+
     public ConnectionDetails fillAbsentValuesFrom(ConnectionDetails other) {
         return other != null ?
                 setDescriptionIfAbsent(other.description)
@@ -227,7 +265,8 @@ public class ConnectionDetails {
                         .setDatabaseIfAbsent(other.database)
                         .setSchemaIfAbsent(other.schema)
                         .addPropertiesIfAbsent(other.properties)
-                        .setPoolOptionsIfAbsent(other.poolOptions) :
+                        .setPoolOptionsIfAbsent(other.poolOptions)
+                        .fillAbsentAdminOptionsFrom(other.adminOptions) :
                 this;
     }
 
@@ -238,7 +277,8 @@ public class ConnectionDetails {
                 .setPortIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_PORT))
                 .setDatabaseIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_NAME))
                 .setSchemaIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_SCHEMA))
-                .addPropertiesIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_CONN_PROPS));
+                .addPropertiesIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_CONN_PROPS))
+                .fillAbsentAdminOptionsFromEnv();
     }
 
     public String toConnectString() {
