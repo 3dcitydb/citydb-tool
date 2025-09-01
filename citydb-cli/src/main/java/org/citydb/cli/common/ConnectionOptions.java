@@ -104,7 +104,7 @@ public class ConnectionOptions implements Option {
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (password != null && password.isEmpty()) {
-            password = ConsolePrompt.newInstance()
+            password = ConsolePrompt.console()
                     .prompt("Enter password for %s: ", user != null ? user : "<username>")
                     .readPassword()
                     .orElseThrow(() -> new ExecutionException("No console available. Supply the password as " +

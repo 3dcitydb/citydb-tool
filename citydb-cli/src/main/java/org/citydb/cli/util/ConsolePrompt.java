@@ -33,7 +33,7 @@ public class ConsolePrompt {
     private ConsolePrompt() {
     }
 
-    public static ConsolePrompt newInstance() {
+    public static ConsolePrompt console() {
         return new ConsolePrompt();
     }
 
