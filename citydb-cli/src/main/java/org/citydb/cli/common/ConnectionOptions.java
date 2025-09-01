@@ -22,7 +22,7 @@
 package org.citydb.cli.common;
 
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.util.ConsoleHelper;
+import org.citydb.cli.util.ConsolePrompt;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
@@ -104,18 +104,11 @@ public class ConnectionOptions implements Option {
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (password != null && password.isEmpty()) {
-            if (!ConsoleHelper.hasInteractiveConsole()) {
-                throw new ExecutionException("No console available. Supply the password as argument or " +
-                        DatabaseConstants.ENV_CITYDB_PASSWORD + " environment variable.");
-            }
-
-            String username = user != null ? user : System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME);
-            if (username == null || username.isBlank()) {
-                username = "<username>";
-            }
-
-            String prompt = String.format("Enter password for %s: ", username);
-            password = ConsoleHelper.readPassword(prompt);
+            password = ConsolePrompt.newInstance()
+                    .prompt("Enter password for %s: ", user != null ? user : "<username>")
+                    .readPassword()
+                    .orElseThrow(() -> new ExecutionException("No console available. Supply the password as " +
+                            "argument or " + DatabaseConstants.ENV_CITYDB_PASSWORD + " environment variable."));
         }
     }
 }
