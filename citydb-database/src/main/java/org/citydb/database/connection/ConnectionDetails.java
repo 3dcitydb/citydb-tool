@@ -219,7 +219,7 @@ public class ConnectionDetails {
     public ConnectionDetails fillAbsentValuesFrom(ConnectionDetails other) {
         return other != null ?
                 setDescriptionIfAbsent(other.description)
-                        .setDatabaseNameIfAbsent(other.database)
+                        .setDatabaseNameIfAbsent(other.databaseName)
                         .setUserIfAbsent(other.user)
                         .setPasswordIfAbsent(other.password)
                         .setHostIfAbsent(other.host)
