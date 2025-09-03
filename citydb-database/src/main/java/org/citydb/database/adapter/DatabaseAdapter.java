@@ -105,6 +105,11 @@ public abstract class DatabaseAdapter {
         return pool;
     }
 
+    public final String getDatabaseName() {
+        DatabaseType databaseType = getClass().getAnnotation(DatabaseType.class);
+        return databaseType != null ? databaseType.name() : null;
+    }
+
     public final ConnectionDetails getConnectionDetails() {
         return connectionDetails;
     }

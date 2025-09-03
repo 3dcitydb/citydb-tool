@@ -28,8 +28,9 @@ import org.postgresql.PGProperty;
 
 import java.util.Properties;
 
-@DatabaseType(name = "PostgreSQL")
+@DatabaseType(name = PostgresqlAdapter.DATABASE_NAME)
 public class PostgresqlAdapter extends DatabaseAdapter {
+    public static final String DATABASE_NAME = "PostgreSQL";
 
     @Override
     protected SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter) {
