@@ -81,37 +81,19 @@ public class ConnectCommand implements Command {
 
         try {
             databaseManager.connect(connectionDetails);
-            handleSuccess(databaseManager);
-            return CommandLine.ExitCode.OK;
-        } catch (Exception e) {
-            handleFailure(connectionDetails, e);
-            return CommandLine.ExitCode.SOFTWARE;
-        }
-    }
-
-    private void handleSuccess(DatabaseManager databaseManager) throws ExecutionException {
-        logger.info("Connection successfully established.");
-        if (outputOptions.isOutputSpecified()) {
-            writeJson(StatusJsonBuilder.buildSuccess(databaseManager.getAdapter()));
-        }
-
-        if (!outputOptions.isWriteToStdout()) {
-            logger.info("Database details:");
-            databaseManager.reportDatabaseInfo(logger::info);
-        }
-    }
-
-    private void handleFailure(ConnectionDetails connectionDetails, Exception e) throws ExecutionException {
-        if (outputOptions.isOutputSpecified()) {
-            if (outputOptions.isWriteToStdout()) {
-                logger.error("Failed to connect to the database.");
+            logger.info("Connection successfully established.");
+            if (outputOptions.isOutputSpecified()) {
+                writeJson(StatusJsonBuilder.buildSuccess(databaseManager.getAdapter()));
             }
 
-            writeJson(StatusJsonBuilder.buildFailure(connectionDetails, e));
-        }
+            if (!outputOptions.isWriteToStdout()) {
+                logger.info("Database details:");
+                databaseManager.reportDatabaseInfo(logger::info);
+            }
 
-        if (!outputOptions.isWriteToStdout()) {
-            throw new ExecutionException("Failed to connect to the database.", e);
+            return CommandLine.ExitCode.OK;
+        } catch (Exception e) {
+            throw new ExecutionException("Failed to connect to the database", e);
         }
     }
 
