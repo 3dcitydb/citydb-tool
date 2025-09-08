@@ -73,16 +73,15 @@ public class ConnectCommand implements Command {
                 .fillAbsentValuesFromEnv();
 
         logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
-        if (outputOptions.isOutputSpecified()) {
-            logger.info("Writing connection status as JSON to {}.",
-                    outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
-        }
 
         try {
             databaseManager.connect(connectionDetails);
             logger.info("Connection successfully established.");
 
             if (outputOptions.isOutputSpecified()) {
+                logger.info("Writing connection status as JSON to {}.",
+                        outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
+
                 try (OutputStream stream = outputOptions.openStream()) {
                     JSON.writeTo(stream, StatusJsonBuilder.build(databaseManager.getAdapter()),
                             JSONWriter.Feature.PrettyFormatWith2Space);
