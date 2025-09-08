@@ -22,7 +22,6 @@
 package org.citydb.cli.connect;
 
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
@@ -82,8 +81,14 @@ public class ConnectCommand implements Command {
         try {
             databaseManager.connect(connectionDetails);
             logger.info("Connection successfully established.");
+
             if (outputOptions.isOutputSpecified()) {
-                writeJson(StatusJsonBuilder.buildSuccess(databaseManager.getAdapter()));
+                try (OutputStream stream = outputOptions.openStream()) {
+                    JSON.writeTo(stream, StatusJsonBuilder.build(databaseManager.getAdapter()),
+                            JSONWriter.Feature.PrettyFormatWith2Space);
+                } catch (Exception e) {
+                    throw new ExecutionException("Failed to write connection status as JSON.", e);
+                }
             }
 
             if (!outputOptions.isWriteToStdout()) {
@@ -94,14 +99,6 @@ public class ConnectCommand implements Command {
             return CommandLine.ExitCode.OK;
         } catch (Exception e) {
             throw new ExecutionException("Failed to connect to the database", e);
-        }
-    }
-
-    private void writeJson(JSONObject object) throws ExecutionException {
-        try (OutputStream stream = outputOptions.openStream()) {
-            JSON.writeTo(stream, object, JSONWriter.Feature.WriteNulls, JSONWriter.Feature.PrettyFormatWith2Space);
-        } catch (Exception e) {
-            throw new ExecutionException("Failed to write connection status as JSON.", e);
         }
     }
 

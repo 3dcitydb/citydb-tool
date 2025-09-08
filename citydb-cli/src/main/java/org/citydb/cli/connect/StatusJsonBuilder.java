@@ -21,30 +21,19 @@
 
 package org.citydb.cli.connect;
 
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 public class StatusJsonBuilder {
 
     private StatusJsonBuilder() {
     }
 
-    public static JSONObject buildSuccess(DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("connectionStatus", "success")
-                .fluentPut("connection", buildDatabaseConnection(adapter.getConnectionDetails()))
+    public static JSONObject build(DatabaseAdapter adapter) {
+        return new JSONObject().fluentPut("connection", buildDatabaseConnection(adapter.getConnectionDetails()))
                 .fluentPut("database", buildDatabase(adapter));
-    }
-
-    public static JSONObject buildFailure(ConnectionDetails connectionDetails, Exception e) {
-        return new JSONObject().fluentPut("connectionStatus", "failure")
-                .fluentPut("connection", buildDatabaseConnection(connectionDetails))
-                .fluentPut("error", buildError(e));
     }
 
     private static JSONObject buildDatabaseConnection(ConnectionDetails connectionDetails) {
@@ -96,25 +85,5 @@ public class StatusJsonBuilder {
         return new JSONObject().fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
                 .fluentPut("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
                 .fluentPut("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
-    }
-
-    private static JSONObject buildError(Exception e) {
-        return new JSONObject().fluentPut("causes", buildCauses(e));
-    }
-
-    private static JSONArray buildCauses(Exception e) {
-        Throwable cause = e;
-        JSONArray causes = new JSONArray();
-        Set<String> messages = new LinkedHashSet<>();
-
-        do {
-            String message = cause.getMessage();
-            if (message != null && messages.add(message)) {
-                causes.add(new JSONObject().fluentPut("message", message)
-                        .fluentPut("exception", cause.getClass().getName()));
-            }
-        } while ((cause = cause.getCause()) != null);
-
-        return causes;
     }
 }
