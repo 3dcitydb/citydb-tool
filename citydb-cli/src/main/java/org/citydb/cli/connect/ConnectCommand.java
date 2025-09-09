@@ -30,15 +30,13 @@ import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.JsonOutputOptions;
 import org.citydb.cli.logging.LoggerManager;
+import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
-import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
-import org.citydb.database.DatabaseOptions;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
-import java.util.Objects;
 
 @CommandLine.Command(
         name = "connect",
@@ -55,58 +53,38 @@ public class ConnectCommand implements Command {
     private Config config;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(ConnectCommand.class);
+    private final CommandHelper helper = CommandHelper.getInstance();
 
-    @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = DatabaseManager.newInstance();
-        try {
-            return doConnect(databaseManager);
-        } finally {
-            databaseManager.disconnect();
-        }
-    }
-
-    private int doConnect(DatabaseManager databaseManager) throws ExecutionException {
-        ConnectionDetails connectionDetails = Objects.requireNonNullElseGet(connectionOptions, ConnectionOptions::new)
-                .toConnectionDetails()
-                .fillAbsentValuesFrom(getConnectionDetailsFromConfig())
-                .fillAbsentValuesFromEnv();
-
-        logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
+        ConnectionDetails connectionDetails = helper.getConnectionDetails(connectionOptions, config);
+        DatabaseManager databaseManager = helper.getDatabaseManager();
 
         try {
+            logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
             databaseManager.connect(connectionDetails);
-            logger.info("Connection successfully established.");
-
-            if (outputOptions.isOutputSpecified()) {
-                logger.info("Writing connection status as JSON to {}.",
-                        outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
-
-                try (OutputStream stream = outputOptions.openStream()) {
-                    JSON.writeTo(stream, StatusJsonBuilder.build(databaseManager.getAdapter()),
-                            JSONWriter.Feature.PrettyFormatWith2Space);
-                } catch (Exception e) {
-                    throw new ExecutionException("Failed to write connection status as JSON.", e);
-                }
-            }
-
-            if (!outputOptions.isWriteToStdout()) {
-                logger.info("Database details:");
-                databaseManager.reportDatabaseInfo(logger::info);
-            }
-
-            return CommandLine.ExitCode.OK;
         } catch (Exception e) {
             throw new ExecutionException("Failed to connect to the database", e);
         }
-    }
 
-    private ConnectionDetails getConnectionDetailsFromConfig() throws ExecutionException {
-        try {
-            DatabaseOptions options = config.get(DatabaseOptions.class);
-            return options != null ? options.getDefaultConnection().orElse(null) : null;
-        } catch (ConfigException e) {
-            throw new ExecutionException("Failed to get database options from config.", e);
+        logger.info("Connection successfully established.");
+
+        if (outputOptions.isOutputSpecified()) {
+            logger.info("Writing connection status as JSON to {}.",
+                    outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
+
+            try (OutputStream stream = outputOptions.openStream()) {
+                JSON.writeTo(stream, StatusJsonBuilder.build(databaseManager.getAdapter()),
+                        JSONWriter.Feature.PrettyFormatWith2Space);
+            } catch (Exception e) {
+                throw new ExecutionException("Failed to write connection status as JSON.", e);
+            }
         }
+
+        if (!outputOptions.isWriteToStdout()) {
+            logger.info("Database details:");
+            databaseManager.reportDatabaseInfo(logger::info);
+        }
+
+        return CommandLine.ExitCode.OK;
     }
 }

@@ -34,6 +34,7 @@ import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
+import org.citydb.database.postgres.PostgresqlAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.ValidityReference;
 import org.citydb.database.util.IndexHelper;
@@ -68,30 +69,21 @@ public class CommandHelper {
         return instance;
     }
 
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
+
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
         return connect(options, null);
     }
 
     public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
-        try {
-            ConnectionDetails connectionDetails = options != null ?
-                    options.toConnectionDetails() :
-                    new ConnectionDetails();
-
-            if (config != null) {
-                config.ifPresent(DatabaseOptions.class, databaseOptions ->
-                        databaseOptions.getDefaultConnection().ifPresent(connectionDetails::fillAbsentValuesFrom));
-            }
-
-            return connect(connectionDetails);
-        } catch (ConfigException e) {
-            throw new ExecutionException("Failed to get database options from config.", e);
-        }
+        ConnectionDetails connectionDetails = getConnectionDetails(options, config);
+        return connect(connectionDetails);
     }
 
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
-            connectionDetails.fillAbsentValuesFromEnv();
             logger.info("Connecting to database {}.", connectionDetails.toConnectString());
             databaseManager.connect(connectionDetails);
             databaseManager.reportDatabaseInfo(logger::info);
@@ -105,6 +97,28 @@ public class CommandHelper {
         if (databaseManager.isConnected()) {
             databaseManager.disconnect();
         }
+    }
+
+    public ConnectionDetails getConnectionDetails(ConnectionOptions options) throws ExecutionException {
+        return getConnectionDetails(options, null);
+    }
+
+    public ConnectionDetails getConnectionDetails(ConnectionOptions options, Config config) throws ExecutionException {
+        ConnectionDetails connectionDetails = options != null ?
+                options.toConnectionDetails() :
+                new ConnectionDetails();
+
+        if (config != null) {
+            try {
+                config.ifPresent(DatabaseOptions.class, databaseOptions ->
+                        databaseOptions.getDefaultConnection().ifPresent(connectionDetails::fillAbsentValuesFrom));
+            } catch (ConfigException e) {
+                throw new ExecutionException("Failed to get database options from config.", e);
+            }
+        }
+
+        return connectionDetails.fillAbsentValuesFromEnv()
+                .setDatabaseNameIfAbsent(PostgresqlAdapter.DATABASE_NAME);
     }
 
     public IOAdapterManager createIOAdapterManager() throws ExecutionException {

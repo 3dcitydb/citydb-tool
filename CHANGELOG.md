@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed
+- Made JSON output of the `connect` command consistent with other commands. In case of an error, no JSON output is
+  generated.
+- Password prompting is only supported if a console is available. Passwords are no longer read from `stdin`.
+
 ## [1.1.0] - 2025-08-24
 
 ### Added
