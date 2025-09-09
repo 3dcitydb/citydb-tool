@@ -67,6 +67,18 @@ public class ProcessHelper {
         return new ProcessHelper(new ProcessBuilder(command));
     }
 
+    public static CommandBuilder builder() {
+        return new CommandBuilder();
+    }
+
+    public static CommandBuilder builder(String command) {
+        return new CommandBuilder(command);
+    }
+
+    public String getCommand() {
+        return String.join(" ", builder.command());
+    }
+
     public Map<String, String> getEnvVariables() {
         return envVariables;
     }
