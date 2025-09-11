@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.connect;
+package org.citydb.cli.util;
 
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.DatabaseConstants;

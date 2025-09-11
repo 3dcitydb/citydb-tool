@@ -30,6 +30,7 @@ import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
+import org.citydb.cli.util.ConnectionInfoBuilder;
 import org.citydb.config.Config;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.connection.ConnectionDetails;
