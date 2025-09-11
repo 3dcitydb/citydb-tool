@@ -266,9 +266,12 @@ public class ProcessHelper {
                     processHandle.destroyForcibly();
                     exitHandle = onExit.completeOnTimeout(null, GRACEFUL_KILL_TIMEOUT, TimeUnit.SECONDS).join();
                     if (exitHandle == null) {
-                        throw new ProcessException("Process did not terminate after forced kill within timeout.");
+                        logger.debug("Process did not terminate after forced kill within timeout.");
                     }
                 }
+
+                throw new ProcessException("Process did not complete before the " +
+                        processTimeout + "-second timeout.");
             }
         } else {
             onExit.join();
