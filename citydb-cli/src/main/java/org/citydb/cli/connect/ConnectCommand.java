@@ -68,14 +68,14 @@ public class ConnectCommand implements Command {
         logger.info("Connection successfully established.");
 
         if (outputOptions.isOutputSpecified()) {
-            logger.info("Writing connection status as JSON to {}.",
+            logger.info("Writing connection info as JSON to {}.",
                     outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
 
             try (OutputStream stream = outputOptions.openStream()) {
                 JSON.writeTo(stream, ConnectionInfoBuilder.build(databaseManager.getAdapter()),
                         JSONWriter.Feature.PrettyFormatWith2Space);
             } catch (Exception e) {
-                throw new ExecutionException("Failed to write connection status as JSON.", e);
+                throw new ExecutionException("Failed to write connection info as JSON.", e);
             }
         }
 
