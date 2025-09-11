@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/connection-status.schema.json",
-  "title": "Connection status schema",
-  "description": "JSON schema describing the connection status to a 3DCityDB.",
+  "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/connection-info.schema.json",
+  "title": "Connection info schema",
+  "description": "JSON schema for the connection info of a 3DCityDB instance.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -3,9 +3,10 @@
 ## [Unreleased]
 
 ### Changed
-- Made JSON output of the `connect` command consistent with other commands. In case of an error, no JSON output is
-  generated.
+- Made the JSON output of the `connect` command consistent with other commands. No JSON is generated in case
+  of an error.
 - Password prompting is only supported if a console is available. Passwords are no longer read from `stdin`.
+- Renamed the JSON schema `connection-status.schema.json` to `connection-info.schema.json`.
 
 ## [1.1.0] - 2025-08-24
 

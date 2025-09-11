@@ -19,11 +19,12 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.index;
+package org.citydb.cli.index.drop;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
+import org.citydb.cli.index.IndexController;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;

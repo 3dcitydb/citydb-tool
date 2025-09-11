@@ -26,9 +26,9 @@ import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
 
-public class StatusJsonBuilder {
+public class ConnectionInfoBuilder {
 
-    private StatusJsonBuilder() {
+    private ConnectionInfoBuilder() {
     }
 
     public static JSONObject build(DatabaseAdapter adapter) {

@@ -19,14 +19,16 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.index;
+package org.citydb.cli.index.status;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.JsonOutputOptions;
+import org.citydb.cli.index.IndexController;
+import org.citydb.cli.index.IndexStatusBuilder;
+import org.citydb.cli.index.options.OutputOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
@@ -43,7 +45,7 @@ import java.util.Map;
         description = "Show indexes with their status in the database.")
 public class IndexStatusCommand extends IndexController {
     @CommandLine.Mixin
-    private JsonOutputOptions outputOptions;
+    private OutputOptions outputOptions;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(IndexStatusCommand.class);
 
@@ -68,7 +70,7 @@ public class IndexStatusCommand extends IndexController {
                     outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
 
             try (OutputStream stream = outputOptions.openStream()) {
-                JSON.writeTo(stream, StatusJsonBuilder.build(indexes), JSONWriter.Feature.PrettyFormatWith2Space);
+                JSON.writeTo(stream, IndexStatusBuilder.build(indexes), JSONWriter.Feature.PrettyFormatWith2Space);
             } catch (Exception e) {
                 throw new ExecutionException("Failed to write indexes status as JSON.", e);
             }

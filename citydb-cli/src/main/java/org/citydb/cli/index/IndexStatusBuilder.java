@@ -28,9 +28,9 @@ import org.citydb.database.schema.Index;
 import java.util.Locale;
 import java.util.Map;
 
-public class StatusJsonBuilder {
+public class IndexStatusBuilder {
 
-    private StatusJsonBuilder() {
+    private IndexStatusBuilder() {
     }
 
     public static JSONObject build(Map<Index, Boolean> indexes) {

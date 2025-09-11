@@ -26,7 +26,10 @@ import com.alibaba.fastjson2.JSONWriter;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.*;
+import org.citydb.cli.common.Command;
+import org.citydb.cli.common.ConfigOption;
+import org.citydb.cli.common.ConnectionOptions;
+import org.citydb.cli.common.ThreadsOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
@@ -48,7 +51,7 @@ public class InfoCommand implements Command {
     enum Scope {all, active}
 
     @CommandLine.Mixin
-    private JsonOutputOptions outputOptions;
+    private OutputOptions outputOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     protected ThreadsOptions threadsOptions;

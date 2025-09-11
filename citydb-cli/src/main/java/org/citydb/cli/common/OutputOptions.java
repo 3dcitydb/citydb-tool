@@ -30,30 +30,26 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-public class JsonOutputOptions implements Option {
-    @CommandLine.Option(names = {"-o", "--output"}, paramLabel = "<file|->",
-            description = "Write output as a JSON file. Use '-' for stdout.")
-    private Path file;
+public abstract class OutputOptions implements Option {
+    protected boolean writeToStdout;
 
-    private boolean writeToStdout;
+    public abstract Path getFile();
 
-    public Path getFile() {
-        return file;
-    }
+    protected abstract void setFile(Path file);
 
     public boolean isWriteToStdout() {
         return writeToStdout;
     }
 
     public boolean isOutputSpecified() {
-        return file != null || writeToStdout;
+        return getFile() != null || writeToStdout;
     }
 
     public OutputStream openStream() throws IOException {
         if (isOutputSpecified()) {
             return writeToStdout ?
                     Streams.nonClosing(System.out) :
-                    Files.newOutputStream(file);
+                    Files.newOutputStream(getFile());
         } else {
             throw new IOException("No output option specified.");
         }
@@ -61,12 +57,13 @@ public class JsonOutputOptions implements Option {
 
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
+        Path file = getFile();
         if (file != null) {
             if ("-".equals(file.toString())) {
                 writeToStdout = true;
-                file = null;
+                setFile(null);
             } else {
-                file = CliConstants.WORKING_DIR.resolve(file);
+                setFile(CliConstants.WORKING_DIR.resolve(file));
             }
         }
     }

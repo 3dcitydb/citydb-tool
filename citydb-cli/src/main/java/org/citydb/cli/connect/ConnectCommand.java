@@ -28,7 +28,6 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
-import org.citydb.cli.common.JsonOutputOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
@@ -43,7 +42,7 @@ import java.io.OutputStream;
         description = "Test connection to the database.")
 public class ConnectCommand implements Command {
     @CommandLine.Mixin
-    private JsonOutputOptions outputOptions;
+    private OutputOptions outputOptions;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Database connection options:%n")
@@ -73,7 +72,7 @@ public class ConnectCommand implements Command {
                     outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
 
             try (OutputStream stream = outputOptions.openStream()) {
-                JSON.writeTo(stream, StatusJsonBuilder.build(databaseManager.getAdapter()),
+                JSON.writeTo(stream, ConnectionInfoBuilder.build(databaseManager.getAdapter()),
                         JSONWriter.Feature.PrettyFormatWith2Space);
             } catch (Exception e) {
                 throw new ExecutionException("Failed to write connection status as JSON.", e);

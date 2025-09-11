@@ -22,6 +22,9 @@
 package org.citydb.cli.index;
 
 import org.citydb.cli.common.Command;
+import org.citydb.cli.index.create.CreateIndexCommand;
+import org.citydb.cli.index.drop.DropIndexCommand;
+import org.citydb.cli.index.status.IndexStatusCommand;
 import picocli.CommandLine;
 
 @CommandLine.Command(

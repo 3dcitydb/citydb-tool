@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://3dcitydb.org/citydb-tool/json-schema/@major@.@minor@/index-status.schema.json",
   "title": "Index status schema",
-  "description": "JSON schema describing the status of database indexes.",
+  "description": "JSON schema for the status of database indexes.",
   "type": "object",
   "additionalProperties": false,
   "required": [
