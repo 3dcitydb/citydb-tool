@@ -33,6 +33,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
 public class ProcessHelper {
@@ -48,6 +49,7 @@ public class ProcessHelper {
     private Charset inputCharset = StandardCharsets.UTF_8;
     private Charset outputCharset = StandardCharsets.UTF_8;
     private Path workingDirectory;
+    private IntUnaryOperator exitCodeMapper;
 
     private ProcessHelper(ProcessBuilder builder) {
         this.builder = Objects.requireNonNull(builder, "The process builder must not be null.");
@@ -150,6 +152,15 @@ public class ProcessHelper {
         return this;
     }
 
+    public IntUnaryOperator getExitCodeMapper() {
+        return exitCodeMapper;
+    }
+
+    public ProcessHelper setExitCodeMapper(IntUnaryOperator exitCodeMapper) {
+        this.exitCodeMapper = exitCodeMapper;
+        return this;
+    }
+
     public int run(Consumer<String> stdoutConsumer, Consumer<String> stderrConsumer) throws ProcessException {
         return run(stdoutConsumer, stderrConsumer, (CheckedConsumer<OutputStream, IOException>) null);
     }
@@ -222,7 +233,9 @@ public class ProcessHelper {
                 inTask.cancel(true);
             }
 
-            return process.exitValue();
+            return exitCodeMapper != null ?
+                    exitCodeMapper.applyAsInt(process.exitValue()) :
+                    process.exitValue();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ProcessException("Process helper was interrupted while running process.", e);
