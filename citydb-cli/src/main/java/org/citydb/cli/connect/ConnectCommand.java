@@ -69,9 +69,7 @@ public class ConnectCommand implements Command {
         logger.info("Connection successfully established.");
 
         if (outputOptions.isOutputSpecified()) {
-            logger.info("Writing connection info as JSON to {}.",
-                    outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
-
+            logger.info("Writing connection info as JSON to {}.", outputOptions);
             try (OutputStream stream = outputOptions.openStream()) {
                 JSON.writeTo(stream, ConnectionInfoBuilder.build(databaseManager.getAdapter()),
                         JSONWriter.Feature.PrettyFormatWith2Space);

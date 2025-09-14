@@ -66,9 +66,7 @@ public class IndexStatusCommand extends IndexController {
         }
 
         if (outputOptions.isOutputSpecified()) {
-            logger.info("Writing indexes status as JSON to {}.",
-                    outputOptions.isWriteToStdout() ? "standard output" : outputOptions.getFile());
-
+            logger.info("Writing indexes status as JSON to {}.", outputOptions);
             try (OutputStream stream = outputOptions.openStream()) {
                 JSON.writeTo(stream, IndexStatusBuilder.build(indexes), JSONWriter.Feature.PrettyFormatWith2Space);
             } catch (Exception e) {
