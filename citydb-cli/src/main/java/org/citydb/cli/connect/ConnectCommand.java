@@ -63,7 +63,7 @@ public class ConnectCommand implements Command {
             logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
             databaseManager.connect(connectionDetails);
         } catch (Exception e) {
-            throw new ExecutionException("Failed to connect to the database", e);
+            throw new ExecutionException("Failed to connect to the database.", e);
         }
 
         logger.info("Connection successfully established.");
