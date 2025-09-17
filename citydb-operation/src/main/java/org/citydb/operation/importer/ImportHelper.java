@@ -129,7 +129,7 @@ public class ImportHelper {
                 transformer.transform(feature);
             }
 
-            importTime = feature.getCreationDate().orElse(OffsetDateTime.now().withNano(0));
+            importTime = OffsetDateTime.now().withNano(0);
             generateSequenceValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
