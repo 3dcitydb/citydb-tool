@@ -28,6 +28,7 @@ public enum Sequence {
     CODELIST_ENTRY("codelist_entry_seq"),
     CODELIST("codelist_seq"),
     FEATURE("feature_seq"),
+    FEATURE_CHANGELOG("feature_changelog_seq"),
     GEOMETRY_DATA("geometry_data_seq"),
     IMPLICIT_GEOMETRY("implicit_geometry_seq"),
     PROPERTY("property_seq"),

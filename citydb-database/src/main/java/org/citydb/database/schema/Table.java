@@ -35,6 +35,7 @@ public enum Table {
     DATATYPE("datatype", Set.of(ADE, NAMESPACE)),
     OBJECTCLASS("objectclass", Set.of(ADE, NAMESPACE)),
     FEATURE("feature", Set.of(OBJECTCLASS)),
+    FEATURE_CHANGELOG("feature_changelog", Set.of(FEATURE)),
     GEOMETRY_DATA("geometry_data", Set.of(FEATURE)),
     IMPLICIT_GEOMETRY("implicit_geometry", Set.of(GEOMETRY_DATA)),
     APPEARANCE("appearance", Set.of(FEATURE, IMPLICIT_GEOMETRY)),
@@ -46,7 +47,7 @@ public enum Table {
     public final static EnumSet<Table> CONTENT_TABLES = EnumSet.of(FEATURE, PROPERTY, ADDRESS, GEOMETRY_DATA,
             IMPLICIT_GEOMETRY, APPEARANCE, APPEAR_TO_SURFACE_DATA, TEX_IMAGE, SURFACE_DATA, SURFACE_DATA_MAPPING);
     public final static EnumSet<Table> METADATA_TABLES = EnumSet.of(ADE, CODELIST, DATABASE_SRS, CODELIST_ENTRY,
-            NAMESPACE, DATATYPE, OBJECTCLASS);
+            NAMESPACE, DATATYPE, OBJECTCLASS, FEATURE_CHANGELOG);
 
     private final static Map<String, Table> types = new HashMap<>();
     private final String name;
