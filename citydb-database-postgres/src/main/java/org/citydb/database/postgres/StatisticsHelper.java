@@ -69,7 +69,10 @@ public class StatisticsHelper extends org.citydb.database.util.StatisticsHelper 
                 if (databaseSizeId.equals(identifier)) {
                     databaseSize = rs.getLong(2);
                 } else {
-                    tableSizes.put(org.citydb.database.schema.Table.of(identifier), rs.getLong(2));
+                    org.citydb.database.schema.Table table = org.citydb.database.schema.Table.of(identifier);
+                    if (table != null) {
+                        tableSizes.put(table, rs.getLong(2));
+                    }
                 }
             }
         }
