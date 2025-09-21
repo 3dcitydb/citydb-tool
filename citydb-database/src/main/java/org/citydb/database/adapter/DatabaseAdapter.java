@@ -44,10 +44,6 @@ public abstract class DatabaseAdapter {
     private GeometryAdapter geometryAdapter;
     private DatabaseMetadata databaseMetadata;
 
-    protected abstract SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter);
-
-    protected abstract GeometryAdapter createGeometryAdapter(DatabaseAdapter adapter);
-
     public abstract Class<?> getDriverClass();
 
     public abstract int getDefaultPort();
@@ -55,6 +51,10 @@ public abstract class DatabaseAdapter {
     public abstract String getConnectionString(String host, int port, String database);
 
     public abstract void setDefaultConnectionProperties(Properties properties);
+
+    protected abstract SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter);
+
+    protected abstract GeometryAdapter createGeometryAdapter(DatabaseAdapter adapter);
 
     public final void initialize(Pool pool, ConnectionDetails connectionDetails) throws DatabaseException, SQLException {
         this.pool = Objects.requireNonNull(pool, "The database pool must not be null.");

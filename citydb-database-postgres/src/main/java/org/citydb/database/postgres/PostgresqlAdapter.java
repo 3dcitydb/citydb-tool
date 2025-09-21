@@ -35,16 +35,6 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     public static final String PROPERTY_POSTGIS_SFCGAL = "postgis_sfcgal";
 
     @Override
-    protected SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter) {
-        return new SchemaAdapter(adapter);
-    }
-
-    @Override
-    protected GeometryAdapter createGeometryAdapter(DatabaseAdapter adapter) {
-        return new GeometryAdapter(adapter);
-    }
-
-    @Override
     public Class<?> getDriverClass() {
         return Driver.class;
     }
@@ -63,5 +53,15 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     public void setDefaultConnectionProperties(Properties properties) {
         PGProperty.DEFAULT_ROW_FETCH_SIZE.set(properties, 1000);
         PGProperty.REWRITE_BATCHED_INSERTS.set(properties, true);
+    }
+
+    @Override
+    protected SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter) {
+        return new SchemaAdapter(adapter);
+    }
+
+    @Override
+    protected GeometryAdapter createGeometryAdapter(DatabaseAdapter adapter) {
+        return new GeometryAdapter(adapter);
     }
 }
