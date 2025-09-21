@@ -31,6 +31,8 @@ import java.util.Properties;
 @DatabaseType(name = PostgresqlAdapter.DATABASE_NAME)
 public class PostgresqlAdapter extends DatabaseAdapter {
     public static final String DATABASE_NAME = "PostgreSQL";
+    public static final String PROPERTY_POSTGIS = "postgis";
+    public static final String PROPERTY_POSTGIS_SFCGAL = "postgis_sfcgal";
 
     @Override
     protected SchemaAdapter createSchemaAdapter(DatabaseAdapter adapter) {

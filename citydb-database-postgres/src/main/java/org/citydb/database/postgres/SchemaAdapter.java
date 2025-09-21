@@ -52,9 +52,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
-    protected static final String PROPERTY_POSTGIS = "postgis";
-    protected static final String PROPERTY_POSTGIS_SFCGAL = "postgis_sfcgal";
-
     private final LazyCheckedInitializer<String, IOException> featureHierarchyQuery;
     private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
     private final OperationHelper operationHelper;
@@ -285,9 +282,9 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     protected List<DatabaseProperty> getDatabaseProperties(Version version, Connection connection) throws SQLException {
         List<DatabaseProperty> properties = new ArrayList<>();
         if (version.compareTo(Version.of(5, 1, 0)) < 0) {
-            properties.add(getDatabaseProperty(PROPERTY_POSTGIS, "PostGIS",
+            properties.add(getDatabaseProperty(PostgresqlAdapter.PROPERTY_POSTGIS, "PostGIS",
                     Select.newInstance().select(Function.of("postgis_lib_version")), connection));
-            properties.add(getDatabaseProperty(PROPERTY_POSTGIS_SFCGAL, "SFCGAL",
+            properties.add(getDatabaseProperty(PostgresqlAdapter.PROPERTY_POSTGIS_SFCGAL, "SFCGAL",
                     Select.newInstance().select(Function.of("postgis_sfcgal_version")), connection));
         } else {
             try (Statement stmt = connection.createStatement();

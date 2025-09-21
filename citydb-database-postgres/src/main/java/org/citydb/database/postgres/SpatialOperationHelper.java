@@ -34,6 +34,9 @@ import org.citydb.sqlbuilder.operation.Operators;
 public class SpatialOperationHelper implements org.citydb.database.util.SpatialOperationHelper {
     private final StringLiteral TRUE = StringLiteral.of("TRUE");
 
+    SpatialOperationHelper() {
+    }
+
     @Override
     public Function extent(ScalarExpression operand) {
         return Function.of("st_3dextent", cast(operand));
