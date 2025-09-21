@@ -91,6 +91,8 @@ public abstract class DatabaseAdapter {
         } catch (SchemaException e) {
             throw new DatabaseException("Failed to build schema mapping.", e);
         }
+
+        postInitialize();
     }
 
     public SchemaAdapter getSchemaAdapter() {
@@ -116,6 +118,9 @@ public abstract class DatabaseAdapter {
 
     public final DatabaseMetadata getDatabaseMetadata() {
         return databaseMetadata;
+    }
+
+    protected void postInitialize() throws DatabaseException {
     }
 
     private Version getCityDBVersion(Connection connection) throws DatabaseException {
