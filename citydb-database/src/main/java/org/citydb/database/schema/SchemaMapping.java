@@ -127,6 +127,20 @@ public class SchemaMapping {
                 FeatureType.UNDEFINED;
     }
 
+    public FeatureType getFeatureType(PrefixedName name, boolean lenient) {
+        FeatureType featureType = getFeatureType(name);
+        if (featureType == FeatureType.UNDEFINED
+                && lenient
+                && name.getPrefix().isEmpty()
+                && name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
+            featureType = featureTypesById.values().stream()
+                    .filter(type -> type.getName().getLocalName().equalsIgnoreCase(name.getLocalName()))
+                    .findFirst().orElse(FeatureType.UNDEFINED);
+        }
+
+        return featureType;
+    }
+
     void addFeatureType(FeatureType featureType) {
         featureTypesById.put(featureType.getId(), featureType);
         featureTypesByName.put(featureType.getName(), featureType);

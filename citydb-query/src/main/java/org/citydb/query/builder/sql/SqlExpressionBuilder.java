@@ -21,6 +21,7 @@
 
 package org.citydb.query.builder.sql;
 
+import org.citydb.database.util.SqlExpressionValidator;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
 import org.citydb.query.filter.operation.SqlExpression;
@@ -28,18 +29,8 @@ import org.citydb.sqlbuilder.operation.In;
 import org.citydb.sqlbuilder.util.PlainText;
 
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class SqlExpressionBuilder {
-    private final Matcher matcher = Pattern.compile("").matcher("");
-    private final List<Pattern> illegalContents = List.of(
-            Pattern.compile("(delete_.+?\\(.*?\\))"),
-            Pattern.compile("(cleanup_.+?\\(.*?\\))"),
-            Pattern.compile("(change_.+?\\(.*?\\))"),
-            Pattern.compile("(set_.+?\\(.*?\\))"),
-            Pattern.compile("(update_.+?\\(.*?\\))")
-    );
 
     private SqlExpressionBuilder() {
     }
@@ -50,13 +41,8 @@ public class SqlExpressionBuilder {
 
     BuildResult build(SqlExpression sqlExpression, SqlContext context, boolean negate) throws QueryBuildException {
         String queryExpression = sqlExpression.getQueryExpression().getValue();
-
-        for (Pattern pattern : illegalContents) {
-            matcher.reset(queryExpression).usePattern(pattern);
-            if (matcher.find()) {
-                throw new QueryBuildException("Found illegal content in SQL expression: " + matcher.group(1));
-            }
-        }
+        SqlExpressionValidator.defaults().validate(queryExpression, invalid ->
+                new QueryBuildException("Found illegal content in SQL expression: " + invalid));
 
         return BuildResult.of(In.of(context.getTable().column("id"),
                         List.of(PlainText.of(queryExpression)),

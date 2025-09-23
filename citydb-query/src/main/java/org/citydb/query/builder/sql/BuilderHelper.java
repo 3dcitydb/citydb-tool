@@ -29,7 +29,6 @@ import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SrsException;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SpatialOperationHelper;
-import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.SpatialObject;
 import org.citydb.query.Query;
@@ -124,15 +123,7 @@ public class BuilderHelper {
         if (query.hasFeatureTypes()) {
             Set<FeatureType> featureTypes = new HashSet<>();
             for (PrefixedName name : query.getFeatureTypes()) {
-                FeatureType featureType = getSchemaMapping().getFeatureType(name);
-                if (featureType == FeatureType.UNDEFINED
-                        && name.getPrefix().isEmpty()
-                        && name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
-                    featureType = getSchemaMapping().getFeatureTypes().stream()
-                            .filter(type -> type.getName().getLocalName().equalsIgnoreCase(name.getLocalName()))
-                            .findFirst().orElse(FeatureType.UNDEFINED);
-                }
-
+                FeatureType featureType = getSchemaMapping().getFeatureType(name, true);
                 if (featureType == FeatureType.UNDEFINED) {
                     throw new QueryBuildException("The feature type '" + name + "' is undefined.");
                 } else if (featureType.getTable() != org.citydb.database.schema.Table.FEATURE) {
