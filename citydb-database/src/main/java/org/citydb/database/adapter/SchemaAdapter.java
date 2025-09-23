@@ -107,10 +107,6 @@ public abstract class SchemaAdapter {
         return indexHelper;
     }
 
-    public String getCreateIndex(Index index) {
-        return getCreateIndex(index, false);
-    }
-
     protected String getVendorProductString(DatabaseMetadata metadata) {
         String productString = metadata.getVendorProductName() + " " + metadata.getVendorProductVersion();
         if (metadata.hasProperties()) {
