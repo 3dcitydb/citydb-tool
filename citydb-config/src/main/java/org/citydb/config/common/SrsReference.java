@@ -29,6 +29,10 @@ public class SrsReference {
     private Integer srid;
     private String identifier;
 
+    public static SrsReference of(int srid) {
+        return new SrsReference().setSRID(srid);
+    }
+
     public Optional<Integer> getSRID() {
         return Optional.ofNullable(srid);
     }
