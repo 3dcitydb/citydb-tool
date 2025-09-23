@@ -21,11 +21,14 @@
 
 package org.citydb.database.postgres;
 
+import org.citydb.core.version.Version;
+import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseType;
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 
+import java.util.Optional;
 import java.util.Properties;
 
 @DatabaseType(name = PostgresqlAdapter.DATABASE_NAME)
@@ -33,6 +36,9 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     public static final String DATABASE_NAME = "PostgreSQL";
     public static final String PROPERTY_POSTGIS = "postgis";
     public static final String PROPERTY_POSTGIS_SFCGAL = "postgis_sfcgal";
+
+    private Version postgisVersion;
+    private Version sfcgalVersion;
 
     @Override
     public Class<?> getDriverClass() {
@@ -63,5 +69,23 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     @Override
     protected GeometryAdapter createGeometryAdapter(DatabaseAdapter adapter) {
         return new GeometryAdapter(adapter);
+    }
+
+    Version getPostGISVersion() {
+        return postgisVersion;
+    }
+
+    Optional<Version> getSCFGALVersion() {
+        return Optional.ofNullable(sfcgalVersion);
+    }
+
+    @Override
+    protected void postInitialize() throws DatabaseException {
+        postgisVersion = getDatabaseMetadata().getProperty(PostgresqlAdapter.PROPERTY_POSTGIS)
+                .flatMap(property -> Version.parse(property.getValue().orElse(null)))
+                .orElseThrow(() -> new DatabaseException("Failed to retrieve PostGIS version."));
+        sfcgalVersion = getDatabaseMetadata().getProperty(PostgresqlAdapter.PROPERTY_POSTGIS_SFCGAL)
+                .flatMap(property -> Version.parse(property.getValue().orElse(null)))
+                .orElse(null);
     }
 }
