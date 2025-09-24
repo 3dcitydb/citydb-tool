@@ -101,6 +101,9 @@ public abstract class ImportController implements Command {
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
 
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
     @ConfigOption
     private Config config;
 
@@ -314,12 +317,14 @@ public abstract class ImportController implements Command {
             }
         }
 
-        importOptions.setMode(switch (mode) {
-            case skip -> ImportMode.SKIP_EXISTING;
-            case delete -> ImportMode.DELETE_EXISTING;
-            case terminate -> ImportMode.TERMINATE_EXISTING;
-            default -> ImportMode.IMPORT_ALL;
-        });
+        if (Command.hasMatchedOption("--import-mode", commandSpec)) {
+            importOptions.setMode(switch (mode) {
+                case import_all -> ImportMode.IMPORT_ALL;
+                case skip -> ImportMode.SKIP_EXISTING;
+                case delete -> ImportMode.DELETE_EXISTING;
+                case terminate -> ImportMode.TERMINATE_EXISTING;
+            });
+        }
 
         if (transformOptions != null) {
             importOptions.setAffineTransform(transformOptions.getTransformationMatrix());
