@@ -2,11 +2,22 @@
 
 ## [Unreleased]
 
+### Added
+- Added a Java API for querying and processing feature changes from the `feature_changelog` table and aggregating
+  them into change regions.
+- The `PostgresqlAdapter` now provides methods to retrieve the installed PostGIS and SFCGAL versions in the connected
+  database.
+
 ### Changed
-- Made the JSON output of the `connect` command consistent with other commands. No JSON is generated in case
-  of an error.
+- Standardized JSON output of the `connect` command to match other commands. No JSON is generated in case of an
+  error anymore.
 - Password prompting is only supported if a console is available. Passwords are no longer read from `stdin`.
 - Renamed the JSON schema `connection-status.schema.json` to `connection-info.schema.json`.
+
+### Fixed
+- Fixed NPE in `info` command when changelog tracking is enabled.
+- The `last_modification_date` now defaults to the current import time and is no longer strictly tied to
+  `creation_date`.
 
 ## [1.1.0] - 2025-08-24
 
