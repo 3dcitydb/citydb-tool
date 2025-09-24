@@ -15,9 +15,10 @@
 - Renamed the JSON schema `connection-status.schema.json` to `connection-info.schema.json`.
 
 ### Fixed
+- Fixed JSON configuration taking precedence over the default `--import-mode` unless explicitly set on the
+  command line.
 - Fixed NPE in `info` command when changelog tracking is enabled.
-- The `last_modification_date` now defaults to the current import time and is no longer strictly tied to
-  `creation_date`.
+- The `last_modification_date` now defaults to the current import time and is no longer tied to `creation_date`.
 
 ## [1.1.0] - 2025-08-24
 
