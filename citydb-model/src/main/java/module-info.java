@@ -3,6 +3,7 @@ module org.citydb.model {
 
     exports org.citydb.model.address;
     exports org.citydb.model.appearance;
+    exports org.citydb.model.change;
     exports org.citydb.model.common;
     exports org.citydb.model.encoding;
     exports org.citydb.model.feature;

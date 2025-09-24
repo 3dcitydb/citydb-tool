@@ -79,6 +79,8 @@ public abstract class SchemaAdapter {
 
     public abstract TempTableHelper getTempTableHelper();
 
+    public abstract ChangelogHelper getChangelogHelper();
+
     protected abstract String getCityDBVersion();
 
     protected abstract String getSchemaExists(String schemaName, Version version);

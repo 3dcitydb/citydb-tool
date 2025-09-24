@@ -4,6 +4,9 @@ module org.citydb.util {
     requires transitive org.citydb.model;
     requires transitive org.apache.commons.csv;
 
+    exports org.citydb.util.changelog;
+    exports org.citydb.util.changelog.options;
+    exports org.citydb.util.changelog.query;
     exports org.citydb.util.csv;
     exports org.citydb.util.process;
     exports org.citydb.util.report;

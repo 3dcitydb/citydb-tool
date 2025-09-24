@@ -57,6 +57,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final OperationHelper operationHelper;
     private final StatisticsHelper statisticsHelper;
     private final TempTableHelper tempTableHelper;
+    private final ChangelogHelper changelogHelper;
 
     SchemaAdapter(DatabaseAdapter adapter) {
         super(adapter);
@@ -65,6 +66,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         operationHelper = new OperationHelper(this);
         statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
+        changelogHelper = new ChangelogHelper(adapter);
     }
 
     @Override
@@ -217,6 +219,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public TempTableHelper getTempTableHelper() {
         return tempTableHelper;
+    }
+
+    @Override
+    public ChangelogHelper getChangelogHelper() {
+        return changelogHelper;
     }
 
     @Override
