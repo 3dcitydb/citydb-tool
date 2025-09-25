@@ -29,6 +29,7 @@ import org.citydb.cli.common.*;
 import org.citydb.cli.importer.duplicate.DuplicateController;
 import org.citydb.cli.importer.filter.Filter;
 import org.citydb.cli.importer.options.FilterOptions;
+import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.cli.importer.options.MetadataOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
@@ -146,9 +147,9 @@ public abstract class ImportController implements Command {
 
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
         ImportMode importMode = importOptions.getMode();
-        IndexOptions.Mode indexMode = indexOptions.getMode();
+        IndexMode indexMode = importOptions.getIndexMode();
 
-        if (indexMode != IndexOptions.Mode.keep) {
+        if (indexMode != IndexMode.KEEP) {
             logger.info("Dropping database indexes...");
             helper.dropIndexes(databaseManager.getAdapter());
         }
@@ -213,7 +214,7 @@ public abstract class ImportController implements Command {
                 }
             }
 
-            if (shouldRun && indexMode == IndexOptions.Mode.drop_create) {
+            if (shouldRun && indexMode == IndexMode.DROP_CREATE) {
                 logger.info("Re-creating database indexes. This operation may take some time...");
                 helper.createIndexes(databaseManager.getAdapter());
             }
@@ -323,6 +324,14 @@ public abstract class ImportController implements Command {
                 case skip -> ImportMode.SKIP_EXISTING;
                 case delete -> ImportMode.DELETE_EXISTING;
                 case terminate -> ImportMode.TERMINATE_EXISTING;
+            });
+        }
+
+        if (Command.hasMatchedOption("--index-mode", commandSpec)) {
+            importOptions.setIndexMode(switch (indexOptions.getMode()) {
+                case keep -> IndexMode.KEEP;
+                case drop -> IndexMode.DROP;
+                case drop_create -> IndexMode.DROP_CREATE;
             });
         }
 

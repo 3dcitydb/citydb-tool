@@ -23,8 +23,8 @@ package org.citydb.cli.importer.duplicate;
 
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.importer.ImportMode;
 import org.citydb.cli.importer.ImportOptions;
+import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.operation.deleter.DeleteOptions;

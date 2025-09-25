@@ -21,6 +21,9 @@
 
 package org.citydb.cli.deleter;
 
+import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.annotation.JSONField;
+import org.citydb.cli.common.IndexMode;
 import org.citydb.config.SerializableConfig;
 import org.citydb.operation.exporter.options.ValidityOptions;
 import org.citydb.query.Query;
@@ -29,8 +32,19 @@ import java.util.Optional;
 
 @SerializableConfig(name = "deleteOptions")
 public class DeleteOptions extends org.citydb.operation.deleter.DeleteOptions {
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
+    private IndexMode indexMode = IndexMode.KEEP;
     private Query query;
     private ValidityOptions validityOptions;
+
+    public IndexMode getIndexMode() {
+        return indexMode != null ? indexMode : IndexMode.KEEP;
+    }
+
+    public DeleteOptions setIndexMode(IndexMode indexMode) {
+        this.indexMode = indexMode;
+        return this;
+    }
 
     public Optional<Query> getQuery() {
         return Optional.ofNullable(query);

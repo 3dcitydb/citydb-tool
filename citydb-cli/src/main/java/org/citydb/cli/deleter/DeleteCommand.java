@@ -116,10 +116,10 @@ public class DeleteCommand implements Command {
                 helper.resolveAgainstWorkingDir(tempDirectory),
                 databaseManager.getAdapter());
 
-        IndexOptions.Mode indexMode = indexOptions.getMode();
+        IndexMode indexMode = deleteOptions.getIndexMode();
         AtomicLong counter = new AtomicLong();
 
-        if (indexMode != IndexOptions.Mode.keep) {
+        if (indexMode != IndexMode.KEEP) {
             logger.info("Dropping database indexes...");
             helper.dropIndexes(databaseManager.getAdapter());
         }
@@ -166,7 +166,7 @@ public class DeleteCommand implements Command {
                 }
             }
 
-            if (shouldRun && indexMode == IndexOptions.Mode.drop_create) {
+            if (shouldRun && indexMode == IndexMode.DROP_CREATE) {
                 logger.info("Re-creating database indexes. This operation may take some time...");
                 helper.createIndexes(databaseManager.getAdapter());
             }
@@ -214,6 +214,14 @@ public class DeleteCommand implements Command {
 
         if (Command.hasMatchedOption("--no-terminate-all", commandSpec)) {
             deleteOptions.setTerminateWithSubFeatures(terminateAll);
+        }
+
+        if (Command.hasMatchedOption("--index-mode", commandSpec)) {
+            deleteOptions.setIndexMode(switch (indexOptions.getMode()) {
+                case keep -> IndexMode.KEEP;
+                case drop -> IndexMode.DROP;
+                case drop_create -> IndexMode.DROP_CREATE;
+            });
         }
 
         if (metadataOptions != null) {

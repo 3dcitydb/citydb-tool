@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-package org.citydb.cli.importer;
+package org.citydb.cli.importer.options;
 
 public enum ImportMode {
     IMPORT_ALL("importAll"),
