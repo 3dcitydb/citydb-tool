@@ -67,23 +67,17 @@ public class CityGMLExportCommand extends ExportController {
     protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException {
         CityGMLFormatOptions options;
         try {
-            options = formatOptions.get(CityGMLFormatOptions.class);
+            options = formatOptions.getOrElse(CityGMLFormatOptions.class, CityGMLFormatOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get CityGML format options from config.", e);
         }
 
-        if (options != null) {
-            if (Command.hasMatchedOption("--citygml-version", commandSpec)) {
-                options.setVersion(version);
-            }
+        if (Command.hasMatchedOption("--citygml-version", commandSpec)) {
+            options.setVersion(version);
+        }
 
-            if (Command.hasMatchedOption("--no-pretty-print", commandSpec)) {
-                options.setPrettyPrint(prettyPrint);
-            }
-        } else {
-            options = new CityGMLFormatOptions()
-                    .setVersion(version)
-                    .setPrettyPrint(prettyPrint);
+        if (Command.hasMatchedOption("--no-pretty-print", commandSpec)) {
+            options.setPrettyPrint(prettyPrint);
         }
 
         if (stylesheets != null) {

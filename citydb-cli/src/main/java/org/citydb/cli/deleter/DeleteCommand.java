@@ -203,23 +203,17 @@ public class DeleteCommand implements Command {
     private DeleteOptions getDeleteOptions() throws ExecutionException {
         DeleteOptions deleteOptions;
         try {
-            deleteOptions = config.get(DeleteOptions.class);
+            deleteOptions = config.getOrElse(DeleteOptions.class, DeleteOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get delete options from config.", e);
         }
 
-        if (deleteOptions != null) {
-            if (Command.hasMatchedOption("--delete-mode", commandSpec)) {
-                deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
-            }
+        if (Command.hasMatchedOption("--delete-mode", commandSpec)) {
+            deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
+        }
 
-            if (Command.hasMatchedOption("--no-terminate-all", commandSpec)) {
-                deleteOptions.setTerminateWithSubFeatures(terminateAll);
-            }
-        } else {
-            deleteOptions = new DeleteOptions();
-            deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE)
-                    .setTerminateWithSubFeatures(terminateAll);
+        if (Command.hasMatchedOption("--no-terminate-all", commandSpec)) {
+            deleteOptions.setTerminateWithSubFeatures(terminateAll);
         }
 
         if (metadataOptions != null) {

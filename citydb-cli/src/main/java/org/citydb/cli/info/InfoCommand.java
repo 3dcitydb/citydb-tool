@@ -73,6 +73,9 @@ public class InfoCommand implements Command {
             heading = "Database connection options:%n")
     private ConnectionOptions connectionOptions;
 
+    @CommandLine.Spec
+    private CommandLine.Model.CommandSpec commandSpec;
+
     @ConfigOption
     private Config config;
 
@@ -127,7 +130,9 @@ public class InfoCommand implements Command {
             reportOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
         }
 
-        reportOptions.setFeatureScope(scope == Scope.active ? FeatureScope.ACTIVE : FeatureScope.ALL);
+        if (Command.hasMatchedOption("--feature-scope", commandSpec)) {
+            reportOptions.setFeatureScope(scope == Scope.active ? FeatureScope.ACTIVE : FeatureScope.ALL);
+        }
 
         if (includeGenericAttributes != null) {
             reportOptions.includeGenericAttributes(includeGenericAttributes);

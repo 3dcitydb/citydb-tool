@@ -46,7 +46,7 @@ public class DeleteOptions {
     private String lineage;
 
     public DeleteMode getMode() {
-        return mode != null ? mode : DeleteMode.DELETE;
+        return mode != null ? mode : DeleteMode.TERMINATE;
     }
 
     public DeleteOptions setMode(DeleteMode mode) {

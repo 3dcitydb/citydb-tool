@@ -59,18 +59,13 @@ public class CityJSONImportCommand extends ImportController {
     protected InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException {
         CityJSONFormatOptions options;
         try {
-            options = formatOptions.get(CityJSONFormatOptions.class);
+            options = formatOptions.getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get CityJSON format options from config.", e);
         }
 
-        if (options != null) {
-            if (Command.hasMatchedOption("--no-map-unknown-objects", commandSpec)) {
-                options.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
-            }
-        } else {
-            options = new CityJSONFormatOptions()
-                    .setMapUnsupportedTypesToGenerics(mapUnknownObjects);
+        if (Command.hasMatchedOption("--no-map-unknown-objects", commandSpec)) {
+            options.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
         }
 
         if (appearanceOptions != null) {

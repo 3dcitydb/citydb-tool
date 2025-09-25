@@ -117,48 +117,37 @@ public class CityJSONExportCommand extends ExportController {
     protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException {
         CityJSONFormatOptions options;
         try {
-            options = formatOptions.get(CityJSONFormatOptions.class);
+            options = formatOptions.getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get CityJSON format options from config.", e);
         }
 
-        if (options != null) {
-            if (Command.hasMatchedOption("--cityjson-version", commandSpec)) {
-                options.setVersion(version);
-            }
+        if (Command.hasMatchedOption("--cityjson-version", commandSpec)) {
+            options.setVersion(version);
+        }
 
-            if (Command.hasMatchedOption("--no-json-lines", commandSpec)) {
-                options.setJsonLines(jsonLines);
-            }
+        if (Command.hasMatchedOption("--no-json-lines", commandSpec)) {
+            options.setJsonLines(jsonLines);
+        }
 
-            if (Command.hasMatchedOption("--vertex-precision", commandSpec)) {
-                options.setVertexPrecision(vertexPrecision);
-            }
+        if (Command.hasMatchedOption("--vertex-precision", commandSpec)) {
+            options.setVertexPrecision(vertexPrecision);
+        }
 
-            if (Command.hasMatchedOption("--template-precision", commandSpec)) {
-                options.setTemplatePrecision(templatePrecision);
-            }
+        if (Command.hasMatchedOption("--template-precision", commandSpec)) {
+            options.setTemplatePrecision(templatePrecision);
+        }
 
-            if (Command.hasMatchedOption("--texture-vertex-precision", commandSpec)) {
-                options.setTextureVertexPrecision(textureVertexPrecision);
-            }
+        if (Command.hasMatchedOption("--texture-vertex-precision", commandSpec)) {
+            options.setTextureVertexPrecision(textureVertexPrecision);
+        }
 
-            if (Command.hasMatchedOption("--no-transform-coordinates", commandSpec)) {
-                options.setTransformCoordinates(transformCoordinates);
-            }
+        if (Command.hasMatchedOption("--no-transform-coordinates", commandSpec)) {
+            options.setTransformCoordinates(transformCoordinates);
+        }
 
-            if (Command.hasMatchedOption("--no-material-defaults", commandSpec)) {
-                options.setUseMaterialDefaults(useMaterialDefaults);
-            }
-        } else {
-            options = new CityJSONFormatOptions()
-                    .setVersion(version)
-                    .setJsonLines(jsonLines)
-                    .setVertexPrecision(vertexPrecision)
-                    .setTemplatePrecision(templatePrecision)
-                    .setTextureVertexPrecision(textureVertexPrecision)
-                    .setTransformCoordinates(transformCoordinates)
-                    .setUseMaterialDefaults(useMaterialDefaults);
+        if (Command.hasMatchedOption("--no-material-defaults", commandSpec)) {
+            options.setUseMaterialDefaults(useMaterialDefaults);
         }
 
         if (prettyPrint != null) {
