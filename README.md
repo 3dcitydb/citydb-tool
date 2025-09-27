@@ -1,6 +1,6 @@
 ![Gradle build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/build-citydb-tool.yml?logo=Gradle&logoColor=white&style=flat-square)
 [![Docker edge image build](https://img.shields.io/github/actions/workflow/status/3dcitydb/citydb-tool/docker-build-push-edge.yml?label=edge&logo=docker&logoColor=white&style=flat-square)](https://github.com/users/3dcitydb/packages/container/package/citydb-tool)
-![release](https://img.shields.io/github/v/release/xmlobjects/gml-objects?display_name=tag&style=flat-square)
+![release](https://img.shields.io/github/v/release/3dcitydb/citydb-tool?display_name=tag&style=flat-square)
 
 # citydb-tool
 
