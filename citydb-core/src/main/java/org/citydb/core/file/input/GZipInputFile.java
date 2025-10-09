@@ -36,6 +36,10 @@ public class GZipInputFile extends RegularInputFile {
         super(file, mediaType);
     }
 
+    public GZipInputFile(Path file) {
+        this(file, null);
+    }
+
     @Override
     public InputStream openStream() throws IOException {
         return new GZIPInputStream(new BufferedInputStream(Files.newInputStream(getFile())));

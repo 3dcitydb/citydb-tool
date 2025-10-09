@@ -47,6 +47,10 @@ public class ZipInputFile extends InputFile {
         this.fileURI = Objects.requireNonNull(fileURI, "The file URI must not be null.");
     }
 
+    public ZipInputFile(String entryName, Path zipFile, URI fileURI) {
+        this(entryName, zipFile, fileURI, null);
+    }
+
     @Override
     public String getContentFile() {
         return Path.of(getFile().toString(), entryName).toString();

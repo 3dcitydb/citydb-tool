@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 
 public abstract class InputFile implements AutoCloseable {
     private final Path file;
@@ -37,7 +38,7 @@ public abstract class InputFile implements AutoCloseable {
         Objects.requireNonNull(file, "The file path must not be null.");
         this.file = file.toAbsolutePath().normalize();
         this.fileType = Objects.requireNonNull(fileType, "The file type must not be null.");
-        this.mediaType = Objects.requireNonNull(mediaType, "The media type must not be null.");
+        this.mediaType = mediaType;
     }
 
     public abstract String getContentFile();
@@ -59,7 +60,7 @@ public abstract class InputFile implements AutoCloseable {
         return fileType;
     }
 
-    public MediaType getMediaType() {
-        return mediaType;
+    public Optional<MediaType> getMediaType() {
+        return Optional.ofNullable(mediaType);
     }
 }

@@ -38,6 +38,10 @@ public class RegularInputFile extends InputFile {
         super(file, FileType.REGULAR, mediaType);
     }
 
+    public RegularInputFile(Path file) {
+        this(file, null);
+    }
+
     @Override
     public String getContentFile() {
         return getFile().toString();
