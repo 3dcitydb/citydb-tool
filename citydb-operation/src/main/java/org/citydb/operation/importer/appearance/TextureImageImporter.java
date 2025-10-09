@@ -25,13 +25,11 @@ import org.citydb.core.file.FileLocator;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.reference.CacheType;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.Collections;
 
@@ -48,19 +46,13 @@ public class TextureImageImporter extends DatabaseImporter {
                 "values (" + String.join(",", Collections.nCopies(5, "?")) + ")";
     }
 
-    public long doImport(ExternalFile textureImage) throws ImportException, SQLException {
+    public long doImport(ExternalFile textureImage) throws IOException, SQLException {
         long texImageId = nextSequenceValue(Sequence.TEX_IMAGE);
         FileLocator locator = getFileLocator(textureImage);
 
         stmt.setLong(1, texImageId);
         stmt.setString(2, locator.getFileName());
-
-        try (InputStream stream = locator.openStream()) {
-            stmt.setBytes(3, stream.readAllBytes());
-        } catch (IOException e) {
-            throw new ImportException("Failed to load texture file " + textureImage.getFileLocation() + ".", e);
-        }
-
+        stmt.setBytes(3, getBytes(locator));
         stmt.setString(4, textureImage.getMimeType().orElse(null));
         stmt.setString(5, textureImage.getMimeTypeCodeSpace().orElse(null));
 

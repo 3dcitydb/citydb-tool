@@ -26,6 +26,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
@@ -36,6 +37,9 @@ import org.citydb.operation.importer.reference.CacheType;
 import org.citydb.operation.importer.reference.ReferenceCache;
 import org.citydb.operation.importer.reference.ReferenceManager;
 import org.citydb.operation.importer.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -46,10 +50,11 @@ import java.util.List;
 import java.util.Map;
 
 public class ImportHelper {
+    private final Logger logger = LoggerFactory.getLogger(ImportHelper.class);
     private final DatabaseAdapter adapter;
     private final ImportOptions options;
     private final ReferenceManager referenceManager;
-    private final ImportLogger logger;
+    private final ImportLogger importLogger;
     private final Connection connection;
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
@@ -62,14 +67,15 @@ public class ImportHelper {
 
     private OffsetDateTime importTime;
     private SequenceValues sequenceValues;
+    private boolean failFast;
     private int batchCounter;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
-                 ImportLogger logger, Importer.TransactionMode transactionMode) throws SQLException {
+                 ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
         this.adapter = adapter;
         this.options = options;
         this.referenceManager = referenceManager;
-        this.logger = logger;
+        this.importLogger = importLogger;
         this.transactionMode = transactionMode;
 
         connection = adapter.getPool().getConnection(false);
@@ -77,6 +83,7 @@ public class ImportHelper {
         tableHelper = new TableHelper(this);
         sequenceHelper = new SequenceHelper(this);
         transformer = options.getAffineTransform().map(AffineTransformer::of).orElse(null);
+        failFast = options.isFailFast();
         batchSize = options.getBatchSize() > 0 ?
                 Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
                 ImportOptions.DEFAULT_BATCH_SIZE;
@@ -110,6 +117,38 @@ public class ImportHelper {
         return sequenceValues;
     }
 
+    public void logOrThrow(Level level, String message, Throwable cause) throws ImportException {
+        if (!failFast) {
+            logger.atLevel(level).setCause(cause).log(message);
+        } else {
+            throw new ImportException(message, cause);
+        }
+    }
+
+    public void logOrThrow(Level level, String message) throws ImportException {
+        logOrThrow(level, message, null);
+    }
+
+    public String formatMessage(Feature feature, String message) {
+        return getObjectSignature(feature) + ": " + message;
+    }
+
+    public String formatMessage(Referencable object, String message) {
+        return getObjectSignature(object) + ": " + message;
+    }
+
+    public String getObjectSignature(Feature feature) {
+        String objectId = feature.getObjectId().orElse(null);
+        return feature.getFeatureType().getLocalName() +
+                (objectId != null ? " '" + objectId + "'" : "");
+    }
+
+    public String getObjectSignature(Referencable object) {
+        String objectId = object.getObjectId().orElse(null);
+        return object.getClass().getSimpleName() +
+                (objectId != null ? " '" + objectId + "'" : "");
+    }
+
     public ReferenceCache getOrCreateReferenceCache(CacheType type) {
         return caches.computeIfAbsent(type, v -> new ReferenceCache(type));
     }
@@ -133,7 +172,7 @@ public class ImportHelper {
             generateSequenceValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
-            if (logger != null) {
+            if (importLogger != null) {
                 logEntries.add(ImportLogEntry.of(feature, descriptor));
             }
 
@@ -180,10 +219,10 @@ public class ImportHelper {
     }
 
     private void updateImportLog(boolean commit) throws ImportException {
-        if (logger != null && !logEntries.isEmpty()) {
+        if (importLogger != null && !logEntries.isEmpty()) {
             try {
                 for (ImportLogEntry logEntry : logEntries) {
-                    logger.log(logEntry.setCommitted(commit));
+                    importLogger.log(logEntry.setCommitted(commit));
                 }
             } finally {
                 logEntries.clear();

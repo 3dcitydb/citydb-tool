@@ -32,9 +32,9 @@ import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.appearance.AppearanceImporter;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.reference.CacheType;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -89,10 +89,12 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
             stmt.setString(4, libraryObject.getMimeTypeCodeSpace().orElse(null));
             stmt.setString(5, locator.getFileName());
 
-            try (InputStream stream = locator.openStream()) {
-                stmt.setBytes(6, stream.readAllBytes());
+            try {
+                stmt.setBytes(6, getBytes(locator));
             } catch (IOException e) {
-                throw new ImportException("Failed to load library object " + libraryObject.getFileLocation() + ".", e);
+                logOrThrow(Level.ERROR, formatMessage(implicitGeometry,
+                        "Failed to import library object " + libraryObject.getFileLocation() + "."), e);
+                stmt.setNull(6, Types.OTHER);
             }
 
             stmt.setNull(7, Types.BIGINT);

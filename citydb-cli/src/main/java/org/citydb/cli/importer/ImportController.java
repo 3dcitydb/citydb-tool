@@ -296,6 +296,9 @@ public abstract class ImportController implements Command {
             throw new ExecutionException("Failed to get import options from config.", e);
         }
 
+        if (failFast != null) {
+            importOptions.setFailFast(failFast);
+        }
         if (tempDirectory != null) {
             importOptions.setTempDirectory(helper.resolveAgainstWorkingDir(tempDirectory));
         }

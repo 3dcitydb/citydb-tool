@@ -26,7 +26,9 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
+import org.slf4j.event.Level;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.sql.Types;
 
@@ -41,8 +43,14 @@ public abstract class TextureImporter extends SurfaceDataImporter {
         if (imageProperty != null) {
             ExternalFile textureImage = imageProperty.getObject().orElse(null);
             if (textureImage != null) {
-                stmt.setLong(7, tableHelper.getOrCreateImporter(TextureImageImporter.class)
-                        .doImport(textureImage));
+                try {
+                    stmt.setLong(7, tableHelper.getOrCreateImporter(TextureImageImporter.class)
+                            .doImport(textureImage));
+                } catch (IOException e) {
+                    logOrThrow(Level.ERROR, formatMessage(texture,
+                            "Failed to import texture file " + textureImage.getFileLocation() + "."), e);
+                    stmt.setNull(7, Types.BIGINT);
+                }
             } else if (imageProperty.getReference().isPresent()) {
                 cacheReference(CacheType.TEXTURE_IMAGE, imageProperty.getReference().get(), surfaceDataId);
                 stmt.setNull(7, Types.BIGINT);

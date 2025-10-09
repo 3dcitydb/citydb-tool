@@ -28,14 +28,19 @@ import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Reference;
+import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
 import org.citydb.operation.importer.util.TableHelper;
+import org.slf4j.event.Level;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -61,6 +66,30 @@ public abstract class DatabaseImporter {
 
     protected abstract String getInsertStatement();
 
+    public void logOrThrow(Level level, String message, Throwable cause) throws ImportException {
+        helper.logOrThrow(level, message, cause);
+    }
+
+    public void logOrThrow(Level level, String message) throws ImportException {
+        helper.logOrThrow(level, message, null);
+    }
+
+    public String formatMessage(Feature feature, String message) {
+        return helper.formatMessage(feature, message);
+    }
+
+    public String formatMessage(Referencable object, String message) {
+        return helper.formatMessage(object, message);
+    }
+
+    public String getObjectSignature(Feature feature) {
+        return helper.getObjectSignature(feature);
+    }
+
+    public String getObjectSignature(Referencable object) {
+        return helper.getObjectSignature(object);
+    }
+
     protected long nextSequenceValue(Sequence sequence) throws SQLException {
         return helper.getSequenceValues().next(sequence);
     }
@@ -83,6 +112,17 @@ public abstract class DatabaseImporter {
 
     protected FileLocator getFileLocator(ExternalFile file) {
         return helper.getFileLocator(file);
+    }
+
+    protected byte[] getBytes(FileLocator locator) throws IOException {
+        try (InputStream stream = locator.openStream()) {
+            byte[] bytes = stream.readAllBytes();
+            if (bytes.length == 0) {
+                throw new IOException("The file " + locator.getFileLocation() + " has zero bytes.");
+            }
+
+            return bytes;
+        }
     }
 
     protected Object getGeometry(Geometry<?> geometry, boolean force3D) throws ImportException {

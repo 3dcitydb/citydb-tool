@@ -88,10 +88,8 @@ public class FileLocator {
             }
         }
 
-        if (path == null || !Files.exists(path)) {
+        if (path == null) {
             throw new IOException("Failed to find file at " + location + ".");
-        } else if (Files.size(path) == 0) {
-            throw new IOException("The file " + location + " has zero bytes.");
         }
 
         return FileLocator.of(path);
@@ -109,6 +107,10 @@ public class FileLocator {
         return new BufferedInputStream(url != null ?
                 url.openStream() :
                 Files.newInputStream(path));
+    }
+
+    public String getFileLocation() {
+        return path != null ? path.toString() : url.toExternalForm();
     }
 
     public String getFileName() {

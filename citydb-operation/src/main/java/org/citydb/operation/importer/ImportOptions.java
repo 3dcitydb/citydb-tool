@@ -34,6 +34,7 @@ import java.util.Optional;
 public class ImportOptions {
     public static final int DEFAULT_BATCH_SIZE = 20;
 
+    private boolean failFast;
     private String tempDirectory;
     private int numberOfThreads;
     private int batchSize = DEFAULT_BATCH_SIZE;
@@ -42,6 +43,15 @@ public class ImportOptions {
     private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
+
+    public boolean isFailFast() {
+        return failFast;
+    }
+
+    public ImportOptions setFailFast(boolean failFast) {
+        this.failFast = failFast;
+        return this;
+    }
 
     public Optional<Path> getTempDirectory() {
         return Optional.ofNullable(tempDirectory != null ? Path.of(tempDirectory) : null);
