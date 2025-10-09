@@ -156,7 +156,7 @@ public class ModelSerializerHelper {
 
     public void logOrThrow(Level level, String message, Throwable cause) throws ModelSerializeException {
         if (!failFast) {
-            logger.atLevel(level).log(message, cause);
+            logger.atLevel(level).setCause(cause).log(message);
         } else {
             throw new ModelSerializeException(message, cause);
         }

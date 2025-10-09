@@ -147,7 +147,7 @@ public class ModelBuilderHelper {
 
     public void logOrThrow(Level level, String message, Throwable cause) throws ModelBuildException {
         if (!failFast) {
-            logger.atLevel(level).log(message, cause);
+            logger.atLevel(level).setCause(cause).log(message);
         } else {
             throw new ModelBuildException(message, cause);
         }
