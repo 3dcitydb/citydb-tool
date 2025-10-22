@@ -52,16 +52,18 @@ public class GeometryImporter extends DatabaseImporter {
         long geometryId = nextSequenceValue(Sequence.GEOMETRY_DATA);
         stmt.setLong(1, geometryId);
 
+        Object value;
         int geometryIndex, nullIndex;
         if (isImplicit) {
+            value = getImplicitGeometry(geometry);
             geometryIndex = 3;
             nullIndex = 2;
         } else {
+            value = getGeometry(geometry, true);
             geometryIndex = 2;
             nullIndex = 3;
         }
 
-        Object value = getGeometry(geometry, true);
         if (value != null) {
             stmt.setObject(geometryIndex, value, adapter.getGeometryAdapter().getGeometrySqlType());
         } else {

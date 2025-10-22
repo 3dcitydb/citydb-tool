@@ -53,6 +53,7 @@ public abstract class DatabaseImporter {
     protected final TableHelper tableHelper;
     protected final PreparedStatement stmt;
 
+    private final Integer srid;
     private int batchCounter;
 
     public DatabaseImporter(Table table, ImportHelper helper) throws SQLException {
@@ -61,6 +62,7 @@ public abstract class DatabaseImporter {
         this.adapter = helper.getAdapter();
         this.schemaMapping = helper.getSchemaMapping();
         this.tableHelper = helper.getTableHelper();
+        srid = adapter.getDatabaseMetadata().getSpatialReference().getSRID();
         stmt = helper.getConnection().prepareStatement(getInsertStatement());
     }
 
@@ -126,19 +128,29 @@ public abstract class DatabaseImporter {
     }
 
     protected Object getGeometry(Geometry<?> geometry, boolean force3D) throws ImportException {
-        try {
-            return geometry != null ? adapter.getGeometryAdapter().getGeometry(geometry, force3D) : null;
-        } catch (GeometryException e) {
-            throw new ImportException("Failed to convert geometry to database representation.", e);
-        }
+        return getGeometry(geometry, srid, force3D);
     }
 
     protected Object getGeometry(Geometry<?> geometry) throws ImportException {
-        return getGeometry(geometry, true);
+        return getGeometry(geometry, srid, true);
+    }
+
+    protected Object getImplicitGeometry(Geometry<?> geometry) throws ImportException {
+        return getGeometry(geometry, null, true);
     }
 
     protected Object getEnvelope(Envelope envelope) throws ImportException {
-        return envelope != null ? getGeometry(envelope.convertToPolygon(), true) : null;
+        return envelope != null ? getGeometry(envelope.convertToPolygon(), srid, true) : null;
+    }
+
+    private Object getGeometry(Geometry<?> geometry, Integer srid, boolean force3D) throws ImportException {
+        try {
+            return geometry != null ? adapter.getGeometryAdapter().getGeometry(
+                    geometry.setSRID(srid).setSrsIdentifier(null), force3D) :
+                    null;
+        } catch (GeometryException e) {
+            throw new ImportException("Failed to convert geometry to database representation.", e);
+        }
     }
 
     protected void addBatch() throws SQLException {
