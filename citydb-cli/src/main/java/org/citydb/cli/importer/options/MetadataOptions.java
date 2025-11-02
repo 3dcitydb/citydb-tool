@@ -22,9 +22,17 @@
 package org.citydb.cli.importer.options;
 
 import org.citydb.cli.common.Option;
+import org.citydb.core.time.TimeHelper;
 import picocli.CommandLine;
 
+import java.time.OffsetDateTime;
+
 public class MetadataOptions implements Option {
+    @CommandLine.Option(names = "--creation-date",
+            description = "Time in <YYYY-MM-DD> or <YYYY-MM-DDThh:mm:ss[(+|-)hh:mm]> format to use as " +
+                    "creation date (default: now) or 'now' to use the current time.")
+    private String time;
+
     @CommandLine.Option(names = "--lineage",
             description = "Lineage to use for the features.")
     private String lineage;
@@ -37,6 +45,9 @@ public class MetadataOptions implements Option {
             description = "Reason for importing the data.")
     private String reasonForUpdate;
 
+    private OffsetDateTime creationDate;
+    private boolean creationDateAsNow;
+
     public String getLineage() {
         return lineage;
     }
@@ -48,4 +59,31 @@ public class MetadataOptions implements Option {
     public String getReasonForUpdate() {
         return reasonForUpdate;
     }
+
+    public OffsetDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public boolean isCreationDateAsNow() {
+        return creationDateAsNow;
+    }
+
+    @Override
+    public void preprocess(CommandLine commandLine) throws Exception {
+        if (time != null) {
+            if (time.equalsIgnoreCase("now")) {
+                creationDateAsNow = true;
+            } else {
+                try {
+                    creationDate = OffsetDateTime.parse(time, TimeHelper.DATE_TIME_FORMATTER);
+                } catch (Exception e) {
+                    throw new CommandLine.ParameterException(commandLine,
+                            "The creation time must be in YYYY-MM-DD or YYYY-MM-DDThh:mm:ss[(+|-)hh:mm] " +
+                                    "format but was '" + time + "'");
+                }
+                creationDateAsNow = false;
+            }
+        }
+    }
+
 }

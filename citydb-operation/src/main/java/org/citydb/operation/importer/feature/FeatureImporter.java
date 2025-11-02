@@ -41,6 +41,8 @@ public class FeatureImporter extends DatabaseImporter {
     private final String updatingPerson;
     private final String reasonForUpdate;
     private final String lineage;
+    private final OffsetDateTime creationDate;
+    private final boolean creationDateAsNow;
 
     public FeatureImporter(ImportHelper helper) throws SQLException {
         super(Table.FEATURE, helper);
@@ -48,6 +50,13 @@ public class FeatureImporter extends DatabaseImporter {
                 .orElse(helper.getAdapter().getConnectionDetails().getUser());
         reasonForUpdate = helper.getOptions().getReasonForUpdate().orElse(null);
         lineage = helper.getOptions().getLineage().orElse(null);
+        if (helper.getOptions().isCreationDateAsNow()) {
+            creationDateAsNow = true;
+            creationDate = null;
+        } else {
+            creationDateAsNow = false;
+            creationDate = helper.getOptions().getCreationDate().orElse(null);
+        }
     }
 
     @Override
@@ -82,7 +91,14 @@ public class FeatureImporter extends DatabaseImporter {
         stmt.setString(8, feature.getUpdatingPerson().orElse(updatingPerson));
         stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
         stmt.setString(10, feature.getLineage().orElse(lineage));
-        stmt.setObject(11, feature.getCreationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
+
+        if (creationDate != null) {
+            stmt.setObject(11, creationDate, Types.TIMESTAMP_WITH_TIMEZONE);
+        } else if (creationDateAsNow) {
+            stmt.setObject(11, importTime, Types.TIMESTAMP_WITH_TIMEZONE);
+        } else {
+            stmt.setObject(11, feature.getCreationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
+        }
 
         OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);
         if (terminationDate != null) {

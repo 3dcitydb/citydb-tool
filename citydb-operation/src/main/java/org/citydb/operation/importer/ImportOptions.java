@@ -28,6 +28,7 @@ import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
 
 import java.nio.file.Path;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @SerializableConfig(name = "importOptions")
@@ -40,6 +41,8 @@ public class ImportOptions {
     private int batchSize = DEFAULT_BATCH_SIZE;
     private String updatingPerson;
     private String reasonForUpdate;
+    private OffsetDateTime creationDate;
+    private boolean creationDateAsNow;
     private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
@@ -99,6 +102,24 @@ public class ImportOptions {
 
     public ImportOptions setReasonForUpdate(String reasonForUpdate) {
         this.reasonForUpdate = reasonForUpdate;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getCreationDate() {
+        return Optional.ofNullable(creationDate);
+    }
+
+    public ImportOptions setCreationDate(OffsetDateTime creationDate) {
+        this.creationDate = creationDate;
+        return this;
+    }
+
+    public boolean isCreationDateAsNow() {
+        return creationDateAsNow;
+    }
+
+    public ImportOptions setCreationDateAsNow(boolean creationDateAsNow) {
+        this.creationDateAsNow = creationDateAsNow;
         return this;
     }
 
