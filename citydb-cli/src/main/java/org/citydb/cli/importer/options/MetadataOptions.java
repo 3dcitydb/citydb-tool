@@ -23,6 +23,8 @@ package org.citydb.cli.importer.options;
 
 import org.citydb.cli.common.Option;
 import org.citydb.core.time.TimeHelper;
+import org.citydb.operation.importer.options.CreationDateMode;
+
 import picocli.CommandLine;
 
 import java.time.OffsetDateTime;
@@ -46,7 +48,7 @@ public class MetadataOptions implements Option {
     private String reasonForUpdate;
 
     private OffsetDateTime creationDate;
-    private boolean creationDateAsNow;
+    private CreationDateMode creationDateMode = CreationDateMode.ATTRIBUTE_OR_NOW;
 
     public String getLineage() {
         return lineage;
@@ -64,15 +66,15 @@ public class MetadataOptions implements Option {
         return creationDate;
     }
 
-    public boolean isCreationDateAsNow() {
-        return creationDateAsNow;
+    public CreationDateMode getCreationDateMode() {
+        return creationDateMode;
     }
 
     @Override
     public void preprocess(CommandLine commandLine) throws Exception {
         if (time != null) {
             if (time.equalsIgnoreCase("now")) {
-                creationDateAsNow = true;
+                creationDateMode = CreationDateMode.OVERWRITE_WITH_NOW;
             } else {
                 try {
                     creationDate = OffsetDateTime.parse(time, TimeHelper.DATE_TIME_FORMATTER);
@@ -81,9 +83,8 @@ public class MetadataOptions implements Option {
                             "The creation time must be in YYYY-MM-DD or YYYY-MM-DDThh:mm:ss[(+|-)hh:mm] " +
                                     "format but was '" + time + "'");
                 }
-                creationDateAsNow = false;
+                creationDateMode = CreationDateMode.OVERWRITE_WITH_FIXED;
             }
         }
-    }
-
+    }    
 }
