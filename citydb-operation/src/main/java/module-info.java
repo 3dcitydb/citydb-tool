@@ -23,6 +23,7 @@ module org.citydb.operation {
     exports org.citydb.operation.importer.common;
     exports org.citydb.operation.importer.feature;
     exports org.citydb.operation.importer.geometry;
+    exports org.citydb.operation.importer.options;
     exports org.citydb.operation.importer.property;
     exports org.citydb.operation.importer.reference;
     exports org.citydb.operation.importer.util;
