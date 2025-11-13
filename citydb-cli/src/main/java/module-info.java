@@ -12,6 +12,7 @@ module org.citydb.cli {
     requires transitive org.citydb.query;
     requires transitive org.citydb.util;
     requires transitive info.picocli;
+    requires org.citydb.core;
 
     exports org.citydb.cli;
     exports org.citydb.cli.common;
@@ -30,6 +31,7 @@ module org.citydb.cli {
     exports org.citydb.cli.importer.duplicate;
     exports org.citydb.cli.importer.filter;
     exports org.citydb.cli.importer.options;
+    exports org.citydb.cli.importer.util;
     exports org.citydb.cli.index;
     exports org.citydb.cli.index.create;
     exports org.citydb.cli.index.drop;

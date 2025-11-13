@@ -31,6 +31,7 @@ import org.citydb.cli.importer.filter.Filter;
 import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.cli.importer.options.MetadataOptions;
+import org.citydb.cli.importer.util.ImportOptionsHelper;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.config.Config;
@@ -169,6 +170,7 @@ public abstract class ImportController implements Command {
                     .setImportLogger(importLogger);
 
             AtomicLong counter = new AtomicLong();
+            ImportOptionsHelper optionsHelper = ImportOptionsHelper.of(importOptions);
 
             for (int i = 0; shouldRun && filter.isCountWithinLimit() && i < inputFiles.size(); i++) {
                 InputFile inputFile = inputFiles.get(i);
@@ -184,7 +186,7 @@ public abstract class ImportController implements Command {
                         }
                     }
 
-                    importer.startSession(databaseManager.getAdapter(), importOptions);
+                    importer.startSession(databaseManager.getAdapter(), optionsHelper.update(importOptions, inputFile));
 
                     reader.read(feature -> {
                         if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
