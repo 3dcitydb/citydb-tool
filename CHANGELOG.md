@@ -5,6 +5,8 @@
 ### Added
 - Added a Java API for querying and processing feature changes from the `feature_changelog` table and aggregating
   them into change regions.
+- Added the placeholders `@file_path@`, `@file_name@`, `@content_path@`, and `@content_name@` for the `--lineage`
+  option of the `import` command, allowing importing file and ZIP entry paths and names as feature metadata.
 - Added `indexMode` to the JSON configuration of the `import` and `delete` commands. [#67](https://github.com/3dcitydb/citydb-tool/issues/67)
 - Added methods to `PostgresqlAdapter` for retrieving the installed PostGIS and SFCGAL versions from the connected
   database.
