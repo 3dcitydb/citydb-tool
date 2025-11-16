@@ -176,7 +176,6 @@ public class PoolOptions extends TreeMap<String, Object> {
         getInteger(MAX_IDLE).ifPresent(properties::setMaxIdle);
         getInteger(MIN_IDLE).ifPresent(properties::setMinIdle);
         getInteger(INITIAL_SIZE).ifPresent(properties::setInitialSize);
-        getInteger(MAX_WAIT).ifPresent(properties::setMaxWait);
         getInteger(MAX_AGE).ifPresent(properties::setMaxAge);
         getBoolean(TEST_ON_BORROW).ifPresent(properties::setTestOnBorrow);
         getBoolean(TEST_ON_CONNECT).ifPresent(properties::setTestOnConnect);
@@ -197,5 +196,9 @@ public class PoolOptions extends TreeMap<String, Object> {
         getString(INIT_SQL).ifPresent(properties::setInitSQL);
         getBoolean(JMX_ENABLED).ifPresent(properties::setJmxEnabled);
         getBoolean(FAIR_QUEUE).ifPresent(properties::setFairQueue);
+
+        properties.setMaxWait(getInteger(LOGIN_TIMEOUT)
+                .map(loginTimeout -> loginTimeout * 1000)
+                .orElse(getIntegerOrDefault(MAX_WAIT, DEFAULT_LOGIN_TIMEOUT * 1000)));
     }
 }

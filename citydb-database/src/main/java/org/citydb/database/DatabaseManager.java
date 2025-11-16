@@ -79,9 +79,8 @@ public class DatabaseManager {
         poolProperties.setInitialSize(0);
         poolProperties.setDefaultAutoCommit(false);
         poolProperties.setRollbackOnReturn(true);
-
-        PoolOptions poolOptions = connectionDetails.getPoolOptions().orElseGet(PoolOptions::new);
-        poolOptions.applyTo(poolProperties);
+        connectionDetails.getPoolOptions().ifPresentOrElse(poolOptions -> poolOptions.applyTo(poolProperties),
+                () -> poolProperties.setMaxWait(PoolOptions.DEFAULT_LOGIN_TIMEOUT * 1000));
 
         Properties dbProperties = new Properties();
         adapter.setDefaultConnectionProperties(dbProperties);
@@ -89,9 +88,6 @@ public class DatabaseManager {
         poolProperties.setDbProperties(dbProperties);
 
         dataSource = new DataSource(poolProperties);
-        dataSource.setLoginTimeout(poolOptions.getIntegerOrDefault(PoolOptions.LOGIN_TIMEOUT,
-                PoolOptions.DEFAULT_LOGIN_TIMEOUT));
-
         try {
             dataSource.createPool();
             adapter.initialize(Pool.newInstance(this), connectionDetails);
