@@ -48,7 +48,7 @@ public class MetadataOptions implements Option {
     private String reasonForUpdate;
 
     private OffsetDateTime creationDate;
-    private CreationDateMode creationDateMode = CreationDateMode.ATTRIBUTE_OR_NOW;
+    private CreationDateMode creationDateMode;
 
     public String getLineage() {
         return lineage;

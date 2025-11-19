@@ -88,14 +88,13 @@ public class FeatureImporter extends DatabaseImporter {
         stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
         stmt.setString(10, feature.getLineage().orElse(lineage));
 
-        switch (creationDateMode) {
-            case OVERWRITE_WITH_FIXED ->
-                stmt.setObject(11, creationDate, Types.TIMESTAMP_WITH_TIMEZONE);
-            case OVERWRITE_WITH_NOW ->
-                stmt.setObject(11, importTime, Types.TIMESTAMP_WITH_TIMEZONE);
-            case ATTRIBUTE_OR_NOW ->
-                stmt.setObject(11, feature.getCreationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
-        }
+        OffsetDateTime creationDate = switch (creationDateMode) {
+            case OVERWRITE_WITH_FIXED -> this.creationDate != null ? this.creationDate : importTime;
+            case OVERWRITE_WITH_NOW -> importTime;
+            default -> feature.getCreationDate().orElse(importTime);
+        };
+
+        stmt.setObject(11, creationDate, Types.TIMESTAMP_WITH_TIMEZONE);
 
         OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);
         if (terminationDate != null) {

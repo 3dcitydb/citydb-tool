@@ -21,12 +21,12 @@
 
 package org.citydb.operation.importer;
 
+import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
-import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.operation.importer.options.CreationDateMode;
 
 import java.nio.file.Path;
@@ -44,6 +44,7 @@ public class ImportOptions {
     private String updatingPerson;
     private String reasonForUpdate;
     private OffsetDateTime creationDate;
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private CreationDateMode creationDateMode = CreationDateMode.ATTRIBUTE_OR_NOW;
     private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
