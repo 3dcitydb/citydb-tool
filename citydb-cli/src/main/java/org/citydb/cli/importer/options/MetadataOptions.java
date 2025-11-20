@@ -24,7 +24,6 @@ package org.citydb.cli.importer.options;
 import org.citydb.cli.common.Option;
 import org.citydb.core.time.TimeHelper;
 import org.citydb.operation.importer.options.CreationDateMode;
-
 import picocli.CommandLine;
 
 import java.time.OffsetDateTime;
