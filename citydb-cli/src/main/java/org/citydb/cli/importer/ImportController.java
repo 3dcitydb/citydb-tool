@@ -310,6 +310,14 @@ public abstract class ImportController implements Command {
         }
 
         if (metadataOptions != null) {
+            if (metadataOptions.getCreationDate() != null) {
+                importOptions.setCreationDate(metadataOptions.getCreationDate());
+            }
+
+            if (metadataOptions.getCreationDateMode() != null) {
+                importOptions.setCreationDateMode(metadataOptions.getCreationDateMode());
+            }
+
             if (metadataOptions.getLineage() != null) {
                 importOptions.setLineage(metadataOptions.getLineage());
             }

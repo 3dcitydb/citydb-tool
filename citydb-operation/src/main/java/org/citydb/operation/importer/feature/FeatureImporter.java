@@ -29,6 +29,7 @@ import org.citydb.model.property.*;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
+import org.citydb.operation.importer.options.CreationDateMode;
 import org.citydb.operation.importer.property.*;
 import org.citydb.operation.importer.reference.CacheType;
 
@@ -41,6 +42,8 @@ public class FeatureImporter extends DatabaseImporter {
     private final String updatingPerson;
     private final String reasonForUpdate;
     private final String lineage;
+    private final OffsetDateTime creationDate;
+    private final CreationDateMode creationDateMode;
 
     public FeatureImporter(ImportHelper helper) throws SQLException {
         super(Table.FEATURE, helper);
@@ -48,6 +51,8 @@ public class FeatureImporter extends DatabaseImporter {
                 .orElse(helper.getAdapter().getConnectionDetails().getUser());
         reasonForUpdate = helper.getOptions().getReasonForUpdate().orElse(null);
         lineage = helper.getOptions().getLineage().orElse(null);
+        creationDate = helper.getOptions().getCreationDate().orElse(null);
+        creationDateMode = helper.getOptions().getCreationDateMode();
     }
 
     @Override
@@ -82,7 +87,14 @@ public class FeatureImporter extends DatabaseImporter {
         stmt.setString(8, feature.getUpdatingPerson().orElse(updatingPerson));
         stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
         stmt.setString(10, feature.getLineage().orElse(lineage));
-        stmt.setObject(11, feature.getCreationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
+
+        OffsetDateTime creationDate = switch (creationDateMode) {
+            case OVERWRITE_WITH_FIXED -> this.creationDate != null ? this.creationDate : importTime;
+            case OVERWRITE_WITH_NOW -> importTime;
+            default -> feature.getCreationDate().orElse(importTime);
+        };
+
+        stmt.setObject(11, creationDate, Types.TIMESTAMP_WITH_TIMEZONE);
 
         OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);
         if (terminationDate != null) {
