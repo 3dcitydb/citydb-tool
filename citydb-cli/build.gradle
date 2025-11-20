@@ -11,7 +11,7 @@ configurations {
     citydb
 }
 
-def log4j_version = '2.25.1'
+def log4j_version = '2.25.2'
 
 dependencies {
     api project(':citydb-database')
