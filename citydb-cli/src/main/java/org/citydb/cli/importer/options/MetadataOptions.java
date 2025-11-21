@@ -30,8 +30,8 @@ import java.time.OffsetDateTime;
 
 public class MetadataOptions implements Option {
     @CommandLine.Option(names = "--creation-date",
-            description = "Time in <YYYY-MM-DD> or <YYYY-MM-DDThh:mm:ss[(+|-)hh:mm]> format to use as " +
-                    "creation date for all features. Use 'now' for the current time.")
+            description = "Time in <YYYY-MM-DD> or <YYYY-MM-DDThh:mm:ss[(+|-)hh:mm]> format or 'now' " +
+                    "to use as creation date (default: attribute value or now).")
     private String time;
 
     @CommandLine.Option(names = "--lineage",
@@ -75,6 +75,7 @@ public class MetadataOptions implements Option {
             if (time.equalsIgnoreCase("now")) {
                 creationDateMode = CreationDateMode.OVERWRITE_WITH_NOW;
             } else {
+                creationDateMode = CreationDateMode.OVERWRITE_WITH_FIXED;
                 try {
                     creationDate = OffsetDateTime.parse(time, TimeHelper.DATE_TIME_FORMATTER);
                 } catch (Exception e) {
@@ -82,7 +83,6 @@ public class MetadataOptions implements Option {
                             "The creation time must be in YYYY-MM-DD or YYYY-MM-DDThh:mm:ss[(+|-)hh:mm] " +
                                     "format but was '" + time + "'");
                 }
-                creationDateMode = CreationDateMode.OVERWRITE_WITH_FIXED;
             }
         }
     }    
