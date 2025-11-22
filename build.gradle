@@ -55,7 +55,8 @@ subprojects {
     }
 
     extraJavaModuleInfo {
-        failOnMissingModuleInfo.set(false)
+        failOnMissingModuleInfo = false
+        deriveAutomaticModuleNamesFromFileNames = true
         module('org.apache.tomcat:tomcat-jdbc', 'org.apache.tomcat.jdbc') {
             requires('java.sql')
             requires('java.management')
