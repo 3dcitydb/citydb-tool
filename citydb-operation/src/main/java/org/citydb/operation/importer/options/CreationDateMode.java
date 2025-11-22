@@ -20,7 +20,7 @@
  */
 
 package org.citydb.operation.importer.options;
- 
+
 public enum CreationDateMode {
     ATTRIBUTE_OR_NOW("attributeOrNow"),
     OVERWRITE_WITH_FIXED("overwriteWithFixed"),

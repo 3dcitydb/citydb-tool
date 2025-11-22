@@ -46,8 +46,8 @@ public class MetadataOptions implements Option {
             description = "Reason for importing the data.")
     private String reasonForUpdate;
 
-    private OffsetDateTime creationDate;
     private CreationDateMode creationDateMode;
+    private OffsetDateTime creationDate;
 
     public String getLineage() {
         return lineage;
@@ -61,12 +61,12 @@ public class MetadataOptions implements Option {
         return reasonForUpdate;
     }
 
-    public OffsetDateTime getCreationDate() {
-        return creationDate;
-    }
-
     public CreationDateMode getCreationDateMode() {
         return creationDateMode;
+    }
+
+    public OffsetDateTime getCreationDate() {
+        return creationDate;
     }
 
     @Override
@@ -85,5 +85,5 @@ public class MetadataOptions implements Option {
                 }
             }
         }
-    }    
+    }
 }

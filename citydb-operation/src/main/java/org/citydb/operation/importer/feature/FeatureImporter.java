@@ -42,8 +42,8 @@ public class FeatureImporter extends DatabaseImporter {
     private final String updatingPerson;
     private final String reasonForUpdate;
     private final String lineage;
-    private final OffsetDateTime creationDate;
     private final CreationDateMode creationDateMode;
+    private final OffsetDateTime creationDate;
 
     public FeatureImporter(ImportHelper helper) throws SQLException {
         super(Table.FEATURE, helper);
@@ -51,8 +51,8 @@ public class FeatureImporter extends DatabaseImporter {
                 .orElse(helper.getAdapter().getConnectionDetails().getUser());
         reasonForUpdate = helper.getOptions().getReasonForUpdate().orElse(null);
         lineage = helper.getOptions().getLineage().orElse(null);
-        creationDate = helper.getOptions().getCreationDate().orElse(null);
         creationDateMode = helper.getOptions().getCreationDateMode();
+        creationDate = helper.getOptions().getCreationDate().orElse(null);
     }
 
     @Override
