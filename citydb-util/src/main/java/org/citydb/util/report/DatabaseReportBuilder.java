@@ -96,7 +96,7 @@ public class DatabaseReportBuilder {
                 execute(connection -> helper.getGeometryCountByLod(scope, connection), report::setLods);
                 execute(connection -> helper.getAppearanceCountByTheme(scope, connection), report::setAppearances);
                 execute(connection -> helper.hasSurfaceData(scope, connection), report::setSurfaceData);
-                execute(connection -> helper.hasGlobalAppearances(scope, connection), report::setGlobalAppearances);
+                execute(helper::hasGlobalAppearances, report::setGlobalAppearances);
                 execute(connection -> helper.getAddressCount(scope, connection),
                         result -> report.setAddressCount(result.second()));
                 execute(this::getADEs, report::setADEs);

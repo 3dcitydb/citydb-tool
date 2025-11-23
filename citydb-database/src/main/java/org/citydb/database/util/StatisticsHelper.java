@@ -397,13 +397,13 @@ public abstract class StatisticsHelper {
         return surfaceDataCount;
     }
 
-    public boolean hasGlobalAppearances(FeatureScope scope) throws SQLException {
+    public boolean hasGlobalAppearances() throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return hasGlobalAppearances(scope, connection);
+            return hasGlobalAppearances(connection);
         }
     }
 
-    public boolean hasGlobalAppearances(FeatureScope scope, Connection connection) throws SQLException {
+    public boolean hasGlobalAppearances(Connection connection) throws SQLException {
         Table appearance = Table.of(org.citydb.database.schema.Table.APPEARANCE.getName(), getSchema());
 
         Select select = Select.newInstance()
