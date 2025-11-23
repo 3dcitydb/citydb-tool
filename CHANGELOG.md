@@ -21,6 +21,7 @@
 - The CLI option `--import-mode` overrode the JSON configuration even when not explicitly set on the command line.
 - Fixed an NPE in the `info` command when changelog tracking is enabled.
 - The `last_modification_date` now defaults to the current import time and is no longer tied to `creation_date`.
+- Fixed start scripts to respect the 8191-character command line limit on Windows.
 
 ## [1.1.0] - 2025-08-24
 
