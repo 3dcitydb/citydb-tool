@@ -196,7 +196,10 @@ public class ReportJsonBuilder {
 
     private JSONObject buildGenericAttributes(DatabaseReport report) {
         JSONObject genericAttributes = new JSONObject();
-        report.getGenericAttributes().forEach((name, types) -> genericAttributes.put(name, new JSONArray(types)));
+        report.getGenericAttributes().forEach((featureType, attributes) -> {
+            JSONObject object = genericAttributes.putObject(featureType);
+            attributes.forEach((name, types) -> object.put(name, new JSONArray(types)));
+        });
 
         return genericAttributes;
     }

@@ -440,9 +440,14 @@
       "additionalProperties": false,
       "patternProperties": {
         "^.*$": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/prefixedName"
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/prefixedName"
+              }
+            }
           }
         }
       }

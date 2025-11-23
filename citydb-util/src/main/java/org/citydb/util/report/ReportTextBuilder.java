@@ -220,9 +220,18 @@ public class ReportTextBuilder {
     }
 
     private void buildGenericAttributes(JSONObject genericAttributes, Consumer<String> consumer) {
-        consumer.accept("Total attributes: " + genericAttributes.size());
-        genericAttributes.forEach((name, types) ->
-                consumer.accept(getListItem(quote(name) + ": " + join((JSONArray) types, String.class))));
+        consumer.accept("Total attributes: " + genericAttributes.values().stream()
+                .filter(JSONObject.class::isInstance)
+                .map(JSONObject.class::cast)
+                .mapToInt(JSONObject::size)
+                .sum());
+        genericAttributes.forEach((featureType, attributes) -> {
+            if (attributes instanceof JSONObject object) {
+                consumer.accept(featureType + ":");
+                object.forEach((name, types) ->
+                        consumer.accept(getListItem(quote(name) + ": " + join((JSONArray) types, String.class))));
+            }
+        });
     }
 
     private void buildEndOfReport(Consumer<String> consumer) {
