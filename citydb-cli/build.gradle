@@ -50,12 +50,15 @@ application {
     executableDir = ''
 
     startScripts {
-        doLast {
-            def windows = getWindowsScript()
-            def unix = getUnixScript()
-            windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
-            unix.text = unix.text.replaceFirst('\nMODULE_PATH=.*',
-                    '$0\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
+        startScripts {
+            doLast {
+                def windows = getWindowsScript()
+                def unix = getUnixScript()
+                windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
+                        .replaceFirst('set MODULE_PATH=.*', 'set MODULE_PATH=%APP_HOME%\\\\lib')
+                unix.text = unix.text.replaceFirst('(?m)^MODULE_PATH=.*',
+                        'MODULE_PATH=\\$APP_HOME/lib\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
+            }
         }
     }
 }
