@@ -8,7 +8,10 @@ plugins {
 }
 
 configurations {
-    citydb
+    citydb {
+        canBeConsumed = false
+        canBeResolved = true
+    }
 }
 
 def log4j_version = '2.25.2'
@@ -74,7 +77,9 @@ distributions {
                 from processLicense
             }
             into('3dcitydb') {
-                from zipTree(configurations.citydb.singleFile)
+                from {
+                    zipTree(configurations.citydb.singleFile)
+                }
             }
             into('json-schema') {
                 from "$rootDir/resources/json-schema"
