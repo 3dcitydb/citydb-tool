@@ -31,6 +31,7 @@ public class ReportOptions {
     private int numberOfThreads;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private FeatureScope featureScope = FeatureScope.ALL;
+    private boolean compact;
     private boolean includeGenericAttributes;
     private boolean includeDatabaseSize;
 
@@ -52,11 +53,20 @@ public class ReportOptions {
         return this;
     }
 
+    public boolean isCompact() {
+        return compact;
+    }
+
+    public ReportOptions setCompact(boolean compact) {
+        this.compact = compact;
+        return this;
+    }
+
     public boolean isIncludeGenericAttributes() {
         return includeGenericAttributes;
     }
 
-    public ReportOptions includeGenericAttributes(boolean includeGenericAttributes) {
+    public ReportOptions setIncludeGenericAttributes(boolean includeGenericAttributes) {
         this.includeGenericAttributes = includeGenericAttributes;
         return this;
     }
@@ -65,7 +75,7 @@ public class ReportOptions {
         return includeDatabaseSize;
     }
 
-    public ReportOptions includeDatabaseSize(boolean includeDatabaseSize) {
+    public ReportOptions setIncludeDatabaseSize(boolean includeDatabaseSize) {
         this.includeDatabaseSize = includeDatabaseSize;
         return this;
     }

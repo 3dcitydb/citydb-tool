@@ -91,16 +91,23 @@ public class DatabaseReportBuilder {
 
                 execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.ACTIVE,
                         connection), report::setActiveFeatures);
-                execute(connection -> helper.getGeometryCount(scope, connection), report::setGeometries);
-                execute(helper::getImplicitGeometryCount, result -> report.setImplicitGeometryCount(result.second()));
-                execute(connection -> helper.getGeometryCountByLod(scope, connection), report::setLods);
-                execute(connection -> helper.getAppearanceCountByTheme(scope, connection), report::setAppearances);
-                execute(connection -> helper.hasSurfaceData(scope, connection), report::setSurfaceData);
-                execute(helper::hasGlobalAppearances, report::setGlobalAppearances);
-                execute(connection -> helper.getAddressCount(scope, connection),
-                        result -> report.setAddressCount(result.second()));
-                execute(this::getADEs, report::setADEs);
-                execute(this::getCodeLists, report::setCodeLists);
+
+                if (options.isCompact()) {
+                    execute(connection -> helper.getLods(scope, connection), report::setLods);
+                    execute(connection -> helper.getThemes(scope, connection), report::setAppearances);
+                } else {
+                    execute(connection -> helper.getGeometryCount(scope, connection), report::setGeometries);
+                    execute(helper::getImplicitGeometryCount,
+                            result -> report.setImplicitGeometryCount(result.second()));
+                    execute(connection -> helper.getGeometryCountByLod(scope, connection), report::setLods);
+                    execute(connection -> helper.getAppearanceCountByTheme(scope, connection), report::setAppearances);
+                    execute(connection -> helper.hasSurfaceData(scope, connection), report::setSurfaceData);
+                    execute(helper::hasGlobalAppearances, report::setGlobalAppearances);
+                    execute(connection -> helper.getAddressCount(scope, connection),
+                            result -> report.setAddressCount(result.second()));
+                    execute(this::getADEs, report::setADEs);
+                    execute(this::getCodeLists, report::setCodeLists);
+                }
 
                 if (options.isIncludeGenericAttributes()) {
                     execute(connection -> helper.getGenericAttributes(scope, connection),

@@ -181,6 +181,12 @@ public class DatabaseReport {
         }
     }
 
+    void setLods(Set<String> lods) {
+        if (lods != null) {
+            lods.forEach(lod -> this.lods.put(lod, -1L));
+        }
+    }
+
     public boolean hasAppearances() {
         return !appearances.isEmpty();
     }
@@ -192,6 +198,12 @@ public class DatabaseReport {
     void setAppearances(Map<String, Long> appearances) {
         if (appearances != null) {
             appearances.forEach((theme, count) -> this.appearances.merge(theme, count, Long::sum));
+        }
+    }
+
+    void setAppearances(Set<String> themes) {
+        if (themes != null) {
+            themes.forEach(theme -> appearances.put(theme, -1L));
         }
     }
 

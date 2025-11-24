@@ -61,6 +61,10 @@ public class InfoCommand implements Command {
                     "only properties of non-terminated features are considered.")
     private Scope scope;
 
+    @CommandLine.Option(names = {"-c", "--compact"},
+            description = "Only generate a compact overview.")
+    private Boolean compact;
+
     @CommandLine.Option(names = "--include-generic-attributes",
             description = "Include generic attributes and their data types.")
     private Boolean includeGenericAttributes;
@@ -134,12 +138,16 @@ public class InfoCommand implements Command {
             reportOptions.setFeatureScope(scope == Scope.active ? FeatureScope.ACTIVE : FeatureScope.ALL);
         }
 
+        if (compact != null) {
+            reportOptions.setCompact(compact);
+        }
+
         if (includeGenericAttributes != null) {
-            reportOptions.includeGenericAttributes(includeGenericAttributes);
+            reportOptions.setIncludeGenericAttributes(includeGenericAttributes);
         }
 
         if (includeSizeMetrics != null) {
-            reportOptions.includeDatabaseSize(includeSizeMetrics);
+            reportOptions.setIncludeDatabaseSize(includeSizeMetrics);
         }
 
         return reportOptions;
