@@ -133,8 +133,9 @@ public abstract class DatabaseAdapter {
                         rs.getString("version"));
 
                 if (!DatabaseConstants.VERSION_SUPPORT.isSupported(version)) {
-                    throw new DatabaseException("The " + DatabaseConstants.CITYDB_SHORT_NAME + " version " + version +
-                            " is not supported. Supported versions are " + DatabaseConstants.VERSION_SUPPORT + ".");
+                    throw new DatabaseVersionException("The " + DatabaseConstants.CITYDB_SHORT_NAME +
+                            " version " + version + " is not supported. " +
+                            "Supported versions are " + DatabaseConstants.VERSION_SUPPORT + ".");
                 }
 
                 return version;
