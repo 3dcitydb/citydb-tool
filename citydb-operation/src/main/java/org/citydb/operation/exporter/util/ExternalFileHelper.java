@@ -24,6 +24,7 @@ package org.citydb.operation.exporter.util;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
+import org.citydb.core.file.FileType;
 import org.citydb.core.file.OutputFile;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.operation.exporter.ExportException;
@@ -31,6 +32,7 @@ import org.citydb.operation.exporter.ExportHelper;
 
 public class ExternalFileHelper {
     private final OutputFile outputFile;
+    private final boolean useAbsoluteResourcePaths;
     private String outputFolder;
     private String fileNamePrefix;
     private boolean createUniqueFileNames;
@@ -41,6 +43,7 @@ public class ExternalFileHelper {
 
     private ExternalFileHelper(ExportHelper helper) {
         outputFile = helper.getOptions().getOutputFile();
+        useAbsoluteResourcePaths = helper.getOptions().isUseAbsoluteResourcePaths();
     }
 
     public static ExternalFileHelper newInstance(ExportHelper helper) {
@@ -93,7 +96,10 @@ public class ExternalFileHelper {
             }
         }
 
-        return ExternalFile.of((path != null ? path + "/" : "") + fileName);
+        path = (path != null ? path + "/" : "") + fileName;
+        return !useAbsoluteResourcePaths || outputFile.getFileType() == FileType.ARCHIVE ?
+                ExternalFile.of(path) :
+                ExternalFile.of(outputFile.getFile().getParent().resolve(path));
     }
 
     private String getFileNamePrefix() {
