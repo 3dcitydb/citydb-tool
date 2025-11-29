@@ -22,6 +22,7 @@
 package org.citydb.model.common;
 
 import java.io.*;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -145,8 +146,8 @@ public class ExternalFile implements Referencable, Serializable {
     private void writeObject(ObjectOutputStream stream) throws IOException {
         if (path != null) {
             uri = path.toString();
+            wasPath = path.getFileSystem() == FileSystems.getDefault();
             path = null;
-            wasPath = true;
         }
 
         stream.defaultWriteObject();
