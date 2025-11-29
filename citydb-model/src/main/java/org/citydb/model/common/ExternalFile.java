@@ -29,24 +29,18 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class ExternalFile implements Referencable, Serializable {
-    private final String uri;
-    private final transient Path path;
+    private String uri;
+    private transient Path path;
     private String objectId;
     private String mimeType;
     private String mimeTypeCodeSpace;
 
     private ExternalFile(String uri) {
-        this.uri = Objects.requireNonNull(uri, "The URI must not be null.");
-        path = null;
-        createAndSetObjectId();
+        setUri(uri).createAndSetObjectId();
     }
 
     private ExternalFile(Path path) {
-        this.path = Objects.requireNonNull(path, "The path must not be null.")
-                .toAbsolutePath()
-                .normalize();
-        uri = null;
-        createAndSetObjectId();
+        setPath(path).createAndSetObjectId();
     }
 
     public static ExternalFile of(String uri) {
@@ -61,8 +55,22 @@ public class ExternalFile implements Referencable, Serializable {
         return Optional.ofNullable(uri);
     }
 
+    public ExternalFile setUri(String uri) {
+        this.uri = Objects.requireNonNull(uri, "The URI must not be null.");
+        path = null;
+        return this;
+    }
+
     public Optional<Path> getPath() {
         return Optional.ofNullable(path);
+    }
+
+    public ExternalFile setPath(Path path) {
+        this.path = Objects.requireNonNull(path, "The path must not be null.")
+                .toAbsolutePath()
+                .normalize();
+        uri = null;
+        return this;
     }
 
     @Override

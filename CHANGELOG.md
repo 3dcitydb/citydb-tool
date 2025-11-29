@@ -9,7 +9,7 @@
   option of the `import` command, allowing file and ZIP entry paths and names to be imported as feature metadata. [#70](https://github.com/3dcitydb/citydb-tool/issues/70)
 - Added the `--creation-date` option to the `import` command to overwrite creation dates from the input files. [#71](https://github.com/3dcitydb/citydb-tool/pull/71)
 - Added `indexMode` to the JSON configuration of the `import` and `delete` commands. [#67](https://github.com/3dcitydb/citydb-tool/issues/67)
-- Added the `--compact` option to the `info` command to generate a shorter, compact database report.
+- Added the `--compact` option to the `info` command to generate a more concise database report.
 - Added methods to `PostgresqlAdapter` for retrieving the installed PostGIS and SFCGAL versions from the connected
   database.
 
