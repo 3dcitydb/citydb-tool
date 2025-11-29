@@ -21,7 +21,7 @@
 
 package org.citydb.model.common;
 
-import java.io.Serializable;
+import java.io.*;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -34,6 +34,7 @@ public class ExternalFile implements Referencable, Serializable {
     private String objectId;
     private String mimeType;
     private String mimeTypeCodeSpace;
+    private boolean wasPath;
 
     private ExternalFile(String uri) {
         setUri(uri).createAndSetObjectId();
@@ -128,5 +129,26 @@ public class ExternalFile implements Referencable, Serializable {
         }
 
         setObjectId(objectId.toString());
+    }
+
+    @Serial
+    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        stream.defaultReadObject();
+        if (uri != null && wasPath) {
+            path = Path.of(uri);
+            uri = null;
+            wasPath = false;
+        }
+    }
+
+    @Serial
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        if (path != null) {
+            uri = path.toString();
+            path = null;
+            wasPath = true;
+        }
+
+        stream.defaultWriteObject();
     }
 }
