@@ -35,7 +35,6 @@ public class ExternalFile implements Referencable, Serializable {
     private String objectId;
     private String mimeType;
     private String mimeTypeCodeSpace;
-    private boolean wasPath;
 
     private ExternalFile(String uri) {
         setUri(uri).createAndSetObjectId();
@@ -135,15 +134,16 @@ public class ExternalFile implements Referencable, Serializable {
     @Serial
     private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
         stream.defaultReadObject();
-        if (uri != null && wasPath) {
+        boolean wasPath = stream.readBoolean();
+        if (wasPath && uri != null) {
             path = Path.of(uri);
             uri = null;
-            wasPath = false;
         }
     }
 
     @Serial
     private void writeObject(ObjectOutputStream stream) throws IOException {
+        boolean wasPath = false;
         if (path != null) {
             uri = path.toString();
             wasPath = path.getFileSystem() == FileSystems.getDefault();
@@ -151,5 +151,6 @@ public class ExternalFile implements Referencable, Serializable {
         }
 
         stream.defaultWriteObject();
+        stream.writeBoolean(wasPath);
     }
 }
