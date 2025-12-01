@@ -24,100 +24,99 @@ package org.citydb.model.encoding;
 import org.citydb.model.appearance.Texture;
 import org.citydb.model.appearance.TextureImageProperty;
 import org.citydb.model.common.Child;
-import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Visitable;
-import org.citydb.model.feature.FeatureCollection;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.walker.ModelWalker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.Objects;
+import java.io.UncheckedIOException;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ModelObjectWriter {
-    private boolean failFast;
-    private boolean copyExternalFiles = true;
-    private boolean createUniqueFileNames;
-    private String textureFolder;
-    private String libraryObjectsFolder;
+    public static final String TEXTURE_DIR = "appearance";
+    public static final String TEXTURE_PREFIX = "tex_";
+    public static final String LIBRARY_OBJECTS_DIR = "library-objects";
+    public static final String LIBRARY_OBJECTS_PREFIX = "lib_";
 
-    private ModelObjectWriter() {
+    private final Object lock = new Object();
+    private final FileHelper helper;
+
+    private ModelObjectWriter(Builder builder) {
+        helper = new FileHelper(builder);
     }
 
     public static ModelObjectWriter newInstance() {
-        return new ModelObjectWriter();
+        return new Builder().build();
     }
 
-    public ModelObjectWriter failFast(boolean failFast) {
-        this.failFast = failFast;
-        return this;
+    public static Builder builder() {
+        return new Builder();
     }
 
-    public ModelObjectWriter copyExternalFiles(boolean copyExternalFiles) {
-        this.copyExternalFiles = copyExternalFiles;
-        return this;
+    public void write(Child object, Path file) throws IOException {
+        write(Collections.singletonList(object), file);
     }
 
-    public ModelObjectWriter createUniqueFileNames(boolean createUniqueFileNames) {
-        this.createUniqueFileNames = createUniqueFileNames;
-        return this;
-    }
-
-    public ModelObjectWriter withRelativeTextureFolder(String textureFolder) {
-        this.textureFolder = textureFolder;
-        return this;
-    }
-
-    public ModelObjectWriter withRelativeLibraryObjectsFolder(String libraryObjectsFolder) {
-        this.libraryObjectsFolder = libraryObjectsFolder;
-        return this;
-    }
-
-    public void write(Child object, Path outputFile) throws IOException {
-        writeObject(object, outputFile);
-    }
-
-    public void write(FeatureCollection collection, Path outputFile) throws IOException {
-        writeObject(collection, outputFile);
-    }
-
-    private void writeObject(Serializable object, Path outputFile) throws IOException {
-        Objects.requireNonNull(object, "The model object must not be null.");
-        outputFile = Objects.requireNonNull(outputFile, "The output file must not be null.")
-                .toAbsolutePath()
-                .normalize();
-
+    public void write(List<Child> objects, Path file) throws IOException {
+        file = file.toAbsolutePath().normalize();
+        helper.ensureCreated(file.getParent());
         try (ObjectOutputStream stream = new ObjectOutputStream(new BufferedOutputStream(
-                Files.newOutputStream(outputFile)))) {
-            if (object instanceof Visitable visitable) {
-                visitable.accept(new Postprocessor(outputFile));
+                Files.newOutputStream(file)))) {
+            for (Child object : objects) {
+                writeObject(object, stream, file.getParent());
             }
-
-            stream.writeObject(object);
         }
     }
 
-    private class Postprocessor extends ModelWalker {
-        private final FileHelper textureHelper;
-        private final FileHelper libraryObjectsHelper;
+    public void write(Child object, ObjectOutputStream stream, Path baseDir) throws IOException {
+        write(Collections.singletonList(object), stream, baseDir);
+    }
 
-        Postprocessor(Path outputFile) {
-            this.textureHelper = new FileHelper(textureFolder, "appearance", outputFile, "tex_");
-            this.libraryObjectsHelper = new FileHelper(libraryObjectsFolder, "library-objects", outputFile, "lib_");
+    public void write(List<Child> objects, ObjectOutputStream stream, Path baseDir) throws IOException {
+        baseDir = baseDir.toAbsolutePath().normalize();
+        helper.ensureCreated(baseDir);
+        for (Child object : objects) {
+            writeObject(object, stream, baseDir);
+        }
+    }
+
+    private void writeObject(Child object, ObjectOutputStream stream, Path baseDir) throws IOException {
+        if (object instanceof Visitable visitable) {
+            try {
+                visitable.accept(new Processor(baseDir, helper));
+            } catch (UncheckedIOException e) {
+                throw new IOException(e.getMessage(), e.getCause());
+            }
+        }
+
+        synchronized (lock) {
+            stream.writeUnshared(object);
+        }
+    }
+
+    private static class Processor extends ModelWalker {
+        private final Path outputFolder;
+        private final FileHelper helper;
+        private final Map<Path, Path> copied = new HashMap<>();
+
+        Processor(Path outputFolder, FileHelper helper) {
+            this.outputFolder = outputFolder;
+            this.helper = helper;
         }
 
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
             implicitGeometry.getLibraryObject()
-                    .flatMap(ExternalFile::getPath)
-                    .ifPresent(path -> implicitGeometry.setLibraryObject(
-                            ExternalFile.of(libraryObjectsHelper.getOrCopy(path))));
+                    .ifPresent(libraryObject -> libraryObject.getPath()
+                            .ifPresent(path -> libraryObject.setPath(copied.computeIfAbsent(path,
+                                    k -> helper.copyLibraryObject(path, outputFolder)))));
 
             super.visit(implicitGeometry);
         }
@@ -125,69 +124,107 @@ public class ModelObjectWriter {
         @Override
         public void visit(Texture<?> texture) {
             texture.getTextureImageProperty()
-                    .flatMap(property -> property.getObject().flatMap(ExternalFile::getPath))
-                    .ifPresent(path -> texture.setTextureImageProperty(TextureImageProperty.of(
-                            ExternalFile.of(textureHelper.getOrCopy(path)))));
+                    .flatMap(TextureImageProperty::getObject)
+                    .ifPresent(externalFile -> externalFile.getPath()
+                            .ifPresent(path -> externalFile.setPath(copied.computeIfAbsent(path,
+                                    k -> helper.copyTexture(path, outputFolder)))));
 
             super.visit(texture);
         }
     }
 
-    private class FileHelper {
-        private final String prefix;
-        private final String folderName;
-        private final Path outputFolder;
-        private boolean isCreated;
-        private long counter;
+    private static class FileHelper {
+        private final Logger logger = LoggerFactory.getLogger(FileHelper.class);
+        private final Set<Path> createdDirs = ConcurrentHashMap.newKeySet();
+        private final AtomicLong textureCounter = new AtomicLong();
+        private final AtomicLong libraryObjectsCounter = new AtomicLong();
 
-        FileHelper(String userFolder, String defaultFolder, Path outputFile, String prefix) {
-            this.prefix = prefix;
-            folderName = userFolder != null ? userFolder : defaultFolder;
-            outputFolder = outputFile.resolveSibling(folderName);
-            isCreated = Files.exists(outputFolder);
+        private final boolean copyExternalFiles;
+        private final int buckets;
+        private final boolean useBuckets;
+
+        FileHelper(Builder builder) {
+            this.copyExternalFiles = builder.copyExternalFiles;
+            this.buckets = builder.buckets;
+            useBuckets = buckets > 0;
         }
 
-        String getOrCopy(Path source) {
-            if (copyExternalFiles || source.getFileSystem() != FileSystems.getDefault()) {
-                if (!isCreated) {
-                    try {
-                        Files.createDirectories(outputFolder);
-                        isCreated = true;
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to create output directory " + outputFolder + ".", e);
-                    }
-                }
+        Path copyTexture(Path source, Path outputFolder) {
+            return copy(source, outputFolder.resolve(TEXTURE_DIR), TEXTURE_PREFIX, textureCounter);
+        }
 
-                try {
-                    String fileName = getFileName(source);
-                    Files.copy(source, outputFolder.resolve(fileName), StandardCopyOption.REPLACE_EXISTING);
-                    return folderName + "/" + fileName;
-                } catch (Exception e) {
-                    if (failFast) {
-                        throw new RuntimeException("Failed to copy external file " + source + ".", e);
-                    }
-                }
+        Path copyLibraryObject(Path source, Path outputFolder) {
+            return copy(source, outputFolder.resolve(LIBRARY_OBJECTS_DIR), LIBRARY_OBJECTS_PREFIX,
+                    libraryObjectsCounter);
+        }
+
+        private Path copy(Path source, Path outputFolder, String prefix, AtomicLong counter) {
+            if (!copyExternalFiles && source.getFileSystem() == FileSystems.getDefault()) {
+                return source;
             }
 
-            return source.toString();
+            long id = counter.incrementAndGet();
+            Path targetFolder = useBuckets ?
+                    outputFolder.resolve(String.valueOf(Math.abs((id - 1) % buckets) + 1)) :
+                    outputFolder;
+
+            try {
+                ensureCreated(targetFolder);
+                Path target = targetFolder.resolve(getFileName(source, id, prefix));
+                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                return target;
+            } catch (NoSuchFileException e) {
+                logger.debug("Failed to copy external resource file {}.", source, e);
+                return source;
+            } catch (IOException e) {
+                throw new UncheckedIOException("Failed to copy external file " + source + ".", e);
+            }
         }
 
-        String getFileName(Path source) {
-            String fileName = source.getFileName().toString();
-            if (createUniqueFileNames) {
-                String extension = getExtension(fileName);
-                fileName = prefix + (counter++);
-                if (extension != null) {
-                    fileName += extension;
-                }
+        private String getFileName(Path source, long id, String prefix) {
+            String extension = getExtension(source.getFileName().toString());
+            String fileName = prefix + id;
+            if (extension != null) {
+                fileName += extension;
             }
 
             return fileName;
         }
 
-        String getExtension(String fileName) {
+        private String getExtension(String fileName) {
             int index = fileName.lastIndexOf(".");
             return index > 0 ? fileName.substring(index) : null;
+        }
+
+        void ensureCreated(Path dir) throws IOException {
+            if (dir != null) {
+                dir = dir.toAbsolutePath().normalize();
+                if (createdDirs.add(dir)) {
+                    Files.createDirectories(dir);
+                }
+            }
+        }
+    }
+
+    public static class Builder {
+        private boolean copyExternalFiles;
+        private int buckets = 10;
+
+        private Builder() {
+        }
+
+        public Builder copyExternalFiles(boolean copyExternalFiles) {
+            this.copyExternalFiles = copyExternalFiles;
+            return this;
+        }
+
+        public Builder withBuckets(int buckets) {
+            this.buckets = buckets;
+            return this;
+        }
+
+        public ModelObjectWriter build() {
+            return new ModelObjectWriter(this);
         }
     }
 }
