@@ -40,12 +40,6 @@ public class QueryOptions implements Option {
     private CountLimitOptions countLimitOptions;
 
     public Query getQuery() throws FilterParseException {
-        if (typeNameOptions == null
-                && filterOptions == null
-                && countLimitOptions == null) {
-            return null;
-        }
-
         Query query = new Query();
         if (typeNameOptions != null) {
             query.setFeatureTypes(typeNameOptions.getTypeNames());
