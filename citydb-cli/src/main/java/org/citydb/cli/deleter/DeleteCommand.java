@@ -190,7 +190,7 @@ public class DeleteCommand implements Command {
 
     private Query getQuery(DeleteOptions deleteOptions) throws ExecutionException {
         try {
-            Query query = queryOptions != null ?
+            Query query = queryOptions != null && queryOptions.getQuery() != null ?
                     queryOptions.getQuery() :
                     deleteOptions.getQuery().orElseGet(Query::new);
 
