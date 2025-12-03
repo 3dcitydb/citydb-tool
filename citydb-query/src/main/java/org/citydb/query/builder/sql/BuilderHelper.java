@@ -34,10 +34,7 @@ import org.citydb.model.geometry.SpatialObject;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.schema.SchemaPathBuilder;
-import org.citydb.query.filter.common.FilterWalker;
-import org.citydb.query.filter.common.GeometryExpression;
-import org.citydb.query.filter.literal.BBoxLiteral;
-import org.citydb.query.filter.literal.GeometryLiteral;
+import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
@@ -151,21 +148,13 @@ public class BuilderHelper {
                 .orElse(adapter.getDatabaseMetadata().getSpatialReference());
     }
 
-    SpatialObject getSpatialLiteral(GeometryExpression expression) {
-        SpatialObject[] spatialObject = new SpatialObject[1];
-        expression.accept(new FilterWalker() {
-            @Override
-            public void visit(BBoxLiteral literal) {
-                spatialObject[0] = literal.getValue();
-            }
-
-            @Override
-            public void visit(GeometryLiteral literal) {
-                spatialObject[0] = literal.getValue();
-            }
-        });
-
-        return spatialObject[0];
+    SpatialObject getSpatialLiteral(BuildResult operand) {
+        return operand.getExpression() instanceof Placeholder placeholder ?
+                placeholder.getValue()
+                        .filter(SpatialObject.class::isInstance)
+                        .map(SpatialObject.class::cast)
+                        .orElse(null) :
+                null;
     }
 
     int getOrSetSRID(SpatialObject object, SpatialReference filterSrs) {
