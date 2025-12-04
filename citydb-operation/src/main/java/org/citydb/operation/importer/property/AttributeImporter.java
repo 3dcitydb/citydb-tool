@@ -91,9 +91,9 @@ public class AttributeImporter extends PropertyImporter {
                         .collect(Collectors.toList())).toString())
                 .orElse(null);
         if (arrayValue != null) {
-            stmt.setObject(14, arrayValue, Types.OTHER);
+            stmt.setObject(14, arrayValue, adapter.getSchemaAdapter().getOtherSqlType());
         } else {
-            stmt.setNull(14, Types.OTHER);
+            stmt.setNull(14, adapter.getSchemaAdapter().getOtherSqlType());
         }
 
         stmt.setString(15, attribute.getGenericContent().orElse(null));

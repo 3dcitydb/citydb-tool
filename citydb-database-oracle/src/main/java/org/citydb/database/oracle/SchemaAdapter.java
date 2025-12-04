@@ -2,9 +2,7 @@
  * citydb-tool - Command-line tool for the 3D City Database
  * https://www.3dcitydb.org/
  *
- * Copyright 2022-2025
- * virtualcitysystems GmbH, Germany
- * https://vc.systems/
+ * Copyright © 2025, Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +17,9 @@
  * limitations under the License.
  */
 
-package org.citydb.database.postgres;
+package org.citydb.database.oracle;
 
+import oracle.spatial.util.Util;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -28,18 +27,19 @@ import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.srs.SpatialReferenceType;
+import org.citydb.database.util.ChangelogHelper;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.function.Function;
-import org.citydb.sqlbuilder.literal.BooleanLiteral;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
 import org.citydb.sqlbuilder.literal.StringLiteral;
 import org.citydb.sqlbuilder.operation.Case;
-import org.citydb.sqlbuilder.operation.Not;
 import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.sqlbuilder.util.PlainText;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -48,16 +48,24 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
+    private final Logger logger = LoggerFactory.getLogger(SchemaAdapter.class);
+    protected static final String PROPERTY_ORACLE_SPATIAL = "oracle_spatial";
+    protected static final int MAX_SQL_NAME_LENGTH = 128;
+
     private final LazyCheckedInitializer<String, IOException> featureHierarchyQuery;
     private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
     private final OperationHelper operationHelper;
     private final StatisticsHelper statisticsHelper;
     private final TempTableHelper tempTableHelper;
-    private final ChangelogHelper changelogHelper;
 
     SchemaAdapter(DatabaseAdapter adapter) {
         super(adapter);
@@ -66,28 +74,28 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         operationHelper = new OperationHelper(this);
         statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
-        changelogHelper = new ChangelogHelper(adapter);
     }
 
     @Override
-    public int getOtherSqlType() {
-        return java.sql.Types.OTHER;
+    public int getOtherSqlType(){
+        return oracle.jdbc.OracleTypes.JSON;
     }
 
     @Override
     public String getDefaultSchema() {
-        return "citydb";
+      return "citydb";
     }
 
     @Override
     public Optional<Table> getDummyTable() {
-        return Optional.empty();
+      return Optional.empty();
     }
 
-    @Override
     public String getNextSequenceValues(Sequence sequence) {
-        return "select citydb_pkg.get_seq_values('" + adapter.getConnectionDetails().getSchema() + "." +
-                sequence + "', ?)";
+        return "select " +
+                enquoteSqlName(adapter.getConnectionDetails().getSchema()) + "." +
+                enquoteSqlName(sequence.toString()) + ".nextval " +
+                " from dual connect by level <= ?";
     }
 
     @Override
@@ -121,8 +129,9 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table) {
         Table hierarchy = Table.of("hierarchy");
-        Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
-                adapter.getConnectionDetails().getSchema());
+        Table property = Table.of(
+                enquoteSqlName(org.citydb.database.schema.Table.PROPERTY.getName()),
+                enquoteSqlName(adapter.getConnectionDetails().getSchema()));
 
         Select featureQuery = Select.newInstance()
                 .select(table.column("id").as("feature_id"),
@@ -149,17 +158,12 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                             .orElse(PlainText.of("depth").plus(1)))
                     .where(PlainText.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
             hierarchyQuery.where(PlainText.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
-        } else {
-            featureQuery.select(BooleanLiteral.FALSE.as("is_cycle"),
-                    PlainText.of("array[]::bigint[]").as("path"));
-            propertyQuery.select(property.column("id").eqAny(PlainText.of("(path)")),
-                            PlainText.of("path || {}", property.column("id")))
-                    .where(Not.of(PlainText.of("is_cycle")));
         }
 
         hierarchy = Table.of(hierarchyQuery);
-        property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
-                adapter.getConnectionDetails().getSchema());
+        property = Table.of(
+                enquoteSqlName(org.citydb.database.schema.Table.PROPERTY.getName()),
+                enquoteSqlName(adapter.getConnectionDetails().getSchema()));
 
         Select select = Select.newInstance()
                 .select(IntegerLiteral.of(1))
@@ -177,38 +181,47 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         } else {
             select.where(property.column("val_lod").isNotNull());
         }
-
+        logger.debug("getResursiveLodQuery: " + select.toString());
         return select;
     }
 
     @Override
     public String getCreateIndex(Index index, boolean ignoreNulls) {
-        String stmt = "create index if not exists " + index.getName() +
-                " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable() +
-                (index.getType() == Index.Type.SPATIAL ? " using gist " : " ") +
-                "(" + String.join(", ", index.getColumns()) + ")";
-
-        if (ignoreNulls) {
-            stmt += " where " + index.getColumns().stream()
-                    .map(column -> column + " is not null")
-                    .collect(Collectors.joining(" and "));
-        }
-
+        String stmt = "create index if not exists " + enquoteSqlName(index.getName()) +
+                " on " + enquoteSqlName(adapter.getConnectionDetails().getSchema()) + "." +
+                enquoteSqlName(index.getTable()) +
+                "(" + String.join(", ", enquoteSqlNames(index.getColumns())) + ")" +
+                (index.getType() == Index.Type.SPATIAL ? " INDEXTYPE IS MDSYS.SPATIAL_INDEX_V2 " : " ") ;
+        logger.debug("getCreateIndex: " + stmt);
+        //Oracle does not index null values by default.
+        //Need to use cumbersome workaround in order to NOT ignore null.
+        //Will consider one of the workarounds if there is a clear need on indexing null values.
+//        if (ignoreNulls) {
+//            stmt += " where " + index.getColumns().stream()
+//                    .map(column -> column + " is not null")
+//                    .collect(Collectors.joining(" and "));
+//        }
         return stmt;
     }
 
     @Override
     public String getDropIndex(Index index) {
-        return "drop index if exists " + adapter.getConnectionDetails().getSchema() + "." + index.getName();
+        String sql = "drop index if exists " +
+                enquoteSqlName(adapter.getConnectionDetails().getSchema()) + "." +
+                enquoteSqlName(index.getName());
+        logger.debug("getDropIndex: "+sql);
+        return sql;
     }
 
     @Override
     public String getIndexExists(Index index) {
-        return "select 1 from pg_index i " +
-                "join pg_class c on c.oid = i.indexrelid " +
-                "join pg_namespace n on n.oid = c.relnamespace " +
-                "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
-                "and c.relname = '" + index.getName() + "' limit 1";
+        String sql = "select 1 " +
+                " from all_indexes " +
+                " where owner = '" + enquoteSqlName(adapter.getConnectionDetails().getSchema()) + "' " +
+                " and index_name = '" + enquoteSqlName(index.getName()) +
+                "' and rownum = 1";
+        logger.debug("getIndexExists: "+sql);
+        return sql;
     }
 
     @Override
@@ -228,43 +241,41 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     @Override
     public ChangelogHelper getChangelogHelper() {
-        return changelogHelper;
+        return null;
     }
 
     @Override
     protected String getCityDBVersion() {
-        return "select major_version, minor_version, minor_revision, version from citydb_pkg.citydb_version()";
+        String sql = "select major_version, minor_version, minor_revision, version from citydb_util.citydb_version()";
+        logger.debug("getCityDBVersion: " + sql);
+        return sql;
     }
 
     @Override
     protected String getSchemaExists(String schemaName, Version version) {
-        if (version.compareTo(Version.of(5, 1, 0)) < 0) {
-            return "select coalesce(( " +
-                    "select 1 from information_schema.schemata s " +
-                    "join information_schema.tables t on t.table_schema = s.schema_name " +
-                    "where s.schema_name = '" + schemaName + "' and t.table_name = 'database_srs'" +
-                    "limit 1), 0)";
-        } else {
-            return "select citydb_pkg.schema_exists('" + schemaName + "')";
-        }
+        String sql = "select 1 " +
+              " from all_users " +
+              " where username = '" + checkSimpleSqlName(adapter.getConnectionDetails().getSchema().toUpperCase()) + "' " +
+              " and rownum = 1";
+        logger.debug("getSchemaExists: "+sql);
+        return sql;
     }
 
     @Override
     protected String getDatabaseSrs() {
-        return "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
-                "from citydb_pkg.db_metadata('" + adapter.getConnectionDetails().getSchema() + "')";
+        String sql = "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
+                "from citydb_util.db_metadata('" + enquoteSqlName(adapter.getConnectionDetails().getSchema()) + "')";
+        logger.debug("getDatabaseSrs: " + sql);
+        return sql;
     }
 
     @Override
     protected String getSpatialReference(int srid) {
-        if (adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0) {
-            return "select split_part(srtext, '\"', 2) as coord_ref_sys_name, " +
-                    "split_part(srtext, '[', 1) as coord_ref_sys_kind, " +
-                    "srtext as wktext from spatial_ref_sys where srid = " + srid;
-        } else {
-            return "select coord_ref_sys_name, coord_ref_sys_kind, wktext " +
-                    "from citydb_pkg.get_coord_ref_sys_info(" + srid + ")";
-        }
+        assert(srid>=0);
+        String sql = "select coord_ref_sys_name, coord_ref_sys_kind, wktext " +
+                "from citydb_srs.get_coord_ref_sys_info(" + srid + ")";
+        logger.debug("getSpatialReference: "+sql);
+        return sql;
     }
 
     @Override
@@ -283,9 +294,9 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     protected String getChangelogEnabled(String schemaName) {
         return "select exists ( " +
-                "select 1 from information_schema.triggers s " +
-                "where s.trigger_schema = '" + schemaName + "' " +
-                "and event_object_table = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
+                "select 1 from all_triggers s " +
+                "where s.owner = '" + enquoteSqlName(schemaName) + "' " +
+                "and table_name = '" + enquoteSqlName(org.citydb.database.schema.Table.FEATURE.getName()) + "' " +
                 "and trigger_name = 'feature_changelog_trigger'" +
                 ")";
     }
@@ -293,24 +304,8 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     protected List<DatabaseProperty> getDatabaseProperties(Version version, Connection connection) throws SQLException {
         List<DatabaseProperty> properties = new ArrayList<>();
-        if (version.compareTo(Version.of(5, 1, 0)) < 0) {
-            properties.add(getDatabaseProperty(PostgresqlAdapter.PROPERTY_POSTGIS, "PostGIS",
-                    Select.newInstance().select(Function.of("postgis_lib_version")), connection));
-            properties.add(getDatabaseProperty(PostgresqlAdapter.PROPERTY_POSTGIS_SFCGAL, "SFCGAL",
-                    Select.newInstance().select(Function.of("postgis_sfcgal_version")), connection));
-        } else {
-            try (Statement stmt = connection.createStatement();
-                 ResultSet rs = stmt.executeQuery("select id, name, value from citydb_pkg.db_properties()")) {
-                while (rs.next()) {
-                    String id = rs.getString(1);
-                    String name = rs.getString(2);
-                    if (id != null && name != null) {
-                        properties.add(DatabaseProperty.of(id, name, rs.getString(3)));
-                    }
-                }
-            }
-        }
-
+        properties.add(getDatabaseProperty(PROPERTY_ORACLE_SPATIAL, "Oracle Spatial",
+                Select.newInstance().select(StringLiteral.of("supported")), connection));
         return properties;
     }
 
@@ -321,30 +316,70 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 return DatabaseProperty.of(id, name, rs.getString(1));
             }
         } catch (SQLException e) {
-            //
+            logger.error("Failed to get database property: "+id+", "+name+": ", e);
         }
-
         return DatabaseProperty.of(id, name);
     }
 
     private String readFeatureHierarchyQuery() throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
-                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {
+                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/oracle/query_feature_hierarchy.sql"))))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
-                    .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema())
-                    .replace("@JSON@", adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0 ?
-                            "json" :
-                            "jsonb");
+                    .replace("@SCHEMA@", enquoteSqlName(adapter.getConnectionDetails().getSchema()));
         }
     }
 
     private String readRecursiveImplicitGeometryQuery() throws IOException {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
-                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_recursive_implicit_geometry.sql"))))) {
+                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/oracle/query_recursive_implicit_geometry.sql"))))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
-                    .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema());
+                    .replace("@SCHEMA@", enquoteSqlName(adapter.getConnectionDetails().getSchema()));
         }
     }
+
+    static String checkSqlType(String type){
+        try {
+            return Util.checkSQLName(type, MAX_SQL_NAME_LENGTH, Util.CheckType.SQLType);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException("Invalid sql type:" + type, e);
+        }
+    }
+
+    static String checkSimpleSqlName(String name){
+        try {
+            return Util.checkSQLName(name, MAX_SQL_NAME_LENGTH, Util.CheckType.sqlName);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException("Invalid sql name:" + name, e);
+        }
+    }
+
+    static List<String> checkSimpleSqlNames(List<String> names){
+        List<String> checkedNames = new ArrayList<>();
+        for(String name : names){
+            checkedNames.add(checkSimpleSqlName(name));
+        }
+        return checkedNames;
+    }
+
+    static String enquoteSqlName(String name){
+        try {
+            return Util.enquoteNameSQLName(name);
+        }
+        catch (SQLException e) {
+            throw new RuntimeException("Invalid sql name:" + name, e);
+        }
+    }
+
+    static List<String> enquoteSqlNames(List<String> names){
+        List<String> quotedNames = new ArrayList<>();
+        for(String name : names){
+            quotedNames.add(enquoteSqlName(name));
+        }
+        return quotedNames;
+    }
+
 }

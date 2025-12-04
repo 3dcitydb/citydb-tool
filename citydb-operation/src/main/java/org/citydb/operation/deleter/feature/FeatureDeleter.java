@@ -65,7 +65,7 @@ public class FeatureDeleter extends DatabaseDeleter {
 
             stmt.setArray(1, helper.getConnection().createArrayOf("bigint", ids));
             stmt.setString(2, helper.getAdapter().getConnectionDetails().getSchema());
-            stmt.setObject(3, metadata.toString(), Types.OTHER);
+            stmt.setObject(3, metadata.toString(), helper.getAdapter().getSchemaAdapter().getOtherSqlType());
             stmt.setBoolean(4, helper.getOptions().isTerminateWithSubFeatures());
             stmt.execute();
         } else {

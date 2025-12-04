@@ -1,0 +1,6 @@
+dependencies {
+    implementation project(':citydb-database')
+    implementation 'com.oracle.database.jdbc:ojdbc8:21.5.0.0'
+    implementation 'com.oracle.spatial:sdoapi:23.26'
+    implementation 'com.oracle.spatial:sdoutl:23.26'
+}

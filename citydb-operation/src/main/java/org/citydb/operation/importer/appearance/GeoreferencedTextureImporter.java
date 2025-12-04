@@ -57,9 +57,9 @@ public class GeoreferencedTextureImporter extends TextureImporter {
                 .map(JSONArray::toString)
                 .orElse(null);
         if (orientation != null) {
-            stmt.setObject(11, orientation, Types.OTHER);
+            stmt.setObject(11, orientation, adapter.getSchemaAdapter().getOtherSqlType());
         } else {
-            stmt.setNull(11, Types.OTHER);
+            stmt.setNull(11, adapter.getSchemaAdapter().getOtherSqlType());
         }
 
         Object referencePoint = getGeometry(texture.getReferencePoint()

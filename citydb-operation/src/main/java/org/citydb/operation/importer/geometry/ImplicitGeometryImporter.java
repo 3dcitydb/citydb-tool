@@ -77,7 +77,7 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
             stmt.setNull(3, Types.VARCHAR);
             stmt.setNull(4, Types.VARCHAR);
             stmt.setNull(5, Types.VARCHAR);
-            stmt.setNull(6, Types.OTHER);
+            stmt.setNull(6, adapter.getSchemaAdapter().getOtherSqlType());
             stmt.setLong(7, tableHelper.getOrCreateImporter(GeometryImporter.class)
                     .doImport(implicitGeometry.getGeometry().get(), true, featureId)
                     .getId());
@@ -94,7 +94,7 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
             } catch (IOException e) {
                 logOrThrow(Level.ERROR, formatMessage(implicitGeometry,
                         "Failed to import library object " + libraryObject.getFileLocation() + "."), e);
-                stmt.setNull(6, Types.OTHER);
+                stmt.setNull(6, adapter.getSchemaAdapter().getOtherSqlType());
             }
 
             stmt.setNull(7, Types.BIGINT);
