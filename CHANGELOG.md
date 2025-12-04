@@ -23,6 +23,7 @@
 - Removed the `FeatureCollection` class due to changes in `ModelObjectWriter` and `ModelObjectReader`.
 
 ### Fixed
+- Fixed 2D spatial queries on `geometry_data` so they no longer fail when encountering `PolyhedralSurface` geometries.
 - The CLI option `--import-mode` no longer overrides the JSON configuration even when not explicitly set on the
   command line.
 - Fixed an NPE in the `info` command when changelog tracking is enabled.
