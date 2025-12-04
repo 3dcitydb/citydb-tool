@@ -37,10 +37,11 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     private final BoxParser boxParser = new BoxParser();
     private final WKBWriter writer = new WKBWriter().includeSRID(true);
     private final WKTWriter textWriter = new WKTWriter().includeSRID(true);
-    private final SpatialOperationHelper spatialOperationHelper = new SpatialOperationHelper();
+    private final SpatialOperationHelper spatialOperationHelper;
 
     GeometryAdapter(DatabaseAdapter adapter) {
         super(adapter);
+        spatialOperationHelper = new SpatialOperationHelper(adapter);
     }
 
     @Override

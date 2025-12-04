@@ -21,6 +21,9 @@
 
 package org.citydb.database.postgres;
 
+import org.citydb.core.concurrent.LazyInitializer;
+import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.schema.Table;
 import org.citydb.sqlbuilder.function.Cast;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
@@ -30,11 +33,14 @@ import org.citydb.sqlbuilder.literal.StringLiteral;
 import org.citydb.sqlbuilder.operation.BinaryComparisonOperation;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.schema.Column;
 
 public class SpatialOperationHelper implements org.citydb.database.util.SpatialOperationHelper {
     private final StringLiteral TRUE = StringLiteral.of("TRUE");
+    private final LazyInitializer<Boolean> supports3D;
 
-    SpatialOperationHelper() {
+    SpatialOperationHelper(DatabaseAdapter adapter) {
+        supports3D = LazyInitializer.of(() -> ((PostgresqlAdapter) adapter).getSCFGALVersion().isPresent());
     }
 
     @Override
@@ -54,57 +60,94 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression contains(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_contains", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_contains", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression crosses(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_crosses", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_crosses", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression disjoint(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_disjoint", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_disjoint", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression equals(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_equals", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_equals", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression intersects(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_intersects", cast(leftOperand), cast(rightOperand)), TRUE);
+        return supports3D.get() ?
+                Operators.eq(Function.of("st_3dintersects", cast(leftOperand), cast(rightOperand)), TRUE) :
+                build("st_intersects", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression overlaps(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_overlaps", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_overlaps", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression touches(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_touches", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_touches", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression within(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Operators.eq(Function.of("st_within", cast(leftOperand), cast(rightOperand)), TRUE);
+        return build("st_within", leftOperand, rightOperand);
     }
 
     @Override
     public BooleanExpression dWithin(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
-        return Operators.eq(Function.of("st_dwithin", cast(leftOperand), cast(rightOperand), distance), TRUE);
+        return supports3D.get() ?
+                Operators.eq(Function.of("st_3ddwithin", cast(leftOperand), cast(rightOperand), distance), TRUE) :
+                build(leftOperand, rightOperand, distance);
     }
 
     @Override
     public BooleanExpression beyond(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
-        return Operators.ne(Function.of("st_dwithin", cast(leftOperand), cast(rightOperand), distance), TRUE);
+        return Operators.not(dWithin(leftOperand, rightOperand, distance));
+    }
+
+    private BooleanExpression build(String operationName, ScalarExpression leftOperand, ScalarExpression rightOperand) {
+        BooleanExpression expression = Operators.eq(Function.of(operationName,
+                prepare(leftOperand), prepare(rightOperand)), TRUE);
+        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand) ?
+                Operators.and(bbox(leftOperand, rightOperand), expression) :
+                expression;
+    }
+
+    private BooleanExpression build(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
+        BooleanExpression dWithin = Operators.eq(Function.of("st_dwithin",
+                prepare(leftOperand), prepare(rightOperand), distance), TRUE);
+        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand) ?
+                Operators.and(bbox(leftOperand,
+                        Function.of("st_buffer", Function.of("box2d", cast(rightOperand)), distance)), dWithin) :
+                dWithin;
+    }
+
+    private ScalarExpression prepare(ScalarExpression expression) {
+        return normalize(cast(expression));
     }
 
     private ScalarExpression cast(ScalarExpression expression) {
         return expression instanceof Placeholder ?
                 Cast.of(expression, "geometry") :
                 expression;
+    }
+
+    private ScalarExpression normalize(ScalarExpression expression) {
+        return requiresNormalization(expression) ?
+                Function.of("st_forcecollection", expression) :
+                expression;
+    }
+
+    private boolean requiresNormalization(ScalarExpression expression) {
+        return expression instanceof Column column
+                && column.getName().equals("geometry")
+                && Table.GEOMETRY_DATA.getName().equals(column.getTable().getName());
     }
 }
