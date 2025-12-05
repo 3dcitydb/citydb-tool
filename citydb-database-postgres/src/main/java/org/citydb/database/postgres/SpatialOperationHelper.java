@@ -21,7 +21,6 @@
 
 package org.citydb.database.postgres;
 
-import org.citydb.core.concurrent.LazyInitializer;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Table;
 import org.citydb.sqlbuilder.function.Cast;
@@ -37,10 +36,10 @@ import org.citydb.sqlbuilder.schema.Column;
 
 public class SpatialOperationHelper implements org.citydb.database.util.SpatialOperationHelper {
     private final StringLiteral TRUE = StringLiteral.of("TRUE");
-    private final LazyInitializer<Boolean> supports3D;
+    private final PostgresqlAdapter adapter;
 
     SpatialOperationHelper(DatabaseAdapter adapter) {
-        supports3D = LazyInitializer.of(() -> ((PostgresqlAdapter) adapter).getSCFGALVersion().isPresent());
+        this.adapter = (PostgresqlAdapter) adapter;
     }
 
     @Override
@@ -80,7 +79,7 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression intersects(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return supports3D.get() ?
+        return adapter.hasSFCGALSupport() ?
                 Operators.eq(Function.of("st_3dintersects", cast(leftOperand), cast(rightOperand)), TRUE) :
                 build("st_intersects", leftOperand, rightOperand);
     }
@@ -102,7 +101,7 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression dWithin(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
-        return supports3D.get() ?
+        return adapter.hasSFCGALSupport() ?
                 Operators.eq(Function.of("st_3ddwithin", cast(leftOperand), cast(rightOperand), distance), TRUE) :
                 build(leftOperand, rightOperand, distance);
     }

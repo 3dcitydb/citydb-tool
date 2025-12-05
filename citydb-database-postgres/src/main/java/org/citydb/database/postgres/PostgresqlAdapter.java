@@ -75,6 +75,10 @@ public class PostgresqlAdapter extends DatabaseAdapter {
         return postgisVersion;
     }
 
+    boolean hasSFCGALSupport() {
+        return sfcgalVersion != null;
+    }
+
     Optional<Version> getSCFGALVersion() {
         return Optional.ofNullable(sfcgalVersion);
     }
