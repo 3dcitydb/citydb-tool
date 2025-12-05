@@ -124,7 +124,7 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
                 prepare(leftOperand), prepare(rightOperand), distance), TRUE);
         return requiresNormalization(leftOperand) || requiresNormalization(rightOperand) ?
                 Operators.and(bbox(leftOperand,
-                        Function.of("st_buffer", Function.of("box2d", cast(rightOperand)), distance)), dWithin) :
+                        Function.of("st_expand", Function.of("box2d", cast(rightOperand)), distance)), dWithin) :
                 dWithin;
     }
 
