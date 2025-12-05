@@ -87,9 +87,9 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
                 .map(JSONArray::toString)
                 .orElse(null);
         if (transformationMatrix != null) {
-            stmt.setObject(10, transformationMatrix, Types.OTHER);
+            stmt.setObject(10, transformationMatrix, adapter.getSchemaAdapter().getOtherSqlType());
         } else {
-            stmt.setNull(10, Types.OTHER);
+            stmt.setNull(10, adapter.getSchemaAdapter().getOtherSqlType());
         }
 
         return super.doImport(property, propertyId, parentId, featureId);

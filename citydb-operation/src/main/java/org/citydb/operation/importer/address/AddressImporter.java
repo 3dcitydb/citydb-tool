@@ -73,9 +73,9 @@ public class AddressImporter extends DatabaseImporter {
                         .collect(Collectors.toList())).toString())
                 .orElse(null);
         if (arrayValue != null) {
-            stmt.setObject(12, arrayValue, Types.OTHER);
+            stmt.setObject(12, arrayValue, adapter.getSchemaAdapter().getOtherSqlType());
         } else {
-            stmt.setNull(12, Types.OTHER);
+            stmt.setNull(12, adapter.getSchemaAdapter().getOtherSqlType());
         }
 
         Object multiPoint = getGeometry(address.getMultiPoint().orElse(null), true);
