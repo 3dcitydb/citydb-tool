@@ -21,6 +21,7 @@
 
 package org.citydb.database.postgres;
 
+import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Table;
 import org.citydb.sqlbuilder.function.Cast;
@@ -139,14 +140,17 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     }
 
     private ScalarExpression normalize(ScalarExpression expression) {
-        return requiresNormalization(expression) ?
-                Function.of("st_forcecollection", expression) :
-                expression;
+        if (requiresNormalization(expression)) {
+            return adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 1)) < 0 ?
+                    Function.of("st_forcecollection", expression) :
+                    Function.of("citydb_pkg.normalize_polyhedral", expression);
+        } else {
+            return expression;
+        }
     }
 
     private boolean requiresNormalization(ScalarExpression expression) {
         return expression instanceof Column column
-                && column.getName().equals("geometry")
                 && Table.GEOMETRY_DATA.getName().equals(column.getTable().getName());
     }
 }
