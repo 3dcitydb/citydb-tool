@@ -63,11 +63,11 @@ public class ImportHelper {
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
     private final Importer.TransactionMode transactionMode;
+    private final boolean failFast;
     private final int batchSize;
 
     private OffsetDateTime importTime;
     private SequenceValues sequenceValues;
-    private boolean failFast;
     private int batchCounter;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
