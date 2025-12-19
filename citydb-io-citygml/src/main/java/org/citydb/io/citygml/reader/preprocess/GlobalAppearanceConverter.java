@@ -31,6 +31,7 @@ import org.citygml4j.core.model.deprecated.appearance.DeprecatedPropertiesOfPara
 import org.citygml4j.core.model.deprecated.appearance.TextureAssociationReference;
 import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.citygml4j.core.visitor.VisitableObject;
 import org.xmlobjects.gml.model.base.AbstractGML;
 import org.xmlobjects.gml.model.base.AbstractInlineOrByReferenceProperty;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
@@ -157,9 +158,11 @@ public class GlobalAppearanceConverter {
         }
     }
 
-    void convertGlobalAppearance(AbstractFeature feature) {
-        AppearanceProcessor processor = new AppearanceProcessor(feature);
-        feature.accept(processor);
+    void convertGlobalAppearance(VisitableObject object) {
+        if (!targets.isEmpty()) {
+            AppearanceProcessor processor = new AppearanceProcessor(object);
+            object.accept(processor);
+        }
     }
 
     private GeometryReference getGeometryReference(TextureAssociationProperty property) {
@@ -171,10 +174,10 @@ public class GlobalAppearanceConverter {
     private class AppearanceProcessor extends ObjectWalker {
         private final AbstractCityObject topLevelFeature;
 
-        AppearanceProcessor(AbstractFeature feature) {
-            topLevelFeature = feature instanceof AbstractCityObject cityObject ?
+        AppearanceProcessor(VisitableObject object) {
+            topLevelFeature = object instanceof AbstractCityObject cityObject ?
                     cityObject :
-                    feature.getParent(AbstractCityObject.class);
+                    object.getParent(AbstractCityObject.class);
         }
 
         @Override

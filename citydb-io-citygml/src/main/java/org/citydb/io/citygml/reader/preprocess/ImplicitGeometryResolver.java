@@ -22,25 +22,50 @@
 package org.citydb.io.citygml.reader.preprocess;
 
 import org.citydb.io.citygml.reader.util.FeatureHelper;
+import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.visitor.ObjectWalker;
-import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
+import org.xmlobjects.gml.util.reference.ReferenceResolver;
+import org.xmlobjects.util.copy.CopyBuilder;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 public class ImplicitGeometryResolver {
-    private final Map<String, AbstractGeometry> geometries = new ConcurrentHashMap<>();
+    private final Supplier<CopyBuilder> copyBuilderSupplier;
+    private final ReferenceResolver referenceResolver;
+    private final Map<String, ImplicitGeometry> implicitGeometries = new ConcurrentHashMap<>();
     private final ResolverProcessor processor = new ResolverProcessor();
 
-    ImplicitGeometryResolver() {
+    ImplicitGeometryResolver(Supplier<CopyBuilder> copyBuilderSupplier, ReferenceResolver referenceResolver) {
+        this.copyBuilderSupplier = copyBuilderSupplier;
+        this.referenceResolver = referenceResolver;
     }
 
-    void addImplicitGeometry(AbstractGeometry geometry) {
-        if (geometry.getId() != null) {
-            geometries.put(geometry.getId(), geometry);
+    boolean hasImplicitGeometries() {
+        return !implicitGeometries.isEmpty();
+    }
+
+    Collection<ImplicitGeometry> getImplicitGeometries() {
+        return implicitGeometries.values();
+    }
+
+    void addImplicitGeometry(ImplicitGeometry implicitGeometry) {
+        if (implicitGeometry.getRelativeGeometry() != null
+                && implicitGeometry.getRelativeGeometry().isSetInlineObject()
+                && implicitGeometry.getRelativeGeometry().getObject().getId() != null) {
+            ImplicitGeometry template = new ImplicitGeometry(implicitGeometry.getRelativeGeometry());
+            if (implicitGeometry.isSetAppearances()) {
+                implicitGeometry.getAppearances().stream()
+                        .filter(AbstractAppearanceProperty::isSetInlineObject)
+                        .forEach(template.getAppearances()::add);
+            }
+
+            implicitGeometries.put(implicitGeometry.getRelativeGeometry().getObject().getId(), template);
         }
     }
 
@@ -51,13 +76,29 @@ public class ImplicitGeometryResolver {
     private class ResolverProcessor extends ObjectWalker {
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
-            if (implicitGeometry.getRelativeGeometry() != null
-                    && implicitGeometry.getRelativeGeometry().getObject() == null
-                    && implicitGeometry.getRelativeGeometry().getHref() != null) {
+            if (implicitGeometry.getRelativeGeometry() != null) {
                 GeometryProperty<?> property = implicitGeometry.getRelativeGeometry();
-                AbstractGeometry template = geometries.get(FeatureHelper.getIdFromReference(property.getHref()));
-                if (template != null) {
-                    property.setReferencedObjectIfValid(template);
+                if (property.isSetInlineObject() && property.getObject().getId() != null) {
+                    ImplicitGeometry template = implicitGeometries.get(property.getObject().getId());
+                    if (template != null) {
+                        implicitGeometry.setRelativeGeometry(template.getRelativeGeometry());
+                        implicitGeometry.setAppearances(template.getAppearances());
+                    }
+                } else if (property.getHref() != null) {
+                    ImplicitGeometry template = implicitGeometries.get(FeatureHelper.getIdFromReference(
+                            property.getHref()));
+                    if (template != null) {
+                        property.setReferencedObjectIfValid(template.getRelativeGeometry().getObject());
+                        if (implicitGeometry.isSetAppearances()) {
+                            implicitGeometry.getAppearances().removeIf(p -> !p.isSetInlineObject());
+                            referenceResolver.resolveReferences(implicitGeometry);
+                        }
+
+                        if (template.isSetAppearances()) {
+                            template.getAppearances().forEach(p -> implicitGeometry.getAppearances().add(
+                                    copyBuilderSupplier.get().shallowCopy(p)));
+                        }
+                    }
                 }
             }
         }

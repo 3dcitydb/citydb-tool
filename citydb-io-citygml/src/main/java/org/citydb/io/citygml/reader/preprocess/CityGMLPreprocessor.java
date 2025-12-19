@@ -45,52 +45,53 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 
-public class Preprocessor {
+public class CityGMLPreprocessor {
     private final GlobalAppearanceConverter appearanceConverter;
+    private final ImplicitGeometryResolver implicitGeometryResolver;
     private final GeometryReferenceResolver globalReferenceResolver;
     private final DeprecatedPropertiesProcessor propertiesProcessor;
     private final CrossLodReferenceResolver crossLodResolver;
     private final ConcurrentLinkedQueue<CityObjectGroup> cityObjectGroups = new ConcurrentLinkedQueue<>();
     private final ReferenceResolver referenceResolver = DefaultReferenceResolver.newInstance();
-    private final ImplicitGeometryResolver implicitGeometryResolver = new ImplicitGeometryResolver();
 
     private boolean resolveCrossLodReferences = true;
     private int numberOfThreads;
     private Throwable exception;
     private volatile boolean shouldRun = true;
 
-    public Preprocessor() {
+    public CityGMLPreprocessor() {
         ThreadLocal<CopyBuilder> copyBuilders = ThreadLocal.withInitial(() ->
                 new CopyBuilder().failOnError(true));
 
         appearanceConverter = new GlobalAppearanceConverter(copyBuilders::get);
+        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilders::get, referenceResolver);
         globalReferenceResolver = new GeometryReferenceResolver(copyBuilders::get);
         propertiesProcessor = new DeprecatedPropertiesProcessor(copyBuilders::get);
         crossLodResolver = new CrossLodReferenceResolver(copyBuilders::get)
                 .setMode(CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
     }
 
-    public Preprocessor useLod4AsLod3(boolean useLod4AsLod3) {
+    public CityGMLPreprocessor useLod4AsLod3(boolean useLod4AsLod3) {
         propertiesProcessor.useLod4AsLod3(useLod4AsLod3);
         return this;
     }
 
-    public Preprocessor mapLod0RoofEdge(boolean mapLod0RoofEdge) {
+    public CityGMLPreprocessor mapLod0RoofEdge(boolean mapLod0RoofEdge) {
         propertiesProcessor.mapLod0RoofEdge(mapLod0RoofEdge);
         return this;
     }
 
-    public Preprocessor mapLod1MultiSurfaces(boolean mapLod1MultiSurfaces) {
+    public CityGMLPreprocessor mapLod1MultiSurfaces(boolean mapLod1MultiSurfaces) {
         propertiesProcessor.mapLod1MultiSurfaces(mapLod1MultiSurfaces);
         return this;
     }
 
-    public Preprocessor createCityObjectRelations(boolean createCityObjectRelations) {
+    public CityGMLPreprocessor createCityObjectRelations(boolean createCityObjectRelations) {
         globalReferenceResolver.createCityObjectRelations(createCityObjectRelations);
         return this;
     }
 
-    public Preprocessor resolveCrossLodReferences(boolean resolveCrossLodReferences) {
+    public CityGMLPreprocessor resolveCrossLodReferences(boolean resolveCrossLodReferences) {
         this.resolveCrossLodReferences = resolveCrossLodReferences;
         crossLodResolver.setMode(resolveCrossLodReferences ?
                 CrossLodReferenceResolver.Mode.RESOLVE :
@@ -98,12 +99,12 @@ public class Preprocessor {
         return this;
     }
 
-    public Preprocessor setGlobalAppearanceMode(GlobalAppearanceConverter.Mode mode) {
+    public CityGMLPreprocessor setGlobalAppearanceMode(GlobalAppearanceConverter.Mode mode) {
         appearanceConverter.setMode(mode);
         return this;
     }
 
-    public Preprocessor setNumberOfThreads(int numberOfThreads) {
+    public CityGMLPreprocessor setNumberOfThreads(int numberOfThreads) {
         this.numberOfThreads = numberOfThreads;
         return this;
     }
@@ -162,6 +163,22 @@ public class Preprocessor {
                 }
             }
 
+            if (shouldRun && implicitGeometryResolver.hasImplicitGeometries()) {
+                for (ImplicitGeometry implicitGeometry : implicitGeometryResolver.getImplicitGeometries()) {
+                    countLatch.increment();
+                    service.execute(() -> {
+                        try {
+                            appearanceConverter.convertGlobalAppearance(implicitGeometry);
+                            referenceResolver.resolveReferences(implicitGeometry);
+                        } finally {
+                            countLatch.decrement();
+                        }
+                    });
+                }
+
+                countLatch.await();
+            }
+
             if (shouldRun && globalReferenceResolver.hasReferences()) {
                 try (CityGMLReader reader = factory.createReader(file, inputFactory,
                         "CityObjectGroup", "Appearance")) {
@@ -202,17 +219,10 @@ public class Preprocessor {
             return false;
         }
 
-        if (appearanceConverter.hasResolvableTargets()) {
-            appearanceConverter.convertGlobalAppearance(feature);
-        }
-
+        appearanceConverter.convertGlobalAppearance(feature);
         referenceResolver.resolveReferences(feature);
         implicitGeometryResolver.resolveImplicitGeometries(feature);
-
-        if (globalReferenceResolver.hasReferences()) {
-            globalReferenceResolver.resolveGeometryReferences(feature, featureId);
-        }
-
+        globalReferenceResolver.resolveGeometryReferences(feature, featureId);
         if (resolveCrossLodReferences || !propertiesProcessor.isUseLod4AsLod3()) {
             crossLodResolver.resolveCrossLodReferences(feature);
         }
@@ -233,10 +243,7 @@ public class Preprocessor {
     private class ImplicitGeometryCollector extends ObjectWalker {
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
-            if (implicitGeometry.getRelativeGeometry() != null
-                    && implicitGeometry.getRelativeGeometry().isSetInlineObject()) {
-                implicitGeometryResolver.addImplicitGeometry(implicitGeometry.getRelativeGeometry().getObject());
-            }
+            implicitGeometryResolver.addImplicitGeometry(implicitGeometry);
         }
     }
 }
