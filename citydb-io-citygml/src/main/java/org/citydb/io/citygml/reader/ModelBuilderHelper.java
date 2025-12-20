@@ -71,10 +71,7 @@ import org.xmlobjects.xml.Namespaces;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class ModelBuilderHelper {
@@ -85,6 +82,7 @@ public class ModelBuilderHelper {
     private final AppearanceHelper appearanceHelper;
     private final GeometryHelper geometryHelper;
     private final Map<Class<?>, ModelBuilder<?, ?>> builderCache = new IdentityHashMap<>();
+    private final Set<String> geometryIdCache = new HashSet<>();
 
     private CityGMLVersion version;
     private String encoding;
@@ -198,6 +196,10 @@ public class ModelBuilderHelper {
         String id = file != null ? file.getObjectId().orElse(null) : null;
         return id != null && getOrCreatePersistentMap("external-files")
                 .putIfAbsent(token == null ? id : token + id, Boolean.TRUE) != null;
+    }
+
+    public boolean lookupAndPut(AbstractGeometry geometry) {
+        return geometry.getId() != null && !geometryIdCache.add(geometry.getId());
     }
 
     @SuppressWarnings("unchecked")
@@ -660,7 +662,7 @@ public class ModelBuilderHelper {
             appearanceHelper.processTargets(source);
             return feature;
         } finally {
-            appearanceHelper.reset();
+            clear();
         }
     }
 
@@ -716,5 +718,10 @@ public class ModelBuilderHelper {
         } else {
             return null;
         }
+    }
+
+    private void clear() {
+        appearanceHelper.reset();
+        geometryIdCache.clear();
     }
 }
