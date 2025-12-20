@@ -27,6 +27,7 @@ import org.citydb.model.feature.Feature;
 import org.citydb.operation.importer.util.ImportLogEntry;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ImportLogger implements org.citydb.operation.importer.util.ImportLogger {
@@ -34,6 +35,7 @@ public class ImportLogger implements org.citydb.operation.importer.util.ImportLo
     private final DatabaseAdapter adapter;
     private final FeatureStatistics statistics;
     private final Map<String, FeatureStatistics> hierarchies = new ConcurrentHashMap<>();
+    private final Set<String> unprocessed = ConcurrentHashMap.newKeySet();
 
     ImportLogger(boolean preview, DatabaseAdapter adapter) {
         this.preview = preview;
@@ -48,13 +50,21 @@ public class ImportLogger implements org.citydb.operation.importer.util.ImportLo
     @Override
     public void log(ImportLogEntry logEntry) {
         FeatureStatistics hierarchy = hierarchies.remove(logEntry.getObjectId());
-        if (hierarchy != null && (preview || logEntry.isCommitted())) {
-            statistics.merge(hierarchy);
+        if (preview || logEntry.isCommitted()) {
+            if (hierarchy != null) {
+                statistics.merge(hierarchy);
+            } else {
+                unprocessed.add(logEntry.getObjectId());
+            }
         }
     }
 
     void add(Feature feature) {
-        hierarchies.computeIfAbsent(feature.getOrCreateObjectId(), k -> new FeatureStatistics(adapter))
-                .add(feature);
+        String objectId = feature.getOrCreateObjectId();
+        if (unprocessed.remove(objectId)) {
+            statistics.add(feature);
+        } else {
+            hierarchies.computeIfAbsent(objectId, k -> new FeatureStatistics(adapter)).add(feature);
+        }
     }
 }

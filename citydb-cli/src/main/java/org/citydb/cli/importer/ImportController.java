@@ -190,9 +190,9 @@ public abstract class ImportController implements Command {
 
                     reader.read(feature -> {
                         if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
-                            importLogger.add(feature);
                             importer.importFeature(feature).whenComplete((descriptor, e) -> {
                                 if (descriptor != null) {
+                                    importLogger.add(feature);
                                     long count = counter.incrementAndGet();
                                     if (count % 1000 == 0) {
                                         logger.info("{} features processed.", count);

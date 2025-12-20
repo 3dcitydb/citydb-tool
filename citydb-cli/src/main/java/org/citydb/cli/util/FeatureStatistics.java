@@ -110,14 +110,18 @@ public class FeatureStatistics {
     private class Counter extends ModelWalker {
         @Override
         public void visit(Appearance appearance) {
-            Name featureType = Name.of(appearance.getClass().getSimpleName(), Namespaces.APPEARANCE);
-            add(schemaMapping.getFeatureType(featureType).getId());
+            if (appearance.getDescriptor().isPresent()) {
+                Name featureType = Name.of(appearance.getClass().getSimpleName(), Namespaces.APPEARANCE);
+                add(schemaMapping.getFeatureType(featureType).getId());
+            }
         }
 
         @Override
         public void visit(Feature feature) {
-            add(schemaMapping.getFeatureType(feature.getFeatureType()).getId());
-            super.visit(feature);
+            if (feature.getDescriptor().isPresent()) {
+                add(schemaMapping.getFeatureType(feature.getFeatureType()).getId());
+                super.visit(feature);
+            }
         }
     }
 }
