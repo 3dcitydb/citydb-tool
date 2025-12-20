@@ -189,7 +189,6 @@ public class Deleter {
             shouldRun = false;
             throw new DeleteException("Failed to commit delete session.", e);
         } finally {
-            service.shutdown();
             close();
         }
     }
@@ -212,7 +211,6 @@ public class Deleter {
             shouldRun = false;
             throw new DeleteException("Failed to abort delete session.", e);
         } finally {
-            service.shutdown();
             close();
         }
     }
@@ -222,6 +220,8 @@ public class Deleter {
             connection.close();
         } catch (SQLException e) {
             //
+        } finally {
+            service.shutdown();
         }
     }
 }
