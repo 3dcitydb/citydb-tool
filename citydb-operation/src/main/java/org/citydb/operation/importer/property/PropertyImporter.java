@@ -24,7 +24,6 @@ package org.citydb.operation.importer.property;
 import org.citydb.database.schema.Table;
 import org.citydb.model.property.Property;
 import org.citydb.model.property.PropertyDescriptor;
-import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
 
@@ -37,7 +36,7 @@ public abstract class PropertyImporter extends DatabaseImporter {
         super(Table.PROPERTY, helper);
     }
 
-    PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
+    PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long featureId) throws SQLException {
         stmt.setLong(1, propertyId);
         stmt.setLong(2, featureId);
         stmt.setInt(4, schemaMapping.getDataType(property.getDataType().orElse(null)).getId());

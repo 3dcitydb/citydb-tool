@@ -222,9 +222,9 @@ public class ModelSerializerHelper {
         if (geometry != null) {
             String objectId = geometry.getObjectId().orElse(null);
             if (objectId != null) {
-                boolean isExported = getOrCreatePersistentMap("implicit-geometries")
+                boolean isWritten = getOrCreatePersistentMap("implicit-geometries")
                         .putIfAbsent(objectId, true) != null;
-                return !geometryIdCache.add(objectId) || isExported;
+                return !geometryIdCache.add(objectId) || isWritten;
             }
 
             return false;
