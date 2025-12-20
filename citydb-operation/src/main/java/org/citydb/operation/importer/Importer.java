@@ -21,6 +21,7 @@
 
 package org.citydb.operation.importer;
 
+import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -28,7 +29,10 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.operation.importer.reference.ReferenceManager;
 import org.citydb.operation.importer.util.ImportLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -37,11 +41,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 public class Importer {
+    private final Logger logger = LoggerFactory.getLogger(Importer.class);
     private ExecutorService service;
+    private PersistentMapStore store;
     private ReferenceManager referenceManager;
     private ThreadLocal<ImportHelper> contexts;
     private Set<ImportHelper> helpers;
-    private ImportLogger logger;
+    private ImportLogger importLogger;
     private CountLatch countLatch;
     private Throwable exception;
     private TransactionMode transactionMode = TransactionMode.AUTO_COMMIT;
@@ -70,11 +76,11 @@ public class Importer {
     }
 
     public Optional<ImportLogger> getImportLogger() {
-        return Optional.ofNullable(logger);
+        return Optional.ofNullable(importLogger);
     }
 
-    public Importer setImportLogger(ImportLogger logger) {
-        this.logger = logger;
+    public Importer setImportLogger(ImportLogger importLogger) {
+        this.importLogger = importLogger;
         return this;
     }
 
@@ -104,7 +110,16 @@ public class Importer {
         Objects.requireNonNull(options, "The import options must not be null.");
 
         try {
-            referenceManager = ReferenceManager.newInstance(adapter, options);
+            store = PersistentMapStore.builder()
+                    .tempDirectory(options.getTempDirectory().orElse(null))
+                    .build();
+            logger.debug("Initialized cache for resolving references at {}.", store.getBackingFile());
+        } catch (IOException e) {
+            throw new ImportException("Failed to initialize local cache.", e);
+        }
+
+        try {
+            referenceManager = ReferenceManager.newInstance(adapter, store, options);
             helpers = ConcurrentHashMap.newKeySet();
             service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
                     options.getNumberOfThreads() :
@@ -113,7 +128,8 @@ public class Importer {
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {
                 try {
-                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, logger, transactionMode);
+                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, store,
+                            importLogger, transactionMode);
                     helpers.add(helper);
                     return helper;
                 } catch (Exception e) {
@@ -196,7 +212,7 @@ public class Importer {
             shouldRun = false;
             throw new ImportException("Failed to commit import session.", e);
         } finally {
-            service.shutdown();
+            close();
         }
     }
 
@@ -220,7 +236,12 @@ public class Importer {
             shouldRun = false;
             throw new ImportException("Failed to abort import session.", e);
         } finally {
-            service.shutdown();
+            close();
         }
+    }
+
+    private void close() {
+        service.shutdown();
+        store.close();
     }
 }

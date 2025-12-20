@@ -29,7 +29,6 @@ import org.citydb.operation.importer.ImportOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.*;
@@ -39,39 +38,27 @@ import java.util.concurrent.Executors;
 public class ReferenceManager {
     private final Logger logger = LoggerFactory.getLogger(ReferenceManager.class);
     private final DatabaseAdapter adapter;
+    private final PersistentMapStore store;
+    private final ExecutorService service;
+    private final CountLatch countLatch;
     private final int batchSize;
 
-    private PersistentMapStore store;
-    private ExecutorService service;
-    private CountLatch countLatch;
     private Throwable exception;
     private volatile boolean shouldRun = true;
 
-    private ReferenceManager(DatabaseAdapter adapter) {
+    private ReferenceManager(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options) {
         this.adapter = adapter;
-        batchSize = Math.min(1000, adapter.getSchemaAdapter().getMaximumBatchSize());
-    }
-
-    public static ReferenceManager newInstance(DatabaseAdapter adapter, ImportOptions options) throws ImportException {
-        try {
-            return new ReferenceManager(adapter).initialize(options);
-        } catch (Exception e) {
-            throw new ImportException("Failed to create reference manager.", e);
-        }
-    }
-
-    private ReferenceManager initialize(ImportOptions options) throws IOException {
-        store = PersistentMapStore.builder()
-                .tempDirectory(options.getTempDirectory().orElse(null))
-                .build();
-        logger.debug("Initialized cache for resolving references at {}.", store.getBackingFile());
+        this.store = store;
 
         service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
                 options.getNumberOfThreads() :
                 Math.max(2, Runtime.getRuntime().availableProcessors()));
         countLatch = new CountLatch();
+        batchSize = Math.min(1000, adapter.getSchemaAdapter().getMaximumBatchSize());
+    }
 
-        return this;
+    public static ReferenceManager newInstance(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options) {
+        return new ReferenceManager(adapter, store, options);
     }
 
     public void storeReferences(ReferenceCache cache) {
@@ -162,7 +149,6 @@ public class ReferenceManager {
     public void close() throws ImportException {
         countLatch.await();
         service.shutdown();
-        store.close();
         if (exception != null) {
             throw new ImportException("Failed to resolve references.", exception);
         }
