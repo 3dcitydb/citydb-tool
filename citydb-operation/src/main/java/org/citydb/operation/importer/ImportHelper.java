@@ -31,6 +31,7 @@ import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.util.AffineTransformer;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.feature.FeatureImporter;
@@ -152,10 +153,6 @@ public class ImportHelper {
                 (objectId != null ? " '" + objectId + "'" : "");
     }
 
-    public <K, V> Map<K, V> getOrCreatePersistentMap(String name) {
-        return store.getOrCreateMap(name);
-    }
-
     public ReferenceCache getOrCreateReferenceCache(CacheType type) {
         return caches.computeIfAbsent(type, v -> new ReferenceCache(type));
     }
@@ -167,6 +164,16 @@ public class ImportHelper {
         }
 
         return null;
+    }
+
+    public boolean lookupAndPut(ImplicitGeometry implicitGeometry) {
+        String objectId = implicitGeometry.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("implicit-geometries").putIfAbsent(objectId, true) != null;
+    }
+
+    public boolean lookup(ImplicitGeometry implicitGeometry) {
+        String objectId = implicitGeometry.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("implicit-geometries").containsKey(objectId);
     }
 
     FeatureDescriptor importFeature(Feature feature) throws ImportException {

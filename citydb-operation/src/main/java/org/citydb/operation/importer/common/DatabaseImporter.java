@@ -98,9 +98,7 @@ public abstract class DatabaseImporter {
     }
 
     protected boolean lookupAndPut(ImplicitGeometry implicitGeometry) {
-        String objectId = implicitGeometry.getObjectId().orElse(null);
-        return objectId != null && helper.getOrCreatePersistentMap("implicit-geometries")
-                .putIfAbsent(objectId, true) != null;
+        return helper.lookupAndPut(implicitGeometry);
     }
 
     protected void cacheTarget(CacheType type, String objectId, long id) {

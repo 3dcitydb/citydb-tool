@@ -87,7 +87,7 @@ public class SequenceHelper {
         }
     }
 
-    private static class ObjectCounter extends ModelWalker {
+    private class ObjectCounter extends ModelWalker {
         final Map<Sequence, Integer> counter;
 
         ObjectCounter(Map<Sequence, Integer> counter) {
@@ -102,10 +102,12 @@ public class SequenceHelper {
 
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
-            counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
-            implicitGeometry.getGeometry().ifPresent(geometry ->
-                    counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
-            super.visit(implicitGeometry);
+            if (!helper.lookup(implicitGeometry)) {
+                counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
+                implicitGeometry.getGeometry().ifPresent(geometry ->
+                        counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
+                super.visit(implicitGeometry);
+            }
         }
 
         @Override
