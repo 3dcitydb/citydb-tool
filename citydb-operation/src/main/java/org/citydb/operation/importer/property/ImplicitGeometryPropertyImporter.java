@@ -67,8 +67,11 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
         if (implicitGeometry != null && !lookupAndPut(implicitGeometry)) {
             stmt.setLong(8, tableHelper.getOrCreateImporter(ImplicitGeometryImporter.class)
                     .doImport(implicitGeometry, featureId));
-        } else if (property.getReference().isPresent()) {
-            Reference reference = property.getReference().get();
+        } else {
+            Reference reference = implicitGeometry != null ?
+                    Reference.of(implicitGeometry.getOrCreateObjectId()) :
+                    property.getReference().orElseThrow(() -> new ImportException("The implicit geometry property " +
+                            "contains neither an object nor a reference."));
             cacheReference(CacheType.IMPLICIT_GEOMETRY, reference, propertyId);
             stmt.setNull(8, Types.BIGINT);
         }
