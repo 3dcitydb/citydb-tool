@@ -56,7 +56,7 @@ public class SequenceValues {
     public boolean hasValueFor(ImplicitGeometry implicitGeometry) {
         if (implicitGeometries != null) {
             String objectId = implicitGeometry.getObjectId().orElse(null);
-            return objectId == null || implicitGeometries.contains(objectId);
+            return objectId == null || implicitGeometries.remove(objectId);
         } else {
             return false;
         }
