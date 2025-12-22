@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -114,7 +115,9 @@ public class FileLocator {
     }
 
     public String getFileName() {
-        return path != null ? path.getFileName().toString() : url.getFile();
+        return path != null ?
+                path.getFileName().toString() :
+                Paths.get(url.getPath()).getFileName().toString();
     }
 
     @Override
