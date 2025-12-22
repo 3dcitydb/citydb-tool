@@ -22,17 +22,17 @@
 package org.citydb.operation.importer.util;
 
 import org.citydb.database.schema.Sequence;
+import org.citydb.model.geometry.ImplicitGeometry;
 
 import java.sql.SQLException;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 public class SequenceValues {
+    private final Set<String> implicitGeometries;
     private final Map<Sequence, Deque<Long>> values = new EnumMap<>(Sequence.class);
 
-    SequenceValues() {
+    SequenceValues(Set<String> implicitGeometries) {
+        this.implicitGeometries = implicitGeometries;
     }
 
     void addValue(Sequence sequence, long value) {
@@ -50,6 +50,15 @@ public class SequenceValues {
             return values.pop();
         } else {
             throw new SQLException("No more values available for sequence " + sequence + ".");
+        }
+    }
+
+    public boolean hasValueFor(ImplicitGeometry implicitGeometry) {
+        if (implicitGeometries != null) {
+            String objectId = implicitGeometry.getObjectId().orElse(null);
+            return objectId == null || implicitGeometries.contains(objectId);
+        } else {
+            return false;
         }
     }
 }

@@ -97,8 +97,8 @@ public abstract class DatabaseImporter {
         return helper.getSequenceValues().next(sequence);
     }
 
-    protected boolean lookupAndPut(ImplicitGeometry implicitGeometry) {
-        return helper.lookupAndPut(implicitGeometry);
+    protected boolean canImport(ImplicitGeometry implicitGeometry) {
+        return helper.getSequenceValues().hasValueFor(implicitGeometry);
     }
 
     protected void cacheTarget(CacheType type, String objectId, long id) {

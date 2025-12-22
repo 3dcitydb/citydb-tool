@@ -22,6 +22,7 @@
 package org.citydb.operation.importer.util;
 
 import org.citydb.database.schema.Sequence;
+import org.citydb.database.schema.Table;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.Visitable;
@@ -31,34 +32,40 @@ import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.property.Property;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.importer.ImportHelper;
+import org.citydb.operation.importer.reference.CacheType;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class SequenceHelper {
     private final ImportHelper helper;
-    private final Map<Sequence, PreparedStatement> statements = new EnumMap<>(Sequence.class);
+    private final Map<String, PreparedStatement> statements = new HashMap<>();
 
     public SequenceHelper(ImportHelper helper) {
         this.helper = helper;
     }
 
     public SequenceValues nextSequenceValues(Visitable visitable) throws SQLException {
-        SequenceValues values = new SequenceValues();
+        Processor processor = new Processor();
+        visitable.accept(processor);
+        if (processor.exception != null) {
+            throw processor.exception;
+        }
 
-        Map<Sequence, Integer> counter = new HashMap<>();
-        visitable.accept(new ObjectCounter(counter));
-
-        for (Map.Entry<Sequence, Integer> entry : counter.entrySet()) {
-            PreparedStatement stmt = getOrCreateStatement(entry.getKey());
-            stmt.setInt(1, entry.getValue());
-            try (ResultSet rs = stmt.executeQuery()) {
+        SequenceValues values = new SequenceValues(processor.implicitGeometries);
+        for (Map.Entry<Sequence, Integer> entry : processor.counter.entrySet()) {
+            Sequence sequence = entry.getKey();
+            PreparedStatement statement = getOrCreateStatement(sequence.getName(),
+                    helper.getAdapter().getSchemaAdapter().getNextSequenceValues(sequence));
+            statement.setInt(1, entry.getValue());
+            try (ResultSet rs = statement.executeQuery()) {
                 while (rs.next()) {
-                    values.addValue(entry.getKey(), rs.getLong(1));
+                    values.addValue(sequence, rs.getLong(1));
                 }
             }
         }
@@ -66,15 +73,14 @@ public class SequenceHelper {
         return values;
     }
 
-    private PreparedStatement getOrCreateStatement(Sequence sequence) throws SQLException {
-        PreparedStatement stmt = statements.get(sequence);
-        if (stmt == null) {
-            stmt = helper.getConnection().prepareStatement(
-                    helper.getAdapter().getSchemaAdapter().getNextSequenceValues(sequence));
-            statements.put(sequence, stmt);
+    private PreparedStatement getOrCreateStatement(String name, String sql) throws SQLException {
+        PreparedStatement statement = statements.get(name);
+        if (statement == null) {
+            statement = helper.getConnection().prepareStatement(sql);
+            statements.put(name, statement);
         }
 
-        return stmt;
+        return statement;
     }
 
     public void close() {
@@ -87,12 +93,10 @@ public class SequenceHelper {
         }
     }
 
-    private class ObjectCounter extends ModelWalker {
-        final Map<Sequence, Integer> counter;
-
-        ObjectCounter(Map<Sequence, Integer> counter) {
-            this.counter = counter;
-        }
+    private class Processor extends ModelWalker {
+        private final Map<Sequence, Integer> counter = new HashMap<>();
+        private Set<String> implicitGeometries;
+        private SQLException exception;
 
         @Override
         public void visit(Feature feature) {
@@ -102,11 +106,17 @@ public class SequenceHelper {
 
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
-            if (!helper.lookup(implicitGeometry)) {
-                counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
-                implicitGeometry.getGeometry().ifPresent(geometry ->
-                        counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
-                super.visit(implicitGeometry);
+            try {
+                if (!lookupAndPut(implicitGeometry)) {
+                    counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
+                    implicitGeometry.getGeometry().ifPresent(geometry ->
+                            counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
+                    cache(implicitGeometry);
+                    super.visit(implicitGeometry);
+                }
+            } catch (SQLException e) {
+                setShouldWalk(false);
+                exception = e;
             }
         }
 
@@ -156,5 +166,36 @@ public class SequenceHelper {
             counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum);
             super.visit(property);
         }
+
+        private void cache(ImplicitGeometry implicitGeometry) {
+            if (implicitGeometries == null) {
+                implicitGeometries = new HashSet<>();
+            }
+
+            implicitGeometries.add(implicitGeometry.getObjectId().orElse(null));
+        }
+    }
+
+    private boolean lookupAndPut(ImplicitGeometry implicitGeometry) throws SQLException {
+        String objectId = implicitGeometry.getObjectId().orElse(null);
+        return objectId != null
+                && (helper.getOrCreatePersistentMap("implicit-geometries").putIfAbsent(objectId, true) != null
+                || lookupImplicitGeometry(objectId));
+    }
+
+    private boolean lookupImplicitGeometry(String objectId) throws SQLException {
+        PreparedStatement statement = getOrCreateStatement("lookup-implicit-geometry",
+                "select id from " + helper.getTableHelper().getPrefixedTableName(Table.IMPLICIT_GEOMETRY) +
+                        " where objectid = ? fetch first 1 rows only");
+
+        statement.setString(1, objectId);
+        try (ResultSet rs = statement.executeQuery()) {
+            if (rs.next()) {
+                helper.getOrCreateReferenceCache(CacheType.IMPLICIT_GEOMETRY).putTarget(objectId, rs.getLong(1));
+                return true;
+            }
+        }
+
+        return false;
     }
 }
