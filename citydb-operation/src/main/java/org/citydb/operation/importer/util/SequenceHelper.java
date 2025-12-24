@@ -107,7 +107,7 @@ public class SequenceHelper {
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
             try {
-                if (!lookupAndPut(implicitGeometry)) {
+                if (!helper.lookupAndPut(implicitGeometry) && !existsInDatabase(implicitGeometry)) {
                     counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
                     implicitGeometry.getGeometry().ifPresent(geometry ->
                             counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
@@ -176,23 +176,19 @@ public class SequenceHelper {
         }
     }
 
-    private boolean lookupAndPut(ImplicitGeometry implicitGeometry) throws SQLException {
+    private boolean existsInDatabase(ImplicitGeometry implicitGeometry) throws SQLException {
         String objectId = implicitGeometry.getObjectId().orElse(null);
-        return objectId != null
-                && (helper.getOrCreatePersistentMap("implicit-geometries").putIfAbsent(objectId, true) != null
-                || lookupImplicitGeometry(objectId));
-    }
+        if (objectId != null) {
+            PreparedStatement statement = getOrCreateStatement("lookup-implicit-geometry",
+                    "select id from " + helper.getTableHelper().getPrefixedTableName(Table.IMPLICIT_GEOMETRY) +
+                            " where objectid = ? fetch first 1 rows only");
 
-    private boolean lookupImplicitGeometry(String objectId) throws SQLException {
-        PreparedStatement statement = getOrCreateStatement("lookup-implicit-geometry",
-                "select id from " + helper.getTableHelper().getPrefixedTableName(Table.IMPLICIT_GEOMETRY) +
-                        " where objectid = ? fetch first 1 rows only");
-
-        statement.setString(1, objectId);
-        try (ResultSet rs = statement.executeQuery()) {
-            if (rs.next()) {
-                helper.getOrCreateReferenceCache(CacheType.IMPLICIT_GEOMETRY).putTarget(objectId, rs.getLong(1));
-                return true;
+            statement.setString(1, objectId);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    helper.getOrCreateReferenceCache(CacheType.IMPLICIT_GEOMETRY).putTarget(objectId, rs.getLong(1));
+                    return true;
+                }
             }
         }
 
