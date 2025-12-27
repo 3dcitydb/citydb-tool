@@ -22,17 +22,33 @@
 package org.citydb.operation.importer.util;
 
 import org.citydb.database.schema.Sequence;
+import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Referencable;
 import org.citydb.model.geometry.ImplicitGeometry;
 
 import java.sql.SQLException;
 import java.util.*;
 
 public class SequenceValues {
-    private final Set<String> implicitGeometries;
     private final Map<Sequence, Deque<Long>> values = new EnumMap<>(Sequence.class);
+    private Set<String> implicitGeometries;
+    private Set<String> externalFiles;
 
-    SequenceValues(Set<String> implicitGeometries) {
+    private SequenceValues() {
+    }
+
+    static SequenceValues newInstance() {
+        return new SequenceValues();
+    }
+
+    SequenceValues withImplicitGeometries(Set<String> implicitGeometries) {
         this.implicitGeometries = implicitGeometries;
+        return this;
+    }
+
+    SequenceValues withExternalFiles(Set<String> externalFiles) {
+        this.externalFiles = externalFiles;
+        return this;
     }
 
     void addValue(Sequence sequence, long value) {
@@ -54,9 +70,17 @@ public class SequenceValues {
     }
 
     public boolean hasValueFor(ImplicitGeometry implicitGeometry) {
-        if (implicitGeometries != null) {
-            String objectId = implicitGeometry.getObjectId().orElse(null);
-            return objectId == null || implicitGeometries.remove(objectId);
+        return hasValueFor(implicitGeometry, implicitGeometries);
+    }
+
+    public boolean hasValueFor(ExternalFile externalFile) {
+        return hasValueFor(externalFile, externalFiles);
+    }
+
+    private boolean hasValueFor(Referencable object, Set<String> objects) {
+        if (objects != null) {
+            String objectId = object.getObjectId().orElse(null);
+            return objectId == null || objects.remove(objectId);
         } else {
             return false;
         }

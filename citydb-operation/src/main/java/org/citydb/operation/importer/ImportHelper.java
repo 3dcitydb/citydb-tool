@@ -171,6 +171,11 @@ public class ImportHelper {
         return objectId != null && store.getOrCreateMap("implicit-geometries").putIfAbsent(objectId, true) != null;
     }
 
+    public boolean lookupAndPut(ExternalFile externalFile) {
+        String objectId = externalFile.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("external-files").putIfAbsent(objectId, true) != null;
+    }
+
     FeatureDescriptor importFeature(Feature feature) throws ImportException {
         try {
             if (transformer != null) {

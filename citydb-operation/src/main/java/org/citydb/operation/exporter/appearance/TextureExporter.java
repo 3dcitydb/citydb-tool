@@ -23,11 +23,9 @@ package org.citydb.operation.exporter.appearance;
 
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.Texture;
-import org.citydb.model.appearance.TextureImageProperty;
 import org.citydb.model.appearance.TextureType;
 import org.citydb.model.appearance.WrapMode;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Reference;
 import org.citydb.operation.exporter.ExportConstants;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
@@ -66,14 +64,12 @@ public abstract class TextureExporter extends SurfaceDataExporter {
 
             ExternalFile textureImage = externalFileHelper.createExternalFile(texImageId, imageURI, mimeType);
             if (textureImage != null) {
-                if (helper.lookupAndPut(textureImage)) {
-                    texture.setTextureImageProperty(TextureImageProperty.of(Reference.of(
-                            textureImage.getOrCreateObjectId())));
-                } else {
+                texture.setTextureImage(textureImage
+                        .setMimeType(mimeType)
+                        .setMimeTypeCodeSpace(rs.getString("mime_type_codespace")));
+
+                if (!helper.lookupAndPut(textureImage)) {
                     blobExporter.addBatch(texImageId, textureImage);
-                    texture.setTextureImageProperty(TextureImageProperty.of(textureImage
-                            .setMimeType(mimeType)
-                            .setMimeTypeCodeSpace(rs.getString("mime_type_codespace"))));
                 }
             }
         }

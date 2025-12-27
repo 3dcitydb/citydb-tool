@@ -101,6 +101,10 @@ public abstract class DatabaseImporter {
         return helper.getSequenceValues().hasValueFor(implicitGeometry);
     }
 
+    protected boolean canImport(ExternalFile externalFile) {
+        return helper.getSequenceValues().hasValueFor(externalFile);
+    }
+
     protected void cacheTarget(CacheType type, String objectId, long id) {
         if (objectId != null) {
             helper.getOrCreateReferenceCache(type).putTarget(objectId, id);

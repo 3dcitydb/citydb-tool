@@ -28,7 +28,6 @@ import org.citydb.io.citygml.reader.ModelBuilderHelper;
 import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.appearance.GeoreferencedTexture;
-import org.citydb.model.appearance.TextureImageProperty;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Point;
@@ -58,8 +57,7 @@ public class GeoreferencedTextureAdapter extends TextureAdapter<GeoreferencedTex
         if (source.getOrientation() == null
                 && source.getReferencePoint() == null
                 && source.getImageURI() != null) {
-            ExternalFile textureImage = target.getTextureImageProperty()
-                    .flatMap(TextureImageProperty::getObject)
+            ExternalFile textureImage = target.getTextureImage()
                     .orElseGet(() -> ExternalFile.of(source.getImageURI()));
             processWorldFile(source, textureImage, helper);
         }
