@@ -35,20 +35,14 @@ import org.citydb.operation.importer.reference.CacheType;
 import org.slf4j.event.Level;
 
 import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.Collections;
 
 public class ImplicitGeometryImporter extends DatabaseImporter {
-    private final PreparedStatement lookupImplicitGeometry;
 
     public ImplicitGeometryImporter(ImportHelper helper) throws SQLException {
         super(Table.IMPLICIT_GEOMETRY, helper);
-        lookupImplicitGeometry = helper.getConnection().prepareStatement("select id from " +
-                tableHelper.getPrefixedTableName(table) +
-                " where objectid = ? fetch first 1 rows only");
     }
 
     @Override
@@ -60,18 +54,11 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
     }
 
     public long doImport(ImplicitGeometry implicitGeometry, long featureId) throws ImportException, SQLException {
-        String objectId = implicitGeometry.getObjectId().orElse(null);
-
-        long implicitGeometryId = lookupImplicitGeometry(objectId);
-        if (implicitGeometryId > 0) {
-            cacheTarget(CacheType.IMPLICIT_GEOMETRY, objectId, implicitGeometryId);
-            return implicitGeometryId;
-        } else {
-            implicitGeometryId = nextSequenceValue(Sequence.IMPLICIT_GEOMETRY);
-        }
+        String objectId = implicitGeometry.getOrCreateObjectId();
+        long implicitGeometryId = nextSequenceValue(Sequence.IMPLICIT_GEOMETRY);
 
         stmt.setLong(1, implicitGeometryId);
-        stmt.setString(2, implicitGeometry.getOrCreateObjectId());
+        stmt.setString(2, objectId);
 
         if (implicitGeometry.getGeometry().isPresent()) {
             stmt.setNull(3, Types.VARCHAR);
@@ -111,24 +98,5 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
         }
 
         return implicitGeometryId;
-    }
-
-    private long lookupImplicitGeometry(String objectId) throws SQLException {
-        if (objectId != null) {
-            lookupImplicitGeometry.setString(1, objectId);
-            try (ResultSet rs = lookupImplicitGeometry.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getLong(1);
-                }
-            }
-        }
-
-        return 0;
-    }
-
-    @Override
-    public void close() throws SQLException {
-        super.close();
-        lookupImplicitGeometry.close();
     }
 }

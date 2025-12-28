@@ -22,7 +22,6 @@
 package org.citydb.model.encoding;
 
 import org.citydb.model.appearance.Texture;
-import org.citydb.model.appearance.TextureImageProperty;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -123,10 +122,9 @@ public class ModelObjectWriter {
 
         @Override
         public void visit(Texture<?> texture) {
-            texture.getTextureImageProperty()
-                    .flatMap(TextureImageProperty::getObject)
-                    .ifPresent(externalFile -> externalFile.getPath()
-                            .ifPresent(path -> externalFile.setPath(copied.computeIfAbsent(path,
+            texture.getTextureImage()
+                    .ifPresent(textureImage -> textureImage.getPath()
+                            .ifPresent(path -> textureImage.setPath(copied.computeIfAbsent(path,
                                     k -> helper.copyTexture(path, outputFolder)))));
 
             super.visit(texture);

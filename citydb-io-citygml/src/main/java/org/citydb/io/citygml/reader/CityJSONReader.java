@@ -27,6 +27,7 @@ import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.file.InputFile;
 import org.citydb.io.citygml.CityGMLAdapterContext;
+import org.citydb.io.citygml.reader.preprocess.CityJSONPreprocessor;
 import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
@@ -35,10 +36,8 @@ import org.citydb.io.reader.filter.Filter;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.cityjson.CityJSONContext;
 import org.citygml4j.core.model.core.AbstractFeature;
-import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xmlobjects.gml.util.reference.ReferenceResolver;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -54,6 +53,7 @@ public class CityJSONReader implements FeatureReader {
     private final CityJSONFormatOptions formatOptions;
     private final PersistentMapStore store;
     private final Filter filter;
+    private final CityJSONPreprocessor preprocessor = new CityJSONPreprocessor();
 
     private volatile boolean shouldRun = true;
     private Throwable exception;
@@ -96,17 +96,17 @@ public class CityJSONReader implements FeatureReader {
 
         try (org.citygml4j.cityjson.reader.CityJSONReader reader = factory.createReader(file)) {
             FileMetadata metadata = FileMetadata.of(reader);
-            ReferenceResolver referenceResolver = DefaultReferenceResolver.newInstance();
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->
                     new ModelBuilderHelper(file, store, adapterContext).initialize(metadata, options, formatOptions));
 
             while (shouldRun && reader.hasNext()) {
                 AbstractFeature feature = reader.next();
+                preprocessor.processGlobalObjects(feature);
 
                 countLatch.increment();
                 service.execute(() -> {
                     try {
-                        referenceResolver.resolveReferences(feature);
+                        preprocessor.process(feature);
                         Feature object = helpers.get().getTopLevelFeature(feature);
                         if (object != null) {
                             Filter.Result result = filter.test(object);

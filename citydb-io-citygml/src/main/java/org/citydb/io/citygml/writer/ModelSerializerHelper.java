@@ -40,7 +40,6 @@ import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Child;
-import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
@@ -222,19 +221,15 @@ public class ModelSerializerHelper {
         if (geometry != null) {
             String objectId = geometry.getObjectId().orElse(null);
             if (objectId != null) {
-                boolean isExported = getOrCreatePersistentMap("implicit-geometries")
+                boolean isWritten = getOrCreatePersistentMap("implicit-geometries")
                         .putIfAbsent(objectId, true) != null;
-                return !geometryIdCache.add(objectId) || isExported;
+                return !geometryIdCache.add(objectId) || isWritten;
             }
 
             return false;
         } else {
             return true;
         }
-    }
-
-    public ExternalFile lookupExternalFile(String objectId) {
-        return objectId != null ? preprocessor.lookupExternalFile(objectId) : null;
     }
 
     public void writeAsGlobalFeature(AbstractFeature feature) {

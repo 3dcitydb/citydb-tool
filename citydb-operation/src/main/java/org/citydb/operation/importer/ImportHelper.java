@@ -21,6 +21,7 @@
 
 package org.citydb.operation.importer;
 
+import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
@@ -30,6 +31,7 @@ import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.util.AffineTransformer;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.feature.FeatureImporter;
@@ -54,6 +56,7 @@ public class ImportHelper {
     private final DatabaseAdapter adapter;
     private final ImportOptions options;
     private final ReferenceManager referenceManager;
+    private final PersistentMapStore store;
     private final ImportLogger importLogger;
     private final Connection connection;
     private final SchemaMapping schemaMapping;
@@ -71,10 +74,11 @@ public class ImportHelper {
     private int batchCounter;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
-                 ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
+                 PersistentMapStore store, ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
         this.adapter = adapter;
         this.options = options;
         this.referenceManager = referenceManager;
+        this.store = store;
         this.importLogger = importLogger;
         this.transactionMode = transactionMode;
 
@@ -160,6 +164,16 @@ public class ImportHelper {
         }
 
         return null;
+    }
+
+    public boolean lookupAndPut(ImplicitGeometry implicitGeometry) {
+        String objectId = implicitGeometry.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("implicit-geometries").putIfAbsent(objectId, true) != null;
+    }
+
+    public boolean lookupAndPut(ExternalFile externalFile) {
+        String objectId = externalFile.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("external-files").putIfAbsent(objectId, true) != null;
     }
 
     FeatureDescriptor importFeature(Feature feature) throws ImportException {

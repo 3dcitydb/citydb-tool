@@ -33,6 +33,7 @@ import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
@@ -94,6 +95,14 @@ public abstract class DatabaseImporter {
 
     protected long nextSequenceValue(Sequence sequence) throws SQLException {
         return helper.getSequenceValues().next(sequence);
+    }
+
+    protected boolean canImport(ImplicitGeometry implicitGeometry) {
+        return helper.getSequenceValues().hasValueFor(implicitGeometry);
+    }
+
+    protected boolean canImport(ExternalFile externalFile) {
+        return helper.getSequenceValues().hasValueFor(externalFile);
     }
 
     protected void cacheTarget(CacheType type, String objectId, long id) {

@@ -21,20 +21,22 @@
 
 package org.citydb.model.appearance;
 
+import org.citydb.model.common.ExternalFile;
+
 import java.util.Optional;
 
 public abstract class Texture<T extends Texture<?>> extends SurfaceData<T> {
-    private TextureImageProperty textureImageProperty;
+    private ExternalFile textureImage;
     private TextureType textureType;
     private WrapMode wrapMode;
     private Color borderColor;
 
-    public Optional<TextureImageProperty> getTextureImageProperty() {
-        return Optional.ofNullable(textureImageProperty);
+    public Optional<ExternalFile> getTextureImage() {
+        return Optional.ofNullable(textureImage);
     }
 
-    public T setTextureImageProperty(TextureImageProperty textureImageProperty) {
-        this.textureImageProperty = textureImageProperty;
+    public T setTextureImage(ExternalFile textureImage) {
+        this.textureImage = textureImage;
         return self();
     }
 

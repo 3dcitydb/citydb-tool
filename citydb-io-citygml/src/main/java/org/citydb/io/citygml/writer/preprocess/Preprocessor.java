@@ -21,21 +21,14 @@
 
 package org.citydb.io.citygml.writer.preprocess;
 
-import org.citydb.model.appearance.Texture;
-import org.citydb.model.appearance.TextureImageProperty;
-import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.walker.ModelWalker;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class Preprocessor {
     private final Processor processor = new Processor();
-    private final Map<String, ExternalFile> externalFiles = new HashMap<>();
 
     private boolean checkForDeprecatedLod4Geometry;
     private boolean hasDeprecatedLod4Geometry;
@@ -53,13 +46,8 @@ public class Preprocessor {
         return hasDeprecatedLod4Geometry;
     }
 
-    public ExternalFile lookupExternalFile(String objectId) {
-        return externalFiles.get(objectId);
-    }
-
     public void clear() {
         hasDeprecatedLod4Geometry = false;
-        externalFiles.clear();
     }
 
     private class Processor extends ModelWalker {
@@ -82,13 +70,6 @@ public class Preprocessor {
                     && property.getName().getNamespace().equals(Namespaces.DEPRECATED)) {
                 hasDeprecatedLod4Geometry = true;
             }
-        }
-
-        @Override
-        public void visit(Texture<?> texture) {
-            texture.getTextureImageProperty()
-                    .flatMap(TextureImageProperty::getObject)
-                    .ifPresent(externalFile -> externalFiles.put(externalFile.getOrCreateObjectId(), externalFile));
         }
     }
 }

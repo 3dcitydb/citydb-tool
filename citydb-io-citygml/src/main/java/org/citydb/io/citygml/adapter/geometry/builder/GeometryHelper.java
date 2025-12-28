@@ -148,11 +148,16 @@ public class GeometryHelper {
     public ImplicitGeometryProperty getImplicitGeometry(org.citygml4j.core.model.core.ImplicitGeometry source, Name name, boolean force2D) throws ModelBuildException {
         if (source != null) {
             if (source.getRelativeGeometry() != null) {
-                if (source.getRelativeGeometry().isSetInlineObject()) {
-                    Geometry<?> geometry = getGeometry(source.getRelativeGeometry().getObject(), force2D);
-                    if (geometry != null) {
-                        return ImplicitGeometryProperty.of(name, ImplicitGeometry.of(geometry
-                                .setSrsIdentifier(source.getRelativeGeometry().getObject().getSrsName())));
+                if (source.getRelativeGeometry().getObject() != null) {
+                    AbstractGeometry template = source.getRelativeGeometry().getObject();
+                    if (helper.lookupAndPut(template)) {
+                        return ImplicitGeometryProperty.of(name, Reference.of(template.getId()));
+                    } else {
+                        Geometry<?> geometry = getGeometry(template, force2D);
+                        if (geometry != null) {
+                            return ImplicitGeometryProperty.of(name, ImplicitGeometry.of(geometry
+                                    .setSrsIdentifier(template.getSrsName())));
+                        }
                     }
                 } else if (source.getRelativeGeometry().getHref() != null) {
                     return ImplicitGeometryProperty.of(name, Reference.of(
