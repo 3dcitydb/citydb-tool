@@ -60,14 +60,12 @@ public class CityGMLPreprocessor {
     private volatile boolean shouldRun = true;
 
     public CityGMLPreprocessor() {
-        ThreadLocal<CopyBuilder> copyBuilders = ThreadLocal.withInitial(() ->
-                new CopyBuilder().failOnError(true));
-
-        appearanceConverter = new GlobalAppearanceConverter(copyBuilders::get);
-        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilders::get, referenceResolver);
-        globalReferenceResolver = new GeometryReferenceResolver(copyBuilders::get);
-        propertiesProcessor = new DeprecatedPropertiesProcessor(copyBuilders::get);
-        crossLodResolver = new CrossLodReferenceResolver(copyBuilders::get)
+        CopyBuilder copyBuilder = new CopyBuilder();
+        appearanceConverter = new GlobalAppearanceConverter(copyBuilder);
+        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder, referenceResolver);
+        globalReferenceResolver = new GeometryReferenceResolver(copyBuilder);
+        propertiesProcessor = new DeprecatedPropertiesProcessor(copyBuilder);
+        crossLodResolver = new CrossLodReferenceResolver(copyBuilder)
                 .setMode(CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
     }
 

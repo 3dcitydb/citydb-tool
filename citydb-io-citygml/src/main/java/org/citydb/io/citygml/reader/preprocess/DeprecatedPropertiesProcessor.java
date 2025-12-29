@@ -77,10 +77,9 @@ import org.xmlobjects.gml.model.geometry.primitives.*;
 import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Supplier;
 
 public class DeprecatedPropertiesProcessor {
-    private final Supplier<CopyBuilder> copyBuilderSupplier;
+    private final CopyBuilder copyBuilder;
     private final DeprecatedPropertiesWalker deprecatedPropertiesWalker = new DeprecatedPropertiesWalker();
     private final LodFilter lodFilter = new LodFilter()
             .setMode(LodFilter.Mode.REMOVE)
@@ -91,8 +90,8 @@ public class DeprecatedPropertiesProcessor {
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
 
-    DeprecatedPropertiesProcessor(Supplier<CopyBuilder> copyBuilderSupplier) {
-        this.copyBuilderSupplier = copyBuilderSupplier;
+    DeprecatedPropertiesProcessor(CopyBuilder copyBuilder) {
+        this.copyBuilder = copyBuilder;
     }
 
     boolean isUseLod4AsLod3() {
@@ -767,7 +766,7 @@ public class DeprecatedPropertiesProcessor {
         }
 
         public <S extends T, D extends T, T> D copy(S src, D dest, Class<T> template) {
-            return copyBuilderSupplier.get().shallowCopy(src, dest, template);
+            return copyBuilder.shallowCopy(src, dest, template);
         }
     }
 }

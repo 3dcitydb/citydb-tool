@@ -34,10 +34,8 @@ public class CityJSONPreprocessor {
     private final ImplicitGeometryCollector collector = new ImplicitGeometryCollector();
 
     public CityJSONPreprocessor() {
-        ThreadLocal<CopyBuilder> copyBuilders = ThreadLocal.withInitial(() ->
-                new CopyBuilder().failOnError(true));
-
-        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilders::get, referenceResolver);
+        CopyBuilder copyBuilder = new CopyBuilder();
+        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder, referenceResolver);
     }
 
     public void processGlobalObjects(AbstractFeature abstractFeature) {

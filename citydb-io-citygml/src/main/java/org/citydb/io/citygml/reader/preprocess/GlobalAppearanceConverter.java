@@ -41,10 +41,9 @@ import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
 public class GlobalAppearanceConverter {
-    private final Supplier<CopyBuilder> copyBuilderSupplier;
+    private final CopyBuilder copyBuilder;
     private final Map<String, List<AbstractSurfaceData>> targets = new ConcurrentHashMap<>();
     private final String ID = "id";
 
@@ -60,8 +59,8 @@ public class GlobalAppearanceConverter {
         }
     }
 
-    GlobalAppearanceConverter(Supplier<CopyBuilder> copyBuilderSupplier) {
-        this.copyBuilderSupplier = copyBuilderSupplier;
+    GlobalAppearanceConverter(CopyBuilder copyBuilder) {
+        this.copyBuilder = copyBuilder;
     }
 
     GlobalAppearanceConverter setMode(Mode mode) {
@@ -87,7 +86,7 @@ public class GlobalAppearanceConverter {
                 public void visit(AbstractInlineOrByReferenceProperty<?> property) {
                     if (property.isSetReferencedObject()) {
                         Child child = property.getObject();
-                        property.setInlineObjectIfValid(copyBuilderSupplier.get().shallowCopy(child));
+                        property.setInlineObjectIfValid(copyBuilder.shallowCopy(child));
                         property.setHref(null);
                     }
 
@@ -102,8 +101,7 @@ public class GlobalAppearanceConverter {
                         while (iterator.hasNext()) {
                             TextureAssociationReference reference = iterator.next();
                             if (reference.isSetReferencedObject()) {
-                                TextureAssociation copy = copyBuilderSupplier.get()
-                                        .shallowCopy(reference.getReferencedObject());
+                                TextureAssociation copy = copyBuilder.shallowCopy(reference.getReferencedObject());
                                 texture.getTextureParameterizations().add(new TextureAssociationProperty(copy));
                                 iterator.remove();
                             } else if (reference.getURI() != null) {
@@ -246,7 +244,7 @@ public class GlobalAppearanceConverter {
                 }
             }
 
-            Appearance appearance = copyBuilderSupplier.get().shallowCopy(globalAppearance);
+            Appearance appearance = copyBuilder.shallowCopy(globalAppearance);
             appearance.setId(target instanceof ImplicitGeometry ? FeatureHelper.createId() : null);
             appearance.setSurfaceData(null);
             appearance.setLocalProperties(null);
@@ -267,7 +265,7 @@ public class GlobalAppearanceConverter {
                 }
             }
 
-            AbstractSurfaceData surfaceData = copyBuilderSupplier.get().shallowCopy(globalSurfaceData);
+            AbstractSurfaceData surfaceData = copyBuilder.shallowCopy(globalSurfaceData);
             surfaceData.setId(null);
             surfaceData.setLocalProperties(null);
             surfaceData.getLocalProperties().set(ID, globalSurfaceData.getLocalProperties().get(ID));

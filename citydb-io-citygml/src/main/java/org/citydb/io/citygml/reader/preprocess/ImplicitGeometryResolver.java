@@ -33,16 +33,15 @@ import org.xmlobjects.util.copy.CopyBuilder;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
 public class ImplicitGeometryResolver {
-    private final Supplier<CopyBuilder> copyBuilderSupplier;
+    private final CopyBuilder copyBuilder;
     private final ReferenceResolver referenceResolver;
     private final Map<String, ImplicitGeometry> implicitGeometries = new ConcurrentHashMap<>();
     private final ResolverProcessor processor = new ResolverProcessor();
 
-    ImplicitGeometryResolver(Supplier<CopyBuilder> copyBuilderSupplier, ReferenceResolver referenceResolver) {
-        this.copyBuilderSupplier = copyBuilderSupplier;
+    ImplicitGeometryResolver(CopyBuilder copyBuilder, ReferenceResolver referenceResolver) {
+        this.copyBuilder = copyBuilder;
         this.referenceResolver = referenceResolver;
     }
 
@@ -96,7 +95,7 @@ public class ImplicitGeometryResolver {
 
                         if (template.isSetAppearances()) {
                             template.getAppearances().forEach(p -> implicitGeometry.getAppearances().add(
-                                    copyBuilderSupplier.get().shallowCopy(p)));
+                                    copyBuilder.shallowCopy(p)));
                         }
                     }
                 }
