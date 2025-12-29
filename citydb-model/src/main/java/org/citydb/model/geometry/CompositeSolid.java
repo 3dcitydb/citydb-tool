@@ -49,6 +49,14 @@ public class CompositeSolid extends SolidCollection<CompositeSolid> {
     }
 
     @Override
+    public CompositeSolid copy() {
+        return new CompositeSolid(getSolids().stream()
+                .map(Solid::copy)
+                .toArray(Solid[]::new))
+                .copyPropertiesFrom(this);
+    }
+
+    @Override
     public GeometryType getGeometryType() {
         return GeometryType.COMPOSITE_SOLID;
     }

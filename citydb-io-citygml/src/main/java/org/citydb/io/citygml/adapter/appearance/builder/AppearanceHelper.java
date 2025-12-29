@@ -58,6 +58,9 @@ public class AppearanceHelper {
     private boolean processAppearances = true;
     private Set<String> themes;
 
+    private record TargetContext<T extends Child>(T target, GeometryProperty<?> parent) {
+    }
+
     public AppearanceHelper(ModelBuilderHelper helper) {
         this.helper = helper;
         builder = new AppearanceBuilder(this);
@@ -196,7 +199,7 @@ public class AppearanceHelper {
 
                     rings.getOrDefault(source, Collections.emptyList()).stream()
                             .filter(this::isValidContext)
-                            .map(TargetContext::getTarget)
+                            .map(TargetContext::target)
                             .forEach(ring -> target.addTextureCoordinates(ring,
                                     createTextureCoordinates(textureCoordinates, ring)));
                 }
@@ -246,7 +249,7 @@ public class AppearanceHelper {
                 if (contexts != null) {
                     return contexts.stream()
                             .filter(this::isValidContext)
-                            .map(TargetContext::getTarget)
+                            .map(TargetContext::target)
                             .collect(Collectors.toList());
                 } else {
                     List<Surface<?>> targets = new ArrayList<>();
@@ -264,7 +267,7 @@ public class AppearanceHelper {
                         private void process(GMLObject geometry) {
                             surfaces.getOrDefault(geometry, Collections.emptyList()).stream()
                                     .filter(context -> isValidContext(context))
-                                    .map(TargetContext::getTarget)
+                                    .map(TargetContext::target)
                                     .forEach(targets::add);
                         }
                     });
@@ -277,25 +280,7 @@ public class AppearanceHelper {
         }
 
         private boolean isValidContext(TargetContext<?> context) {
-            return context.getParent() == null || contexts.contains(context.getParent());
-        }
-    }
-
-    private static class TargetContext<T extends Child> {
-        private final T target;
-        private final GeometryProperty<?> parent;
-
-        TargetContext(T target, GeometryProperty<?> parent) {
-            this.target = target;
-            this.parent = parent;
-        }
-
-        T getTarget() {
-            return target;
-        }
-
-        GeometryProperty<?> getParent() {
-            return parent;
+            return context.parent() == null || contexts.contains(context.parent());
         }
     }
 }
