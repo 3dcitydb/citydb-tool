@@ -72,14 +72,6 @@ public class LineString extends Geometry<LineString> {
     }
 
     @Override
-    public LineString copy() {
-        return new LineString(points.stream()
-                .map(Coordinate::copy)
-                .toArray(Coordinate[]::new))
-                .copyPropertiesFrom(this);
-    }
-
-    @Override
     public GeometryType getGeometryType() {
         return GeometryType.LINE_STRING;
     }

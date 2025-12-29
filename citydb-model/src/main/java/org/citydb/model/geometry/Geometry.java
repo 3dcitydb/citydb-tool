@@ -35,8 +35,6 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     private String srsIdentifier;
     private GeometryDescriptor descriptor;
 
-    public abstract T copy();
-
     public abstract GeometryType getGeometryType();
 
     abstract T self();

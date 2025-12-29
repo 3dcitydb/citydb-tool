@@ -111,10 +111,4 @@ public class Coordinate implements Serializable {
         dimension = 2;
         return this;
     }
-
-    public Coordinate copy() {
-        return dimension == 2 ?
-                new Coordinate(x, y) :
-                new Coordinate(x, y, z);
-    }
 }

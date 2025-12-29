@@ -49,14 +49,6 @@ public class MultiSurface extends SurfaceCollection<MultiSurface> {
     }
 
     @Override
-    public MultiSurface copy() {
-        return new MultiSurface(getPolygons().stream()
-                .map(Polygon::copy)
-                .toArray(Polygon[]::new))
-                .copyPropertiesFrom(this);
-    }
-
-    @Override
     public GeometryType getGeometryType() {
         return GeometryType.MULTI_SURFACE;
     }

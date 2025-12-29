@@ -55,12 +55,6 @@ public class Solid extends Geometry<Solid> {
     }
 
     @Override
-    public Solid copy() {
-        return new Solid(shell.copy())
-                .copyPropertiesFrom(this);
-    }
-
-    @Override
     public GeometryType getGeometryType() {
         return GeometryType.SOLID;
     }

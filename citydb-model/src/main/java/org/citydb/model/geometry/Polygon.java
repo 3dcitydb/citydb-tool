@@ -129,17 +129,6 @@ public class Polygon extends Surface<Polygon> {
     }
 
     @Override
-    public Polygon copy() {
-        return new Polygon(exteriorRing.copy(),
-                interiorRings != null ? interiorRings.stream()
-                        .map(LinearRing::copy)
-                        .toArray(LinearRing[]::new) :
-                        null,
-                reversed)
-                .copyPropertiesFrom(this);
-    }
-
-    @Override
     public GeometryType getGeometryType() {
         return GeometryType.POLYGON;
     }

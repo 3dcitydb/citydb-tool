@@ -78,11 +78,4 @@ public class LinearRing extends Child implements Referencable {
         points.forEach(Coordinate::force2D);
         return this;
     }
-
-    public LinearRing copy() {
-        return new LinearRing(points.stream()
-                .map(Coordinate::copy)
-                .toArray(Coordinate[]::new))
-                .setObjectId(objectId);
-    }
 }

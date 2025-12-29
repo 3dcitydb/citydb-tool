@@ -49,14 +49,6 @@ public class MultiSolid extends SolidCollection<MultiSolid> {
     }
 
     @Override
-    public MultiSolid copy() {
-        return new MultiSolid(getSolids().stream()
-                .map(Solid::copy)
-                .toArray(Solid[]::new))
-                .copyPropertiesFrom(this);
-    }
-
-    @Override
     public GeometryType getGeometryType() {
         return GeometryType.MULTI_SOLID;
     }
