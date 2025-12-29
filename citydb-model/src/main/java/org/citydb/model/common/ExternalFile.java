@@ -80,7 +80,7 @@ public class ExternalFile implements Referencable, Serializable {
     }
 
     @Override
-    public Referencable setObjectId(String objectId) {
+    public ExternalFile setObjectId(String objectId) {
         this.objectId = objectId;
         return this;
     }
