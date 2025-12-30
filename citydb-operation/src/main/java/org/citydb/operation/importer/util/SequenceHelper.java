@@ -112,7 +112,9 @@ public class SequenceHelper {
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
             try {
-                if (!helper.lookupAndPut(implicitGeometry) && !existsInDatabase(implicitGeometry)) {
+                if (!lookup(CacheType.IMPLICIT_GEOMETRY, implicitGeometry)
+                        && !helper.lookupAndPut(implicitGeometry)
+                        && !existsInDatabase(implicitGeometry)) {
                     count(Sequence.IMPLICIT_GEOMETRY);
                     implicitGeometry.getGeometry().ifPresent(geometry -> count(Sequence.GEOMETRY_DATA));
                     cache(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
@@ -145,7 +147,9 @@ public class SequenceHelper {
         @Override
         public void visit(Texture<?> texture) {
             ExternalFile textureImage = texture.getTextureImage().orElse(null);
-            if (textureImage != null && !helper.lookupAndPut(textureImage)) {
+            if (textureImage != null
+                    && !lookup(CacheType.TEXTURE_IMAGE, textureImage)
+                    && !helper.lookupAndPut(textureImage)) {
                 count(Sequence.TEX_IMAGE);
                 cache(CacheType.TEXTURE_IMAGE, textureImage);
             }
@@ -173,6 +177,16 @@ public class SequenceHelper {
 
         private void count(Sequence sequence) {
             counter.merge(sequence, 1, Integer::sum);
+        }
+
+        private boolean lookup(CacheType type, Referencable object) {
+            Set<String> ids = idCache.get(type);
+            if (ids != null) {
+                String objectId = object.getObjectId().orElse(null);
+                return objectId != null && ids.contains(objectId);
+            } else {
+                return false;
+            }
         }
 
         private void cache(CacheType type, Referencable object) {
