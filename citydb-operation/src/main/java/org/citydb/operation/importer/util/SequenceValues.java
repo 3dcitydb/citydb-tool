@@ -25,30 +25,17 @@ import org.citydb.database.schema.Sequence;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.operation.importer.reference.CacheType;
 
 import java.sql.SQLException;
 import java.util.*;
 
 public class SequenceValues {
+    private final Map<CacheType, Set<String>> idCache;
     private final Map<Sequence, Deque<Long>> values = new EnumMap<>(Sequence.class);
-    private Set<String> implicitGeometries;
-    private Set<String> externalFiles;
 
-    private SequenceValues() {
-    }
-
-    static SequenceValues newInstance() {
-        return new SequenceValues();
-    }
-
-    SequenceValues withImplicitGeometries(Set<String> implicitGeometries) {
-        this.implicitGeometries = implicitGeometries;
-        return this;
-    }
-
-    SequenceValues withExternalFiles(Set<String> externalFiles) {
-        this.externalFiles = externalFiles;
-        return this;
+    SequenceValues(Map<CacheType, Set<String>> idCache) {
+        this.idCache = idCache;
     }
 
     void addValue(Sequence sequence, long value) {
@@ -70,17 +57,18 @@ public class SequenceValues {
     }
 
     public boolean hasValueFor(ImplicitGeometry implicitGeometry) {
-        return hasValueFor(implicitGeometry, implicitGeometries);
+        return hasValueFor(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
     }
 
     public boolean hasValueFor(ExternalFile externalFile) {
-        return hasValueFor(externalFile, externalFiles);
+        return hasValueFor(CacheType.TEXTURE_IMAGE, externalFile);
     }
 
-    private boolean hasValueFor(Referencable object, Set<String> objects) {
-        if (objects != null) {
+    private boolean hasValueFor(CacheType type, Referencable object) {
+        Set<String> ids = idCache.get(type);
+        if (ids != null && !ids.isEmpty()) {
             String objectId = object.getObjectId().orElse(null);
-            return objectId == null || objects.remove(objectId);
+            return objectId == null || ids.remove(objectId);
         } else {
             return false;
         }

@@ -29,6 +29,7 @@ import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.appearance.SurfaceDataProperty;
 import org.citydb.model.appearance.Texture;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -61,10 +62,7 @@ public class SequenceHelper {
             throw processor.exception;
         }
 
-        SequenceValues values = SequenceValues.newInstance()
-                .withImplicitGeometries(processor.implicitGeometries)
-                .withExternalFiles(processor.externalFiles);
-
+        SequenceValues values = new SequenceValues(processor.idCache);
         for (Map.Entry<Sequence, Integer> entry : processor.counter.entrySet()) {
             Sequence sequence = entry.getKey();
             PreparedStatement statement = getOrCreateStatement(sequence.getName(),
@@ -102,8 +100,7 @@ public class SequenceHelper {
 
     private class Processor extends ModelWalker {
         private final Map<Sequence, Integer> counter = new HashMap<>();
-        private Set<String> implicitGeometries;
-        private Set<String> externalFiles;
+        private final Map<CacheType, Set<String>> idCache = new HashMap<>();
         private SQLException exception;
 
         @Override
@@ -119,7 +116,7 @@ public class SequenceHelper {
                     counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
                     implicitGeometry.getGeometry().ifPresent(geometry ->
                             counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
-                    cache(implicitGeometry);
+                    cache(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
                     super.visit(implicitGeometry);
                 }
             } catch (SQLException e) {
@@ -151,7 +148,7 @@ public class SequenceHelper {
             ExternalFile textureImage = texture.getTextureImage().orElse(null);
             if (textureImage != null && !helper.lookupAndPut(textureImage)) {
                 counter.merge(Sequence.TEX_IMAGE, 1, Integer::sum);
-                cache(textureImage);
+                cache(CacheType.TEXTURE_IMAGE, textureImage);
             }
 
             super.visit(texture);
@@ -175,20 +172,8 @@ public class SequenceHelper {
             super.visit(property);
         }
 
-        private void cache(ImplicitGeometry implicitGeometry) {
-            if (implicitGeometries == null) {
-                implicitGeometries = new HashSet<>();
-            }
-
-            implicitGeometries.add(implicitGeometry.getObjectId().orElse(null));
-        }
-
-        private void cache(ExternalFile externalFile) {
-            if (externalFiles == null) {
-                externalFiles = new HashSet<>();
-            }
-
-            externalFiles.add(externalFile.getObjectId().orElse(null));
+        private void cache(CacheType type, Referencable object) {
+            idCache.computeIfAbsent(type, k -> new HashSet<>()).add(object.getObjectId().orElse(null));
         }
     }
 
