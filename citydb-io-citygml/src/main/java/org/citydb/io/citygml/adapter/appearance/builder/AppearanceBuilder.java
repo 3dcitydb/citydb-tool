@@ -54,17 +54,22 @@ public class AppearanceBuilder implements ModelBuilder<org.citygml4j.core.model.
             for (AbstractSurfaceDataProperty property : source.getSurfaceData()) {
                 if (property != null) {
                     if (property.isSetInlineObject()) {
-                        SurfaceDataAdapter<SurfaceData<?>, AbstractSurfaceData> builder = helper.getContext()
-                                .getBuilderByType(property.getObject().getClass(), SurfaceDataAdapter.class);
-                        if (builder != null) {
-                            SurfaceData<?> surfaceData = builder.createModel(property.getObject());
-                            if (surfaceData != null) {
-                                builder.build(property.getObject(), surfaceData, helper);
-                                target.getSurfaceData().add(SurfaceDataProperty.of(surfaceData));
-                                appearanceHelper.addSurfaceData(surfaceData, property.getObject());
-                            } else {
-                                throw new ModelBuildException("The builder " + builder.getClass().getName() +
-                                        " returned a null object.");
+                        AbstractSurfaceData object = property.getObject();
+                        if (helper.lookupAndPut(object)) {
+                            target.getSurfaceData().add(SurfaceDataProperty.of(Reference.of(object.getId())));
+                        } else {
+                            SurfaceDataAdapter<SurfaceData<?>, AbstractSurfaceData> builder = helper.getContext()
+                                    .getBuilderByType(object.getClass(), SurfaceDataAdapter.class);
+                            if (builder != null) {
+                                SurfaceData<?> surfaceData = builder.createModel(object);
+                                if (surfaceData != null) {
+                                    builder.build(object, surfaceData, helper);
+                                    target.getSurfaceData().add(SurfaceDataProperty.of(surfaceData));
+                                    appearanceHelper.addSurfaceData(surfaceData, object);
+                                } else {
+                                    throw new ModelBuildException("The builder " + builder.getClass().getName() +
+                                            " returned a null object.");
+                                }
                             }
                         }
                     } else {
