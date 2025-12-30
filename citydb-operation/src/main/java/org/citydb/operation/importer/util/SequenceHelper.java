@@ -105,8 +105,11 @@ public class SequenceHelper {
 
         @Override
         public void visit(Feature feature) {
-            count(Sequence.FEATURE);
-            super.visit(feature);
+            if (!lookup(CacheType.FEATURE, feature)) {
+                count(Sequence.FEATURE);
+                cache(CacheType.FEATURE, feature);
+                super.visit(feature);
+            }
         }
 
         @Override
@@ -134,14 +137,20 @@ public class SequenceHelper {
 
         @Override
         public void visit(Address address) {
-            count(Sequence.ADDRESS);
-            super.visit(address);
+            if (!lookup(CacheType.ADDRESS, address)) {
+                count(Sequence.ADDRESS);
+                cache(CacheType.ADDRESS, address);
+                super.visit(address);
+            }
         }
 
         @Override
         public void visit(SurfaceData<?> surfaceData) {
-            count(Sequence.SURFACE_DATA);
-            super.visit(surfaceData);
+            if (!lookup(CacheType.SURFACE_DATA, surfaceData)) {
+                count(Sequence.SURFACE_DATA);
+                cache(CacheType.SURFACE_DATA, surfaceData);
+                super.visit(surfaceData);
+            }
         }
 
         @Override

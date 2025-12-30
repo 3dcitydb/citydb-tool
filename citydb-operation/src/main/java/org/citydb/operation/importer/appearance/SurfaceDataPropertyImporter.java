@@ -54,7 +54,7 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
         stmt.setLong(2, appearanceId);
 
         SurfaceData<?> surfaceData = property.getObject().orElse(null);
-        if (surfaceData != null) {
+        if (surfaceData != null && canImport(surfaceData)) {
             long surfaceDataId = 0;
             if (surfaceData instanceof ParameterizedTexture texture) {
                 surfaceDataId = tableHelper.getOrCreateImporter(ParameterizedTextureImporter.class)
@@ -72,8 +72,11 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
             } else {
                 stmt.setNull(3, Types.BIGINT);
             }
-        } else if (property.getReference().isPresent()) {
-            Reference reference = property.getReference().get();
+        } else {
+            Reference reference = surfaceData != null ?
+                    Reference.of(surfaceData.getOrCreateObjectId()) :
+                    property.getReference().orElseThrow(() -> new ImportException("The surface data property " +
+                            "contains neither an object nor a reference."));
             cacheReference(CacheType.SURFACE_DATA, reference, propertyId);
             stmt.setNull(3, Types.BIGINT);
         }

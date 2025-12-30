@@ -60,12 +60,15 @@ public class FeaturePropertyImporter extends PropertyImporter {
 
     private PropertyDescriptor doImport(FeatureProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
         Feature feature = property.getObject().orElse(null);
-        if (feature != null) {
+        if (feature != null && canImport(feature)) {
             stmt.setLong(7, tableHelper.getOrCreateImporter(FeatureImporter.class)
                     .doImport(feature)
                     .getId());
-        } else if (property.getReference().isPresent()) {
-            Reference reference = property.getReference().get();
+        } else {
+            Reference reference = feature != null ?
+                    Reference.of(feature.getOrCreateObjectId()) :
+                    property.getReference().orElseThrow(() -> new ImportException("The feature property " +
+                            "contains neither an object nor a reference."));
             cacheReference(CacheType.FEATURE, reference, propertyId);
             stmt.setNull(7, Types.BIGINT);
         }

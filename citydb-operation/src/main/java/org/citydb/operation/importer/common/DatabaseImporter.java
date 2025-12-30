@@ -27,6 +27,8 @@ import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
+import org.citydb.model.address.Address;
+import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Reference;
@@ -97,8 +99,20 @@ public abstract class DatabaseImporter {
         return helper.getSequenceValues().next(sequence);
     }
 
+    protected boolean canImport(Feature feature) {
+        return canImport(CacheType.FEATURE, feature);
+    }
+
+    protected boolean canImport(SurfaceData<?> surfaceData) {
+        return canImport(CacheType.SURFACE_DATA, surfaceData);
+    }
+
     protected boolean canImport(ImplicitGeometry implicitGeometry) {
         return canImport(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
+    }
+
+    protected boolean canImport(Address address) {
+        return canImport(CacheType.ADDRESS, address);
     }
 
     protected boolean canImport(ExternalFile externalFile) {
