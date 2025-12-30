@@ -98,11 +98,15 @@ public abstract class DatabaseImporter {
     }
 
     protected boolean canImport(ImplicitGeometry implicitGeometry) {
-        return helper.getSequenceValues().hasValueFor(implicitGeometry);
+        return canImport(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
     }
 
     protected boolean canImport(ExternalFile externalFile) {
-        return helper.getSequenceValues().hasValueFor(externalFile);
+        return canImport(CacheType.TEXTURE_IMAGE, externalFile);
+    }
+
+    private boolean canImport(CacheType type, Referencable object) {
+        return helper.getSequenceValues().hasValueFor(type, object);
     }
 
     protected void cacheTarget(CacheType type, String objectId, long id) {

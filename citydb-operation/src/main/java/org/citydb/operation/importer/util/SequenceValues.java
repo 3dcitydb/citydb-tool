@@ -22,9 +22,7 @@
 package org.citydb.operation.importer.util;
 
 import org.citydb.database.schema.Sequence;
-import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
-import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.importer.reference.CacheType;
 
 import java.sql.SQLException;
@@ -56,15 +54,7 @@ public class SequenceValues {
         }
     }
 
-    public boolean hasValueFor(ImplicitGeometry implicitGeometry) {
-        return hasValueFor(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
-    }
-
-    public boolean hasValueFor(ExternalFile externalFile) {
-        return hasValueFor(CacheType.TEXTURE_IMAGE, externalFile);
-    }
-
-    private boolean hasValueFor(CacheType type, Referencable object) {
+    public boolean hasValueFor(CacheType type, Referencable object) {
         Set<String> ids = idCache.get(type);
         if (ids != null && !ids.isEmpty()) {
             String objectId = object.getObjectId().orElse(null);
