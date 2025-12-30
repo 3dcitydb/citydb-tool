@@ -26,7 +26,6 @@ import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.ModelBuilderHelper;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.ImplicitGeometryProperty;
@@ -151,7 +150,7 @@ public class GeometryHelper {
                 if (source.getRelativeGeometry().getObject() != null) {
                     AbstractGeometry template = source.getRelativeGeometry().getObject();
                     if (helper.lookupAndPut(template)) {
-                        return ImplicitGeometryProperty.of(name, Reference.of(template.getId()));
+                        return ImplicitGeometryProperty.of(name, template.getId());
                     } else {
                         Geometry<?> geometry = getGeometry(template, force2D);
                         if (geometry != null) {
@@ -160,14 +159,14 @@ public class GeometryHelper {
                         }
                     }
                 } else if (source.getRelativeGeometry().getHref() != null) {
-                    return ImplicitGeometryProperty.of(name, Reference.of(
-                            helper.getIdFromReference(source.getRelativeGeometry().getHref())));
+                    return ImplicitGeometryProperty.of(name,
+                            helper.getIdFromReference(source.getRelativeGeometry().getHref()));
                 }
             } else if (source.getLibraryObject() != null) {
                 try {
                     ExternalFile libraryObject = helper.getExternalFile(source.getLibraryObject());
                     return helper.lookupAndPut(libraryObject) ?
-                            ImplicitGeometryProperty.of(name, Reference.of(libraryObject.getOrCreateObjectId())) :
+                            ImplicitGeometryProperty.of(name, libraryObject.getOrCreateObjectId()) :
                             ImplicitGeometryProperty.of(name, ImplicitGeometry.of(libraryObject));
                 } catch (IOException e) {
                     helper.logOrThrow(Level.ERROR, helper.formatMessage(source, "Failed to read library object file " +

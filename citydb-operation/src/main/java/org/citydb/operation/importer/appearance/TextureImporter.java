@@ -26,7 +26,6 @@ import org.citydb.model.appearance.Texture;
 import org.citydb.model.appearance.TextureType;
 import org.citydb.model.appearance.WrapMode;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Reference;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
@@ -55,8 +54,7 @@ public abstract class TextureImporter extends SurfaceDataImporter {
                     stmt.setNull(7, Types.BIGINT);
                 }
             } else {
-                Reference reference = Reference.of(textureImage.getOrCreateObjectId());
-                cacheReference(CacheType.TEXTURE_IMAGE, reference, surfaceDataId);
+                cacheReference(CacheType.TEXTURE_IMAGE, textureImage.getOrCreateObjectId(), surfaceDataId);
                 stmt.setNull(7, Types.BIGINT);
             }
         } else {

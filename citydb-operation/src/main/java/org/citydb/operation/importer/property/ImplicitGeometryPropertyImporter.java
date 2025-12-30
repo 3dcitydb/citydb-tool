@@ -23,7 +23,6 @@ package org.citydb.operation.importer.property;
 
 import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
-import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.PropertyDescriptor;
@@ -68,8 +67,8 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
             stmt.setLong(8, tableHelper.getOrCreateImporter(ImplicitGeometryImporter.class)
                     .doImport(implicitGeometry, featureId));
         } else {
-            Reference reference = implicitGeometry != null ?
-                    Reference.of(implicitGeometry.getOrCreateObjectId()) :
+            String reference = implicitGeometry != null ?
+                    implicitGeometry.getOrCreateObjectId() :
                     property.getReference().orElseThrow(() -> new ImportException("The implicit geometry property " +
                             "contains neither an object nor a reference."));
             cacheReference(CacheType.IMPLICIT_GEOMETRY, reference, propertyId);

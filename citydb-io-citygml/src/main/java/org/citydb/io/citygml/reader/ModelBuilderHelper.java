@@ -42,7 +42,6 @@ import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -512,13 +511,13 @@ public class ModelBuilderHelper {
             if (source.isSetInlineObject()) {
                 org.citygml4j.core.model.core.Address address = source.getObject();
                 if (lookupAndPut(address)) {
-                    return AddressProperty.of(name, Reference.of(address.getId()));
+                    return AddressProperty.of(name, address.getId());
                 } else {
                     return AddressProperty.of(name, buildObject(address, Address.newInstance(),
                             getOrCreateBuilder(AddressAdapter.class)));
                 }
             } else {
-                Reference reference = getFeatureReference(source);
+                String reference = getFeatureReference(source);
                 return reference != null ? AddressProperty.of(name, reference) : null;
             }
         }
@@ -539,7 +538,7 @@ public class ModelBuilderHelper {
             if (source.isSetInlineObject()) {
                 AbstractGML object = source.getObject();
                 if (lookupAndPut(object)) {
-                    return FeatureProperty.of(name, Reference.of(object.getId()), relationType);
+                    return FeatureProperty.of(name, object.getId(), relationType);
                 } else {
                     Feature feature = getFeature(object);
                     if (feature != null) {
@@ -568,7 +567,7 @@ public class ModelBuilderHelper {
     }
 
     public FeatureProperty getFeatureProperty(Name name, ResolvableAssociation<? extends AbstractGML> source, RelationType relationType) {
-        Reference reference = getFeatureReference(source);
+        String reference = getFeatureReference(source);
         return reference != null ? FeatureProperty.of(name, reference, relationType) : null;
     }
 
@@ -650,15 +649,15 @@ public class ModelBuilderHelper {
         }
     }
 
-    public Reference getFeatureReference(ResolvableAssociation<?> association) {
+    public String getFeatureReference(ResolvableAssociation<?> association) {
         return association != null && !AbstractGeometry.class.isAssignableFrom(association.getTargetType()) ?
                 getReference(association) :
                 null;
     }
 
-    private Reference getReference(ResolvableAssociation<?> association) {
+    private String getReference(ResolvableAssociation<?> association) {
         return association != null && association.getHref() != null ?
-                Reference.of(getIdFromReference(association.getHref())) :
+                getIdFromReference(association.getHref()) :
                 null;
     }
 

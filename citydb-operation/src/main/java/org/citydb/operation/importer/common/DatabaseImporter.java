@@ -31,7 +31,6 @@ import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
@@ -129,7 +128,7 @@ public abstract class DatabaseImporter {
         }
     }
 
-    protected void cacheReference(CacheType type, Reference reference, long id) {
+    protected void cacheReference(CacheType type, String reference, long id) {
         if (reference != null) {
             helper.getOrCreateReferenceCache(type).putReference(reference, id);
         }

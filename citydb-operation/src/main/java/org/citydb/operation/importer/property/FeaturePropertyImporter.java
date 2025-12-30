@@ -22,7 +22,6 @@
 package org.citydb.operation.importer.property;
 
 import org.citydb.database.schema.Sequence;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.PropertyDescriptor;
@@ -65,8 +64,8 @@ public class FeaturePropertyImporter extends PropertyImporter {
                     .doImport(feature)
                     .getId());
         } else {
-            Reference reference = feature != null ?
-                    Reference.of(feature.getOrCreateObjectId()) :
+            String reference = feature != null ?
+                    feature.getOrCreateObjectId() :
                     property.getReference().orElseThrow(() -> new ImportException("The feature property " +
                             "contains neither an object nor a reference."));
             cacheReference(CacheType.FEATURE, reference, propertyId);

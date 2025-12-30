@@ -23,7 +23,6 @@ package org.citydb.operation.importer.property;
 
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.address.Address;
-import org.citydb.model.common.Reference;
 import org.citydb.model.property.AddressProperty;
 import org.citydb.model.property.PropertyDescriptor;
 import org.citydb.operation.importer.ImportException;
@@ -65,8 +64,8 @@ public class AddressPropertyImporter extends PropertyImporter {
                     .doImport(address)
                     .getId());
         } else {
-            Reference reference = address != null ?
-                    Reference.of(address.getOrCreateObjectId()) :
+            String reference = address != null ?
+                    address.getOrCreateObjectId() :
                     property.getReference().orElseThrow(() -> new ImportException("The address property " +
                             "contains neither an object nor a reference."));
             cacheReference(CacheType.ADDRESS, reference, propertyId);

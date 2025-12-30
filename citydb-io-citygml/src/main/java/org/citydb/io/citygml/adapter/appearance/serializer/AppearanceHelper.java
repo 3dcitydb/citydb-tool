@@ -29,7 +29,6 @@ import org.citydb.model.appearance.SurfaceDataProperty;
 import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.Matrix3x4;
-import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Surface;
@@ -77,9 +76,7 @@ public class AppearanceHelper {
                 }
             }
         } else {
-            source.getReference()
-                    .map(Reference::getTarget)
-                    .ifPresent(reference -> property.setHref("#" + reference));
+            source.getReference().ifPresent(reference -> property.setHref("#" + reference));
         }
 
         return property;

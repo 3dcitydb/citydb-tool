@@ -24,7 +24,6 @@ package org.citydb.model.property;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 
 import java.util.Objects;
@@ -32,21 +31,19 @@ import java.util.Optional;
 
 public class FeatureProperty extends Property<FeatureProperty> implements InlineOrByReferenceProperty<Feature> {
     private Feature feature;
-    private Reference reference;
+    private String reference;
     private RelationType relationType;
 
     private FeatureProperty(Name name, Feature feature, RelationType relationType) {
         super(name, DataType.FEATURE_PROPERTY);
         this.feature = asChild(Objects.requireNonNull(feature, "The feature must not be null."));
         this.relationType = Objects.requireNonNull(relationType, "The relation type must not be null.");
-        reference = null;
     }
 
-    private FeatureProperty(Name name, Reference reference, RelationType relationType) {
+    private FeatureProperty(Name name, String reference, RelationType relationType) {
         super(name, DataType.FEATURE_PROPERTY);
-        this.reference = asChild(Objects.requireNonNull(reference, "The reference must not be null."));
+        this.reference = Objects.requireNonNull(reference, "The reference must not be null.");
         this.relationType = Objects.requireNonNull(relationType, "The relation type must not be null.");
-        feature = null;
     }
 
     public static FeatureProperty of(Name name, Feature feature, RelationType relationType) {
@@ -61,15 +58,15 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
         return new FeatureProperty(name, feature, RelationType.RELATES);
     }
 
-    public static FeatureProperty of(Name name, Reference reference, RelationType relationType) {
+    public static FeatureProperty of(Name name, String reference, RelationType relationType) {
         return new FeatureProperty(name, reference, relationType);
     }
 
-    public static FeatureProperty contains(Name name, Reference reference) {
+    public static FeatureProperty contains(Name name, String reference) {
         return new FeatureProperty(name, reference, RelationType.CONTAINS);
     }
 
-    public static FeatureProperty relates(Name name, Reference reference) {
+    public static FeatureProperty relates(Name name, String reference) {
         return new FeatureProperty(name, reference, RelationType.RELATES);
     }
 
@@ -89,14 +86,14 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     }
 
     @Override
-    public Optional<Reference> getReference() {
+    public Optional<String> getReference() {
         return Optional.ofNullable(reference);
     }
 
     @Override
-    public FeatureProperty setReference(Reference reference) {
+    public FeatureProperty setReference(String reference) {
         if (reference != null) {
-            this.reference = asChild(reference);
+            this.reference = reference;
             feature = null;
         }
 

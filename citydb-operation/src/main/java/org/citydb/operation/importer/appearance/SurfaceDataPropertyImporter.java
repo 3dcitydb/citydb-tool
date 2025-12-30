@@ -24,7 +24,6 @@ package org.citydb.operation.importer.appearance;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.*;
-import org.citydb.model.common.Reference;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
@@ -73,8 +72,8 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
                 stmt.setNull(3, Types.BIGINT);
             }
         } else {
-            Reference reference = surfaceData != null ?
-                    Reference.of(surfaceData.getOrCreateObjectId()) :
+            String reference = surfaceData != null ?
+                    surfaceData.getOrCreateObjectId() :
                     property.getReference().orElseThrow(() -> new ImportException("The surface data property " +
                             "contains neither an object nor a reference."));
             cacheReference(CacheType.SURFACE_DATA, reference, propertyId);

@@ -24,7 +24,6 @@ package org.citydb.io.citygml.adapter.geometry.serializer;
 
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.core.ImplicitGeometry;
@@ -272,7 +271,6 @@ public class GeometryHelper {
                 }
             } else {
                 source.getReference()
-                        .map(Reference::getTarget)
                         .ifPresent(reference -> target.setRelativeGeometry(new GeometryProperty<>("#" + reference)));
             }
 

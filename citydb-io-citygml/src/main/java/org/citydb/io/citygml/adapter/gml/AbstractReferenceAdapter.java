@@ -24,21 +24,17 @@ package org.citydb.io.citygml.adapter.gml;
 import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.serializer.ModelSerializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.FeatureProperty;
 import org.xmlobjects.gml.model.base.AbstractReference;
-
-import java.util.Optional;
 
 public abstract class AbstractReferenceAdapter<T extends AbstractReference<?>> implements ModelSerializer<FeatureProperty, T> {
 
     @Override
     public void serialize(FeatureProperty source, T target, ModelSerializerHelper helper) throws ModelSerializeException {
-        Optional<Feature> object = source.getObject();
-        Optional<String> reference = object.isPresent() ?
-                object.get().getObjectId() :
-                source.getReference().map(Reference::getTarget);
-        reference.ifPresent(href -> target.setHref("#" + href));
+        source.getObject()
+                .map(Feature::getObjectId)
+                .orElseGet(source::getReference)
+                .ifPresent(href -> target.setHref("#" + href));
     }
 }

@@ -22,7 +22,6 @@
 package org.citydb.operation.exporter.util;
 
 import org.citydb.model.common.Matrix4x4;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
@@ -104,8 +103,7 @@ public class EnvelopeHelper {
                     Point referencePoint = property.getReferencePoint().orElse(null);
                     if (transformationMatrix != null && referencePoint != null) {
                         ImplicitGeometry geometry = property.getObject().orElse(
-                                implicitGeometries.get(property.getReference()
-                                        .map(Reference::getTarget).orElse(null)));
+                                implicitGeometries.get(property.getReference().orElse(null)));
                         if (geometry != null) {
                             envelope.include(geometry.getEnvelope(transformationMatrix, referencePoint));
                         } else {
