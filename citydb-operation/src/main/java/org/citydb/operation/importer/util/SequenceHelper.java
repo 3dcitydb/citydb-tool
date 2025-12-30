@@ -105,7 +105,7 @@ public class SequenceHelper {
 
         @Override
         public void visit(Feature feature) {
-            counter.merge(Sequence.FEATURE, 1, Integer::sum);
+            count(Sequence.FEATURE);
             super.visit(feature);
         }
 
@@ -113,9 +113,8 @@ public class SequenceHelper {
         public void visit(ImplicitGeometry implicitGeometry) {
             try {
                 if (!helper.lookupAndPut(implicitGeometry) && !existsInDatabase(implicitGeometry)) {
-                    counter.merge(Sequence.IMPLICIT_GEOMETRY, 1, Integer::sum);
-                    implicitGeometry.getGeometry().ifPresent(geometry ->
-                            counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum));
+                    count(Sequence.IMPLICIT_GEOMETRY);
+                    implicitGeometry.getGeometry().ifPresent(geometry -> count(Sequence.GEOMETRY_DATA));
                     cache(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
                     super.visit(implicitGeometry);
                 }
@@ -127,19 +126,19 @@ public class SequenceHelper {
 
         @Override
         public void visit(Appearance appearance) {
-            counter.merge(Sequence.APPEARANCE, 1, Integer::sum);
+            count(Sequence.APPEARANCE);
             super.visit(appearance);
         }
 
         @Override
         public void visit(Address address) {
-            counter.merge(Sequence.ADDRESS, 1, Integer::sum);
+            count(Sequence.ADDRESS);
             super.visit(address);
         }
 
         @Override
         public void visit(SurfaceData<?> surfaceData) {
-            counter.merge(Sequence.SURFACE_DATA, 1, Integer::sum);
+            count(Sequence.SURFACE_DATA);
             super.visit(surfaceData);
         }
 
@@ -147,7 +146,7 @@ public class SequenceHelper {
         public void visit(Texture<?> texture) {
             ExternalFile textureImage = texture.getTextureImage().orElse(null);
             if (textureImage != null && !helper.lookupAndPut(textureImage)) {
-                counter.merge(Sequence.TEX_IMAGE, 1, Integer::sum);
+                count(Sequence.TEX_IMAGE);
                 cache(CacheType.TEXTURE_IMAGE, textureImage);
             }
 
@@ -156,20 +155,24 @@ public class SequenceHelper {
 
         @Override
         public void visit(Property<?> property) {
-            counter.merge(Sequence.PROPERTY, 1, Integer::sum);
+            count(Sequence.PROPERTY);
             super.visit(property);
         }
 
         @Override
         public void visit(SurfaceDataProperty property) {
-            counter.merge(Sequence.APPEAR_TO_SURFACE_DATA, 1, Integer::sum);
+            count(Sequence.APPEAR_TO_SURFACE_DATA);
             super.visit(property);
         }
 
         @Override
         public void visit(GeometryProperty property) {
-            counter.merge(Sequence.GEOMETRY_DATA, 1, Integer::sum);
+            count(Sequence.GEOMETRY_DATA);
             super.visit(property);
+        }
+
+        private void count(Sequence sequence) {
+            counter.merge(sequence, 1, Integer::sum);
         }
 
         private void cache(CacheType type, Referencable object) {
