@@ -62,7 +62,7 @@ public class CityGMLPreprocessor {
     public CityGMLPreprocessor() {
         CopyBuilder copyBuilder = new CopyBuilder();
         appearanceConverter = new GlobalAppearanceConverter(copyBuilder);
-        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder, referenceResolver);
+        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder);
         globalReferenceResolver = new GeometryReferenceResolver(copyBuilder);
         propertiesProcessor = new DeprecatedPropertiesProcessor(copyBuilder);
         crossLodResolver = new CrossLodReferenceResolver(copyBuilder)

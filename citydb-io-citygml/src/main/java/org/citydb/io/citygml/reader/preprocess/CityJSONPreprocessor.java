@@ -35,7 +35,7 @@ public class CityJSONPreprocessor {
 
     public CityJSONPreprocessor() {
         CopyBuilder copyBuilder = new CopyBuilder();
-        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder, referenceResolver);
+        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder);
     }
 
     public void processGlobalObjects(AbstractFeature abstractFeature) {
