@@ -76,7 +76,7 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
         if (implicitGeometry != null && implicitGeometry.hasAppearances()) {
             for (AppearanceProperty property : implicitGeometry.getAppearances().getAll()) {
                 boolean isInline = target.getRelativeGeometry() != null
-                        && target.getRelativeGeometry().getObject() != null
+                        && target.getRelativeGeometry().isSetInlineObject()
                         && !helper.lookupAndPut(property.getObject());
                 if (helper.getCityGMLVersion() == CityGMLVersion.v3_0) {
                     target.getAppearances().add(isInline ?
