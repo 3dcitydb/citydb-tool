@@ -65,7 +65,7 @@ public class PropertyBuilder {
         Feature feature = hierarchy.getFeature(propertyStub.getFeatureId());
         if (feature != null) {
             return propertyStub.getRelationType() == RelationType.RELATES || helper.lookupAndPut(feature) ?
-                    FeatureProperty.of(propertyStub.getName(), helper.getOrCreateId(feature),
+                    FeatureProperty.of(propertyStub.getName(), feature.getOrCreateObjectId(),
                             propertyStub.getRelationType()) :
                     FeatureProperty.of(propertyStub.getName(), feature, propertyStub.getRelationType());
         }
@@ -85,7 +85,7 @@ public class PropertyBuilder {
         ImplicitGeometry implicitGeometry = hierarchy.getImplicitGeometry(propertyStub.getImplicitGeometryId());
         if (implicitGeometry != null) {
             ImplicitGeometryProperty property = helper.lookupAndPut(implicitGeometry) ?
-                    ImplicitGeometryProperty.of(propertyStub.getName(), helper.getOrCreateId(implicitGeometry)) :
+                    ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry.getOrCreateObjectId()) :
                     ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
 
             if (propertyStub.getArrayValue() != null) {
@@ -113,7 +113,7 @@ public class PropertyBuilder {
         Address address = hierarchy.getAddress(propertyStub.getAddressId());
         if (address != null) {
             return helper.lookupAndPut(address) ?
-                    AddressProperty.of(propertyStub.getName(), helper.getOrCreateId(address)) :
+                    AddressProperty.of(propertyStub.getName(), address.getOrCreateObjectId()) :
                     AddressProperty.of(propertyStub.getName(), address);
         }
 

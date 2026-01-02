@@ -29,9 +29,9 @@ import org.citydb.database.util.OperationHelper;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Referencable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.model.util.IdCreator;
 import org.citydb.operation.exporter.feature.FeatureHierarchyExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.options.LodOptions;
@@ -44,7 +44,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 public class ExportHelper {
     private final DatabaseAdapter adapter;
@@ -122,17 +121,7 @@ public class ExportHelper {
     }
 
     public String createId() {
-        return "ID_" + UUID.randomUUID();
-    }
-
-    public String getOrCreateId(Referencable object) {
-        if (object.getObjectId().isPresent()) {
-            return object.getObjectId().get();
-        } else {
-            String objectId = createId();
-            object.setObjectId(objectId);
-            return objectId;
-        }
+        return IdCreator.getInstance().createId();
     }
 
     public boolean lookupAndPut(Feature feature) {
