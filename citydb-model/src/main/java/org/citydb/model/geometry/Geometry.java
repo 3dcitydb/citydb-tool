@@ -100,8 +100,8 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     }
 
     public Geometry<?> getRootGeometry() {
-        Geometry<?> root = this, parent = this;
-        while ((parent = parent.getParent(Geometry.class)) != null) {
+        Geometry<?> root = this;
+        while (root.getParent().orElse(null) instanceof Geometry<?> parent) {
             root = parent;
         }
 
