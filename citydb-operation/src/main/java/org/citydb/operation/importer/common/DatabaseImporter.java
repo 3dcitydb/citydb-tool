@@ -162,7 +162,7 @@ public abstract class DatabaseImporter {
     }
 
     protected Object getImplicitGeometry(Geometry<?> geometry) throws ImportException {
-        return getGeometry(geometry, null, true);
+        return getGeometry(geometry, 0, true);
     }
 
     protected Object getEnvelope(Envelope envelope) throws ImportException {
