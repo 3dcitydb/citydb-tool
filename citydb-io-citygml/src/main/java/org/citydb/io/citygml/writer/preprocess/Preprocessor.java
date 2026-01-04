@@ -21,7 +21,6 @@
 
 package org.citydb.io.citygml.writer.preprocess;
 
-import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -34,7 +33,7 @@ import java.util.Map;
 
 public class Preprocessor {
     private final Processor processor = new Processor();
-    private final Map<String, ExternalFile> libraryObjects = new HashMap<>();
+    private final Map<String, ImplicitGeometry> implicitGeometries = new HashMap<>();
 
     private boolean checkForDeprecatedLod4Geometry;
     private boolean hasDeprecatedLod4Geometry;
@@ -52,13 +51,13 @@ public class Preprocessor {
         return hasDeprecatedLod4Geometry;
     }
 
-    public ExternalFile lookupLibraryObject(String objectId) {
-        return libraryObjects.get(objectId);
+    public ImplicitGeometry lookupImplicitGeometry(String objectId) {
+        return implicitGeometries.get(objectId);
     }
 
     public void clear() {
         hasDeprecatedLod4Geometry = false;
-        libraryObjects.clear();
+        implicitGeometries.clear();
     }
 
     private class Processor extends ModelWalker {
@@ -82,13 +81,8 @@ public class Preprocessor {
                 hasDeprecatedLod4Geometry = true;
             }
 
-            super.visit(property);
-        }
-
-        @Override
-        public void visit(ImplicitGeometry implicitGeometry) {
-            implicitGeometry.getLibraryObject().ifPresent(libraryObject ->
-                    libraryObjects.put(implicitGeometry.getOrCreateObjectId(), libraryObject));
+            property.getObject().ifPresent(implicitGeometry ->
+                    implicitGeometries.put(implicitGeometry.getOrCreateObjectId(), implicitGeometry));
         }
     }
 }

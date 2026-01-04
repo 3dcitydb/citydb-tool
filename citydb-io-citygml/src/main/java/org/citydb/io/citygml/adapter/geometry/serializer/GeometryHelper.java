@@ -256,9 +256,9 @@ public class GeometryHelper {
 
     public ImplicitGeometry getImplicitGeometry(ImplicitGeometryProperty source, boolean force3D) {
         if (source != null) {
-            ImplicitGeometry target = new ImplicitGeometry();
-            org.citydb.model.geometry.ImplicitGeometry implicitGeometry = source.getObject().orElse(null);
+            org.citydb.model.geometry.ImplicitGeometry implicitGeometry = helper.getOrLookupObject(source);
             if (implicitGeometry != null) {
+                ImplicitGeometry target = new ImplicitGeometry();
                 Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
                 if (geometry != null) {
                     target.setRelativeGeometry(helper.lookupAndPut(implicitGeometry) ?
@@ -269,18 +269,9 @@ public class GeometryHelper {
                             .map(ExternalFile::getFileLocation)
                             .orElse(null));
                 }
-            } else {
-                source.getReference().ifPresent(reference -> {
-                    ExternalFile libraryObject = helper.lookupLibraryObject(reference);
-                    if (libraryObject != null) {
-                        target.setLibraryObject(libraryObject.getFileLocation());
-                    } else {
-                        target.setRelativeGeometry(new GeometryProperty<>("#" + reference));
-                    }
-                });
-            }
 
-            return target;
+                return target;
+            }
         }
 
         return null;

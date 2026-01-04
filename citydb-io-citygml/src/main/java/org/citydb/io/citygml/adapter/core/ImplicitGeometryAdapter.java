@@ -72,7 +72,7 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
         source.getReferencePoint().ifPresent(referencePoint ->
                 target.setReferencePoint(new PointProperty(helper.getPoint(referencePoint))));
 
-        ImplicitGeometry implicitGeometry = source.getObject().orElse(null);
+        ImplicitGeometry implicitGeometry = helper.getOrLookupObject(source);
         if (implicitGeometry != null && implicitGeometry.hasAppearances()) {
             for (AppearanceProperty property : implicitGeometry.getAppearances().getAll()) {
                 boolean isInline = target.getRelativeGeometry() != null
