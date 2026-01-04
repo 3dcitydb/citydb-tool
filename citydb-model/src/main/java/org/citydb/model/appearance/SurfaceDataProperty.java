@@ -49,6 +49,11 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
         return new SurfaceDataProperty(reference);
     }
 
+    public static SurfaceDataProperty asReference(SurfaceData<?> surfaceData) {
+        Objects.requireNonNull(surfaceData, "The referenced surface data must not be null.");
+        return new SurfaceDataProperty(surfaceData.getOrCreateObjectId());
+    }
+
     @Override
     public Optional<SurfaceData<?>> getObject() {
         return Optional.ofNullable(surfaceData);
@@ -70,10 +75,10 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
     }
 
     @Override
-    public SurfaceDataProperty setReference(String reference) {
-        if (reference != null) {
-            this.reference = reference;
-            surfaceData = null;
+    public SurfaceDataProperty setReference(SurfaceData<?> surfaceData) {
+        if (surfaceData != null) {
+            reference = surfaceData.getOrCreateObjectId();
+            this.surfaceData = null;
         }
 
         return this;

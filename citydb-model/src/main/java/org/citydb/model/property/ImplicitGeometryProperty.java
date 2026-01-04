@@ -60,6 +60,11 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
         return new ImplicitGeometryProperty(name, reference);
     }
 
+    public static ImplicitGeometryProperty asReference(Name name, ImplicitGeometry implicitGeometry) {
+        Objects.requireNonNull(implicitGeometry, "The referenced implicit geometry must not be null.");
+        return new ImplicitGeometryProperty(name, implicitGeometry.getOrCreateObjectId());
+    }
+
     @Override
     public Optional<ImplicitGeometry> getObject() {
         return Optional.ofNullable(implicitGeometry);
@@ -81,10 +86,10 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     }
 
     @Override
-    public ImplicitGeometryProperty setReference(String reference) {
-        if (reference != null) {
-            this.reference = reference;
-            implicitGeometry = null;
+    public ImplicitGeometryProperty setReference(ImplicitGeometry implicitGeometry) {
+        if (implicitGeometry != null) {
+            reference = implicitGeometry.getOrCreateObjectId();
+            this.implicitGeometry = null;
         }
 
         return this;

@@ -50,24 +50,13 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
         return new FeatureProperty(name, feature, relationType);
     }
 
-    public static FeatureProperty contains(Name name, Feature feature) {
-        return new FeatureProperty(name, feature, RelationType.CONTAINS);
-    }
-
-    public static FeatureProperty relates(Name name, Feature feature) {
-        return new FeatureProperty(name, feature, RelationType.RELATES);
-    }
-
     public static FeatureProperty of(Name name, String reference, RelationType relationType) {
         return new FeatureProperty(name, reference, relationType);
     }
 
-    public static FeatureProperty contains(Name name, String reference) {
-        return new FeatureProperty(name, reference, RelationType.CONTAINS);
-    }
-
-    public static FeatureProperty relates(Name name, String reference) {
-        return new FeatureProperty(name, reference, RelationType.RELATES);
+    public static FeatureProperty asReference(Name name, Feature feature, RelationType relationType) {
+        Objects.requireNonNull(feature, "The referenced feature must not be null.");
+        return new FeatureProperty(name, feature.getOrCreateObjectId(), relationType);
     }
 
     @Override
@@ -91,10 +80,10 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     }
 
     @Override
-    public FeatureProperty setReference(String reference) {
-        if (reference != null) {
-            this.reference = reference;
-            feature = null;
+    public FeatureProperty setReference(Feature feature) {
+        if (feature != null) {
+            reference = feature.getOrCreateObjectId();
+            this.feature = null;
         }
 
         return this;

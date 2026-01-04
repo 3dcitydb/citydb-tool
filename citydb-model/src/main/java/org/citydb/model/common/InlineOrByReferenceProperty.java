@@ -30,5 +30,5 @@ public interface InlineOrByReferenceProperty<T extends Child & Referencable> {
 
     Optional<String> getReference();
 
-    InlineOrByReferenceProperty<T> setReference(String reference);
+    InlineOrByReferenceProperty<T> setReference(T referencedObject);
 }

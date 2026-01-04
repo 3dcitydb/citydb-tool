@@ -54,6 +54,11 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
         return new AddressProperty(name, reference);
     }
 
+    public static AddressProperty asReference(Name name, Address address) {
+        Objects.requireNonNull(address, "The referenced address must not be null.");
+        return new AddressProperty(name, address.getOrCreateObjectId());
+    }
+
     @Override
     public Optional<Address> getObject() {
         return Optional.ofNullable(address);
@@ -75,10 +80,10 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
     }
 
     @Override
-    public AddressProperty setReference(String reference) {
-        if (reference != null) {
-            this.reference = reference;
-            address = null;
+    public AddressProperty setReference(Address address) {
+        if (address != null) {
+            reference = address.getOrCreateObjectId();
+            this.address = null;
         }
 
         return this;
