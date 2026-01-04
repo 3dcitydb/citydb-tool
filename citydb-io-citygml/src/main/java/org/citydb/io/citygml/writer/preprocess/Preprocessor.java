@@ -21,14 +21,20 @@
 
 package org.citydb.io.citygml.writer.preprocess;
 
+import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.walker.ModelWalker;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Preprocessor {
     private final Processor processor = new Processor();
+    private final Map<String, ExternalFile> libraryObjects = new HashMap<>();
 
     private boolean checkForDeprecatedLod4Geometry;
     private boolean hasDeprecatedLod4Geometry;
@@ -46,8 +52,13 @@ public class Preprocessor {
         return hasDeprecatedLod4Geometry;
     }
 
+    public ExternalFile lookupLibraryObject(String objectId) {
+        return libraryObjects.get(objectId);
+    }
+
     public void clear() {
         hasDeprecatedLod4Geometry = false;
+        libraryObjects.clear();
     }
 
     private class Processor extends ModelWalker {
@@ -70,6 +81,14 @@ public class Preprocessor {
                     && property.getName().getNamespace().equals(Namespaces.DEPRECATED)) {
                 hasDeprecatedLod4Geometry = true;
             }
+
+            super.visit(property);
+        }
+
+        @Override
+        public void visit(ImplicitGeometry implicitGeometry) {
+            implicitGeometry.getLibraryObject().ifPresent(libraryObject ->
+                    libraryObjects.put(implicitGeometry.getOrCreateObjectId(), libraryObject));
         }
     }
 }

@@ -270,8 +270,14 @@ public class GeometryHelper {
                             .orElse(null));
                 }
             } else {
-                source.getReference()
-                        .ifPresent(reference -> target.setRelativeGeometry(new GeometryProperty<>("#" + reference)));
+                source.getReference().ifPresent(reference -> {
+                    ExternalFile libraryObject = helper.lookupLibraryObject(reference);
+                    if (libraryObject != null) {
+                        target.setLibraryObject(libraryObject.getFileLocation());
+                    } else {
+                        target.setRelativeGeometry(new GeometryProperty<>("#" + reference));
+                    }
+                });
             }
 
             return target;
