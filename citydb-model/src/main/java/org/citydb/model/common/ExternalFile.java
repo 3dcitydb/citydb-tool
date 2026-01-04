@@ -24,10 +24,9 @@ package org.citydb.model.common;
 import java.io.*;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 public class ExternalFile implements Referencable, Serializable {
     private String uri;
@@ -113,22 +112,7 @@ public class ExternalFile implements Referencable, Serializable {
     }
 
     private void createAndSetObjectId() {
-        MessageDigest md5;
-        try {
-            md5 = MessageDigest.getInstance("MD5");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("The MD5 algorithm is not supported.", e);
-        }
-
-        StringBuilder objectId = new StringBuilder();
-        char[] digits = new char[2];
-        for (byte b : md5.digest(getFileLocation().getBytes())) {
-            digits[0] = Character.forDigit((b >> 4) & 0xF, 16);
-            digits[1] = Character.forDigit((b & 0xF), 16);
-            objectId.append(new String(digits));
-        }
-
-        setObjectId(objectId.toString());
+        setObjectId("ID_" + UUID.nameUUIDFromBytes(getFileLocation().getBytes()));
     }
 
     @Serial
