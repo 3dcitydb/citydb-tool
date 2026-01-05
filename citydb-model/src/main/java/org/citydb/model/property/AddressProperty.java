@@ -80,13 +80,18 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
     }
 
     @Override
-    public AddressProperty setReference(Address address) {
-        if (address != null) {
-            reference = address.getOrCreateObjectId();
-            this.address = null;
+    public AddressProperty setReference(String reference) {
+        if (reference != null) {
+            this.reference = reference;
+            address = null;
         }
 
         return this;
+    }
+
+    @Override
+    public AddressProperty setReference(Address address) {
+        return address != null ? setReference(address.getOrCreateObjectId()) : this;
     }
 
     @Override

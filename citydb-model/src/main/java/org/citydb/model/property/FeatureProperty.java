@@ -80,13 +80,18 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     }
 
     @Override
-    public FeatureProperty setReference(Feature feature) {
-        if (feature != null) {
-            reference = feature.getOrCreateObjectId();
-            this.feature = null;
+    public FeatureProperty setReference(String reference) {
+        if (reference != null) {
+            this.reference = reference;
+            feature = null;
         }
 
         return this;
+    }
+
+    @Override
+    public FeatureProperty setReference(Feature feature) {
+        return feature != null ? setReference(feature.getOrCreateObjectId()) : this;
     }
 
     public RelationType getRelationType() {
