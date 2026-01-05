@@ -23,7 +23,7 @@ package org.citydb.model.common;
 
 import java.util.Optional;
 
-public interface InlineOrByReferenceProperty<T extends Child & Referencable> {
+public interface InlineOrByReferenceProperty<T extends Referencable> {
     Optional<T> getObject();
 
     InlineOrByReferenceProperty<T> setObject(T object);
