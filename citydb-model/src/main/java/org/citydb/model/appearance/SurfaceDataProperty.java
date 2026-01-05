@@ -75,6 +75,16 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
     }
 
     @Override
+    public SurfaceDataProperty setReference(String reference) {
+        if (reference != null) {
+            this.reference = reference;
+            surfaceData = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public SurfaceDataProperty setReference(SurfaceData<?> surfaceData) {
         if (surfaceData != null) {
             reference = surfaceData.getOrCreateObjectId();

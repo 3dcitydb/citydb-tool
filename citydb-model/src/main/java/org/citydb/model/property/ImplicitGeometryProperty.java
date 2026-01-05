@@ -87,6 +87,16 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     }
 
     @Override
+    public ImplicitGeometryProperty setReference(String reference) {
+        if (reference != null) {
+            this.reference = reference;
+            implicitGeometry = null;
+        }
+
+        return this;
+    }
+
+    @Override
     public ImplicitGeometryProperty setReference(ImplicitGeometry implicitGeometry) {
         if (implicitGeometry != null) {
             reference = implicitGeometry.getOrCreateObjectId();
