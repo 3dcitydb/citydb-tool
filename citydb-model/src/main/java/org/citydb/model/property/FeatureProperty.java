@@ -56,7 +56,7 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
 
     public static FeatureProperty asReference(Name name, Feature feature, RelationType relationType) {
         Objects.requireNonNull(feature, "The referenced feature must not be null.");
-        return new FeatureProperty(name, feature.getOrCreateObjectId(), relationType);
+        return new FeatureProperty(name, feature.getOrCreateObjectId(), relationType).setReference(feature);
     }
 
     @Override
@@ -83,7 +83,7 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     public FeatureProperty setReference(Feature feature) {
         if (feature != null) {
             reference = feature.getOrCreateObjectId();
-            this.feature = null;
+            this.feature = feature;
         }
 
         return this;
@@ -96,6 +96,16 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     public FeatureProperty setRelationType(RelationType relationType) {
         this.relationType = relationType;
         return this;
+    }
+
+    @Override
+    public boolean isInline() {
+        return reference == null;
+    }
+
+    @Override
+    public boolean isReferenced() {
+        return reference != null;
     }
 
     @Override

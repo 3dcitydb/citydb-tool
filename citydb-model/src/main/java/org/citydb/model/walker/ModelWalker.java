@@ -33,6 +33,7 @@ import org.citydb.model.property.*;
 
 public class ModelWalker implements Visitor {
     private boolean shouldWalk = true;
+    private boolean skipReferencedObjects;
 
     public boolean shouldWalk() {
         return shouldWalk;
@@ -40,6 +41,14 @@ public class ModelWalker implements Visitor {
 
     public void setShouldWalk(boolean shouldWalk) {
         this.shouldWalk = shouldWalk;
+    }
+
+    public boolean isSkipReferencedObjects() {
+        return skipReferencedObjects;
+    }
+
+    public void setSkipReferencedObjects(boolean skipReferencedObjects) {
+        this.skipReferencedObjects = skipReferencedObjects;
     }
 
     public void reset() {
@@ -256,7 +265,7 @@ public class ModelWalker implements Visitor {
             visit(object);
         }
 
-        if (shouldWalk) {
+        if (shouldWalk && (!skipReferencedObjects || property.isInline())) {
             visitObject(property.getObject().orElse(null));
         }
     }

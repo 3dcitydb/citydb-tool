@@ -31,4 +31,8 @@ public interface InlineOrByReferenceProperty<T extends Child & Referencable> {
     Optional<String> getReference();
 
     InlineOrByReferenceProperty<T> setReference(T referencedObject);
+
+    boolean isInline();
+
+    boolean isReferenced();
 }

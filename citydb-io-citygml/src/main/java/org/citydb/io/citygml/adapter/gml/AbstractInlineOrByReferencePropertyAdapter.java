@@ -33,15 +33,15 @@ public abstract class AbstractInlineOrByReferencePropertyAdapter<T extends Abstr
 
     @Override
     public void serialize(FeatureProperty source, T target, ModelSerializerHelper helper) throws ModelSerializeException {
-        Feature feature = source.getObject().orElse(null);
-        if (feature != null) {
+        if (source.isInline()) {
+            Feature feature = source.getObject().orElseThrow();
             if (helper.lookupAndPut(feature)) {
                 target.setHref("#" + feature.getOrCreateObjectId());
             } else {
                 target.setInlineObjectIfValid(helper.getObject(feature, AbstractGML.class));
             }
         } else {
-            source.getReference().ifPresent(reference -> target.setHref("#" + reference));
+            target.setHref("#" + source.getReference().orElseThrow());
         }
     }
 }

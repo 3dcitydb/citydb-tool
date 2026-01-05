@@ -62,7 +62,8 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
 
     public static ImplicitGeometryProperty asReference(Name name, ImplicitGeometry implicitGeometry) {
         Objects.requireNonNull(implicitGeometry, "The referenced implicit geometry must not be null.");
-        return new ImplicitGeometryProperty(name, implicitGeometry.getOrCreateObjectId());
+        return new ImplicitGeometryProperty(name, implicitGeometry.getOrCreateObjectId())
+                .setReference(implicitGeometry);
     }
 
     @Override
@@ -89,10 +90,20 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     public ImplicitGeometryProperty setReference(ImplicitGeometry implicitGeometry) {
         if (implicitGeometry != null) {
             reference = implicitGeometry.getOrCreateObjectId();
-            this.implicitGeometry = null;
+            this.implicitGeometry = implicitGeometry;
         }
 
         return this;
+    }
+
+    @Override
+    public boolean isInline() {
+        return reference == null;
+    }
+
+    @Override
+    public boolean isReferenced() {
+        return reference != null;
     }
 
     public Optional<Matrix4x4> getTransformationMatrix() {

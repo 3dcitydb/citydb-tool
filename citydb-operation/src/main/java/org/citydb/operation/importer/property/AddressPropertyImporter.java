@@ -66,8 +66,7 @@ public class AddressPropertyImporter extends PropertyImporter {
         } else {
             String reference = address != null ?
                     address.getOrCreateObjectId() :
-                    property.getReference().orElseThrow(() -> new ImportException("The address property " +
-                            "contains neither an object nor a reference."));
+                    property.getReference().orElseThrow();
             cacheReference(CacheType.ADDRESS, reference, propertyId);
             stmt.setNull(7, Types.BIGINT);
         }

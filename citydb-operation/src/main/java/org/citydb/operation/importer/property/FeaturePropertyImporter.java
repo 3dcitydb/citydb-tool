@@ -66,8 +66,7 @@ public class FeaturePropertyImporter extends PropertyImporter {
         } else {
             String reference = feature != null ?
                     feature.getOrCreateObjectId() :
-                    property.getReference().orElseThrow(() -> new ImportException("The feature property " +
-                            "contains neither an object nor a reference."));
+                    property.getReference().orElseThrow();
             cacheReference(CacheType.FEATURE, reference, propertyId);
             stmt.setNull(7, Types.BIGINT);
         }

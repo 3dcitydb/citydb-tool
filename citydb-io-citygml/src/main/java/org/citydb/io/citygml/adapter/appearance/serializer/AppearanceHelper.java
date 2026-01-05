@@ -61,8 +61,8 @@ public class AppearanceHelper {
     @SuppressWarnings("rawtypes")
     AbstractSurfaceDataProperty getSurfaceDataProperty(SurfaceDataProperty source) throws ModelSerializeException {
         AbstractSurfaceDataProperty property = new AbstractSurfaceDataProperty();
-        SurfaceData<?> surfaceData = source.getObject().orElse(null);
-        if (surfaceData != null) {
+        if (source.isInline()) {
+            SurfaceData<?> surfaceData = source.getObject().orElseThrow();
             if (lookupAndPut(surfaceData)) {
                 property.setHref("#" + surfaceData.getOrCreateObjectId());
             } else {
@@ -76,7 +76,7 @@ public class AppearanceHelper {
                 }
             }
         } else {
-            source.getReference().ifPresent(reference -> property.setHref("#" + reference));
+            property.setHref("#" + source.getReference().orElseThrow());
         }
 
         return property;

@@ -74,8 +74,7 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
         } else {
             String reference = surfaceData != null ?
                     surfaceData.getOrCreateObjectId() :
-                    property.getReference().orElseThrow(() -> new ImportException("The surface data property " +
-                            "contains neither an object nor a reference."));
+                    property.getReference().orElseThrow();
             cacheReference(CacheType.SURFACE_DATA, reference, propertyId);
             stmt.setNull(3, Types.BIGINT);
         }

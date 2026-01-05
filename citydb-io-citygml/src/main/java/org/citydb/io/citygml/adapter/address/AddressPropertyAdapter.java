@@ -36,15 +36,15 @@ public class AddressPropertyAdapter implements ModelSerializer<org.citydb.model.
 
     @Override
     public void serialize(org.citydb.model.property.AddressProperty source, AddressProperty target, ModelSerializerHelper helper) throws ModelSerializeException {
-        Address address = source.getObject().orElse(null);
-        if (address != null) {
+        if (source.isInline()) {
+            Address address = source.getObject().orElseThrow();
             if (helper.lookupAndPut(address)) {
                 target.setHref("#" + address.getOrCreateObjectId());
             } else {
                 target.setInlineObjectIfValid(helper.getAddress(address));
             }
         } else {
-            source.getReference().ifPresent(reference -> target.setHref("#" + reference));
+            target.setHref("#" + source.getReference().orElseThrow());
         }
     }
 }
