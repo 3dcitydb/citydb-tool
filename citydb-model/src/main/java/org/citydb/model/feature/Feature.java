@@ -25,6 +25,7 @@ import org.citydb.model.common.*;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.property.*;
 import org.citydb.model.util.GeometryInfo;
+import org.citydb.model.util.ReferenceResolver;
 import org.citydb.model.walker.ModelWalker;
 
 import java.time.OffsetDateTime;
@@ -380,6 +381,10 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
         } else if (property instanceof Attribute attribute) {
             addAttribute(attribute);
         }
+    }
+
+    public void resolveReferences(ReferenceResolver.Target... targets) {
+        ReferenceResolver.getInstance().resolveReferences(this, targets);
     }
 
     public GeometryInfo getGeometryInfo() {
