@@ -75,9 +75,9 @@ public class GeometryImporter extends DatabaseImporter {
 
         JSONObject geometryProperties = adapter.getGeometryAdapter().buildGeometryProperties(geometry);
         if (geometryProperties != null) {
-            stmt.setObject(4, geometryProperties.toString(JSONWriter.Feature.LargeObject), Types.OTHER);
+            stmt.setObject(4, geometryProperties.toString(JSONWriter.Feature.LargeObject), adapter.getSchemaAdapter().getOtherSqlType());
         } else {
-            stmt.setNull(4, Types.OTHER);
+            stmt.setNull(4, adapter.getSchemaAdapter().getOtherSqlType());
         }
 
         stmt.setLong(5, featureId);
