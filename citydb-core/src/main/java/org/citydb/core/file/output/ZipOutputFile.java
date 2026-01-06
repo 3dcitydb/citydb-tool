@@ -30,6 +30,7 @@ import org.citydb.core.file.helper.Pipe;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Objects;
@@ -40,12 +41,14 @@ import java.util.zip.ZipEntry;
 
 public class ZipOutputFile extends OutputFile {
     private final String contentFile;
+    private Path tempDir;
     private final ParallelZipCreator zipCreator;
     private final Set<String> entries = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     public ZipOutputFile(String contentFile, Path zipFile, Path tempDir, int compressionLevel) {
         super(zipFile, FileType.ARCHIVE);
         this.contentFile = Objects.requireNonNull(contentFile, "The content file must not be null.");
+        this.tempDir = Objects.requireNonNull(tempDir, "The temporary directory must not be null.");
         zipCreator = new ParallelZipCreator(tempDir, compressionLevel);
     }
 
@@ -58,7 +61,13 @@ public class ZipOutputFile extends OutputFile {
     }
 
     @Override
-    public OutputStream openStream() {
+    public OutputStream openStream() throws IOException {
+        if (!Files.exists(tempDir)) {
+            Files.createDirectories(tempDir);
+        } else if (!Files.isDirectory(tempDir)) {
+            throw new IOException("The temporary ZIP content path " + tempDir + " is not a directory.");
+        }
+
         return newOutputStream(contentFile);
     }
 
@@ -78,7 +87,7 @@ public class ZipOutputFile extends OutputFile {
             Pipe pipe = new Pipe();
             ZipArchiveEntry entry = new ZipArchiveEntry(file);
             entry.setMethod(ZipEntry.DEFLATED);
-            zipCreator.addArchiveEntry(entry, pipe::sink);
+            zipCreator.addArchiveEntry(entry, pipe);
             return pipe.source();
         } else {
             return OutputStream.nullOutputStream();

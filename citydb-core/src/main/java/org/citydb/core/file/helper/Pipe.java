@@ -34,6 +34,8 @@ public class Pipe {
     private int size;
     private volatile boolean inputClosed;
     private volatile boolean outputClosed;
+    private volatile boolean isCancelled;
+    private IOException exception;
 
     public Pipe() {
         this(8192);
@@ -53,6 +55,20 @@ public class Pipe {
 
     public OutputStream source() {
         return output;
+    }
+
+    public void cancel() {
+        cancel("The pipe has been cancelled.", null);
+    }
+
+    public void cancel(String message) {
+        cancel(message, null);
+    }
+
+    public synchronized void cancel(String message, Throwable cause) {
+        isCancelled = true;
+        exception = new IOException(message, cause);
+        notifyAll();
     }
 
     private synchronized int read() throws IOException {
@@ -119,7 +135,9 @@ public class Pipe {
     }
 
     private synchronized int available() throws IOException {
-        if (inputClosed) {
+        if (isCancelled) {
+            throw exception;
+        } else if (inputClosed) {
             throw new IOException("The input stream has been closed.");
         }
 
@@ -176,7 +194,9 @@ public class Pipe {
 
     private boolean waitForInput() throws IOException {
         while (true) {
-            if (inputClosed) {
+            if (isCancelled) {
+                throw exception;
+            } else if (inputClosed) {
                 throw new IOException("The input stream has been closed.");
             } else if (size > 0) {
                 return true;
@@ -194,7 +214,9 @@ public class Pipe {
 
     private void waitForOutput() throws IOException {
         while (true) {
-            if (outputClosed) {
+            if (isCancelled) {
+                throw exception;
+            } else if (outputClosed) {
                 throw new IOException("The output stream has been closed.");
             } else if (inputClosed) {
                 throw new IOException("The input stream has been closed.");
