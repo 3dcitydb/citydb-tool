@@ -49,12 +49,12 @@ public enum Table {
     public final static EnumSet<Table> METADATA_TABLES = EnumSet.of(ADE, CODELIST, DATABASE_SRS, CODELIST_ENTRY,
             NAMESPACE, DATATYPE, OBJECTCLASS, FEATURE_CHANGELOG);
 
-    private final static Map<String, Table> types = new HashMap<>();
+    private final static Map<String, Table> tables = new HashMap<>();
     private final String name;
     private final Set<Table> dependencies;
 
     static {
-        Arrays.stream(values()).forEach(type -> types.put(type.name, type));
+        Arrays.stream(values()).forEach(table -> tables.put(table.name, table));
     }
 
     Table(String name, Set<Table> dependencies) {
@@ -63,7 +63,7 @@ public enum Table {
     }
 
     public static Table of(String name) {
-        return name != null ? types.get(name.toLowerCase(Locale.ROOT)) : null;
+        return name != null ? tables.get(name.toLowerCase(Locale.ROOT)) : null;
     }
 
     public String getName() {
