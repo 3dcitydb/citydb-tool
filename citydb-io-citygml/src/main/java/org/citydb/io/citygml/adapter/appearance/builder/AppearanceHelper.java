@@ -117,6 +117,7 @@ public class AppearanceHelper {
     }
 
     private static class AppearanceCollector extends ObjectWalker {
+        private final Map<AbstractFeature, Set<GeometryProperty<?>>> contexts = new IdentityHashMap<>();
         private final Map<Appearance, Set<GeometryProperty<?>>> appearances = new IdentityHashMap<>();
 
         Map<Appearance, Set<GeometryProperty<?>>> collect(AbstractFeature feature) {
@@ -126,20 +127,25 @@ public class AppearanceHelper {
 
         @Override
         public void visit(FeatureProperty<?> property) {
-            if (property.getObject() instanceof Appearance) {
-                Set<GeometryProperty<?>> contexts = Collections.newSetFromMap(new IdentityHashMap<>());
-                property.getParent(AbstractFeature.class).accept(new ObjectWalker() {
-                    @Override
-                    public void visit(GeometryProperty<?> property) {
-                        contexts.add(property);
-                        super.visit(property);
-                    }
-                });
-
-                appearances.put((Appearance) property.getObject(), contexts);
+            if (property.getObject() instanceof Appearance appearance) {
+                AbstractFeature parent = property.getParent(AbstractFeature.class);
+                appearances.put(appearance, contexts.computeIfAbsent(parent, this::collectContexts));
             } else {
                 super.visit(property);
             }
+        }
+
+        private Set<GeometryProperty<?>> collectContexts(AbstractFeature parent) {
+            Set<GeometryProperty<?>> contexts = Collections.newSetFromMap(new IdentityHashMap<>());
+            parent.accept(new ObjectWalker() {
+                @Override
+                public void visit(GeometryProperty<?> property) {
+                    contexts.add(property);
+                    super.visit(property);
+                }
+            });
+
+            return contexts;
         }
     }
 
