@@ -26,7 +26,6 @@ import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.Index;
-import org.citydb.database.schema.Sequence;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -80,9 +79,10 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public String getNextSequenceValues(Sequence sequence) {
-        return "select citydb_pkg.get_seq_values('" + adapter.getConnectionDetails().getSchema() + "." +
-                sequence + "', ?)";
+    public String getNextSequenceValues() {
+        return "select e->>'seq_name', v " +
+                "from jsonb_array_elements(?) as e " +
+                "cross join lateral citydb_pkg.get_seq_values(e->>'seq_name', (e->>'count')::bigint) as v";
     }
 
     @Override

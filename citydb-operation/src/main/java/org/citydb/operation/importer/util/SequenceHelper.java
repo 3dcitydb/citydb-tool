@@ -21,6 +21,9 @@
 
 package org.citydb.operation.importer.util;
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.address.Address;
@@ -42,6 +45,7 @@ import org.citydb.operation.importer.reference.CacheType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -49,10 +53,15 @@ import java.util.Set;
 
 public class SequenceHelper {
     private final ImportHelper helper;
-    private final Map<String, PreparedStatement> statements = new HashMap<>();
+    private final String schema;
+    private final PreparedStatement sequenceStmt;
+    private PreparedStatement lookupStmt;
 
-    public SequenceHelper(ImportHelper helper) {
+    public SequenceHelper(ImportHelper helper) throws SQLException {
         this.helper = helper;
+        schema = helper.getAdapter().getConnectionDetails().getSchema();
+        sequenceStmt = helper.getConnection().prepareStatement(
+                helper.getAdapter().getSchemaAdapter().getNextSequenceValues());
     }
 
     public SequenceValues nextSequenceValues(Visitable visitable) throws SQLException {
@@ -63,14 +72,14 @@ public class SequenceHelper {
         }
 
         SequenceValues values = new SequenceValues(processor.idCache);
-        for (Map.Entry<Sequence, Integer> entry : processor.counter.entrySet()) {
-            Sequence sequence = entry.getKey();
-            PreparedStatement statement = getOrCreateStatement(sequence.getName(),
-                    helper.getAdapter().getSchemaAdapter().getNextSequenceValues(sequence));
-            statement.setInt(1, entry.getValue());
-            try (ResultSet rs = statement.executeQuery()) {
-                while (rs.next()) {
-                    values.addValue(sequence, rs.getLong(1));
+        sequenceStmt.setObject(1, getJson(processor.counter), Types.OTHER);
+        try (ResultSet rs = sequenceStmt.executeQuery()) {
+            while (rs.next()) {
+                Sequence sequence = getSequence(rs.getString(1));
+                if (sequence != null) {
+                    values.addValue(sequence, rs.getLong(2));
+                } else {
+                    throw new SQLException("Received value for unknown sequence '" + rs.getString(1) + "'.");
                 }
             }
         }
@@ -78,23 +87,26 @@ public class SequenceHelper {
         return values;
     }
 
-    private PreparedStatement getOrCreateStatement(String name, String sql) throws SQLException {
-        PreparedStatement statement = statements.get(name);
-        if (statement == null) {
-            statement = helper.getConnection().prepareStatement(sql);
-            statements.put(name, statement);
+    private String getJson(Map<Sequence, Integer> counter) {
+        JSONArray array = new JSONArray(counter.size());
+        for (Map.Entry<Sequence, Integer> entry : counter.entrySet()) {
+            array.add(JSONObject.of(
+                    "seq_name", schema + "." + entry.getKey(),
+                    "count", entry.getValue()));
         }
 
-        return statement;
+        return array.toString(JSONWriter.Feature.WriteEnumUsingToString);
     }
 
-    public void close() {
-        for (PreparedStatement stmt : statements.values()) {
-            try {
-                stmt.close();
-            } catch (SQLException e) {
-                //
-            }
+    private Sequence getSequence(String name) {
+        int index = name.indexOf('.');
+        return Sequence.of(index != -1 ? name.substring(index + 1) : name);
+    }
+
+    public void close() throws SQLException {
+        sequenceStmt.close();
+        if (lookupStmt != null) {
+            lookupStmt.close();
         }
     }
 
@@ -206,12 +218,14 @@ public class SequenceHelper {
     private boolean existsInDatabase(ImplicitGeometry implicitGeometry) throws SQLException {
         String objectId = implicitGeometry.getObjectId().orElse(null);
         if (objectId != null) {
-            PreparedStatement statement = getOrCreateStatement("lookup-implicit-geometry",
-                    "select id from " + helper.getTableHelper().getPrefixedTableName(Table.IMPLICIT_GEOMETRY) +
-                            " where objectid = ? fetch first 1 rows only");
+            if (lookupStmt == null) {
+                lookupStmt = helper.getConnection().prepareStatement("select id from " +
+                        helper.getTableHelper().getPrefixedTableName(Table.IMPLICIT_GEOMETRY) +
+                        " where objectid = ? fetch first 1 rows only");
+            }
 
-            statement.setString(1, objectId);
-            try (ResultSet rs = statement.executeQuery()) {
+            lookupStmt.setString(1, objectId);
+            try (ResultSet rs = lookupStmt.executeQuery()) {
                 if (rs.next()) {
                     helper.getOrCreateReferenceCache(CacheType.IMPLICIT_GEOMETRY).putTarget(objectId, rs.getLong(1));
                     return true;

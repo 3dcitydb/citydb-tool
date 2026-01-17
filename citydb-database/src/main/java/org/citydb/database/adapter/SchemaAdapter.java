@@ -24,7 +24,10 @@ package org.citydb.database.adapter;
 import org.citydb.core.version.Version;
 import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.metadata.DatabaseProperty;
-import org.citydb.database.schema.*;
+import org.citydb.database.schema.Index;
+import org.citydb.database.schema.SchemaException;
+import org.citydb.database.schema.SchemaMapping;
+import org.citydb.database.schema.SchemaMappingBuilder;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.util.*;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -55,7 +58,7 @@ public abstract class SchemaAdapter {
 
     public abstract Optional<Table> getDummyTable();
 
-    public abstract String getNextSequenceValues(Sequence sequence);
+    public abstract String getNextSequenceValues();
 
     public abstract int getMaximumBatchSize();
 
