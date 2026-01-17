@@ -37,7 +37,9 @@ import org.citygml4j.core.model.appearance.*;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.core.AbstractAppearance;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.citygml4j.core.visitor.VisitableObject;
 import org.xmlobjects.gml.model.GMLObject;
 import org.xmlobjects.gml.model.feature.FeatureProperty;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
@@ -106,7 +108,11 @@ public class AppearanceHelper {
     public void processTargets(AbstractFeature feature) {
         if (processAppearances) {
             AppearanceCollector collector = new AppearanceCollector();
-            collector.collect(feature).forEach(processor::process);
+            for (AppearanceCollector.Context context : collector.collect(feature)) {
+                for (Appearance appearance : context.appearances) {
+                    processor.process(appearance, context.properties);
+                }
+            }
         }
     }
 
@@ -117,35 +123,56 @@ public class AppearanceHelper {
     }
 
     private static class AppearanceCollector extends ObjectWalker {
-        private final Map<AbstractFeature, Set<GeometryProperty<?>>> contexts = new IdentityHashMap<>();
-        private final Map<Appearance, Set<GeometryProperty<?>>> appearances = new IdentityHashMap<>();
+        private final Map<VisitableObject, Context> contexts = new IdentityHashMap<>();
 
-        Map<Appearance, Set<GeometryProperty<?>>> collect(AbstractFeature feature) {
+        Collection<Context> collect(AbstractFeature feature) {
             feature.accept(this);
-            return appearances;
+            return contexts.values();
         }
 
         @Override
         public void visit(FeatureProperty<?> property) {
             if (property.getObject() instanceof Appearance appearance) {
-                AbstractFeature parent = property.getParent(AbstractFeature.class);
-                appearances.put(appearance, contexts.computeIfAbsent(parent, this::collectContexts));
+                VisitableObject parent = getParent(property);
+                contexts.computeIfAbsent(parent, this::getContext)
+                        .appearances.add(appearance);
             } else {
                 super.visit(property);
             }
         }
 
-        private Set<GeometryProperty<?>> collectContexts(AbstractFeature parent) {
-            Set<GeometryProperty<?>> contexts = Collections.newSetFromMap(new IdentityHashMap<>());
+        private Context getContext(VisitableObject parent) {
+            Set<GeometryProperty<?>> properties = Collections.newSetFromMap(new IdentityHashMap<>());
             parent.accept(new ObjectWalker() {
                 @Override
                 public void visit(GeometryProperty<?> property) {
-                    contexts.add(property);
+                    properties.add(property);
                     super.visit(property);
                 }
             });
 
-            return contexts;
+            return new Context(properties);
+        }
+
+        private VisitableObject getParent(FeatureProperty<?> property) {
+            org.xmlobjects.model.Child parent = property.getParent();
+            if (parent instanceof AbstractFeature feature) {
+                return feature;
+            } else if (parent instanceof ImplicitGeometry implicitGeometry) {
+                return implicitGeometry;
+            } else {
+                return parent.getParent(AbstractFeature.class);
+            }
+        }
+
+        private static class Context {
+            final Set<GeometryProperty<?>> properties;
+            final Set<Appearance> appearances;
+
+            Context(Set<GeometryProperty<?>> properties) {
+                this.properties = properties;
+                appearances = Collections.newSetFromMap(new IdentityHashMap<>());
+            }
         }
     }
 
