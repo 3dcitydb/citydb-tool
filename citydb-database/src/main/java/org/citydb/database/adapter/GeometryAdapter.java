@@ -57,7 +57,7 @@ public abstract class GeometryAdapter {
 
     public abstract Envelope getEnvelope(Object geometryObject) throws GeometryException;
 
-    public abstract Object getGeometry(Geometry<?> geometry, boolean force3D) throws GeometryException;
+    public abstract Object getGeometry(Geometry<?> geometry, boolean force3D, Connection connection) throws GeometryException;
 
     public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
 
@@ -69,8 +69,8 @@ public abstract class GeometryAdapter {
         return srsHelper;
     }
 
-    public Object getGeometry(Geometry<?> geometry) throws GeometryException {
-        return getGeometry(geometry, true);
+    public Object getGeometry(Geometry<?> geometry, Connection connection) throws GeometryException {
+        return getGeometry(geometry, true, connection);
     }
 
     public Geometry<?> buildGeometry(Object geometryObject, JSONObject properties) throws GeometryException {

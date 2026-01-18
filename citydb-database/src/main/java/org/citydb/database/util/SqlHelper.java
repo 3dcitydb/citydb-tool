@@ -89,7 +89,7 @@ public class SqlHelper {
 
     private void prepareStatement(int index, Geometry<?> geometry, PreparedStatement stmt) throws SQLException {
         try {
-            stmt.setObject(index, adapter.getGeometryAdapter().getGeometry(geometry, false),
+            stmt.setObject(index, adapter.getGeometryAdapter().getGeometry(geometry, false, stmt.getConnection()),
                     adapter.getGeometryAdapter().getGeometrySqlType());
         } catch (Exception e) {
             throw new SQLException("Failed to convert geometry to database representation.", e);

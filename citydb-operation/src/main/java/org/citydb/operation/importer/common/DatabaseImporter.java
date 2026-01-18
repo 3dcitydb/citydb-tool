@@ -172,7 +172,7 @@ public abstract class DatabaseImporter {
     private Object getGeometry(Geometry<?> geometry, Integer srid, boolean force3D) throws ImportException {
         try {
             return geometry != null ? adapter.getGeometryAdapter().getGeometry(
-                    geometry.setSRID(srid).setSrsIdentifier(null), force3D) :
+                    geometry.setSRID(srid).setSrsIdentifier(null), force3D, helper.getConnection()) :
                     null;
         } catch (GeometryException e) {
             throw new ImportException("Failed to convert geometry to database representation.", e);
