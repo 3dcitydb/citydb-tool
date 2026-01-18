@@ -76,7 +76,7 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
 
     @Override
     public String getAsText(Geometry<?> geometry) throws GeometryException {
-        return textWriter.write(geometry);
+        return "'" + textWriter.write(geometry) + "'";
     }
 
     @Override

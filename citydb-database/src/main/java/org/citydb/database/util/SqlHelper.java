@@ -140,7 +140,7 @@ public class SqlHelper {
 
     private String toSql(Geometry<?> geometry) {
         try {
-            return "'" + adapter.getGeometryAdapter().getAsText(geometry) + "'";
+            return adapter.getGeometryAdapter().getAsText(geometry);
         } catch (GeometryException e) {
             return null;
         }
