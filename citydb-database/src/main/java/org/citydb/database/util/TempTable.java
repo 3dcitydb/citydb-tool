@@ -25,7 +25,10 @@ import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -127,24 +130,14 @@ public class TempTable implements AutoCloseable {
     }
 
     public enum DataType {
-        INTEGER(Types.INTEGER),
-        LONG(Types.BIGINT),
-        DOUBLE(Types.DOUBLE),
-        NUMERIC(Types.NUMERIC),
-        STRING(Types.VARCHAR),
-        TIMESTAMP(Types.TIMESTAMP),
-        TIMESTAMP_WITH_TIMEZONE(Types.TIMESTAMP_WITH_TIMEZONE),
-        GEOMETRY(Types.OTHER);
-
-        private final int sqlType;
-
-        DataType(int sqlType) {
-            this.sqlType = sqlType;
-        }
-
-        public int getSqlType() {
-            return sqlType;
-        }
+        INTEGER,
+        LONG,
+        DOUBLE,
+        NUMERIC,
+        STRING,
+        TIMESTAMP,
+        TIMESTAMP_WITH_TIMEZONE,
+        GEOMETRY
     }
 
     public static class Builder {
