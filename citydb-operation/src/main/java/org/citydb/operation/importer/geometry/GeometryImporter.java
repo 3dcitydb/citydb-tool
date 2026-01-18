@@ -70,6 +70,7 @@ public class GeometryImporter extends DatabaseImporter {
             stmt.setNull(geometryIndex, adapter.getGeometryAdapter().getGeometrySqlType(),
                     adapter.getGeometryAdapter().getGeometryTypeName());
         }
+
         stmt.setNull(nullIndex, adapter.getGeometryAdapter().getGeometrySqlType(),
                 adapter.getGeometryAdapter().getGeometryTypeName());
 
