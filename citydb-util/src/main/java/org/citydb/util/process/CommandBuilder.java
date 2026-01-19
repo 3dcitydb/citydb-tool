@@ -128,10 +128,6 @@ public class CommandBuilder {
         return condition ? addOption(option, value) : this;
     }
 
-    public String quote(String value) {
-        return '"' + value + '"';
-    }
-
     public ProcessHelper build() {
         return ProcessHelper.of(parts);
     }

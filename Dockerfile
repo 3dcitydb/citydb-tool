@@ -5,8 +5,8 @@
 
 # Fetch & build stage #########################################################
 # ARGS
-ARG BUILDER_IMAGE_TAG='25-jdk-noble'
-ARG RUNTIME_IMAGE_TAG='25-jre-noble'
+ARG BUILDER_IMAGE_TAG='21-jdk-noble'
+ARG RUNTIME_IMAGE_TAG='21-jre-noble'
 
 # Base image
 FROM eclipse-temurin:${BUILDER_IMAGE_TAG} AS builder
@@ -28,7 +28,7 @@ ARG CITYDB_TOOL_VERSION
 ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 
 # Copy from builder
-COPY --from=builder /build/citydb-cli/build/install/citydb-tool-docker /opt/citydb-tool
+COPY --from=builder --chown=1000:1000 /build/citydb-cli/build/install/citydb-tool-docker /opt/citydb-tool
 
 # Put start script in path
 RUN set -x && \
