@@ -59,30 +59,30 @@ public class SurfaceDataMappingImporter extends DatabaseImporter {
 
             if (mapping.hasMaterialMapping()) {
                 stmt.setObject(3, mapping.getMaterialMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
+                        .toString(JSONWriter.Feature.LargeObject), adapter.getSchemaAdapter().getOtherSqlType());
             } else {
-                stmt.setNull(3, Types.OTHER);
+                stmt.setNull(3, adapter.getSchemaAdapter().getOtherSqlType());
             }
 
             if (mapping.hasTextureMapping()) {
                 stmt.setObject(4, mapping.getTextureMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
+                        .toString(JSONWriter.Feature.LargeObject), adapter.getSchemaAdapter().getOtherSqlType());
             } else {
-                stmt.setNull(4, Types.OTHER);
+                stmt.setNull(4, adapter.getSchemaAdapter().getOtherSqlType());
             }
 
             if (mapping.hasWorldToTextureMapping()) {
                 stmt.setObject(5, mapping.getWorldToTextureMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
+                        .toString(JSONWriter.Feature.LargeObject), adapter.getSchemaAdapter().getOtherSqlType());
             } else {
-                stmt.setNull(5, Types.OTHER);
+                stmt.setNull(5, adapter.getSchemaAdapter().getOtherSqlType());
             }
 
             if (mapping.hasGeoreferencedTextureMapping()) {
                 stmt.setObject(6, mapping.getGeoreferencedTextureMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
+                        .toString(JSONWriter.Feature.LargeObject), adapter.getSchemaAdapter().getOtherSqlType());
             } else {
-                stmt.setNull(6, Types.OTHER);
+                stmt.setNull(6, adapter.getSchemaAdapter().getOtherSqlType());
             }
 
             addBatch();
