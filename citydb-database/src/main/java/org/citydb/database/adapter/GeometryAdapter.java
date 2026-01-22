@@ -49,10 +49,6 @@ public abstract class GeometryAdapter {
         srsHelper = SrsHelper.newInstance(adapter);
     }
 
-    public abstract int getGeometrySqlType();
-
-    public abstract String getGeometryTypeName();
-
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
 
     public abstract Envelope getEnvelope(Object geometryObject) throws GeometryException;

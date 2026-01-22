@@ -30,7 +30,6 @@ import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.Collections;
 
 public class GeoreferencedTextureImporter extends TextureImporter {
@@ -51,26 +50,18 @@ public class GeoreferencedTextureImporter extends TextureImporter {
     public long doImport(GeoreferencedTexture texture) throws ImportException, SQLException {
         long surfaceDataId = nextSequenceValue(Sequence.SURFACE_DATA);
 
-        String orientation = texture.getOrientation()
+        JSONArray orientation = texture.getOrientation()
                 .map(Matrix::toRowMajor)
                 .map(JSONArray::new)
-                .map(JSONArray::toString)
                 .orElse(null);
-        if (orientation != null) {
-            stmt.setObject(11, orientation, Types.OTHER);
-        } else {
-            stmt.setNull(11, Types.OTHER);
-        }
+
+        setJsonOrNull(11, getJson(orientation));
 
         Object referencePoint = getGeometry(texture.getReferencePoint()
                 .map(Point::force2D)
                 .orElse(null), false);
-        if (referencePoint != null) {
-            stmt.setObject(12, referencePoint, adapter.getGeometryAdapter().getGeometrySqlType());
-        } else {
-            stmt.setNull(12, adapter.getGeometryAdapter().getGeometrySqlType(),
-                    adapter.getGeometryAdapter().getGeometryTypeName());
-        }
+
+        setGeometryOrNull(12, referencePoint);
 
         return doImport(texture, surfaceDataId);
     }

@@ -53,8 +53,8 @@ public class TextureImageImporter extends DatabaseImporter {
         stmt.setLong(1, texImageId);
         stmt.setString(2, locator.getFileName());
         stmt.setBytes(3, getBytes(locator));
-        stmt.setString(4, textureImage.getMimeType().orElse(null));
-        stmt.setString(5, textureImage.getMimeTypeCodeSpace().orElse(null));
+        setStringOrNull(4, textureImage.getMimeType().orElse(null));
+        setStringOrNull(5, textureImage.getMimeTypeCodeSpace().orElse(null));
 
         stmt.execute();
         cacheTarget(CacheType.TEXTURE_IMAGE, textureImage.getObjectId().orElse(null), texImageId);

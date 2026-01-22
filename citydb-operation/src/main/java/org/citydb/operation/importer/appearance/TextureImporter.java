@@ -61,9 +61,9 @@ public abstract class TextureImporter extends SurfaceDataImporter {
             stmt.setNull(7, Types.BIGINT);
         }
 
-        stmt.setString(8, texture.getTextureType().map(TextureType::getDatabaseValue).orElse(null));
-        stmt.setString(9, texture.getWrapMode().map(WrapMode::getDatabaseValue).orElse(null));
-        stmt.setString(10, texture.getBorderColor().map(Color::toRGBA).orElse(null));
+        setStringOrNull(8, texture.getTextureType().map(TextureType::getDatabaseValue).orElse(null));
+        setStringOrNull(9, texture.getWrapMode().map(WrapMode::getDatabaseValue).orElse(null));
+        setStringOrNull(10, texture.getBorderColor().map(Color::toRGBA).orElse(null));
 
         return super.doImport(texture, surfaceDataId);
     }

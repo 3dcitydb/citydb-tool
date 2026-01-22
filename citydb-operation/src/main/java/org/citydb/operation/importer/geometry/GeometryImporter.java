@@ -21,7 +21,6 @@
 
 package org.citydb.operation.importer.geometry;
 
-import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
@@ -32,7 +31,6 @@ import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
 
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.Collections;
 
 public class GeometryImporter extends DatabaseImporter {
@@ -64,23 +62,10 @@ public class GeometryImporter extends DatabaseImporter {
             nullIndex = 3;
         }
 
-        if (value != null) {
-            stmt.setObject(geometryIndex, value, adapter.getGeometryAdapter().getGeometrySqlType());
-        } else {
-            stmt.setNull(geometryIndex, adapter.getGeometryAdapter().getGeometrySqlType(),
-                    adapter.getGeometryAdapter().getGeometryTypeName());
-        }
-
-        stmt.setNull(nullIndex, adapter.getGeometryAdapter().getGeometrySqlType(),
-                adapter.getGeometryAdapter().getGeometryTypeName());
-
-        JSONObject geometryProperties = adapter.getGeometryAdapter().buildGeometryProperties(geometry);
-        if (geometryProperties != null) {
-            stmt.setObject(4, geometryProperties.toString(JSONWriter.Feature.LargeObject), Types.OTHER);
-        } else {
-            stmt.setNull(4, Types.OTHER);
-        }
-
+        setGeometryOrNull(geometryIndex, value);
+        setGeometryOrNull(nullIndex, null);
+        setJsonOrNull(4, getJson(adapter.getGeometryAdapter().buildGeometryProperties(geometry),
+                JSONWriter.Feature.LargeObject));
         stmt.setLong(5, featureId);
 
         addBatch();

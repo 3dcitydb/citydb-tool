@@ -31,7 +31,6 @@ import org.citydb.operation.importer.util.SurfaceDataMapper;
 import org.citydb.operation.importer.util.SurfaceDataMapping;
 
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.Collections;
 import java.util.Map;
 
@@ -56,34 +55,10 @@ public class SurfaceDataMappingImporter extends DatabaseImporter {
 
             stmt.setLong(1, surfaceDataId);
             stmt.setLong(2, entry.getKey());
-
-            if (mapping.hasMaterialMapping()) {
-                stmt.setObject(3, mapping.getMaterialMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
-            } else {
-                stmt.setNull(3, Types.OTHER);
-            }
-
-            if (mapping.hasTextureMapping()) {
-                stmt.setObject(4, mapping.getTextureMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
-            } else {
-                stmt.setNull(4, Types.OTHER);
-            }
-
-            if (mapping.hasWorldToTextureMapping()) {
-                stmt.setObject(5, mapping.getWorldToTextureMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
-            } else {
-                stmt.setNull(5, Types.OTHER);
-            }
-
-            if (mapping.hasGeoreferencedTextureMapping()) {
-                stmt.setObject(6, mapping.getGeoreferencedTextureMapping()
-                        .toString(JSONWriter.Feature.LargeObject), Types.OTHER);
-            } else {
-                stmt.setNull(6, Types.OTHER);
-            }
+            setJsonOrNull(3, getJson(mapping.getMaterialMapping(), JSONWriter.Feature.LargeObject));
+            setJsonOrNull(4, getJson(mapping.getTextureMapping(), JSONWriter.Feature.LargeObject));
+            setJsonOrNull(5, getJson(mapping.getWorldToTextureMapping(), JSONWriter.Feature.LargeObject));
+            setJsonOrNull(6, getJson(mapping.getGeoreferencedTextureMapping(), JSONWriter.Feature.LargeObject));
 
             addBatch();
         }

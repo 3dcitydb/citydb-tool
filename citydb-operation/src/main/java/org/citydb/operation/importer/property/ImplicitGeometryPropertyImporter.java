@@ -60,7 +60,7 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
     }
 
     PropertyDescriptor doImport(ImplicitGeometryProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
-        stmt.setString(7, property.getLod().orElse(null));
+        setStringOrNull(7, property.getLod().orElse(null));
 
         ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
         if (implicitGeometry != null && canImport(implicitGeometry)) {
@@ -75,24 +75,14 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
             stmt.setNull(8, Types.BIGINT);
         }
 
-        Object referencePoint = getGeometry(property.getReferencePoint().orElse(null), true);
-        if (referencePoint != null) {
-            stmt.setObject(9, referencePoint, adapter.getGeometryAdapter().getGeometrySqlType());
-        } else {
-            stmt.setNull(9, adapter.getGeometryAdapter().getGeometrySqlType(),
-                    adapter.getGeometryAdapter().getGeometryTypeName());
-        }
+        setGeometryOrNull(9, getGeometry(property.getReferencePoint().orElse(null), true));
 
-        String transformationMatrix = property.getTransformationMatrix()
+        JSONArray transformationMatrix = property.getTransformationMatrix()
                 .map(Matrix::toRowMajor)
                 .map(JSONArray::new)
-                .map(JSONArray::toString)
                 .orElse(null);
-        if (transformationMatrix != null) {
-            stmt.setObject(10, transformationMatrix, Types.OTHER);
-        } else {
-            stmt.setNull(10, Types.OTHER);
-        }
+
+        setJsonOrNull(10, getJson(transformationMatrix));
 
         return super.doImport(property, propertyId, parentId, featureId);
     }

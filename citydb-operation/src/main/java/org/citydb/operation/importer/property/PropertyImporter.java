@@ -39,7 +39,6 @@ public abstract class PropertyImporter extends DatabaseImporter {
     PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long featureId) throws SQLException {
         stmt.setLong(1, propertyId);
         stmt.setLong(2, featureId);
-        stmt.setInt(4, schemaMapping.getDataType(property.getDataType().orElse(null)).getId());
 
         if (parentId != propertyId) {
             stmt.setLong(3, parentId);
@@ -47,13 +46,8 @@ public abstract class PropertyImporter extends DatabaseImporter {
             stmt.setNull(3, Types.BIGINT);
         }
 
-        Integer namespaceId = schemaMapping.getNamespaceByURI(property.getName().getNamespace()).getId();
-        if (namespaceId != null) {
-            stmt.setInt(5, namespaceId);
-        } else {
-            stmt.setNull(5, Types.INTEGER);
-        }
-
+        stmt.setInt(4, schemaMapping.getDataType(property.getDataType().orElse(null)).getId());
+        setIntegerOrNull(5, schemaMapping.getNamespaceByURI(property.getName().getNamespace()).getId());
         stmt.setString(6, property.getName().getLocalName());
 
         addBatch();

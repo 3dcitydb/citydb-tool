@@ -30,7 +30,6 @@ import org.citydb.operation.deleter.options.DeleteMode;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.time.OffsetDateTime;
 
 public class FeatureDeleter extends DatabaseDeleter {
@@ -65,7 +64,7 @@ public class FeatureDeleter extends DatabaseDeleter {
 
             stmt.setArray(1, helper.getConnection().createArrayOf("bigint", ids));
             stmt.setString(2, helper.getAdapter().getConnectionDetails().getSchema());
-            stmt.setObject(3, metadata.toString(), Types.OTHER);
+            setJsonOrNull(3, metadata.toString());
             stmt.setBoolean(4, helper.getOptions().isTerminateWithSubFeatures());
             stmt.execute();
         } else {

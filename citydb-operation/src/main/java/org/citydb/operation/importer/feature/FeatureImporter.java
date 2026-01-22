@@ -72,21 +72,13 @@ public class FeatureImporter extends DatabaseImporter {
         stmt.setLong(1, featureId);
         stmt.setInt(2, objectClassId);
         stmt.setString(3, feature.getOrCreateObjectId());
-        stmt.setString(4, feature.getIdentifier().orElse(null));
-        stmt.setString(5, feature.getIdentifierCodeSpace().orElse(null));
-
-        Object envelope = getEnvelope(feature.getEnvelope().orElse(null));
-        if (envelope != null) {
-            stmt.setObject(6, envelope, adapter.getGeometryAdapter().getGeometrySqlType());
-        } else {
-            stmt.setNull(6, adapter.getGeometryAdapter().getGeometrySqlType(),
-                    adapter.getGeometryAdapter().getGeometryTypeName());
-        }
-
+        setStringOrNull(4, feature.getIdentifier().orElse(null));
+        setStringOrNull(5, feature.getIdentifierCodeSpace().orElse(null));
+        setGeometryOrNull(6, getEnvelope(feature.getEnvelope().orElse(null)));
         stmt.setObject(7, feature.getLastModificationDate().orElse(importTime), Types.TIMESTAMP_WITH_TIMEZONE);
         stmt.setString(8, feature.getUpdatingPerson().orElse(updatingPerson));
-        stmt.setString(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
-        stmt.setString(10, feature.getLineage().orElse(lineage));
+        setStringOrNull(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
+        setStringOrNull(10, feature.getLineage().orElse(lineage));
 
         OffsetDateTime creationDate = switch (creationDateMode) {
             case OVERWRITE_WITH_FIXED -> this.creationDate != null ? this.creationDate : importTime;
@@ -95,27 +87,9 @@ public class FeatureImporter extends DatabaseImporter {
         };
 
         stmt.setObject(11, creationDate, Types.TIMESTAMP_WITH_TIMEZONE);
-
-        OffsetDateTime terminationDate = feature.getTerminationDate().orElse(null);
-        if (terminationDate != null) {
-            stmt.setObject(12, terminationDate, Types.TIMESTAMP_WITH_TIMEZONE);
-        } else {
-            stmt.setNull(12, Types.TIMESTAMP_WITH_TIMEZONE);
-        }
-
-        OffsetDateTime validFrom = feature.getValidFrom().orElse(null);
-        if (validFrom != null) {
-            stmt.setObject(13, validFrom, Types.TIMESTAMP_WITH_TIMEZONE);
-        } else {
-            stmt.setNull(13, Types.TIMESTAMP_WITH_TIMEZONE);
-        }
-
-        OffsetDateTime validTo = feature.getValidTo().orElse(null);
-        if (validTo != null) {
-            stmt.setObject(14, validTo, Types.TIMESTAMP_WITH_TIMEZONE);
-        } else {
-            stmt.setNull(14, Types.TIMESTAMP_WITH_TIMEZONE);
-        }
+        setTimestampOrNull(12, feature.getTerminationDate().orElse(null));
+        setTimestampOrNull(13, feature.getValidFrom().orElse(null));
+        setTimestampOrNull(14, feature.getValidTo().orElse(null));
 
         addBatch();
         cacheTarget(CacheType.FEATURE, objectId, featureId);

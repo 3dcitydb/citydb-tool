@@ -21,6 +21,9 @@
 
 package org.citydb.operation.importer.common;
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
@@ -45,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.OffsetDateTime;
 
 public abstract class DatabaseImporter {
@@ -92,6 +96,58 @@ public abstract class DatabaseImporter {
 
     public String getObjectSignature(Referencable object) {
         return helper.getObjectSignature(object);
+    }
+
+    protected void setStringOrNull(int index, String value) throws SQLException {
+        if (value != null) {
+            stmt.setString(index, value);
+        } else {
+            stmt.setNull(index, Types.VARCHAR);
+        }
+    }
+
+    protected void setIntegerOrNull(int index, Integer value) throws SQLException {
+        if (value != null) {
+            stmt.setInt(index, value);
+        } else {
+            stmt.setNull(index, Types.INTEGER);
+        }
+    }
+
+    protected void setLongOrNull(int index, Long value) throws SQLException {
+        if (value != null) {
+            stmt.setLong(index, value);
+        } else {
+            stmt.setNull(index, Types.BIGINT);
+        }
+    }
+
+    protected void setDoubleOrNull(int index, Double value) throws SQLException {
+        if (value != null) {
+            stmt.setDouble(index, value);
+        } else {
+            stmt.setNull(index, Types.DOUBLE);
+        }
+    }
+
+    protected void setTimestampOrNull(int index, OffsetDateTime value) throws SQLException {
+        if (value != null) {
+            stmt.setObject(index, value, Types.TIMESTAMP_WITH_TIMEZONE);
+        } else {
+            stmt.setNull(index, Types.TIMESTAMP_WITH_TIMEZONE);
+        }
+    }
+
+    protected void setBytesOrNull(int index, byte[] bytes) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setBytesOrNull(index, stmt, bytes);
+    }
+
+    protected void setJsonOrNull(int index, String json) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setJsonOrNull(index, stmt, json);
+    }
+
+    protected void setGeometryOrNull(int index, Object geometry) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setGeometryOrNull(index, stmt, geometry);
     }
 
     protected long nextSequenceValue(Sequence sequence) throws SQLException {
@@ -150,6 +206,26 @@ public abstract class DatabaseImporter {
             }
 
             return bytes;
+        }
+    }
+
+    protected String getJson(JSONArray jsonArray, JSONWriter.Feature... features) {
+        if (jsonArray != null) {
+            return features == null || features.length == 0 ?
+                    jsonArray.toString() :
+                    jsonArray.toString(features);
+        } else {
+            return null;
+        }
+    }
+
+    protected String getJson(JSONObject jsonObject, JSONWriter.Feature... features) {
+        if (jsonObject != null) {
+            return features == null || features.length == 0 ?
+                    jsonObject.toString() :
+                    jsonObject.toString(features);
+        } else {
+            return null;
         }
     }
 

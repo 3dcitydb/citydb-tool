@@ -30,7 +30,10 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
 import org.postgresql.util.PGobject;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter {
     private final WKBParser parser = new WKBParser();
@@ -42,16 +45,6 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     GeometryAdapter(DatabaseAdapter adapter) {
         super(adapter);
         spatialOperationHelper = new SpatialOperationHelper(adapter);
-    }
-
-    @Override
-    public int getGeometrySqlType() {
-        return Types.OTHER;
-    }
-
-    @Override
-    public String getGeometryTypeName() {
-        return "ST_Geometry";
     }
 
     @Override

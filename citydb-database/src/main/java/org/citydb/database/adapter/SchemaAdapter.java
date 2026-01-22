@@ -44,13 +44,11 @@ import java.util.stream.Collectors;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
-    private final SqlHelper sqlHelper;
     private final IndexHelper indexHelper;
     private SchemaMapping schemaMapping;
 
     protected SchemaAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
-        sqlHelper = SqlHelper.newInstance(adapter);
         indexHelper = IndexHelper.newInstance(adapter);
     }
 
@@ -75,6 +73,8 @@ public abstract class SchemaAdapter {
     public abstract String getDropIndex(Index index);
 
     public abstract String getIndexExists(Index index);
+
+    public abstract SqlHelper getSqlHelper();
 
     public abstract OperationHelper getOperationHelper();
 
@@ -102,10 +102,6 @@ public abstract class SchemaAdapter {
 
     public SchemaMapping getSchemaMapping() {
         return schemaMapping;
-    }
-
-    public SqlHelper getSqlHelper() {
-        return sqlHelper;
     }
 
     public IndexHelper getIndexHelper() {

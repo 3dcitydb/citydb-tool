@@ -39,16 +39,18 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-public class SqlHelper {
+public abstract class SqlHelper {
     private final DatabaseAdapter adapter;
 
-    private SqlHelper(DatabaseAdapter adapter) {
+    protected SqlHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
     }
 
-    public static SqlHelper newInstance(DatabaseAdapter adapter) {
-        return new SqlHelper(adapter);
-    }
+    public abstract void setBytesOrNull(int index, PreparedStatement stmt, byte[] bytes) throws SQLException;
+
+    public abstract void setJsonOrNull(int index, PreparedStatement stmt, String json) throws SQLException;
+
+    public abstract void setGeometryOrNull(int index, PreparedStatement stmt, Object geometry) throws SQLException;
 
     public PreparedStatement prepareStatement(SqlObject statement, Connection connection) throws SQLException {
         PreparedStatement stmt = connection.prepareStatement(statement.toSql());
@@ -89,8 +91,8 @@ public class SqlHelper {
 
     private void prepareStatement(int index, Geometry<?> geometry, PreparedStatement stmt) throws SQLException {
         try {
-            stmt.setObject(index, adapter.getGeometryAdapter().getGeometry(geometry, false, stmt.getConnection()),
-                    adapter.getGeometryAdapter().getGeometrySqlType());
+            setGeometryOrNull(index, stmt, adapter.getGeometryAdapter()
+                    .getGeometry(geometry, false, stmt.getConnection()));
         } catch (Exception e) {
             throw new SQLException("Failed to convert geometry to database representation.", e);
         }

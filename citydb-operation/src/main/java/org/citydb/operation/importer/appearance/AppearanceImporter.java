@@ -54,9 +54,9 @@ public class AppearanceImporter extends DatabaseImporter {
 
         stmt.setLong(1, appearanceId);
         stmt.setString(2, appearance.getOrCreateObjectId());
-        stmt.setString(3, appearance.getIdentifier().orElse(null));
-        stmt.setString(4, appearance.getIdentifierCodeSpace().orElse(null));
-        stmt.setString(5, appearance.getTheme().orElse(null));
+        setStringOrNull(3, appearance.getIdentifier().orElse(null));
+        setStringOrNull(4, appearance.getIdentifierCodeSpace().orElse(null));
+        setStringOrNull(5, appearance.getTheme().orElse(null));
 
         switch (type) {
             case GLOBAL:
