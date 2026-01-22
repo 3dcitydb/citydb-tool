@@ -48,7 +48,7 @@ public abstract class DatabaseDeleter {
     protected abstract void executeBatch(Long[] ids) throws DeleteException, SQLException;
 
     protected void setJsonOrNull(int index, String json) throws SQLException {
-        adapter.getSchemaAdapter().getSqlHelper().setJsonOrNull(index, stmt, json);
+        adapter.getSchemaAdapter().getSqlHelper().setJsonOrNull(stmt, index, json);
     }
 
     protected void addBatch(long id) throws DeleteException, SQLException {

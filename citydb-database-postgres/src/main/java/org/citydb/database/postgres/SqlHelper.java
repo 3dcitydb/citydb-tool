@@ -34,7 +34,7 @@ public class SqlHelper extends org.citydb.database.util.SqlHelper {
     }
 
     @Override
-    public void setBytesOrNull(int index, PreparedStatement stmt, byte[] bytes) throws SQLException {
+    public void setBytesOrNull(PreparedStatement stmt, int index, byte[] bytes) throws SQLException {
         if (bytes != null) {
             stmt.setBytes(index, bytes);
         } else {
@@ -43,7 +43,7 @@ public class SqlHelper extends org.citydb.database.util.SqlHelper {
     }
 
     @Override
-    public void setJsonOrNull(int index, PreparedStatement stmt, String json) throws SQLException {
+    public void setJsonOrNull(PreparedStatement stmt, int index, String json) throws SQLException {
         if (json != null) {
             stmt.setObject(index, json, Types.OTHER);
         } else {
@@ -52,7 +52,7 @@ public class SqlHelper extends org.citydb.database.util.SqlHelper {
     }
 
     @Override
-    public void setGeometryOrNull(int index, PreparedStatement stmt, Object geometry) throws SQLException {
+    public void setGeometryOrNull(PreparedStatement stmt, int index, Object geometry) throws SQLException {
         if (geometry != null) {
             stmt.setObject(index, geometry, Types.OTHER);
         } else {

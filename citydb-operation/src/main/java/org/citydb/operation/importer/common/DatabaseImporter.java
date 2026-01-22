@@ -139,15 +139,15 @@ public abstract class DatabaseImporter {
     }
 
     protected void setBytesOrNull(int index, byte[] bytes) throws SQLException {
-        adapter.getSchemaAdapter().getSqlHelper().setBytesOrNull(index, stmt, bytes);
+        adapter.getSchemaAdapter().getSqlHelper().setBytesOrNull(stmt, index, bytes);
     }
 
     protected void setJsonOrNull(int index, String json) throws SQLException {
-        adapter.getSchemaAdapter().getSqlHelper().setJsonOrNull(index, stmt, json);
+        adapter.getSchemaAdapter().getSqlHelper().setJsonOrNull(stmt, index, json);
     }
 
     protected void setGeometryOrNull(int index, Object geometry) throws SQLException {
-        adapter.getSchemaAdapter().getSqlHelper().setGeometryOrNull(index, stmt, geometry);
+        adapter.getSchemaAdapter().getSqlHelper().setGeometryOrNull(stmt, index, geometry);
     }
 
     protected long nextSequenceValue(Sequence sequence) throws SQLException {

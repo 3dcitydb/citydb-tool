@@ -46,11 +46,11 @@ public abstract class SqlHelper {
         this.adapter = adapter;
     }
 
-    public abstract void setBytesOrNull(int index, PreparedStatement stmt, byte[] bytes) throws SQLException;
+    public abstract void setBytesOrNull(PreparedStatement stmt, int index, byte[] bytes) throws SQLException;
 
-    public abstract void setJsonOrNull(int index, PreparedStatement stmt, String json) throws SQLException;
+    public abstract void setJsonOrNull(PreparedStatement stmt, int index, String json) throws SQLException;
 
-    public abstract void setGeometryOrNull(int index, PreparedStatement stmt, Object geometry) throws SQLException;
+    public abstract void setGeometryOrNull(PreparedStatement stmt, int index, Object geometry) throws SQLException;
 
     public PreparedStatement prepareStatement(SqlObject statement, Connection connection) throws SQLException {
         PreparedStatement stmt = connection.prepareStatement(statement.toSql());
@@ -91,7 +91,7 @@ public abstract class SqlHelper {
 
     private void prepareStatement(int index, Geometry<?> geometry, PreparedStatement stmt) throws SQLException {
         try {
-            setGeometryOrNull(index, stmt, adapter.getGeometryAdapter()
+            setGeometryOrNull(stmt, index, adapter.getGeometryAdapter()
                     .getGeometry(geometry, false, stmt.getConnection()));
         } catch (Exception e) {
             throw new SQLException("Failed to convert geometry to database representation.", e);
