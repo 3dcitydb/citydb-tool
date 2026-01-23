@@ -58,7 +58,7 @@ public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
             while (rs.next()) {
                 Sequence sequence = getSequence(rs.getString(1));
                 Long[] values = (Long[]) rs.getArray(2).getArray();
-                results.computeIfAbsent(sequence, k -> Arrays.asList(values));
+                results.put(sequence, Arrays.asList(values));
             }
         }
 
