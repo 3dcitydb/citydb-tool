@@ -81,13 +81,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public String getNextSequenceValues() {
-        return "select e->>'seq_name', v " +
-                "from jsonb_array_elements(?) as e " +
-                "cross join lateral citydb_pkg.get_seq_values(e->>'seq_name', (e->>'count')::bigint) as v";
-    }
-
-    @Override
     public int getMaximumBatchSize() {
         return 1000;
     }
@@ -216,6 +209,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public OperationHelper getOperationHelper() {
         return operationHelper;
+    }
+
+    @Override
+    public SequenceHelper getSequenceHelper(Connection connection) throws SQLException {
+        return new SequenceHelper(connection, adapter);
     }
 
     @Override

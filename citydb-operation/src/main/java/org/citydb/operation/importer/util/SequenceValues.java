@@ -36,8 +36,8 @@ public class SequenceValues {
         this.idCache = idCache;
     }
 
-    void addValue(Sequence sequence, long value) {
-        values.computeIfAbsent(sequence, v -> new ArrayDeque<>()).add(value);
+    void addValues(Sequence sequence, List<Long> values) {
+        this.values.computeIfAbsent(sequence, v -> new ArrayDeque<>(values));
     }
 
     public boolean hasNext(Sequence sequence) {

@@ -56,8 +56,6 @@ public abstract class SchemaAdapter {
 
     public abstract Optional<Table> getDummyTable();
 
-    public abstract String getNextSequenceValues();
-
     public abstract int getMaximumBatchSize();
 
     public abstract int getMaximumNumberOfItemsForInOperator();
@@ -77,6 +75,8 @@ public abstract class SchemaAdapter {
     public abstract SqlHelper getSqlHelper();
 
     public abstract OperationHelper getOperationHelper();
+
+    public abstract SequenceHelper getSequenceHelper(Connection connection) throws SQLException;
 
     public abstract StatisticsHelper getStatisticsHelper();
 

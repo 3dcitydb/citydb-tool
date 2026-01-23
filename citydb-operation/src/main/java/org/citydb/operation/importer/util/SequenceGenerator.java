@@ -21,11 +21,9 @@
 
 package org.citydb.operation.importer.util;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
+import org.citydb.database.util.SequenceHelper;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.appearance.SurfaceData;
@@ -45,26 +43,22 @@ import org.citydb.operation.importer.reference.CacheType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class SequenceHelper {
+public class SequenceGenerator {
     private final ImportHelper helper;
-    private final String schema;
-    private final PreparedStatement sequenceStmt;
+    private final SequenceHelper sequenceHelper;
     private PreparedStatement lookupStmt;
 
-    public SequenceHelper(ImportHelper helper) throws SQLException {
+    public SequenceGenerator(ImportHelper helper) throws SQLException {
         this.helper = helper;
-        schema = helper.getAdapter().getConnectionDetails().getSchema();
-        sequenceStmt = helper.getConnection().prepareStatement(
-                helper.getAdapter().getSchemaAdapter().getNextSequenceValues());
+        sequenceHelper = helper.getAdapter().getSchemaAdapter().getSequenceHelper(helper.getConnection());
     }
 
-    public SequenceValues nextSequenceValues(Visitable visitable) throws SQLException {
+    public SequenceValues generateNextValues(Visitable visitable) throws SQLException {
         Processor processor = new Processor();
         visitable.accept(processor);
         if (processor.exception != null) {
@@ -72,47 +66,20 @@ public class SequenceHelper {
         }
 
         SequenceValues values = new SequenceValues(processor.idCache);
-        sequenceStmt.setObject(1, getJson(processor.counter), Types.OTHER);
-        try (ResultSet rs = sequenceStmt.executeQuery()) {
-            while (rs.next()) {
-                Sequence sequence = getSequence(rs.getString(1));
-                if (sequence != null) {
-                    values.addValue(sequence, rs.getLong(2));
-                } else {
-                    throw new SQLException("Received value for unknown sequence '" + rs.getString(1) + "'.");
-                }
-            }
-        }
-
+        sequenceHelper.getNextValues(processor.counter).forEach(values::addValues);
         return values;
     }
 
-    private String getJson(Map<Sequence, Integer> counter) {
-        JSONArray array = new JSONArray(counter.size());
-        for (Map.Entry<Sequence, Integer> entry : counter.entrySet()) {
-            array.add(JSONObject.of(
-                    "seq_name", schema + "." + entry.getKey(),
-                    "count", entry.getValue()));
-        }
-
-        return array.toString(JSONWriter.Feature.WriteEnumUsingToString);
-    }
-
-    private Sequence getSequence(String name) {
-        int index = name.indexOf('.');
-        return Sequence.of(index != -1 ? name.substring(index + 1) : name);
-    }
-
     public void close() throws SQLException {
-        sequenceStmt.close();
+        sequenceHelper.close();
         if (lookupStmt != null) {
             lookupStmt.close();
         }
     }
 
     private class Processor extends ModelWalker {
-        private final Map<Sequence, Integer> counter = new HashMap<>();
-        private final Map<CacheType, Set<String>> idCache = new HashMap<>();
+        private final Map<Sequence, Integer> counter = new EnumMap<>(Sequence.class);
+        private final Map<CacheType, Set<String>> idCache = new EnumMap<>(CacheType.class);
         private SQLException exception;
 
         @Override

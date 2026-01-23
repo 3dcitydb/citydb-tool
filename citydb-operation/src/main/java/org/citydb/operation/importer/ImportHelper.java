@@ -28,7 +28,6 @@ import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
-import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.geometry.ImplicitGeometry;
@@ -61,7 +60,7 @@ public class ImportHelper {
     private final Connection connection;
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
-    private final SequenceHelper sequenceHelper;
+    private final SequenceGenerator sequenceGenerator;
     private final AffineTransformer transformer;
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
@@ -85,7 +84,7 @@ public class ImportHelper {
         connection = adapter.getPool().getConnection(false);
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
-        sequenceHelper = new SequenceHelper(this);
+        sequenceGenerator = new SequenceGenerator(this);
         transformer = options.getAffineTransform().map(AffineTransformer::of).orElse(null);
         failFast = options.isFailFast();
         batchSize = options.getBatchSize() > 0 ?
@@ -183,7 +182,7 @@ public class ImportHelper {
             }
 
             importTime = OffsetDateTime.now().withNano(0);
-            generateSequenceValues(feature);
+            sequenceValues = sequenceGenerator.generateNextValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
             if (importLogger != null) {
@@ -195,10 +194,6 @@ public class ImportHelper {
         } catch (Exception e) {
             throw new ImportException("Failed to import feature.", e);
         }
-    }
-
-    private void generateSequenceValues(Visitable visitable) throws SQLException {
-        sequenceValues = sequenceHelper.nextSequenceValues(visitable);
     }
 
     void executeBatch(boolean force, boolean commit) throws ImportException, SQLException {
@@ -247,7 +242,7 @@ public class ImportHelper {
     void close() throws ImportException, SQLException {
         updateImportLog(false);
         logEntries.clear();
-        sequenceHelper.close();
+        sequenceGenerator.close();
 
         try {
             tableHelper.close();
