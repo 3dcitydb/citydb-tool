@@ -34,14 +34,16 @@ import java.util.*;
 public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
     private final SqlHelper helper;
     private final PreparedStatement stmt;
+    private final int prefixLength;
     private final Map<Sequence, String> prefixedSequenceNames = new EnumMap<>(Sequence.class);
 
     SequenceHelper(Connection connection, DatabaseAdapter adapter) throws SQLException {
         super(connection);
         helper = adapter.getSchemaAdapter().getSqlHelper();
-        String schema = adapter.getConnectionDetails().getSchema();
+        String prefix = adapter.getConnectionDetails().getSchema() + ".";
+        prefixLength = prefix.length();
         for (Sequence sequence : Sequence.values()) {
-            prefixedSequenceNames.put(sequence, schema + "." + sequence.getName());
+            prefixedSequenceNames.put(sequence, prefix + sequence.getName());
         }
 
         stmt = connection.prepareStatement("select e.key, array_agg(nextval(e.key)) " +
@@ -56,7 +58,7 @@ public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
         helper.setJsonOrNull(stmt, 1, getJson(counts));
         try (ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                Sequence sequence = getSequence(rs.getString(1));
+                Sequence sequence = Sequence.of(rs.getString(1).substring(prefixLength));
                 Long[] values = (Long[]) rs.getArray(2).getArray();
                 results.put(sequence, Arrays.asList(values));
             }
@@ -80,11 +82,6 @@ public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
         }
 
         return json.append("}").toString();
-    }
-
-    private Sequence getSequence(String name) {
-        int index = name.indexOf('.');
-        return Sequence.of(index != -1 ? name.substring(index + 1) : name);
     }
 
     @Override
