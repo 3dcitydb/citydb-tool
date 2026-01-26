@@ -60,8 +60,8 @@ public class ArithmeticExpressionBuilder {
             return BuildResult.of(switch (expression.getOperator()) {
                 case PLUS -> Operators.plus(leftExpression, rightExpression);
                 case MINUS -> Operators.minus(leftExpression, rightExpression);
-                case MULTIPLY -> Operators.multiplyBy(leftExpression, rightExpression);
-                case DIVIDE -> Operators.divideBy(leftExpression, rightExpression);
+                case MULTIPLY -> Operators.multiply(leftExpression, rightExpression);
+                case DIVIDE -> Operators.divide(leftExpression, rightExpression);
                 case INT_DIVIDE -> helper.getOperationHelper().intDivision(leftExpression, rightExpression);
                 case POWER -> helper.getOperationHelper().power(leftExpression, rightExpression);
                 case MODULO -> Operators.modulo(leftExpression, rightExpression);
