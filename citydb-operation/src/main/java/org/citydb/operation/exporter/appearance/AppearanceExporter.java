@@ -30,41 +30,51 @@ import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.query.Sets;
 import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 
 public class AppearanceExporter extends DatabaseExporter {
-    private final Table appearance;
-    private final Select select;
     private final FeatureType material;
     private final FeatureType parameterizedTexture;
     private final FeatureType georeferencedTexture;
 
     public AppearanceExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        appearance = tableHelper.getTable(org.citydb.database.schema.Table.APPEARANCE);
-        select = getBaseQuery();
         material = schemaMapping.getFeatureType(X3DMaterial.newInstance().getName());
         parameterizedTexture = schemaMapping.getFeatureType(ParameterizedTexture.newInstance().getName());
         georeferencedTexture = schemaMapping.getFeatureType(GeoreferencedTexture.newInstance().getName());
-        stmt = helper.getConnection().prepareStatement(Select.of(select)
-                .where(appearance.column("id").eq(Placeholder.empty()))
-                .toSql());
+        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
     }
 
-    private Select getBaseQuery() {
+    private Select getQuery() {
+        Table appearance = tableHelper.getTable(org.citydb.database.schema.Table.APPEARANCE);
+        BooleanExpression themeFilter = getThemeFilter(appearance);
+
+        Select filter = Select.newInstance().select(appearance.column("id")).from(appearance);
+        if (themeFilter != null) {
+            filter.where(themeFilter);
+        }
+
+        CommonTableExpression cte = CommonTableExpression.of("filtered", Sets.unionAll(
+                Select.of(filter).where(operationHelper.inArray(appearance.column("id"), Placeholder.empty())),
+                Select.of(filter).where(operationHelper.inArray(appearance.column("implicit_geometry_id"),
+                        Placeholder.empty()))
+        ));
+
+        Table filtered = Table.of(cte);
         Table appearToSurfaceData = tableHelper.getTable(org.citydb.database.schema.Table.APPEAR_TO_SURFACE_DATA);
         Table surfaceData = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA);
         Table texImage = tableHelper.getTable(org.citydb.database.schema.Table.TEX_IMAGE);
         Table surfaceDataMapping = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING);
-        BooleanExpression themeFilter = getThemeFilter();
 
-        Select select = Select.newInstance()
+        return Select.newInstance()
+                .with(cte)
                 .select(appearance.columns("id", "objectid", "identifier", "identifier_codespace", "theme",
                         "feature_id", "implicit_geometry_id"))
                 .select(surfaceData.columns(Map.of("id", "sd_id", "objectid", "sd_objectid", "identifier",
@@ -77,34 +87,18 @@ public class AppearanceExporter extends DatabaseExporter {
                 .select(texImage.columns("image_uri", "mime_type", "mime_type_codespace"))
                 .select(surfaceDataMapping.columns("geometry_data_id", "material_mapping", "texture_mapping",
                         "world_to_texture_mapping", "georeferenced_texture_mapping"))
-                .from(appearance)
+                .from(filtered)
+                .join(appearance).on(appearance.column("id").eq(filtered.column("id")))
                 .join(appearToSurfaceData).on(appearToSurfaceData.column("appearance_id").eq(appearance.column("id")))
                 .join(surfaceData).on(surfaceData.column("id").eq(appearToSurfaceData.column("surface_data_id")))
                 .leftJoin(texImage).on(texImage.column("id").eq(surfaceData.column("tex_image_id")))
                 .leftJoin(surfaceDataMapping).on(surfaceDataMapping.column("surface_data_id")
                         .eq(surfaceData.column("id")));
-
-        return themeFilter != null ?
-                select.where(themeFilter) :
-                select;
-    }
-
-    private Select getQuery(Set<Long> ids, Set<Long> implicitGeometryIds) {
-        BooleanExpression condition;
-        if (!ids.isEmpty() && !implicitGeometryIds.isEmpty()) {
-            condition = Operators.or(operationHelper.in(appearance.column("id"), ids),
-                    operationHelper.in(appearance.column("implicit_geometry_id"), implicitGeometryIds));
-        } else if (!implicitGeometryIds.isEmpty()) {
-            condition = operationHelper.in(appearance.column("implicit_geometry_id"), implicitGeometryIds);
-        } else {
-            condition = operationHelper.in(appearance.column("id"), ids);
-        }
-
-        return Select.of(select).where(condition);
     }
 
     public Appearance doExport(long id) throws ExportException, SQLException {
-        stmt.setLong(1, id);
+        setLongArrayOrNull(1, List.of(id));
+        setLongArrayOrNull(2, Collections.emptyList());
         try (ResultSet rs = stmt.executeQuery()) {
             return doExport(rs).get(id);
         }
@@ -112,8 +106,9 @@ public class AppearanceExporter extends DatabaseExporter {
 
     public Map<Long, Appearance> doExport(Set<Long> ids, Set<Long> implicitGeometryIds) throws ExportException, SQLException {
         if (!ids.isEmpty() || !implicitGeometryIds.isEmpty()) {
-            try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids, implicitGeometryIds).toSql())) {
+            setLongArrayOrNull(1, ids);
+            setLongArrayOrNull(2, implicitGeometryIds);
+            try (ResultSet rs = stmt.executeQuery()) {
                 return doExport(rs);
             }
         } else {
@@ -171,7 +166,7 @@ public class AppearanceExporter extends DatabaseExporter {
         return appearances;
     }
 
-    private BooleanExpression getThemeFilter() {
+    private BooleanExpression getThemeFilter(Table appearance) {
         AppearanceOptions options = helper.getOptions().getAppearanceOptions().orElse(null);
         if (options != null && options.hasThemes()) {
             Set<String> themes = options.getThemes();

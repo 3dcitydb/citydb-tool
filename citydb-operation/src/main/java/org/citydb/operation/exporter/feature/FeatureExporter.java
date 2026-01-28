@@ -33,56 +33,38 @@ import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class FeatureExporter extends DatabaseExporter {
-    private final Table feature;
-    private final Select select;
 
     public FeatureExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        feature = tableHelper.getTable(org.citydb.database.schema.Table.FEATURE);
-        select = getBaseQuery();
-        stmt = helper.getConnection().prepareStatement(Select.of(select)
-                .where(feature.column("id").eq(Placeholder.empty()))
-                .toSql());
+        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
     }
 
-    private Select getBaseQuery() {
+    private Select getQuery() {
+        Table feature = tableHelper.getTable(org.citydb.database.schema.Table.FEATURE);
         return Select.newInstance()
                 .select(feature.columns("id", "objectclass_id", "objectid", "identifier", "identifier_codespace",
                         "last_modification_date", "updating_person", "reason_for_update", "lineage",
                         "creation_date", "termination_date", "valid_from", "valid_to"))
                 .select(helper.getTransformOperator(feature.column("envelope")))
-                .from(feature);
-    }
-
-    private Select getQuery(Set<Long> ids) {
-        return Select.of(select)
-                .where(operationHelper.in(feature.column("id"), ids));
+                .from(feature)
+                .where(operationHelper.inArray(feature.column("id"), Placeholder.empty()));
     }
 
     public Feature doExport(long id) throws ExportException, SQLException {
-        stmt.setLong(1, id);
+        setLongArrayOrNull(1, List.of(id));
         try (ResultSet rs = stmt.executeQuery()) {
             return doExport(rs).get(id);
         }
     }
 
     public Map<Long, Feature> doExport(Set<Long> ids) throws ExportException, SQLException {
-        if (ids.size() == 1) {
-            stmt.setLong(1, ids.iterator().next());
+        if (!ids.isEmpty()) {
+            setLongArrayOrNull(1, ids);
             try (ResultSet rs = stmt.executeQuery()) {
-                return doExport(rs);
-            }
-        } else if (!ids.isEmpty()) {
-            try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
                 return doExport(rs);
             }
         } else {

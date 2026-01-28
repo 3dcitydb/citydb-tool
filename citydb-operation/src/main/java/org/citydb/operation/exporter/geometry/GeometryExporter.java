@@ -34,35 +34,22 @@ import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class GeometryExporter extends DatabaseExporter {
-    private final Table geometryData;
-    private final Select select;
 
     public GeometryExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        geometryData = tableHelper.getTable(org.citydb.database.schema.Table.GEOMETRY_DATA);
-        select = getBaseQuery();
-        stmt = helper.getConnection().prepareStatement(Select.of(select)
-                .where(geometryData.column("id").eq(Placeholder.empty()))
-                .toSql());
+        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
     }
 
-    private Select getBaseQuery() {
+    private Select getQuery() {
+        Table geometryData = tableHelper.getTable(org.citydb.database.schema.Table.GEOMETRY_DATA);
         return Select.newInstance()
                 .select(geometryData.columns("id", "implicit_geometry", "geometry_properties", "feature_id"))
                 .select(helper.getTransformOperator(geometryData.column("geometry")))
-                .from(geometryData);
-    }
-
-    private Select getQuery(Set<Long> ids) {
-        return Select.of(select)
-                .where(operationHelper.in(geometryData.column("id"), ids));
+                .from(geometryData)
+                .where(operationHelper.inArray(geometryData.column("id"), Placeholder.empty()));
     }
 
     public Geometry<?> doExport(long id) throws ExportException, SQLException {
@@ -70,7 +57,7 @@ public class GeometryExporter extends DatabaseExporter {
     }
 
     public Geometry<?> doExport(long id, boolean isImplicit) throws ExportException, SQLException {
-        stmt.setLong(1, id);
+        setLongArrayOrNull(1, List.of(id));
         try (ResultSet rs = stmt.executeQuery()) {
             if (rs.next()) {
                 return doExport(isImplicit, rs).get(id);
@@ -85,14 +72,9 @@ public class GeometryExporter extends DatabaseExporter {
     }
 
     public Map<Long, Geometry<?>> doExport(Set<Long> ids, boolean isImplicit) throws ExportException, SQLException {
-        if (ids.size() == 1) {
-            stmt.setLong(1, ids.iterator().next());
+        if (!ids.isEmpty()) {
+            setLongArrayOrNull(1, ids);
             try (ResultSet rs = stmt.executeQuery()) {
-                return doExport(isImplicit, rs);
-            }
-        } else if (!ids.isEmpty()) {
-            try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
                 return doExport(isImplicit, rs);
             }
         } else {
