@@ -23,9 +23,12 @@ package org.citydb.database.postgres;
 
 import org.citydb.database.adapter.DatabaseAdapter;
 
+import java.sql.Array;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Collection;
+import java.util.function.IntFunction;
 
 public class SqlHelper extends org.citydb.database.util.SqlHelper {
 
@@ -57,6 +60,29 @@ public class SqlHelper extends org.citydb.database.util.SqlHelper {
             stmt.setObject(index, geometry, Types.OTHER);
         } else {
             stmt.setNull(index, Types.OTHER);
+        }
+    }
+
+    @Override
+    public void setLongArrayOrNull(PreparedStatement stmt, int index, Collection<Long> values) throws SQLException {
+        setArrayOrNull(stmt, index, values, "bigint", Long[]::new);
+    }
+
+    @Override
+    public void setStringArrayOrNull(PreparedStatement stmt, int index, Collection<String> values) throws SQLException {
+        setArrayOrNull(stmt, index, values, "text", String[]::new);
+    }
+
+    private <T> void setArrayOrNull(PreparedStatement stmt, int index, Collection<T> values, String type, IntFunction<T[]> factory) throws SQLException {
+        if (values != null) {
+            Array array = stmt.getConnection().createArrayOf(type, values.toArray(factory));
+            try {
+                stmt.setArray(index, array);
+            } finally {
+                array.free();
+            }
+        } else {
+            stmt.setNull(index, Types.ARRAY);
         }
     }
 }

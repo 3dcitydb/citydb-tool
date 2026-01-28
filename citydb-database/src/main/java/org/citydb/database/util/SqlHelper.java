@@ -37,6 +37,7 @@ import org.citydb.sqlbuilder.schema.WildcardColumn;
 import java.sql.*;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.List;
 
 public abstract class SqlHelper {
@@ -51,6 +52,10 @@ public abstract class SqlHelper {
     public abstract void setJsonOrNull(PreparedStatement stmt, int index, String json) throws SQLException;
 
     public abstract void setGeometryOrNull(PreparedStatement stmt, int index, Object geometry) throws SQLException;
+
+    public abstract void setLongArrayOrNull(PreparedStatement stmt, int index, Collection<Long> values) throws SQLException;
+
+    public abstract void setStringArrayOrNull(PreparedStatement stmt, int index, Collection<String> values) throws SQLException;
 
     public PreparedStatement prepareStatement(SqlObject statement, Connection connection) throws SQLException {
         PreparedStatement stmt = connection.prepareStatement(statement.toSql());
