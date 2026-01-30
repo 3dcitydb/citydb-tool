@@ -30,7 +30,7 @@ import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.query.Selection;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.PlainText;
+import org.citydb.sqlbuilder.util.PlainSql;
 
 public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper {
     private final PostgresqlAdapter adapter;
@@ -51,14 +51,13 @@ public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper
         envelope.as(alias);
         Table base = Table.of(baseQuery);
 
-        CommonTableExpression cteExtents = CommonTableExpression.of("extents", Select.newInstance()
+        CommonTableExpression extents = CommonTableExpression.of("extents", Select.newInstance()
                 .select(Function.of("st_force2d", base.column(alias)).as(alias))
                 .from(base)
                 .where(base.column(alias).isNotNull()));
-
         Pair<Table, Select> result = adapter.getPostGISVersion().compareTo(Version.of(3, 4, 0)) >= 0 ?
-                buildWithWindowFunction(cteExtents, alias) :
-                buildWithoutWindowFunction(cteExtents, alias);
+                buildWithWindowFunction(extents, alias) :
+                buildWithoutWindowFunction(extents, alias);
 
         Selection<?> cluster = Function.of("st_union", result.first().column(alias));
         if (adapter.getDatabaseMetadata().getSpatialReference().getSRID() != srid) {
@@ -66,43 +65,38 @@ public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper
         }
 
         return result.second()
-                .select(PlainText.of("({}).geom", Function.of("st_dump", cluster)).as("region"));
+                .select(PlainSql.of("({}).geom", Function.of("st_dump", cluster)).as("region"));
     }
 
-    private Pair<Table, Select> buildWithWindowFunction(CommonTableExpression cteExtents, String alias) {
-        Table extents = Table.of(cteExtents);
-        CommonTableExpression cteClusters = CommonTableExpression.of("clusters", Select.newInstance()
-                .select(extents.column(alias).as(alias))
-                .select(Function.of("st_clusterintersectingwin", extents.column(alias)).over().as("cluster_id"))
-                .from(extents));
-        Table clusters = Table.of(cteClusters);
-
-        return Pair.of(clusters, Select.newInstance()
-                .with(cteExtents)
-                .with(cteClusters)
-                .from(clusters)
-                .groupBy(clusters.column("cluster_id")));
-    }
-
-    private Pair<Table, Select> buildWithoutWindowFunction(CommonTableExpression cteExtents, String alias) {
-        Table extents = Table.of(cteExtents);
-        CommonTableExpression cteClusteredExtents = CommonTableExpression.of("clustered_extents", Select.newInstance()
-                .select(Function.of("st_clusterintersecting", extents.column(alias)).as("cluster"))
-                .from(extents));
-        Table clustered = Table.of(cteClusteredExtents);
-
-        CommonTableExpression cteClusters = CommonTableExpression.of("clusters", Select.newInstance()
-                .select(Function.of("unnest", clustered.column("cluster")).as(alias))
-                .select(Function.of("generate_subscripts", clustered.column("cluster"), IntegerLiteral.of(1))
+    private Pair<Table, Select> buildWithWindowFunction(CommonTableExpression extents, String alias) {
+        CommonTableExpression clusters = CommonTableExpression.of("clusters", Select.newInstance()
+                .select(extents.asTable().column(alias).as(alias))
+                .select(Function.of("st_clusterintersectingwin", extents.asTable().column(alias)).over()
                         .as("cluster_id"))
-                .from(clustered));
-        Table clusters = Table.of(cteClusters);
+                .from(extents.asTable()));
 
-        return Pair.of(clusters, Select.newInstance()
-                .with(cteExtents)
-                .with(cteClusteredExtents)
-                .with(cteClusters)
-                .from(clusters)
-                .groupBy(clusters.column("cluster_id")));
+        return Pair.of(clusters.asTable(), Select.newInstance()
+                .with(extents)
+                .with(clusters)
+                .from(clusters.asTable())
+                .groupBy(clusters.asTable().column("cluster_id")));
+    }
+
+    private Pair<Table, Select> buildWithoutWindowFunction(CommonTableExpression extents, String alias) {
+        CommonTableExpression clustered = CommonTableExpression.of("clustered_extents", Select.newInstance()
+                .select(Function.of("st_clusterintersecting", extents.asTable().column(alias)).as("cluster"))
+                .from(extents.asTable()));
+        CommonTableExpression clusters = CommonTableExpression.of("clusters", Select.newInstance()
+                .select(Function.of("unnest", clustered.asTable().column("cluster")).as(alias))
+                .select(Function.of("generate_subscripts", clustered.asTable().column("cluster"), IntegerLiteral.of(1))
+                        .as("cluster_id"))
+                .from(clustered.asTable()));
+
+        return Pair.of(clusters.asTable(), Select.newInstance()
+                .with(extents)
+                .with(clustered)
+                .with(clusters)
+                .from(clusters.asTable())
+                .groupBy(clusters.asTable().column("cluster_id")));
     }
 }

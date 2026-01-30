@@ -37,7 +37,7 @@ import org.citydb.sqlbuilder.query.OrderBy;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Column;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.PlainText;
+import org.citydb.sqlbuilder.util.PlainSql;
 import org.citydb.util.changelog.ChangelogHelper;
 import org.citydb.util.changelog.options.BboxMode;
 import org.citydb.util.changelog.options.SortOrder;
@@ -160,7 +160,7 @@ public class QueryBuilder {
         SqlExpressionValidator.defaults().validate(sqlFilter, invalid ->
                 new QueryBuildException("Found illegal content in SQL expression: " + invalid));
 
-        return In.of(column, PlainText.of(sqlFilter));
+        return In.of(column, PlainSql.of(sqlFilter));
     }
 
     private <T> Optional<BooleanExpression> buildComparisonOperator(Collection<T> values, Function<T, ScalarExpression> literal, Column column) {

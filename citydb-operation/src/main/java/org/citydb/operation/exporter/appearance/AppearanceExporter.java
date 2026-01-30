@@ -54,6 +54,10 @@ public class AppearanceExporter extends DatabaseExporter {
 
     private Select getQuery() {
         Table appearance = tableHelper.getTable(org.citydb.database.schema.Table.APPEARANCE);
+        Table appearToSurfaceData = tableHelper.getTable(org.citydb.database.schema.Table.APPEAR_TO_SURFACE_DATA);
+        Table surfaceData = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA);
+        Table texImage = tableHelper.getTable(org.citydb.database.schema.Table.TEX_IMAGE);
+        Table surfaceDataMapping = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING);
         BooleanExpression themeFilter = getThemeFilter(appearance);
 
         Select filter = Select.newInstance().select(appearance.column("id")).from(appearance);
@@ -61,20 +65,14 @@ public class AppearanceExporter extends DatabaseExporter {
             filter.where(themeFilter);
         }
 
-        CommonTableExpression cte = CommonTableExpression.of("filtered", Sets.unionAll(
+        CommonTableExpression appearances = CommonTableExpression.of("appearances", Sets.unionAll(
                 Select.of(filter).where(operationHelper.inArray(appearance.column("id"), Placeholder.empty())),
                 Select.of(filter).where(operationHelper.inArray(appearance.column("implicit_geometry_id"),
                         Placeholder.empty()))
         ));
 
-        Table filtered = Table.of(cte);
-        Table appearToSurfaceData = tableHelper.getTable(org.citydb.database.schema.Table.APPEAR_TO_SURFACE_DATA);
-        Table surfaceData = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA);
-        Table texImage = tableHelper.getTable(org.citydb.database.schema.Table.TEX_IMAGE);
-        Table surfaceDataMapping = tableHelper.getTable(org.citydb.database.schema.Table.SURFACE_DATA_MAPPING);
-
         return Select.newInstance()
-                .with(cte)
+                .with(appearances)
                 .select(appearance.columns("id", "objectid", "identifier", "identifier_codespace", "theme",
                         "feature_id", "implicit_geometry_id"))
                 .select(surfaceData.columns(Map.of("id", "sd_id", "objectid", "sd_objectid", "identifier",
@@ -87,8 +85,8 @@ public class AppearanceExporter extends DatabaseExporter {
                 .select(texImage.columns("image_uri", "mime_type", "mime_type_codespace"))
                 .select(surfaceDataMapping.columns("geometry_data_id", "material_mapping", "texture_mapping",
                         "world_to_texture_mapping", "georeferenced_texture_mapping"))
-                .from(filtered)
-                .join(appearance).on(appearance.column("id").eq(filtered.column("id")))
+                .from(appearances.asTable())
+                .join(appearance).on(appearance.column("id").eq(appearances.asTable().column("id")))
                 .join(appearToSurfaceData).on(appearToSurfaceData.column("appearance_id").eq(appearance.column("id")))
                 .join(surfaceData).on(surfaceData.column("id").eq(appearToSurfaceData.column("surface_data_id")))
                 .leftJoin(texImage).on(texImage.column("id").eq(surfaceData.column("tex_image_id")))

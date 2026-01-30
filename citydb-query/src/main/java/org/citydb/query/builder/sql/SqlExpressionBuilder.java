@@ -26,7 +26,7 @@ import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
 import org.citydb.query.filter.operation.SqlExpression;
 import org.citydb.sqlbuilder.operation.In;
-import org.citydb.sqlbuilder.util.PlainText;
+import org.citydb.sqlbuilder.util.PlainSql;
 
 import java.util.List;
 
@@ -45,7 +45,7 @@ public class SqlExpressionBuilder {
                 new QueryBuildException("Found illegal content in SQL expression: " + invalid));
 
         return BuildResult.of(In.of(context.getTable().column("id"),
-                        List.of(PlainText.of(queryExpression)),
+                        List.of(PlainSql.of(queryExpression)),
                         negate),
                 Type.BOOLEAN);
     }
