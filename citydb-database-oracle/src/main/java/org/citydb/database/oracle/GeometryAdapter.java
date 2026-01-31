@@ -21,35 +21,14 @@ package org.citydb.database.oracle;
 
 import oracle.spatial.geometry.J3D_Geometry;
 import oracle.spatial.geometry.JGeometry;
-
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Struct;
-
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.WKTWriter;
-import org.citydb.model.geometry.CompositeSolid;
-import org.citydb.model.geometry.CompositeSurface;
-import org.citydb.model.geometry.Coordinate;
-import org.citydb.model.geometry.Envelope;
-import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.GeometryType;
-import org.citydb.model.geometry.LineString;
-import org.citydb.model.geometry.LinearRing;
-import org.citydb.model.geometry.MultiLineString;
-import org.citydb.model.geometry.MultiPoint;
-import org.citydb.model.geometry.MultiSolid;
-import org.citydb.model.geometry.MultiSurface;
-import org.citydb.model.geometry.Point;
-import org.citydb.model.geometry.Polygon;
-import org.citydb.model.geometry.Solid;
-import org.citydb.model.geometry.TriangulatedSurface;
+import org.citydb.model.geometry.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -86,23 +65,13 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     @Override
-    public int getGeometrySqlType() {
-        return java.sql.Types.STRUCT;
-    }
-
-    @Override
-    public String getGeometryTypeName() {
-        return "MDSYS.SDO_GEOMETRY";
-    }
-
-    @Override
     public Geometry<?> getGeometry(Object geometryObject) throws GeometryException {   //Input geometryObject is from an Object ResultSet.getObject()
         if (geometryObject instanceof Struct struct) {
             try {
                 JGeometry oracleGeometry = JGeometry.loadJS(struct);
-                logger.debug("Oracle JGeometry type: "+oracleGeometry.getType());
+                logger.debug("Oracle JGeometry type: " + oracleGeometry.getType());
                 Geometry citydbGeometry = fromOracleGeometry(oracleGeometry);
-                logger.debug("Citydb geometry type: "+citydbGeometry.getGeometryType());
+                logger.debug("Citydb geometry type: " + citydbGeometry.getGeometryType());
                 return citydbGeometry;
             } catch (Exception e) {
                 logger.error(e.getMessage(), e);
@@ -114,38 +83,21 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     @Override
-    public Struct getGeometry(Geometry<?> geometry, boolean force3D)
-            throws GeometryException {
-        Struct struct = null;
-        Connection connection = null;
+    public Struct getGeometry(Geometry<?> geometry, boolean force3D, Connection connection) throws GeometryException {
         try {
-//            if (geometry.getParent(ImplicitGeometry.class) != null) {
-//                geometry.setSRID(0);
-//            } else {
-//                geometry.setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID());
-//            }
-            logger.debug("Citydb geometry type: "+geometry.getGeometryType());
+            logger.debug("Citydb geometry type: " + geometry.getGeometryType());
             JGeometry oracleGeometry = toOracleGeometry(geometry);
-            logger.debug("Oracle JGeometry type: "+oracleGeometry.getType());
-            connection = adapter.getPool().getConnection();
-            struct = JGeometry.storeJS(connection.unwrap(oracle.jdbc.OracleConnection.class), oracleGeometry);
-        }
-        catch (Exception e){
+            logger.debug("Oracle JGeometry type: " + oracleGeometry.getType());
+            return JGeometry.storeJS(connection.unwrap(oracle.jdbc.OracleConnection.class), oracleGeometry);
+        } catch (Exception e) {
             logger.error(e.getMessage(), e);
             throw new GeometryException(e);
         }
-        finally {
-            if(connection!=null){
-                try{connection.close();}
-                catch(SQLException e){}
-            }
-        }
-        return struct;
     }
 
     @Override
     public Envelope getEnvelope(Object geometryObject) throws GeometryException {
-        if (! (geometryObject instanceof Struct struct)) {
+        if (!(geometryObject instanceof Struct struct)) {
             throw new GeometryException("Unsupported geometry object type.");
         }
         try {
@@ -158,8 +110,8 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
 
     private static Envelope getEnvelope(JGeometry geometry) {
         double[] mbr = geometry.getMBR();
-        double[] min = Arrays.copyOfRange(mbr, 0, mbr.length/2);
-        double[] max = Arrays.copyOfRange(mbr, mbr.length/2, mbr.length);
+        double[] min = Arrays.copyOfRange(mbr, 0, mbr.length / 2);
+        double[] max = Arrays.copyOfRange(mbr, mbr.length / 2, mbr.length);
         Coordinate lowerCorner = Coordinate.of(min[0], min[1], min.length == 3 ? min[2] : Double.NaN);
         Coordinate upperCorner = Coordinate.of(max[0], max[1], max.length == 3 ? max[2] : Double.NaN);
         Envelope envelope = Envelope.of(lowerCorner, upperCorner);
@@ -167,31 +119,31 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
         return envelope;
     }
 
-    static double[] pointsToCoords(List<Coordinate> points, int dim){
+    static double[] pointsToCoords(List<Coordinate> points, int dim) {
         int numPoints = points.size();
-        double[] coords = new double[points.size()*dim];
-        for(int i = 0; i < numPoints; i++){
+        double[] coords = new double[points.size() * dim];
+        for (int i = 0; i < numPoints; i++) {
             Coordinate point = points.get(i);
-            coords[i*dim] = point.getX();
-            coords[i*dim+1] = point.getY();
-            coords[i*dim+2] = point.getZ();
+            coords[i * dim] = point.getX();
+            coords[i * dim + 1] = point.getY();
+            coords[i * dim + 2] = point.getZ();
         }
         return coords;
     }
 
-    private static double[] pointToCoords(Coordinate point, int dim){
+    private static double[] pointToCoords(Coordinate point, int dim) {
         double[] coords = new double[dim];
         coords[0] = point.getX();
         coords[1] = point.getY();
-        if(dim>=3) {
+        if (dim >= 3) {
             coords[2] = point.getZ();
         }
         return coords;
     }
 
-    private static String coordinateListToString(List<Coordinate> points){
+    private static String coordinateListToString(List<Coordinate> points) {
         StringBuilder sb = new StringBuilder();
-        for(Coordinate point: points){
+        for (Coordinate point : points) {
             sb.append(point.getX()).append(',').append(point.getY()).append(',').append(point.getZ()).append('\n');
         }
         return sb.toString();
@@ -207,82 +159,82 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
         return sb.toString();
     }
 
-    private static JGeometry polygonToOracleGeometry(Polygon polygon){
+    private static JGeometry polygonToOracleGeometry(Polygon polygon) {
         int dim = polygon.getVertexDimension();
         List<LinearRing> rings = polygon.getRings();
         double[][] polygonCoords = new double[rings.size()][];
-        for(int i = 0; i < rings.size(); i++){
+        for (int i = 0; i < rings.size(); i++) {
             List<Coordinate> points = rings.get(i).getPoints();
             polygonCoords[i] = pointsToCoords(points, dim);
         }
         return JGeometryUtil.createLinearPolygon(polygonCoords, dim, polygon.getSRID().orElse(0));
     }
 
-    private static JGeometry[] polygonsToOracleGeometries(List<Polygon> polygons){
+    private static JGeometry[] polygonsToOracleGeometries(List<Polygon> polygons) {
         JGeometry[] oraclePolygons = new JGeometry[polygons.size()];
-        for(int i = 0; i < oraclePolygons.length; i++){
+        for (int i = 0; i < oraclePolygons.length; i++) {
             oraclePolygons[i] = polygonToOracleGeometry(polygons.get(i));
         }
         return oraclePolygons;
     }
 
-    private static JGeometry solidToOracleGeometry(Solid solid){
+    private static JGeometry solidToOracleGeometry(Solid solid) {
         List<Polygon> shell = solid.getShell().getPolygons();
         JGeometry[] polygons = new JGeometry[shell.size()];
-        for(int i = 0; i < polygons.length; i++){
+        for (int i = 0; i < polygons.length; i++) {
             polygons[i] = polygonToOracleGeometry(shell.get(i));
         }
         JGeometry multiPolygon = JGeometryUtil.createSurface(polygons);
         return JGeometryUtil.createSolid(multiPolygon);
     }
 
-    static JGeometry toOracleGeometry(Geometry<?> geometry){
+    static JGeometry toOracleGeometry(Geometry<?> geometry) {
         GeometryType type = geometry.getGeometryType();
         int dim = geometry.getVertexDimension();
         int srid = geometry.getSRID().orElse(0);
 
-        switch(type){
+        switch (type) {
             case POINT:
-                Coordinate coordinate = ((Point)geometry).getCoordinate();
+                Coordinate coordinate = ((Point) geometry).getCoordinate();
                 double[] pointCoords = {coordinate.getX(), coordinate.getY(), coordinate.getZ()};
                 return JGeometry.createPoint(pointCoords, dim, srid);
             case MULTI_POINT:
-                List<Point> points = ((MultiPoint)geometry).getPoints();
+                List<Point> points = ((MultiPoint) geometry).getPoints();
                 double[][] multiPointCoords = new double[points.size()][];
-                for(int i = 0; i < points.size(); i++){
+                for (int i = 0; i < points.size(); i++) {
                     Coordinate point = points.get(i).getCoordinate();
                     multiPointCoords[i] = pointToCoords(point, dim);
                 }
                 return JGeometry.createMultiPoint(multiPointCoords, dim, srid);
             case LINE_STRING:
-                double[] lineStringCoords = pointsToCoords(((LineString)geometry).getPoints(), dim);
+                double[] lineStringCoords = pointsToCoords(((LineString) geometry).getPoints(), dim);
                 return JGeometry.createLinearLineString(lineStringCoords, dim, srid);
             case MULTI_LINE_STRING:
-                List<LineString> lineStrings = ((MultiLineString)geometry).getLineStrings();
+                List<LineString> lineStrings = ((MultiLineString) geometry).getLineStrings();
                 double[][] multiLineStringCoords = new double[lineStrings.size()][];
-                for(int i = 0; i < lineStrings.size(); i++){
+                for (int i = 0; i < lineStrings.size(); i++) {
                     multiLineStringCoords[i] = pointsToCoords(lineStrings.get(i).getPoints(), dim);
                 }
                 return JGeometry.createLinearMultiLineString(multiLineStringCoords, dim, srid);
             case POLYGON:
-                return polygonToOracleGeometry((Polygon)geometry);
+                return polygonToOracleGeometry((Polygon) geometry);
             case TRIANGULATED_SURFACE:
-                List<Polygon> surfaceTriangles = ((TriangulatedSurface)geometry).getPolygons();
+                List<Polygon> surfaceTriangles = ((TriangulatedSurface) geometry).getPolygons();
                 JGeometry[] oracleSurfaceTriangles = polygonsToOracleGeometries(surfaceTriangles);
                 return JGeometryUtil.createSurface(oracleSurfaceTriangles);
             case MULTI_SURFACE:
-                JGeometry[] multiSurfacePolygon = polygonsToOracleGeometries(((MultiSurface)geometry).getPolygons());
+                JGeometry[] multiSurfacePolygon = polygonsToOracleGeometries(((MultiSurface) geometry).getPolygons());
                 return JGeometryUtil.createSurface(multiSurfacePolygon);
             case COMPOSITE_SURFACE:
-                List<Polygon> compositeSurface = ((CompositeSurface)geometry).getPolygons();
+                List<Polygon> compositeSurface = ((CompositeSurface) geometry).getPolygons();
                 JGeometry[] oracleCompositeSurfaces = polygonsToOracleGeometries(compositeSurface);
                 return JGeometryUtil.createSurface(oracleCompositeSurfaces);
             case SOLID:
-                return solidToOracleGeometry((Solid)geometry);
+                return solidToOracleGeometry((Solid) geometry);
             case MULTI_SOLID:
-                List<Solid> citydbMultiSolids = ((MultiSolid)geometry).getSolids();
+                List<Solid> citydbMultiSolids = ((MultiSolid) geometry).getSolids();
                 JGeometry[] oracleMultiSolids = new JGeometry[citydbMultiSolids.size()];
-                for(int i = 0; i < citydbMultiSolids.size(); i++){
+                for (int i = 0; i < citydbMultiSolids.size(); i++) {
                     Solid solid = citydbMultiSolids.get(i);
                     JGeometry[] multiSolidPolygon = polygonsToOracleGeometries(solid.getShell().getPolygons());
                     JGeometry surface = JGeometryUtil.createSurface(multiSolidPolygon);
@@ -290,9 +242,9 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
                 }
                 return JGeometryUtil.createMultiSolid(oracleMultiSolids);
             case COMPOSITE_SOLID:
-                List<Solid> citydbCompositeSolids = ((CompositeSolid)geometry).getSolids();
+                List<Solid> citydbCompositeSolids = ((CompositeSolid) geometry).getSolids();
                 JGeometry[] oracleCompositeSolids = new JGeometry[citydbCompositeSolids.size()];
-                for(int i = 0; i < citydbCompositeSolids.size(); i++){
+                for (int i = 0; i < citydbCompositeSolids.size(); i++) {
                     Solid solid = citydbCompositeSolids.get(i);
                     JGeometry[] compositePolygons = polygonsToOracleGeometries(solid.getShell().getPolygons());
                     JGeometry surface = JGeometryUtil.createSurface(compositePolygons);
@@ -310,7 +262,7 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
         int srid = oracleGeometry.getSRID();
         int[] elemInfo = oracleGeometry.getElemInfo();
         double[] ordinates = oracleGeometry.getOrdinatesArray();
-        int firstElementType = elemInfo!=null && elemInfo.length>2 ? getElementType(elemInfo[1]) : 0;
+        int firstElementType = elemInfo != null && elemInfo.length > 2 ? getElementType(elemInfo[1]) : 0;
 
         switch (gType) {
             case J3D_Geometry.GTYPE_POINT:
@@ -322,10 +274,9 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
             case JGeometry.GTYPE_MULTICURVE:
                 return createMultiLineString(elemInfo, ordinates, dim).setSRID(srid);
             case J3D_Geometry.GTYPE_POLYGON:   //same as J3D_Geometry.GTYPE_SURFACE
-                if(firstElementType == J3D_Geometry.ETYPE_COMPOSITEPOLYGON) {   //same as J3D_Geometry.ETYPE_COMPOSITESURFACE
+                if (firstElementType == J3D_Geometry.ETYPE_COMPOSITEPOLYGON) {   //same as J3D_Geometry.ETYPE_COMPOSITESURFACE
                     return createCompositeSurface(elemInfo, ordinates, dim).setSRID(srid);
-                }
-                else {
+                } else {
                     return createPolygon(elemInfo, ordinates, dim).setSRID(srid);
                 }
             case J3D_Geometry.GTYPE_MULTIPOLYGON:  //same as J3D_Geometry.GTYPE_MULTISURFACE
@@ -336,17 +287,16 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
                 // a MultiSurface will be returned.
                 return createMultiSurface(elemInfo, ordinates, dim).setSRID(srid);
             case J3D_Geometry.GTYPE_SOLID:
-                if(firstElementType == J3D_Geometry.ETYPE_COMPOSITESOLID) {
+                if (firstElementType == J3D_Geometry.ETYPE_COMPOSITESOLID) {
                     return createCompositeSolid(elemInfo, ordinates, dim).setSRID(srid);
-                }
-                else {
+                } else {
                     return createSolid(elemInfo, ordinates, dim).setSRID(srid);
                 }
             case J3D_Geometry.GTYPE_MULTISOLID:
                 return createMultiSolid(elemInfo, ordinates, dim).setSRID(srid);
             case J3D_Geometry.GTYPE_COLLECTION:
             default:
-                throw new IllegalArgumentException("Unsupported JGeometry type: "+gType);
+                throw new IllegalArgumentException("Unsupported JGeometry type: " + gType);
         }
     }
 
@@ -355,12 +305,11 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     private static MultiPoint createMultiPoint(double[] ordinates, int dim) {
-        Point[] points = new Point[ordinates.length/dim];
-        for(int i = 0; i < ordinates.length; i += dim) {
-            if(dim==3) {
-                points[i/dim] = Point.of(Coordinate.of(ordinates[i], ordinates[i + 1], ordinates[i + 2]));
-            }
-            else {
+        Point[] points = new Point[ordinates.length / dim];
+        for (int i = 0; i < ordinates.length; i += dim) {
+            if (dim == 3) {
+                points[i / dim] = Point.of(Coordinate.of(ordinates[i], ordinates[i + 1], ordinates[i + 2]));
+            } else {
                 points[i] = Point.of(Coordinate.of(ordinates[i], ordinates[i + 1]));
             }
         }
@@ -390,15 +339,15 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     private static LineString createLineStringForOneElement(int[] elemInfo, int elemInfoStartIndex, int elemInfoEndIndex,
-                                                            double[] ordinates, int ordinatesEndIndex, int dim){
+                                                            double[] ordinates, int ordinatesEndIndex, int dim) {
         //citygml does not support curve
-        if(elemInfo!=null && getElementType(elemInfo[elemInfoStartIndex+1])!=JGeometryUtil.ETYPE_CURVE) {
+        if (elemInfo != null && getElementType(elemInfo[elemInfoStartIndex + 1]) != JGeometryUtil.ETYPE_CURVE) {
             throw new IllegalArgumentException("Curve is not supported!");
         }
         List<Coordinate> points = extractPoints(
                 elemInfo, elemInfoStartIndex, elemInfoEndIndex,
                 ordinates, ordinatesEndIndex, dim);
-        if(points.isEmpty()){
+        if (points.isEmpty()) {
             return null;
         }
         return LineString.of(points);
@@ -408,41 +357,41 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
                                                          double[] ordinates,
                                                          int dim) {
         List<LineString> lineStrings = new ArrayList<>();
-        for(int i = 0; i < elemInfo.length; i += 3) {
+        for (int i = 0; i < elemInfo.length; i += 3) {
             int elemInfoEndIndex = elemInfo.length;
             int ordinatesEndIndex = ordinates.length;
-            if(i < elemInfo.length-3) {
-                elemInfoEndIndex = i+3;
+            if (i < elemInfo.length - 3) {
+                elemInfoEndIndex = i + 3;
                 ordinatesEndIndex = elemInfo[elemInfoEndIndex];
             }
             LineString lineString = createLineStringForOneElement(
                     elemInfo, i, elemInfoEndIndex,
                     ordinates, ordinatesEndIndex, dim);
-            if(lineString!=null){
+            if (lineString != null) {
                 lineStrings.add(lineString);
             }
         }
         return MultiLineString.of(lineStrings);
     }
 
-    private static int getElementType(int eType){
-        return eType%10;
+    private static int getElementType(int eType) {
+        return eType % 10;
     }
 
 
-    private static boolean isInterior(int eType){
-        return eType/1000 == 2;
+    private static boolean isInterior(int eType) {
+        return eType / 1000 == 2;
     }
 
     private static LinearRing createLinearRingForOneElement(int[] elemInfo, int elemInfoStartIndex, int elemInfoEndIndex,
-                                                            double[] ordinates, int ordinatesEndIndex, int dim){
-        if(getElementType(elemInfo[elemInfoStartIndex+1])!=J3D_Geometry.ETYPE_POLYGON) {
+                                                            double[] ordinates, int ordinatesEndIndex, int dim) {
+        if (getElementType(elemInfo[elemInfoStartIndex + 1]) != J3D_Geometry.ETYPE_POLYGON) {
             return null;
         }
         List<Coordinate> points = extractPoints(
                 elemInfo, elemInfoStartIndex, elemInfoEndIndex,
                 ordinates, ordinatesEndIndex, dim);
-        if(points.isEmpty()){
+        if (points.isEmpty()) {
             return null;
         }
         return LinearRing.of(points);
@@ -451,25 +400,24 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     private static Polygon createPolygon(int[] elemInfo, double[] ordinates, int dim) {  //polygon could have holes/interior rings
         LinearRing exteriorRing = null;
         List<LinearRing> interiorRings = new ArrayList<>();
-        for(int i = 0; i < elemInfo.length; i += 3) {
-            boolean isInterior = isInterior(elemInfo[i+1]);
+        for (int i = 0; i < elemInfo.length; i += 3) {
+            boolean isInterior = isInterior(elemInfo[i + 1]);
             int elemInfoEndIndex = elemInfo.length;
             int ordinatesEndIndex = ordinates.length;
-            if(i < elemInfo.length-3) {
-                elemInfoEndIndex = i+3;
+            if (i < elemInfo.length - 3) {
+                elemInfoEndIndex = i + 3;
                 ordinatesEndIndex = elemInfo[elemInfoEndIndex];
             }
             LinearRing currRing = createLinearRingForOneElement(
                     elemInfo, i, elemInfoEndIndex,
                     ordinates, ordinatesEndIndex, dim);
-            if(currRing==null)
+            if (currRing == null)
                 continue;
-            if(exteriorRing==null){
-                assert(!isInterior);
+            if (exteriorRing == null) {
+                assert (!isInterior);
                 exteriorRing = currRing;
-            }
-            else{
-                assert(isInterior);
+            } else {
+                assert (isInterior);
                 interiorRings.add(currRing);
             }
         }
@@ -478,42 +426,41 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
 
     private static List<Polygon> createMultiPolygon(int[] elemInfo, int elemInfoStartIndex, int elemInfoEndIndex,
                                                     double[] ordinates, int ordinatesEndIndex, int dim) {
-        if(elemInfo==null || elemInfo.length<3){
+        if (elemInfo == null || elemInfo.length < 3) {
             return null;
         }
         List<Polygon> polygons = new ArrayList<>();
         LinearRing exteriorRing = null;
         List<LinearRing> interiorRings = new ArrayList<>();
-        for(int i = elemInfoStartIndex; i < elemInfoEndIndex; i += 3) {
-            if(getElementType(elemInfo[i+1]) != J3D_Geometry.ETYPE_POLYGON) {
+        for (int i = elemInfoStartIndex; i < elemInfoEndIndex; i += 3) {
+            if (getElementType(elemInfo[i + 1]) != J3D_Geometry.ETYPE_POLYGON) {
                 continue;
             }
-            boolean isInterior = isInterior(elemInfo[i+1]);
+            boolean isInterior = isInterior(elemInfo[i + 1]);
             int currElemInfoEndIndex = elemInfoEndIndex;
             int currPolygonOrdinatesEndIndex = ordinatesEndIndex;
-            if(i < elemInfoEndIndex-3) {
-                currElemInfoEndIndex = i+3;
+            if (i < elemInfoEndIndex - 3) {
+                currElemInfoEndIndex = i + 3;
                 currPolygonOrdinatesEndIndex = elemInfo[currElemInfoEndIndex];
             }
             LinearRing currRing = createLinearRingForOneElement(
                     elemInfo, i, currElemInfoEndIndex, ordinates, currPolygonOrdinatesEndIndex, dim);
-            if(currRing==null){
+            if (currRing == null) {
                 continue;
             }
-            if(!isInterior){
+            if (!isInterior) {
                 //wrap up the previous polygon
-                if(exteriorRing!=null) {
+                if (exteriorRing != null) {
                     polygons.add(Polygon.of(exteriorRing, interiorRings));
                 }
                 exteriorRing = currRing;
                 interiorRings = new ArrayList<>();
-            }
-            else{
+            } else {
                 interiorRings.add(currRing);
             }
         }
         //wrap up the last polygon
-        if(exteriorRing!=null) {
+        if (exteriorRing != null) {
             polygons.add(Polygon.of(exteriorRing, interiorRings));
         }
         return polygons;
@@ -544,29 +491,28 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
         Envelope envelope = Envelope.of(
                 Coordinate.of(
                         ordinates[ordinateStartIndex],
-                        ordinates[ordinateStartIndex+1],
-                        ordinates[ordinateStartIndex+2]),
+                        ordinates[ordinateStartIndex + 1],
+                        ordinates[ordinateStartIndex + 2]),
                 Coordinate.of(
-                        ordinates[ordinateStartIndex+3],
-                        ordinates[ordinateStartIndex+4],
-                        ordinates[ordinateStartIndex+5])
+                        ordinates[ordinateStartIndex + 3],
+                        ordinates[ordinateStartIndex + 4],
+                        ordinates[ordinateStartIndex + 5])
         );
         polygons.add(envelope.convertToPolygon());
         return polygons;
     }
 
     private static Solid createSingleSolid(int[] elemInfo, int elemInfoStartIndex, int elemInfoEndIndex,
-                                     double[] ordinates, int ordinatesEndIndex,
-                                     int dim) {
+                                           double[] ordinates, int ordinatesEndIndex,
+                                           int dim) {
         //need to handle optimized representation for rectangular boxes
-        if(getElementType(elemInfo[elemInfoStartIndex+1]) != J3D_Geometry.ETYPE_SOLID) {
-            throw new IllegalArgumentException("The first element triplet must be of solid element type! "+Arrays.toString(elemInfo));
+        if (getElementType(elemInfo[elemInfoStartIndex + 1]) != J3D_Geometry.ETYPE_SOLID) {
+            throw new IllegalArgumentException("The first element triplet must be of solid element type! " + Arrays.toString(elemInfo));
         }
         List<Polygon> polygons = null;
-        if(elemInfo[elemInfoStartIndex+2] == JGeometryUtil.EITPR_RECTANGLE){
+        if (elemInfo[elemInfoStartIndex + 2] == JGeometryUtil.EITPR_RECTANGLE) {
             polygons = createRectangularBox(elemInfo, elemInfoStartIndex, ordinates, dim);
-        }
-        else {
+        } else {
             polygons = createMultiPolygon(elemInfo, elemInfoStartIndex, elemInfoEndIndex, ordinates, ordinatesEndIndex, dim);
         }
         CompositeSurface shell = CompositeSurface.of(polygons);

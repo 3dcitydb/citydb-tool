@@ -20,7 +20,6 @@
 package org.citydb.database.oracle;
 
 import oracle.jdbc.OracleDriver;
-
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseType;
 

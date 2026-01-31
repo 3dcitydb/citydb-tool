@@ -21,7 +21,6 @@ package org.citydb.database.oracle;
 
 import org.citydb.database.adapter.DatabaseAdapter;
 
-import javax.xml.validation.Schema;
 import java.util.Map;
 
 public class TempTableHelper implements org.citydb.database.util.TempTableHelper {
@@ -68,7 +67,7 @@ public class TempTableHelper implements org.citydb.database.util.TempTableHelper
 
     @Override
     public String getString(int size) {
-        assert(size>0);
+        assert (size > 0);
         return "varchar2(" + size + ")";
     }
 

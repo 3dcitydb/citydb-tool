@@ -3,4 +3,8 @@ dependencies {
     compileOnly 'com.oracle.database.jdbc:ojdbc17:23.26.0.0.0'
     compileOnly 'com.oracle.database.spatial:sdoapi:23.26'
     compileOnly 'com.oracle.database.spatial:sdoutl:23.26'
+
+    testImplementation 'com.oracle.database.jdbc:ojdbc17:23.26.0.0.0'
+    testImplementation 'com.oracle.database.spatial:sdoapi:23.26'
+    testImplementation 'com.oracle.database.spatial:sdoutl:23.26'
 }

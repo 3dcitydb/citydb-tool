@@ -22,8 +22,12 @@ package org.citydb.database.oracle;
 import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.function.Function;
-import org.citydb.sqlbuilder.operation.ArithmeticOperation;
+import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
+import org.citydb.sqlbuilder.operation.ArithmeticOperation;
+import org.citydb.sqlbuilder.operation.BooleanExpression;
+import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
 public class OperationHelper extends org.citydb.database.util.OperationHelper {
 
@@ -61,5 +65,13 @@ public class OperationHelper extends org.citydb.database.util.OperationHelper {
     @Override
     public Expression upper(ScalarExpression expression) {
         return Function.of("upper", expression);
+    }
+
+    @Override
+    public BooleanExpression inArray(ScalarExpression operand, Placeholder values) {
+        Table table = Table.of(Function.of("table", values));
+        return operand.in(Select.newInstance()
+                .select(table.column("COLUMN_VALUE"))
+                .from(table));
     }
 }
