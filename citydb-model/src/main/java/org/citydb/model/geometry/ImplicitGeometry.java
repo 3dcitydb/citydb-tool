@@ -24,6 +24,7 @@ package org.citydb.model.geometry;
 import org.citydb.model.common.*;
 import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.util.AffineTransformer;
+import org.citydb.model.util.IdCreator;
 import org.citydb.model.util.matrix.Matrix;
 
 import java.util.List;
@@ -91,6 +92,21 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
     public ImplicitGeometry setObjectId(String objectId) {
         this.objectId = objectId;
         return this;
+    }
+
+    @Override
+    public String getOrCreateObjectId(IdCreator idCreator) {
+        return getObjectId().orElseGet(() -> {
+            if (geometry != null) {
+                setObjectId(geometry.getOrCreateObjectId(idCreator));
+            } else if (libraryObject != null) {
+                setObjectId(libraryObject.getOrCreateObjectId(idCreator));
+            } else {
+                setObjectId(Referencable.super.getOrCreateObjectId(idCreator));
+            }
+
+            return objectId;
+        });
     }
 
     public boolean hasAppearances() {

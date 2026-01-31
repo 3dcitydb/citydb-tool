@@ -54,14 +54,17 @@ public class ReportJsonBuilder {
         JSONObject jsonReport = new JSONObject();
         jsonReport.fluentPut("metadata", buildMetadata(options))
                 .fluentPut("summary", buildSummary(report, options, adapter))
-                .fluentPut("database", buildDatabase(report, options, adapter))
-                .fluentPut("features", buildFeatures(report, adapter))
-                .fluentPut("geometries", buildGeometries(report))
-                .fluentPut("addresses", buildAddresses(report))
-                .fluentPut("appearances", buildAppearances(report))
-                .fluentPut("extensions", buildExtensions(report))
-                .fluentPut("codeLists", buildCodeLists(report))
-                .fluentPut("modules", new JSONObject(report.getModules()));
+                .fluentPut("database", buildDatabase(report, options, adapter));
+
+        if (!options.isCompact()) {
+            jsonReport.fluentPut("features", buildFeatures(report, adapter))
+                    .fluentPut("geometries", buildGeometries(report))
+                    .fluentPut("addresses", buildAddresses(report))
+                    .fluentPut("appearances", buildAppearances(report))
+                    .fluentPut("extensions", buildExtensions(report))
+                    .fluentPut("codeLists", buildCodeLists(report))
+                    .fluentPut("modules", new JSONObject(report.getModules()));
+        }
 
         if (options.isIncludeGenericAttributes()) {
             jsonReport.put("genericAttributes", buildGenericAttributes(report));
@@ -196,7 +199,10 @@ public class ReportJsonBuilder {
 
     private JSONObject buildGenericAttributes(DatabaseReport report) {
         JSONObject genericAttributes = new JSONObject();
-        report.getGenericAttributes().forEach((name, types) -> genericAttributes.put(name, new JSONArray(types)));
+        report.getGenericAttributes().forEach((featureType, attributes) -> {
+            JSONObject object = genericAttributes.putObject(featureType);
+            attributes.forEach((name, types) -> object.put(name, new JSONArray(types)));
+        });
 
         return genericAttributes;
     }

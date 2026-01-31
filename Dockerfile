@@ -28,7 +28,7 @@ ARG CITYDB_TOOL_VERSION
 ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 
 # Copy from builder
-COPY --from=builder /build/citydb-cli/build/install/citydb-tool-docker /opt/citydb-tool
+COPY --from=builder --chown=1000:1000 /build/citydb-cli/build/install/citydb-tool-docker /opt/citydb-tool
 
 # Put start script in path
 RUN set -x && \

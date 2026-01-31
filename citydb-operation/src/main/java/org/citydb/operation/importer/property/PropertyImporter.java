@@ -24,7 +24,6 @@ package org.citydb.operation.importer.property;
 import org.citydb.database.schema.Table;
 import org.citydb.model.property.Property;
 import org.citydb.model.property.PropertyDescriptor;
-import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
 
@@ -37,10 +36,9 @@ public abstract class PropertyImporter extends DatabaseImporter {
         super(Table.PROPERTY, helper);
     }
 
-    PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
+    PropertyDescriptor doImport(Property<?> property, long propertyId, long parentId, long featureId) throws SQLException {
         stmt.setLong(1, propertyId);
         stmt.setLong(2, featureId);
-        stmt.setInt(4, schemaMapping.getDataType(property.getDataType().orElse(null)).getId());
 
         if (parentId != propertyId) {
             stmt.setLong(3, parentId);
@@ -48,13 +46,8 @@ public abstract class PropertyImporter extends DatabaseImporter {
             stmt.setNull(3, Types.BIGINT);
         }
 
-        Integer namespaceId = schemaMapping.getNamespaceByURI(property.getName().getNamespace()).getId();
-        if (namespaceId != null) {
-            stmt.setInt(5, namespaceId);
-        } else {
-            stmt.setNull(5, Types.INTEGER);
-        }
-
+        stmt.setInt(4, schemaMapping.getDataType(property.getDataType().orElse(null)).getId());
+        setIntegerOrNull(5, schemaMapping.getNamespaceByURI(property.getName().getNamespace()).getId());
         stmt.setString(6, property.getName().getLocalName());
 
         addBatch();

@@ -29,7 +29,6 @@ import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.reference.CacheType;
 
 import java.sql.SQLException;
-import java.sql.Types;
 
 public abstract class SurfaceDataImporter extends DatabaseImporter {
 
@@ -42,17 +41,10 @@ public abstract class SurfaceDataImporter extends DatabaseImporter {
 
         stmt.setLong(1, surfaceDataId);
         stmt.setString(2, surfaceData.getOrCreateObjectId());
-        stmt.setString(3, surfaceData.getIdentifier().orElse(null));
-        stmt.setString(4, surfaceData.getIdentifierCodeSpace().orElse(null));
-
-        Integer isFront = surfaceData.isFront().map(v -> v ? 1 : 0).orElse(null);
-        if (isFront != null) {
-            stmt.setInt(5, isFront);
-        } else {
-            stmt.setNull(5, Types.INTEGER);
-        }
-
-        stmt.setInt(6, schemaMapping.getFeatureType(surfaceData.getName()).getId());
+        setStringOrNull(3, surfaceData.getIdentifier().orElse(null));
+        setStringOrNull(4, surfaceData.getIdentifierCodeSpace().orElse(null));
+        setIntegerOrNull(5, surfaceData.isFront().map(v -> v ? 1 : 0).orElse(null));
+        setIntegerOrNull(6, schemaMapping.getFeatureType(surfaceData.getName()).getId());
 
         addBatch();
         cacheTarget(CacheType.SURFACE_DATA, objectId, surfaceDataId);

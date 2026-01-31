@@ -46,6 +46,14 @@ public class QueryOptions implements Option {
     private AppearanceOptions appearanceOptions;
 
     public Query getQuery() throws FilterParseException {
+        if (typeNameOptions == null
+                && filterOptions == null
+                && sortingOptions == null
+                && countLimitOptions == null
+                && lodOptions == null) {
+            return null;
+        }
+
         Query query = new Query();
         if (typeNameOptions != null) {
             query.setFeatureTypes(typeNameOptions.getTypeNames());

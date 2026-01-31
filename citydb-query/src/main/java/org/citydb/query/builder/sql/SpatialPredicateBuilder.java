@@ -82,12 +82,12 @@ public class SpatialPredicateBuilder {
             SpatialOperator operator = negate(predicate.getOperator(), negate);
             negate = negate ^ operator != predicate.getOperator();
 
-            SpatialObject leftLiteral = helper.getSpatialLiteral(predicate.getLeftOperand());
+            SpatialObject leftLiteral = helper.getSpatialLiteral(leftOperand);
             if (leftLiteral != null && helper.getOrSetSRID(leftLiteral, filterSrs) != databaseSrs.getSRID()) {
                 leftExpression = helper.getSpatialOperationHelper().transform(leftExpression, databaseSrs.getSRID());
             }
 
-            SpatialObject rightLiteral = helper.getSpatialLiteral(predicate.getRightOperand());
+            SpatialObject rightLiteral = helper.getSpatialLiteral(rightOperand);
             if (rightLiteral != null && helper.getOrSetSRID(rightLiteral, filterSrs) != databaseSrs.getSRID()) {
                 rightExpression = helper.getSpatialOperationHelper().transform(rightExpression, databaseSrs.getSRID());
             }
@@ -134,12 +134,12 @@ public class SpatialPredicateBuilder {
                 && rightOperand.getExpression() instanceof ScalarExpression rightExpression) {
             negate = negate ^ dWithin.getOperator() == SpatialOperator.BEYOND;
 
-            SpatialObject leftLiteral = helper.getSpatialLiteral(dWithin.getLeftOperand());
+            SpatialObject leftLiteral = helper.getSpatialLiteral(leftOperand);
             if (leftLiteral != null && helper.getOrSetSRID(leftLiteral, filterSrs) != databaseSrs.getSRID()) {
                 leftExpression = helper.getSpatialOperationHelper().transform(leftExpression, databaseSrs.getSRID());
             }
 
-            SpatialObject rightLiteral = helper.getSpatialLiteral(dWithin.getRightOperand());
+            SpatialObject rightLiteral = helper.getSpatialLiteral(rightOperand);
             if (rightLiteral != null && helper.getOrSetSRID(rightLiteral, filterSrs) != databaseSrs.getSRID()) {
                 rightExpression = helper.getSpatialOperationHelper().transform(rightExpression, databaseSrs.getSRID());
             }

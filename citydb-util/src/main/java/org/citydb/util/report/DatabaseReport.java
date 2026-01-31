@@ -47,7 +47,7 @@ public class DatabaseReport {
     private final Map<String, Long> geometries = new TreeMap<>();
     private final Map<String, Long> lods = new TreeMap<>();
     private final Map<String, Long> appearances = new TreeMap<>();
-    private final Map<String, Set<String>> genericAttributes = new TreeMap<>();
+    private final Map<String, Map<String, Set<String>>> genericAttributes = new TreeMap<>();
     private final Map<String, Pair<String, String>> ades = new TreeMap<>();
     private final Map<String, Set<String>> codeLists = new TreeMap<>();
     private final Map<String, String> modules = new TreeMap<>();
@@ -181,6 +181,12 @@ public class DatabaseReport {
         }
     }
 
+    void setLods(Set<String> lods) {
+        if (lods != null) {
+            lods.forEach(lod -> this.lods.put(lod, -1L));
+        }
+    }
+
     public boolean hasAppearances() {
         return !appearances.isEmpty();
     }
@@ -192,6 +198,12 @@ public class DatabaseReport {
     void setAppearances(Map<String, Long> appearances) {
         if (appearances != null) {
             appearances.forEach((theme, count) -> this.appearances.merge(theme, count, Long::sum));
+        }
+    }
+
+    void setAppearances(Set<String> themes) {
+        if (themes != null) {
+            themes.forEach(theme -> appearances.put(theme, -1L));
         }
     }
 
@@ -237,17 +249,20 @@ public class DatabaseReport {
         return !genericAttributes.isEmpty();
     }
 
-    public Map<String, Set<String>> getGenericAttributes() {
+    public Map<String, Map<String, Set<String>>> getGenericAttributes() {
         return genericAttributes;
     }
 
-    void setGenericAttributes(Map<String, Set<DataType>> genericAttributes) {
+    void setGenericAttributes(Map<FeatureType, Map<String, Set<DataType>>> genericAttributes) {
         if (genericAttributes != null) {
-            genericAttributes.forEach((name, types) -> this.genericAttributes
-                    .computeIfAbsent(name, k -> new TreeSet<>())
-                    .addAll(types.stream()
-                            .map(type -> getQName(type.getName()))
-                            .toList()));
+            genericAttributes.forEach((featureType, attributes) -> {
+                String key = getQName(featureType.getName());
+                attributes.forEach((name, types) -> this.genericAttributes.computeIfAbsent(key, k -> new TreeMap<>())
+                        .computeIfAbsent(name, k -> new TreeSet<>())
+                        .addAll(types.stream()
+                                .map(type -> getQName(type.getName()))
+                                .toList()));
+            });
         }
     }
 

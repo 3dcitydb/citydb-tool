@@ -21,18 +21,23 @@
 
 package org.citydb.operation.importer.common;
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
+import org.citydb.model.address.Address;
+import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
@@ -43,6 +48,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.OffsetDateTime;
 
 public abstract class DatabaseImporter {
@@ -92,8 +98,84 @@ public abstract class DatabaseImporter {
         return helper.getObjectSignature(object);
     }
 
+    protected void setStringOrNull(int index, String value) throws SQLException {
+        if (value != null) {
+            stmt.setString(index, value);
+        } else {
+            stmt.setNull(index, Types.VARCHAR);
+        }
+    }
+
+    protected void setIntegerOrNull(int index, Integer value) throws SQLException {
+        if (value != null) {
+            stmt.setInt(index, value);
+        } else {
+            stmt.setNull(index, Types.INTEGER);
+        }
+    }
+
+    protected void setLongOrNull(int index, Long value) throws SQLException {
+        if (value != null) {
+            stmt.setLong(index, value);
+        } else {
+            stmt.setNull(index, Types.BIGINT);
+        }
+    }
+
+    protected void setDoubleOrNull(int index, Double value) throws SQLException {
+        if (value != null) {
+            stmt.setDouble(index, value);
+        } else {
+            stmt.setNull(index, Types.DOUBLE);
+        }
+    }
+
+    protected void setTimestampOrNull(int index, OffsetDateTime value) throws SQLException {
+        if (value != null) {
+            stmt.setObject(index, value, Types.TIMESTAMP_WITH_TIMEZONE);
+        } else {
+            stmt.setNull(index, Types.TIMESTAMP_WITH_TIMEZONE);
+        }
+    }
+
+    protected void setBytesOrNull(int index, byte[] bytes) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setBytesOrNull(stmt, index, bytes);
+    }
+
+    protected void setJsonOrNull(int index, String json) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setJsonOrNull(stmt, index, json);
+    }
+
+    protected void setGeometryOrNull(int index, Object geometry) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setGeometryOrNull(stmt, index, geometry);
+    }
+
     protected long nextSequenceValue(Sequence sequence) throws SQLException {
         return helper.getSequenceValues().next(sequence);
+    }
+
+    protected boolean canImport(Feature feature) {
+        return canImport(CacheType.FEATURE, feature);
+    }
+
+    protected boolean canImport(SurfaceData<?> surfaceData) {
+        return canImport(CacheType.SURFACE_DATA, surfaceData);
+    }
+
+    protected boolean canImport(ImplicitGeometry implicitGeometry) {
+        return canImport(CacheType.IMPLICIT_GEOMETRY, implicitGeometry);
+    }
+
+    protected boolean canImport(Address address) {
+        return canImport(CacheType.ADDRESS, address);
+    }
+
+    protected boolean canImport(ExternalFile externalFile) {
+        return canImport(CacheType.TEXTURE_IMAGE, externalFile);
+    }
+
+    private boolean canImport(CacheType type, Referencable object) {
+        return helper.getSequenceValues().hasValueFor(type, object);
     }
 
     protected void cacheTarget(CacheType type, String objectId, long id) {
@@ -102,7 +184,7 @@ public abstract class DatabaseImporter {
         }
     }
 
-    protected void cacheReference(CacheType type, Reference reference, long id) {
+    protected void cacheReference(CacheType type, String reference, long id) {
         if (reference != null) {
             helper.getOrCreateReferenceCache(type).putReference(reference, id);
         }
@@ -127,6 +209,26 @@ public abstract class DatabaseImporter {
         }
     }
 
+    protected String getJson(JSONArray jsonArray, JSONWriter.Feature... features) {
+        if (jsonArray != null) {
+            return features == null || features.length == 0 ?
+                    jsonArray.toString() :
+                    jsonArray.toString(features);
+        } else {
+            return null;
+        }
+    }
+
+    protected String getJson(JSONObject jsonObject, JSONWriter.Feature... features) {
+        if (jsonObject != null) {
+            return features == null || features.length == 0 ?
+                    jsonObject.toString() :
+                    jsonObject.toString(features);
+        } else {
+            return null;
+        }
+    }
+
     protected Object getGeometry(Geometry<?> geometry, boolean force3D) throws ImportException {
         return getGeometry(geometry, srid, force3D);
     }
@@ -136,7 +238,7 @@ public abstract class DatabaseImporter {
     }
 
     protected Object getImplicitGeometry(Geometry<?> geometry) throws ImportException {
-        return getGeometry(geometry, null, true);
+        return getGeometry(geometry, 0, true);
     }
 
     protected Object getEnvelope(Envelope envelope) throws ImportException {
@@ -146,7 +248,7 @@ public abstract class DatabaseImporter {
     private Object getGeometry(Geometry<?> geometry, Integer srid, boolean force3D) throws ImportException {
         try {
             return geometry != null ? adapter.getGeometryAdapter().getGeometry(
-                    geometry.setSRID(srid).setSrsIdentifier(null), force3D) :
+                    geometry.setSRID(srid).setSrsIdentifier(null), force3D, helper.getConnection()) :
                     null;
         } catch (GeometryException e) {
             throw new ImportException("Failed to convert geometry to database representation.", e);

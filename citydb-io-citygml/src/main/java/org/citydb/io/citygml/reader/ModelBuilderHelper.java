@@ -42,12 +42,12 @@ import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
 import org.citygml4j.core.model.CityGMLVersion;
+import org.citygml4j.core.model.appearance.AbstractSurfaceData;
 import org.citygml4j.core.model.core.AbstractAppearance;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
@@ -71,10 +71,7 @@ import org.xmlobjects.xml.Namespaces;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class ModelBuilderHelper {
@@ -85,6 +82,11 @@ public class ModelBuilderHelper {
     private final AppearanceHelper appearanceHelper;
     private final GeometryHelper geometryHelper;
     private final Map<Class<?>, ModelBuilder<?, ?>> builderCache = new IdentityHashMap<>();
+    private final Set<String> featureIdCache = new HashSet<>();
+    private final Set<String> surfaceDataIdCache = new HashSet<>();
+    private final Set<String> geometryIdCache = new HashSet<>();
+    private final Set<String> addressIdCache = new HashSet<>();
+    private final Set<String> externalFileIdCache = new HashSet<>();
 
     private CityGMLVersion version;
     private String encoding;
@@ -190,14 +192,25 @@ public class ModelBuilderHelper {
         return null;
     }
 
-    public boolean lookupAndPut(ExternalFile file) {
-        return lookupAndPut(file, null);
+    public boolean lookupAndPut(AbstractGML feature) {
+        return feature.getId() != null && !featureIdCache.add(feature.getId());
     }
 
-    public boolean lookupAndPut(ExternalFile file, String token) {
-        String id = file != null ? file.getObjectId().orElse(null) : null;
-        return id != null && getOrCreatePersistentMap("external-files")
-                .putIfAbsent(token == null ? id : token + id, Boolean.TRUE) != null;
+    public boolean lookupAndPut(AbstractSurfaceData surfaceData) {
+        return surfaceData.getId() != null && !surfaceDataIdCache.add(surfaceData.getId());
+    }
+
+    public boolean lookupAndPut(AbstractGeometry geometry) {
+        return geometry.getId() != null && !geometryIdCache.add(geometry.getId());
+    }
+
+    public boolean lookupAndPut(org.citygml4j.core.model.core.Address address) {
+        return address.getId() != null && !addressIdCache.add(address.getId());
+    }
+
+    public boolean lookupAndPut(ExternalFile externalFile) {
+        String objectId = externalFile.getObjectId().orElse(null);
+        return objectId != null && !externalFileIdCache.add(objectId);
     }
 
     @SuppressWarnings("unchecked")
@@ -496,11 +509,15 @@ public class ModelBuilderHelper {
     public AddressProperty getAddressProperty(Name name, org.citygml4j.core.model.core.AddressProperty source) throws ModelBuildException {
         if (source != null) {
             if (source.isSetInlineObject()) {
-                return AddressProperty.of(name, buildObject(source.getObject(),
-                        Address.newInstance(),
-                        getOrCreateBuilder(AddressAdapter.class)));
+                org.citygml4j.core.model.core.Address address = source.getObject();
+                if (lookupAndPut(address)) {
+                    return AddressProperty.of(name, address.getId());
+                } else {
+                    return AddressProperty.of(name, buildObject(address, Address.newInstance(),
+                            getOrCreateBuilder(AddressAdapter.class)));
+                }
             } else {
-                Reference reference = getFeatureReference(source);
+                String reference = getFeatureReference(source);
                 return reference != null ? AddressProperty.of(name, reference) : null;
             }
         }
@@ -519,9 +536,14 @@ public class ModelBuilderHelper {
     public FeatureProperty getFeatureProperty(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, RelationType relationType) throws ModelBuildException {
         if (source != null && !AbstractGeometry.class.isAssignableFrom(source.getTargetType())) {
             if (source.isSetInlineObject()) {
-                Feature feature = getFeature(source.getObject());
-                if (feature != null) {
-                    return FeatureProperty.of(name, feature, relationType);
+                AbstractGML object = source.getObject();
+                if (lookupAndPut(object)) {
+                    return FeatureProperty.of(name, object.getId(), relationType);
+                } else {
+                    Feature feature = getFeature(object);
+                    if (feature != null) {
+                        return FeatureProperty.of(name, feature, relationType);
+                    }
                 }
             } else {
                 return getFeatureProperty(name, (ResolvableAssociation<? extends AbstractGML>) source, relationType);
@@ -545,7 +567,7 @@ public class ModelBuilderHelper {
     }
 
     public FeatureProperty getFeatureProperty(Name name, ResolvableAssociation<? extends AbstractGML> source, RelationType relationType) {
-        Reference reference = getFeatureReference(source);
+        String reference = getFeatureReference(source);
         return reference != null ? FeatureProperty.of(name, reference, relationType) : null;
     }
 
@@ -627,15 +649,15 @@ public class ModelBuilderHelper {
         }
     }
 
-    public Reference getFeatureReference(ResolvableAssociation<?> association) {
+    public String getFeatureReference(ResolvableAssociation<?> association) {
         return association != null && !AbstractGeometry.class.isAssignableFrom(association.getTargetType()) ?
                 getReference(association) :
                 null;
     }
 
-    private Reference getReference(ResolvableAssociation<?> association) {
+    private String getReference(ResolvableAssociation<?> association) {
         return association != null && association.getHref() != null ?
-                Reference.of(getIdFromReference(association.getHref())) :
+                getIdFromReference(association.getHref()) :
                 null;
     }
 
@@ -660,7 +682,7 @@ public class ModelBuilderHelper {
             appearanceHelper.processTargets(source);
             return feature;
         } finally {
-            appearanceHelper.reset();
+            clear();
         }
     }
 
@@ -716,5 +738,14 @@ public class ModelBuilderHelper {
         } else {
             return null;
         }
+    }
+
+    private void clear() {
+        appearanceHelper.reset();
+        featureIdCache.clear();
+        surfaceDataIdCache.clear();
+        geometryIdCache.clear();
+        addressIdCache.clear();
+        externalFileIdCache.clear();
     }
 }

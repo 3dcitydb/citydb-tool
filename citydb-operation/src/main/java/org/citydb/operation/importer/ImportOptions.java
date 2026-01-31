@@ -21,13 +21,16 @@
 
 package org.citydb.operation.importer;
 
+import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
+import org.citydb.operation.importer.options.CreationDateMode;
 
 import java.nio.file.Path;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @SerializableConfig(name = "importOptions")
@@ -40,6 +43,9 @@ public class ImportOptions {
     private int batchSize = DEFAULT_BATCH_SIZE;
     private String updatingPerson;
     private String reasonForUpdate;
+    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
+    private CreationDateMode creationDateMode = CreationDateMode.ATTRIBUTE_OR_NOW;
+    private OffsetDateTime creationDate;
     private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
@@ -99,6 +105,24 @@ public class ImportOptions {
 
     public ImportOptions setReasonForUpdate(String reasonForUpdate) {
         this.reasonForUpdate = reasonForUpdate;
+        return this;
+    }
+
+    public CreationDateMode getCreationDateMode() {
+        return creationDateMode != null ? creationDateMode : CreationDateMode.ATTRIBUTE_OR_NOW;
+    }
+
+    public ImportOptions setCreationDateMode(CreationDateMode creationDateMode) {
+        this.creationDateMode = creationDateMode;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getCreationDate() {
+        return Optional.ofNullable(creationDate);
+    }
+
+    public ImportOptions setCreationDate(OffsetDateTime creationDate) {
+        this.creationDate = creationDate;
         return this;
     }
 

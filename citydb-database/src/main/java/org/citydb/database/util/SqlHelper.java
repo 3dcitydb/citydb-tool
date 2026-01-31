@@ -37,18 +37,25 @@ import org.citydb.sqlbuilder.schema.WildcardColumn;
 import java.sql.*;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Collection;
 import java.util.List;
 
-public class SqlHelper {
+public abstract class SqlHelper {
     private final DatabaseAdapter adapter;
 
-    private SqlHelper(DatabaseAdapter adapter) {
+    protected SqlHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
     }
 
-    public static SqlHelper newInstance(DatabaseAdapter adapter) {
-        return new SqlHelper(adapter);
-    }
+    public abstract void setBytesOrNull(PreparedStatement stmt, int index, byte[] bytes) throws SQLException;
+
+    public abstract void setJsonOrNull(PreparedStatement stmt, int index, String json) throws SQLException;
+
+    public abstract void setGeometryOrNull(PreparedStatement stmt, int index, Object geometry) throws SQLException;
+
+    public abstract void setLongArrayOrNull(PreparedStatement stmt, int index, Collection<Long> values) throws SQLException;
+
+    public abstract void setStringArrayOrNull(PreparedStatement stmt, int index, Collection<String> values) throws SQLException;
 
     public PreparedStatement prepareStatement(SqlObject statement, Connection connection) throws SQLException {
         PreparedStatement stmt = connection.prepareStatement(statement.toSql());
@@ -89,8 +96,8 @@ public class SqlHelper {
 
     private void prepareStatement(int index, Geometry<?> geometry, PreparedStatement stmt) throws SQLException {
         try {
-            stmt.setObject(index, adapter.getGeometryAdapter().getGeometry(geometry, false),
-                    adapter.getGeometryAdapter().getGeometrySqlType());
+            setGeometryOrNull(stmt, index, adapter.getGeometryAdapter()
+                    .getGeometry(geometry, false, stmt.getConnection()));
         } catch (Exception e) {
             throw new SQLException("Failed to convert geometry to database representation.", e);
         }
@@ -140,7 +147,7 @@ public class SqlHelper {
 
     private String toSql(Geometry<?> geometry) {
         try {
-            return "'" + adapter.getGeometryAdapter().getAsText(geometry) + "'";
+            return adapter.getGeometryAdapter().getAsText(geometry);
         } catch (GeometryException e) {
             return null;
         }

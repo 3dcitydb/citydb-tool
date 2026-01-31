@@ -55,7 +55,7 @@ public class GeometryPropertyImporter extends PropertyImporter {
     }
 
     PropertyDescriptor doImport(GeometryProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
-        stmt.setString(7, property.getLod().orElse(null));
+        setStringOrNull(7, property.getLod().orElse(null));
         stmt.setLong(8, tableHelper.getOrCreateImporter(GeometryImporter.class)
                 .doImport(property.getObject(), false, featureId)
                 .getId());

@@ -22,13 +22,16 @@
 package org.citydb.cli.importer.duplicate;
 
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.model.feature.Feature;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
-import java.sql.*;
-import java.util.Collections;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +39,7 @@ import java.util.Set;
 public class DuplicateFinder {
     private final Map<String, Boolean> objectIds;
     private final Map<Long, Boolean> databaseIds;
+    private final SchemaAdapter schemaAdapter;
     private final int batchSize;
     private final Connection connection;
     private final PreparedStatement stmt;
@@ -45,14 +49,15 @@ public class DuplicateFinder {
         this.objectIds = objectIds;
         this.databaseIds = databaseIds;
 
-        batchSize = adapter.getSchemaAdapter().getMaximumNumberOfItemsForInOperator();
+        schemaAdapter = adapter.getSchemaAdapter();
+        batchSize = Math.min(1000, schemaAdapter.getMaximumNumberOfItemsForInOperator());
         connection = adapter.getPool().getConnection();
         Table table = Table.of(org.citydb.database.schema.Table.FEATURE.getName(),
                 adapter.getConnectionDetails().getSchema());
         Select select = Select.newInstance()
                 .select(table.columns("objectid", "id"))
                 .from(table)
-                .where(table.column("objectid").in(Collections.nCopies(batchSize, Placeholder.empty()))
+                .where(schemaAdapter.getOperationHelper().inArray(table.column("objectid"), Placeholder.empty())
                         .and(table.column("termination_date").isNull()));
         stmt = connection.prepareStatement(select.toSql());
     }
@@ -85,15 +90,7 @@ public class DuplicateFinder {
     private void executeBatch() throws SQLException {
         if (!batches.isEmpty()) {
             try {
-                int i = 1;
-                for (String id : batches) {
-                    stmt.setString(i++, id);
-                }
-
-                while (i <= batchSize) {
-                    stmt.setNull(i++, Types.VARCHAR);
-                }
-
+                schemaAdapter.getSqlHelper().setStringArrayOrNull(stmt, 1, batches);
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         objectIds.put(rs.getString(1), Boolean.TRUE);

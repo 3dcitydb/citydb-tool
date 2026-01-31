@@ -1,10 +1,10 @@
-def citygml4j_version = '3.2.7-SNAPSHOT'
+def citygml4j_version = '3.2.8'
 
 dependencies {
     api "org.citygml4j:citygml4j-xml:$citygml4j_version"
     api "org.citygml4j:citygml4j-cityjson:$citygml4j_version"
     implementation project(':citydb-io')
     runtimeOnly 'com.fasterxml.woodstox:woodstox-core:7.1.1'
-    runtimeOnly 'net.sf.saxon:Saxon-HE:12.8'
+    runtimeOnly 'net.sf.saxon:Saxon-HE:12.9'
     annotationProcessor "org.citygml4j:citygml4j-xml:$citygml4j_version"
 }

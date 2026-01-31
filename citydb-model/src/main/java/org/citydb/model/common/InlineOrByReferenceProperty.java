@@ -28,7 +28,9 @@ public interface InlineOrByReferenceProperty<T extends Referencable> {
 
     InlineOrByReferenceProperty<T> setObject(T object);
 
-    Optional<Reference> getReference();
+    Optional<String> getReference();
 
-    InlineOrByReferenceProperty<T> setReference(Reference reference);
+    InlineOrByReferenceProperty<T> setReference(String reference);
+
+    InlineOrByReferenceProperty<T> setReference(T referencedObject);
 }

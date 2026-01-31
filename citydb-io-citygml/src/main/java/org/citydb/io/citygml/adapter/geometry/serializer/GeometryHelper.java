@@ -24,7 +24,6 @@ package org.citydb.io.citygml.adapter.geometry.serializer;
 
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.core.ImplicitGeometry;
@@ -257,9 +256,9 @@ public class GeometryHelper {
 
     public ImplicitGeometry getImplicitGeometry(ImplicitGeometryProperty source, boolean force3D) {
         if (source != null) {
-            ImplicitGeometry target = new ImplicitGeometry();
-            org.citydb.model.geometry.ImplicitGeometry implicitGeometry = source.getObject().orElse(null);
+            org.citydb.model.geometry.ImplicitGeometry implicitGeometry = helper.getOrLookupObject(source);
             if (implicitGeometry != null) {
+                ImplicitGeometry target = new ImplicitGeometry();
                 Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
                 if (geometry != null) {
                     target.setRelativeGeometry(helper.lookupAndPut(implicitGeometry) ?
@@ -270,13 +269,9 @@ public class GeometryHelper {
                             .map(ExternalFile::getFileLocation)
                             .orElse(null));
                 }
-            } else {
-                source.getReference()
-                        .map(Reference::getTarget)
-                        .ifPresent(reference -> target.setRelativeGeometry(new GeometryProperty<>("#" + reference)));
-            }
 
-            return target;
+                return target;
+            }
         }
 
         return null;

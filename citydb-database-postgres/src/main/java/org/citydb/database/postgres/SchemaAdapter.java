@@ -26,7 +26,6 @@ import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.Index;
-import org.citydb.database.schema.Sequence;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -39,7 +38,7 @@ import org.citydb.sqlbuilder.operation.Not;
 import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.PlainText;
+import org.citydb.sqlbuilder.util.PlainSql;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -54,6 +53,7 @@ import java.util.stream.Collectors;
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final LazyCheckedInitializer<String, IOException> featureHierarchyQuery;
     private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
+    private final SqlHelper sqlHelper;
     private final OperationHelper operationHelper;
     private final StatisticsHelper statisticsHelper;
     private final TempTableHelper tempTableHelper;
@@ -63,6 +63,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         super(adapter);
         featureHierarchyQuery = LazyCheckedInitializer.of(this::readFeatureHierarchyQuery);
         recursiveImplicitGeometryQuery = LazyCheckedInitializer.of(this::readRecursiveImplicitGeometryQuery);
+        sqlHelper = new SqlHelper(this.adapter);
         operationHelper = new OperationHelper(this);
         statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
@@ -82,12 +83,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public Optional<Table> getDummyTable() {
         return Optional.empty();
-    }
-
-    @Override
-    public String getNextSequenceValues(Sequence sequence) {
-        return "select citydb_pkg.get_seq_values('" + adapter.getConnectionDetails().getSchema() + "." +
-                sequence + "', ?)";
     }
 
     @Override
@@ -112,7 +107,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery) {
         try {
-            return PlainText.of(recursiveImplicitGeometryQuery.get(), featureQuery);
+            return PlainSql.of(recursiveImplicitGeometryQuery.get(), featureQuery);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create recursive implicit geometry query.", e);
         }
@@ -145,16 +140,16 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
             featureQuery.select(IntegerLiteral.of(0).as("depth"));
             propertyQuery.select(Case.newInstance()
                             .when(property.column("namespace_id").eq(1).and(property.column("name").eq("boundary")))
-                            .then(PlainText.of("depth"))
-                            .orElse(PlainText.of("depth").plus(1)))
-                    .where(PlainText.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
-            hierarchyQuery.where(PlainText.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
+                            .then(PlainSql.of("depth"))
+                            .orElse(PlainSql.of("depth").plus(1)))
+                    .where(PlainSql.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
+            hierarchyQuery.where(PlainSql.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
         } else {
             featureQuery.select(BooleanLiteral.FALSE.as("is_cycle"),
-                    PlainText.of("array[]::bigint[]").as("path"));
-            propertyQuery.select(property.column("id").eqAny(PlainText.of("(path)")),
-                            PlainText.of("path || {}", property.column("id")))
-                    .where(Not.of(PlainText.of("is_cycle")));
+                    PlainSql.of("array[]::bigint[]").as("path"));
+            propertyQuery.select(property.column("id").eqAny(PlainSql.of("(path)")),
+                            PlainSql.of("path || {}", property.column("id")))
+                    .where(Not.of(PlainSql.of("is_cycle")));
         }
 
         hierarchy = Table.of(hierarchyQuery);
@@ -212,8 +207,18 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
+    public SqlHelper getSqlHelper() {
+        return sqlHelper;
+    }
+
+    @Override
     public OperationHelper getOperationHelper() {
         return operationHelper;
+    }
+
+    @Override
+    public SequenceHelper getSequenceHelper(Connection connection) throws SQLException {
+        return new SequenceHelper(connection, adapter);
     }
 
     @Override

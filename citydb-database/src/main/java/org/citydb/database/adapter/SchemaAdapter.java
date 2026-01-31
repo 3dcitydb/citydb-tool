@@ -24,7 +24,10 @@ package org.citydb.database.adapter;
 import org.citydb.core.version.Version;
 import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.metadata.DatabaseProperty;
-import org.citydb.database.schema.*;
+import org.citydb.database.schema.Index;
+import org.citydb.database.schema.SchemaException;
+import org.citydb.database.schema.SchemaMapping;
+import org.citydb.database.schema.SchemaMappingBuilder;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.util.*;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -41,13 +44,11 @@ import java.util.stream.Collectors;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
-    private final SqlHelper sqlHelper;
     private final IndexHelper indexHelper;
     private SchemaMapping schemaMapping;
 
     protected SchemaAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
-        sqlHelper = SqlHelper.newInstance(adapter);
         indexHelper = IndexHelper.newInstance(adapter);
     }
 
@@ -56,8 +57,6 @@ public abstract class SchemaAdapter {
     public abstract String getDefaultSchema();
 
     public abstract Optional<Table> getDummyTable();
-
-    public abstract String getNextSequenceValues(Sequence sequence);
 
     public abstract int getMaximumBatchSize();
 
@@ -75,7 +74,11 @@ public abstract class SchemaAdapter {
 
     public abstract String getIndexExists(Index index);
 
+    public abstract SqlHelper getSqlHelper();
+
     public abstract OperationHelper getOperationHelper();
+
+    public abstract SequenceHelper getSequenceHelper(Connection connection) throws SQLException;
 
     public abstract StatisticsHelper getStatisticsHelper();
 
@@ -101,10 +104,6 @@ public abstract class SchemaAdapter {
 
     public SchemaMapping getSchemaMapping() {
         return schemaMapping;
-    }
-
-    public SqlHelper getSqlHelper() {
-        return sqlHelper;
     }
 
     public IndexHelper getIndexHelper() {

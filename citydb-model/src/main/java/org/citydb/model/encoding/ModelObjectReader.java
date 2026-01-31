@@ -21,20 +21,18 @@
 
 package org.citydb.model.encoding;
 
-import org.citydb.model.appearance.Texture;
-import org.citydb.model.appearance.TextureImageProperty;
-import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Visitable;
-import org.citydb.model.geometry.ImplicitGeometry;
-import org.citydb.model.walker.ModelWalker;
+import org.citydb.core.function.Pipeline;
+import org.citydb.model.common.Child;
 
 import java.io.BufferedInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 public class ModelObjectReader {
 
@@ -45,69 +43,62 @@ public class ModelObjectReader {
         return new ModelObjectReader();
     }
 
-    public <T extends Serializable> T read(Path inputFile, Class<T> type) throws IOException {
-        Object object = read(inputFile);
-        if (type.isInstance(object)) {
-            return type.cast(object);
-        } else {
-            throw new IOException("Failed to cast content of input file to " + type.getSimpleName() + ".");
-        }
+    public List<Child> read(Path file) throws IOException {
+        return read(file, Child.class);
     }
 
-    public Object read(Path inputFile) throws IOException {
-        Objects.requireNonNull(inputFile, "The input file must not be null.");
-        try (ObjectInputStream stream = new ObjectInputStream(new BufferedInputStream(
-                Files.newInputStream(inputFile)))) {
-            Object object = stream.readObject();
-            if (object instanceof Visitable visitable) {
-                visitable.accept(new Postprocessor(inputFile));
-            }
+    public <T extends Child> List<T> read(Path file, Class<T> type) throws IOException {
+        List<T> result = new ArrayList<>();
+        consume(file, type, result::add);
+        return result;
+    }
 
-            return object;
+    public void consume(Path file, Consumer<Child> consumer) throws IOException {
+        consume(file, Child.class, consumer);
+    }
+
+    public <T extends Child> void consume(Path file, Class<T> type, Consumer<T> consumer) throws IOException {
+        try (ObjectInputStream stream = new ObjectInputStream(new BufferedInputStream(
+                Files.newInputStream(file)))) {
+            while (true) {
+                try {
+                    Object object = stream.readObject();
+                    if (type.isInstance(object)) {
+                        consumer.accept(type.cast(object));
+                    }
+                } catch (EOFException e) {
+                    return;
+                }
+            }
         } catch (ClassNotFoundException e) {
             throw new IOException("Failed to parse model object.", e);
         }
     }
 
-    private static class Postprocessor extends ModelWalker {
-        private final Path inputFile;
+    public <R> R process(Path file, Pipeline<Child, R> pipeline) throws IOException {
+        return process(file, Child.class, pipeline);
+    }
 
-        Postprocessor(Path inputFile) {
-            this.inputFile = inputFile;
-        }
-
-        @Override
-        public void visit(ImplicitGeometry implicitGeometry) {
-            implicitGeometry.getLibraryObject()
-                    .ifPresent(externalFile -> implicitGeometry.setLibraryObject(getOrCreate(externalFile)));
-
-            super.visit(implicitGeometry);
-        }
-
-        @Override
-        public void visit(Texture<?> texture) {
-            texture.getTextureImageProperty()
-                    .flatMap(TextureImageProperty::getObject)
-                    .ifPresent(externalFile -> texture.setTextureImageProperty(
-                            TextureImageProperty.of(getOrCreate(externalFile))));
-
-            super.visit(texture);
-        }
-
-        private ExternalFile getOrCreate(ExternalFile candidate) {
-            String uri = candidate.getURI().orElse(null);
-            if (uri != null) {
+    public <T extends Child, R> R process(Path file, Class<T> type, Pipeline<T, R> pipeline) throws IOException {
+        try (ObjectInputStream stream = new ObjectInputStream(new BufferedInputStream(
+                Files.newInputStream(file)))) {
+            while (true) {
                 try {
-                    Path path = inputFile.resolveSibling(uri);
-                    if (Files.exists(path)) {
-                        return ExternalFile.of(path);
+                    Object object = stream.readObject();
+                    if (type.isInstance(object)) {
+                        Pipeline.Action action = pipeline.process(type.cast(object));
+                        if (action == Pipeline.Action.STOP) {
+                            break;
+                        }
                     }
-                } catch (Exception e) {
-                    //
+                } catch (EOFException e) {
+                    break;
                 }
             }
 
-            return candidate;
+            return pipeline.getResult();
+        } catch (ClassNotFoundException e) {
+            throw new IOException("Failed to parse model object.", e);
         }
     }
 }

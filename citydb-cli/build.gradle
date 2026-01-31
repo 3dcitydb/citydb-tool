@@ -8,10 +8,13 @@ plugins {
 }
 
 configurations {
-    citydb
+    citydb {
+        canBeConsumed = false
+        canBeResolved = true
+    }
 }
 
-def log4j_version = '2.25.1'
+def log4j_version = '2.25.2'
 
 dependencies {
     api project(':citydb-database')
@@ -28,7 +31,7 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
     implementation "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
     implementation "org.apache.logging.log4j:log4j-jul:$log4j_version"
-    citydb 'org.citydb:3dcitydb:5.1.0'
+    citydb 'org.citydb:3dcitydb:5.1.1'
 }
 
 processResources {
@@ -55,8 +58,9 @@ application {
             def windows = getWindowsScript()
             def unix = getUnixScript()
             windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
-            unix.text = unix.text.replaceFirst('\nMODULE_PATH=.*',
-                    '$0\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
+                    .replaceFirst('set MODULE_PATH=.*', 'set MODULE_PATH=%APP_HOME%\\\\lib')
+            unix.text = unix.text.replaceFirst('(?m)^MODULE_PATH=.*',
+                    'MODULE_PATH=\\$APP_HOME/lib\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
         }
     }
 }
@@ -72,7 +76,9 @@ distributions {
                 from processLicense
             }
             into('3dcitydb') {
-                from zipTree(configurations.citydb.singleFile)
+                from {
+                    zipTree(configurations.citydb.singleFile)
+                }
             }
             into('json-schema') {
                 from "$rootDir/resources/json-schema"

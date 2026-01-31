@@ -24,7 +24,6 @@ package org.citydb.io.citygml.adapter.gml;
 import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.serializer.ModelSerializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.FeatureProperty;
 import org.xmlobjects.gml.model.base.AbstractGML;
@@ -42,7 +41,7 @@ public abstract class AbstractInlineOrByReferencePropertyAdapter<T extends Abstr
                 target.setInlineObjectIfValid(helper.getObject(feature, AbstractGML.class));
             }
         } else {
-            source.getReference().map(Reference::getTarget).ifPresent(reference -> target.setHref("#" + reference));
+            source.getReference().ifPresent(reference -> target.setHref("#" + reference));
         }
     }
 }

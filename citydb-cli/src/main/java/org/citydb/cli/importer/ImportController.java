@@ -190,9 +190,9 @@ public abstract class ImportController implements Command {
 
                     reader.read(feature -> {
                         if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
-                            importLogger.add(feature);
                             importer.importFeature(feature).whenComplete((descriptor, e) -> {
                                 if (descriptor != null) {
+                                    importLogger.add(feature);
                                     long count = counter.incrementAndGet();
                                     if (count % 1000 == 0) {
                                         logger.info("{} features processed.", count);
@@ -310,6 +310,14 @@ public abstract class ImportController implements Command {
         }
 
         if (metadataOptions != null) {
+            if (metadataOptions.getCreationDateMode() != null) {
+                importOptions.setCreationDateMode(metadataOptions.getCreationDateMode());
+            }
+
+            if (metadataOptions.getCreationDate() != null) {
+                importOptions.setCreationDate(metadataOptions.getCreationDate());
+            }
+
             if (metadataOptions.getLineage() != null) {
                 importOptions.setLineage(metadataOptions.getLineage());
             }

@@ -39,18 +39,17 @@ import org.xmlobjects.util.copy.CopyBuilder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
 
 public class GeometryCopyBuilder {
-    private final Supplier<CopyBuilder> copyBuilderSupplier;
+    private final CopyBuilder copyBuilder;
     private final AppearanceProcessor appearanceProcessor = new AppearanceProcessor();
     private final String ID = "id";
 
     private AppearanceHelper appearanceHelper;
     private boolean copyAppearance;
 
-    GeometryCopyBuilder(Supplier<CopyBuilder> copyBuilderSupplier) {
-        this.copyBuilderSupplier = copyBuilderSupplier;
+    GeometryCopyBuilder(CopyBuilder copyBuilder) {
+        this.copyBuilder = copyBuilder;
     }
 
     GeometryCopyBuilder withAppearanceHelper(AppearanceHelper appearanceHelper) {
@@ -72,7 +71,7 @@ public class GeometryCopyBuilder {
     }
 
     private AbstractGeometry copy(AbstractGeometry geometry, AbstractCityObject topLevelObject) {
-        AbstractGeometry copy = copyBuilderSupplier.get().deepCopy(geometry);
+        AbstractGeometry copy = copyBuilder.deepCopy(geometry);
 
         IdHelper idHelper = new IdHelper();
         idHelper.updateIds(copy, copyAppearance);
@@ -132,7 +131,7 @@ public class GeometryCopyBuilder {
             if (properties != null) {
                 for (TextureAssociationProperty property : properties) {
                     ParameterizedTexture texture = getOrCreateSurfaceData(property, ParameterizedTexture.class);
-                    TextureAssociationProperty copy = copyBuilderSupplier.get().deepCopy(property);
+                    TextureAssociationProperty copy = copyBuilder.deepCopy(property);
                     idHelper.visit(copy);
                     texture.getTextureParameterizations().add(copy);
                 }
@@ -171,7 +170,7 @@ public class GeometryCopyBuilder {
                 }
             }
 
-            T surfaceData = copyBuilderSupplier.get().shallowCopy(source);
+            T surfaceData = copyBuilder.shallowCopy(source);
             surfaceData.setId(null);
             surfaceData.getLocalProperties().set(ID, source.getLocalProperties().getOrSet(ID, Integer.class, () -> id++));
             appearance.getSurfaceData().add(new AbstractSurfaceDataProperty(surfaceData));
@@ -199,7 +198,7 @@ public class GeometryCopyBuilder {
                 }
             }
 
-            Appearance appearance = copyBuilderSupplier.get().shallowCopy(source);
+            Appearance appearance = copyBuilder.shallowCopy(source);
             appearance.setId(null);
             appearance.setSurfaceData(null);
             appearance.getLocalProperties().set(ID, source.getLocalProperties().getOrSet(ID, Integer.class, () -> id++));

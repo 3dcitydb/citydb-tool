@@ -22,6 +22,7 @@
 package org.citydb.operation.exporter.common;
 
 import org.citydb.core.file.OutputFile;
+import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
@@ -36,21 +37,21 @@ import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
 public class BlobExporter {
     private final OutputFile outputFile;
+    private final SchemaAdapter schemaAdapter;
     private final int batchSize;
     private final PreparedStatement stmt;
     private final Map<Long, ExternalFile> batches = new HashMap<>();
 
     public BlobExporter(Table table, String idColumn, String blobColumn, ExportHelper helper) throws SQLException {
-        this.outputFile = helper.getOptions().getOutputFile();
-        batchSize = Math.min(1000, helper.getAdapter().getSchemaAdapter().getMaximumNumberOfItemsForInOperator());
+        outputFile = helper.getOptions().getOutputFile();
+        schemaAdapter = helper.getAdapter().getSchemaAdapter();
+        batchSize = Math.min(100, schemaAdapter.getMaximumNumberOfItemsForInOperator());
         stmt = helper.getConnection().prepareStatement(getQuery(table, idColumn, blobColumn).toSql());
     }
 
@@ -58,7 +59,7 @@ public class BlobExporter {
         return Select.newInstance()
                 .select(table.columns(idColumn, blobColumn))
                 .from(table)
-                .where(table.column(idColumn).in(Collections.nCopies(batchSize, Placeholder.empty())));
+                .where(schemaAdapter.getOperationHelper().inArray(table.column(idColumn), Placeholder.empty()));
     }
 
     public void addBatch(long id, ExternalFile externalFile) throws ExportException, SQLException {
@@ -70,27 +71,21 @@ public class BlobExporter {
         }
     }
 
-    public void executeBatch() throws ExportException, SQLException {
+    private void executeBatch() throws ExportException, SQLException {
         if (!batches.isEmpty()) {
-            int i = 1;
-            for (long id : batches.keySet()) {
-                stmt.setLong(i++, id);
-            }
-
-            while (i <= batchSize) {
-                stmt.setNull(i++, Types.BIGINT);
-            }
-
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    ExternalFile externalFile = batches.get(rs.getLong(1));
-                    byte[] buffer = rs.getBytes(2);
-                    if (buffer != null && buffer.length > 0) {
-                        try (OutputStream out = openStream(externalFile)) {
-                            out.write(buffer);
-                        } catch (Exception e) {
-                            throw new ExportException("Failed to export file '" +
-                                    externalFile.getFileLocation() + "'.", e);
+            try {
+                schemaAdapter.getSqlHelper().setLongArrayOrNull(stmt, 1, batches.keySet());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        ExternalFile externalFile = batches.get(rs.getLong(1));
+                        byte[] buffer = rs.getBytes(2);
+                        if (buffer != null && buffer.length > 0) {
+                            try (OutputStream out = openStream(externalFile)) {
+                                out.write(buffer);
+                            } catch (Exception e) {
+                                throw new ExportException("Failed to export file '" +
+                                        externalFile.getFileLocation() + "'.", e);
+                            }
                         }
                     }
                 }

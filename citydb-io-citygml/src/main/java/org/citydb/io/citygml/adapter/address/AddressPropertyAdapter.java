@@ -25,7 +25,6 @@ import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.serializer.ModelSerializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.address.Address;
-import org.citydb.model.common.Reference;
 import org.citygml4j.core.model.core.AddressProperty;
 
 public class AddressPropertyAdapter implements ModelSerializer<org.citydb.model.property.AddressProperty, AddressProperty> {
@@ -45,7 +44,7 @@ public class AddressPropertyAdapter implements ModelSerializer<org.citydb.model.
                 target.setInlineObjectIfValid(helper.getAddress(address));
             }
         } else {
-            source.getReference().map(Reference::getTarget).ifPresent(reference -> target.setHref("#" + reference));
+            source.getReference().ifPresent(reference -> target.setHref("#" + reference));
         }
     }
 }

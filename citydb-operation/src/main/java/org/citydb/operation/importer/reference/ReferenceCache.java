@@ -21,8 +21,6 @@
 
 package org.citydb.operation.importer.reference;
 
-import org.citydb.model.common.Reference;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,9 +51,9 @@ public class ReferenceCache {
         }
     }
 
-    public void putReference(Reference reference, long id) {
+    public void putReference(String reference, long id) {
         if (reference != null) {
-            references.put(id, reference.getTarget());
+            references.put(id, reference);
         }
     }
 

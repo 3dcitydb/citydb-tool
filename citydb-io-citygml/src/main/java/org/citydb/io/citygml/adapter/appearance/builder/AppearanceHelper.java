@@ -37,7 +37,9 @@ import org.citygml4j.core.model.appearance.*;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.core.AbstractAppearance;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.citygml4j.core.visitor.VisitableObject;
 import org.xmlobjects.gml.model.GMLObject;
 import org.xmlobjects.gml.model.feature.FeatureProperty;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
@@ -57,6 +59,9 @@ public class AppearanceHelper {
     private final Map<GMLObject, List<TargetContext<LinearRing>>> rings = new IdentityHashMap<>();
     private boolean processAppearances = true;
     private Set<String> themes;
+
+    private record TargetContext<T extends Child>(T target, GeometryProperty<?> parent) {
+    }
 
     public AppearanceHelper(ModelBuilderHelper helper) {
         this.helper = helper;
@@ -103,7 +108,11 @@ public class AppearanceHelper {
     public void processTargets(AbstractFeature feature) {
         if (processAppearances) {
             AppearanceCollector collector = new AppearanceCollector();
-            collector.collect(feature).forEach(processor::process);
+            for (AppearanceCollector.Context context : collector.collect(feature)) {
+                for (Appearance appearance : context.appearances) {
+                    processor.process(appearance, context.properties);
+                }
+            }
         }
     }
 
@@ -114,28 +123,55 @@ public class AppearanceHelper {
     }
 
     private static class AppearanceCollector extends ObjectWalker {
-        private final Map<Appearance, Set<GeometryProperty<?>>> appearances = new IdentityHashMap<>();
+        private final Map<VisitableObject, Context> contexts = new IdentityHashMap<>();
 
-        Map<Appearance, Set<GeometryProperty<?>>> collect(AbstractFeature feature) {
+        Collection<Context> collect(AbstractFeature feature) {
             feature.accept(this);
-            return appearances;
+            return contexts.values();
         }
 
         @Override
         public void visit(FeatureProperty<?> property) {
-            if (property.getObject() instanceof Appearance) {
-                Set<GeometryProperty<?>> contexts = Collections.newSetFromMap(new IdentityHashMap<>());
-                property.getParent(AbstractFeature.class).accept(new ObjectWalker() {
-                    @Override
-                    public void visit(GeometryProperty<?> property) {
-                        contexts.add(property);
-                        super.visit(property);
-                    }
-                });
-
-                appearances.put((Appearance) property.getObject(), contexts);
+            if (property.getObject() instanceof Appearance appearance) {
+                VisitableObject parent = getParent(property);
+                contexts.computeIfAbsent(parent, this::getContext)
+                        .appearances.add(appearance);
             } else {
                 super.visit(property);
+            }
+        }
+
+        private Context getContext(VisitableObject parent) {
+            Set<GeometryProperty<?>> properties = Collections.newSetFromMap(new IdentityHashMap<>());
+            parent.accept(new ObjectWalker() {
+                @Override
+                public void visit(GeometryProperty<?> property) {
+                    properties.add(property);
+                    super.visit(property);
+                }
+            });
+
+            return new Context(properties);
+        }
+
+        private VisitableObject getParent(FeatureProperty<?> property) {
+            org.xmlobjects.model.Child parent = property.getParent();
+            if (parent instanceof AbstractFeature feature) {
+                return feature;
+            } else if (parent instanceof ImplicitGeometry implicitGeometry) {
+                return implicitGeometry;
+            } else {
+                return parent.getParent(AbstractFeature.class);
+            }
+        }
+
+        private static class Context {
+            final Set<GeometryProperty<?>> properties;
+            final Set<Appearance> appearances;
+
+            Context(Set<GeometryProperty<?>> properties) {
+                this.properties = properties;
+                appearances = Collections.newSetFromMap(new IdentityHashMap<>());
             }
         }
     }
@@ -196,7 +232,7 @@ public class AppearanceHelper {
 
                     rings.getOrDefault(source, Collections.emptyList()).stream()
                             .filter(this::isValidContext)
-                            .map(TargetContext::getTarget)
+                            .map(TargetContext::target)
                             .forEach(ring -> target.addTextureCoordinates(ring,
                                     createTextureCoordinates(textureCoordinates, ring)));
                 }
@@ -246,7 +282,7 @@ public class AppearanceHelper {
                 if (contexts != null) {
                     return contexts.stream()
                             .filter(this::isValidContext)
-                            .map(TargetContext::getTarget)
+                            .map(TargetContext::target)
                             .collect(Collectors.toList());
                 } else {
                     List<Surface<?>> targets = new ArrayList<>();
@@ -264,7 +300,7 @@ public class AppearanceHelper {
                         private void process(GMLObject geometry) {
                             surfaces.getOrDefault(geometry, Collections.emptyList()).stream()
                                     .filter(context -> isValidContext(context))
-                                    .map(TargetContext::getTarget)
+                                    .map(TargetContext::target)
                                     .forEach(targets::add);
                         }
                     });
@@ -277,25 +313,7 @@ public class AppearanceHelper {
         }
 
         private boolean isValidContext(TargetContext<?> context) {
-            return context.getParent() == null || contexts.contains(context.getParent());
-        }
-    }
-
-    private static class TargetContext<T extends Child> {
-        private final T target;
-        private final GeometryProperty<?> parent;
-
-        TargetContext(T target, GeometryProperty<?> parent) {
-            this.target = target;
-            this.parent = parent;
-        }
-
-        T getTarget() {
-            return target;
-        }
-
-        GeometryProperty<?> getParent() {
-            return parent;
+            return context.parent() == null || contexts.contains(context.parent());
         }
     }
 }

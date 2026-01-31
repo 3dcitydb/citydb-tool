@@ -23,7 +23,6 @@ package org.citydb.operation.importer.property;
 
 import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
-import org.citydb.model.common.Reference;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.PropertyDescriptor;
@@ -61,36 +60,29 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
     }
 
     PropertyDescriptor doImport(ImplicitGeometryProperty property, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
-        stmt.setString(7, property.getLod().orElse(null));
+        setStringOrNull(7, property.getLod().orElse(null));
 
         ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
-        if (implicitGeometry != null) {
+        if (implicitGeometry != null && canImport(implicitGeometry)) {
             stmt.setLong(8, tableHelper.getOrCreateImporter(ImplicitGeometryImporter.class)
                     .doImport(implicitGeometry, featureId));
-        } else if (property.getReference().isPresent()) {
-            Reference reference = property.getReference().get();
+        } else {
+            String reference = implicitGeometry != null ?
+                    implicitGeometry.getOrCreateObjectId() :
+                    property.getReference().orElseThrow(() -> new ImportException("The implicit geometry property " +
+                            "contains neither an object nor a reference."));
             cacheReference(CacheType.IMPLICIT_GEOMETRY, reference, propertyId);
             stmt.setNull(8, Types.BIGINT);
         }
 
-        Object referencePoint = getGeometry(property.getReferencePoint().orElse(null), true);
-        if (referencePoint != null) {
-            stmt.setObject(9, referencePoint, adapter.getGeometryAdapter().getGeometrySqlType());
-        } else {
-            stmt.setNull(9, adapter.getGeometryAdapter().getGeometrySqlType(),
-                    adapter.getGeometryAdapter().getGeometryTypeName());
-        }
+        setGeometryOrNull(9, getGeometry(property.getReferencePoint().orElse(null), true));
 
-        String transformationMatrix = property.getTransformationMatrix()
+        JSONArray transformationMatrix = property.getTransformationMatrix()
                 .map(Matrix::toRowMajor)
                 .map(JSONArray::new)
-                .map(JSONArray::toString)
                 .orElse(null);
-        if (transformationMatrix != null) {
-            stmt.setObject(10, transformationMatrix, adapter.getSchemaAdapter().getOtherSqlType());
-        } else {
-            stmt.setNull(10, adapter.getSchemaAdapter().getOtherSqlType());
-        }
+
+        setJsonOrNull(10, getJson(transformationMatrix));
 
         return super.doImport(property, propertyId, parentId, featureId);
     }

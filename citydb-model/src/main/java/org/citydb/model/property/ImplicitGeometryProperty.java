@@ -21,7 +21,10 @@
 
 package org.citydb.model.property;
 
-import org.citydb.model.common.*;
+import org.citydb.model.common.Child;
+import org.citydb.model.common.InlineOrByReferenceProperty;
+import org.citydb.model.common.Matrix4x4;
+import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
@@ -32,7 +35,7 @@ import java.util.Optional;
 
 public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty> implements InlineOrByReferenceProperty<ImplicitGeometry> {
     private ImplicitGeometry implicitGeometry;
-    private Reference reference;
+    private String reference;
     private Matrix4x4 transformationMatrix;
     private Point referencePoint;
     private String lod;
@@ -41,22 +44,25 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
         super(name, DataType.IMPLICIT_GEOMETRY_PROPERTY);
         Objects.requireNonNull(implicitGeometry, "The implicit geometry must not be null.");
         this.implicitGeometry = asChild(implicitGeometry);
-        reference = null;
     }
 
-    private ImplicitGeometryProperty(Name name, Reference reference) {
+    private ImplicitGeometryProperty(Name name, String reference) {
         super(name, DataType.IMPLICIT_GEOMETRY_PROPERTY);
         Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = asChild(reference);
-        implicitGeometry = null;
+        this.reference = reference;
     }
 
     public static ImplicitGeometryProperty of(Name name, ImplicitGeometry implicitGeometry) {
         return new ImplicitGeometryProperty(name, implicitGeometry);
     }
 
-    public static ImplicitGeometryProperty of(Name name, Reference reference) {
+    public static ImplicitGeometryProperty of(Name name, String reference) {
         return new ImplicitGeometryProperty(name, reference);
+    }
+
+    public static ImplicitGeometryProperty asReference(Name name, ImplicitGeometry implicitGeometry) {
+        Objects.requireNonNull(implicitGeometry, "The referenced implicit geometry must not be null.");
+        return new ImplicitGeometryProperty(name, implicitGeometry.getOrCreateObjectId());
     }
 
     @Override
@@ -75,18 +81,23 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     }
 
     @Override
-    public Optional<Reference> getReference() {
+    public Optional<String> getReference() {
         return Optional.ofNullable(reference);
     }
 
     @Override
-    public ImplicitGeometryProperty setReference(Reference reference) {
+    public ImplicitGeometryProperty setReference(String reference) {
         if (reference != null) {
-            this.reference = asChild(reference);
+            this.reference = reference;
             implicitGeometry = null;
         }
 
         return this;
+    }
+
+    @Override
+    public ImplicitGeometryProperty setReference(ImplicitGeometry implicitGeometry) {
+        return implicitGeometry != null ? setReference(implicitGeometry.getOrCreateObjectId()) : this;
     }
 
     public Optional<Matrix4x4> getTransformationMatrix() {

@@ -33,55 +33,37 @@ import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class AddressExporter extends DatabaseExporter {
-    private final Table address;
-    private final Select select;
 
     public AddressExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        address = tableHelper.getTable(org.citydb.database.schema.Table.ADDRESS);
-        select = getBaseQuery();
-        stmt = helper.getConnection().prepareStatement(Select.of(select)
-                .where(address.column("id").eq(Placeholder.empty()))
-                .toSql());
+        stmt = helper.getConnection().prepareStatement(getQuery().toSql());
     }
 
-    private Select getBaseQuery() {
+    private Select getQuery() {
+        Table address = tableHelper.getTable(org.citydb.database.schema.Table.ADDRESS);
         return Select.newInstance()
                 .select(address.columns("id", "objectid", "identifier", "identifier_codespace", "street",
                         "house_number", "po_box", "zip_code", "city", "state", "country", "free_text", "content",
                         "content_mime_type"))
                 .select(helper.getTransformOperator(address.column("multi_point")))
-                .from(address);
-    }
-
-    private Select getQuery(Set<Long> ids) {
-        return Select.of(select)
-                .where(operationHelper.in(address.column("id"), ids));
+                .from(address)
+                .where(operationHelper.inArray(address.column("id"), Placeholder.empty()));
     }
 
     public Address doExport(long id) throws ExportException, SQLException {
-        stmt.setLong(1, id);
+        setLongArrayOrNull(1, List.of(id));
         try (ResultSet rs = stmt.executeQuery()) {
             return doExport(rs).get(id);
         }
     }
 
     public Map<Long, Address> doExport(Set<Long> ids) throws ExportException, SQLException {
-        if (ids.size() == 1) {
-            stmt.setLong(1, ids.iterator().next());
+        if (!ids.isEmpty()) {
+            setLongArrayOrNull(1, ids);
             try (ResultSet rs = stmt.executeQuery()) {
-                return doExport(rs);
-            }
-        } else if (!ids.isEmpty()) {
-            try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
                 return doExport(rs);
             }
         } else {

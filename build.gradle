@@ -6,7 +6,7 @@ plugins {
 
 apply from: 'properties.gradle'
 
-version = '1.1.1-SNAPSHOT'
+version = '1.2.0'
 
 allprojects {
     group = 'org.citydb'
@@ -55,11 +55,15 @@ subprojects {
     }
 
     extraJavaModuleInfo {
-        failOnMissingModuleInfo.set(false)
+        failOnMissingModuleInfo = false
+        deriveAutomaticModuleNamesFromFileNames = true
         module('org.apache.tomcat:tomcat-jdbc', 'org.apache.tomcat.jdbc') {
             requires('java.sql')
             requires('java.management')
             requires('org.apache.tomcat.juli')
+            exportAllPackages()
+        }
+        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305') {
             exportAllPackages()
         }
     }

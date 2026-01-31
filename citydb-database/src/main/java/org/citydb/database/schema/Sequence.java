@@ -21,6 +21,11 @@
 
 package org.citydb.database.schema;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+
 public enum Sequence {
     ADE("ade_seq"),
     ADDRESS("address_seq"),
@@ -36,10 +41,19 @@ public enum Sequence {
     APPEAR_TO_SURFACE_DATA("appear_to_surface_data_seq"),
     TEX_IMAGE("tex_image_seq");
 
+    private final static Map<String, Sequence> sequences = new HashMap<>();
     private final String name;
+
+    static {
+        Arrays.stream(values()).forEach(sequence -> sequences.put(sequence.name.toLowerCase(Locale.ROOT), sequence));
+    }
 
     Sequence(String name) {
         this.name = name;
+    }
+
+    public static Sequence of(String name) {
+        return name != null ? sequences.get(name.toLowerCase(Locale.ROOT)) : null;
     }
 
     public String getName() {

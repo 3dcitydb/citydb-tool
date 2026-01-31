@@ -89,29 +89,31 @@ public class ReportTextBuilder {
             buildDatabaseSize(getJSONObject(getJSONObject(jsonReport, "database"), "size"), consumer);
         }
 
-        addSectionSpacing(consumer);
-        consumer.accept(getTitle("Feature Statistics"));
-        buildFeatures(getJSONObject(jsonReport, "features"), consumer);
+        if (!options.isCompact()) {
+            addSectionSpacing(consumer);
+            consumer.accept(getTitle("Feature Statistics"));
+            buildFeatures(getJSONObject(jsonReport, "features"), consumer);
 
-        addSectionSpacing(consumer);
-        consumer.accept(getTitle("Geometry Statistics"));
-        buildGeometries(getJSONObject(jsonReport, "geometries"), consumer);
+            addSectionSpacing(consumer);
+            consumer.accept(getTitle("Geometry Statistics"));
+            buildGeometries(getJSONObject(jsonReport, "geometries"), consumer);
 
-        addSectionSpacing(consumer);
-        consumer.accept(getTitle("Address Statistics"));
-        buildAddresses(getJSONObject(jsonReport, "addresses"), consumer);
+            addSectionSpacing(consumer);
+            consumer.accept(getTitle("Address Statistics"));
+            buildAddresses(getJSONObject(jsonReport, "addresses"), consumer);
 
-        addSectionSpacing(consumer);
-        consumer.accept(getTitle("Appearance Statistics"));
-        buildAppearances(getJSONObject(jsonReport, "appearances"), consumer);
+            addSectionSpacing(consumer);
+            consumer.accept(getTitle("Appearance Statistics"));
+            buildAppearances(getJSONObject(jsonReport, "appearances"), consumer);
 
-        addSectionSpacing(consumer);
-        consumer.accept(getTitle("Extensions"));
-        buildExtensions(getJSONArray(jsonReport, "extensions"), consumer);
+            addSectionSpacing(consumer);
+            consumer.accept(getTitle("Extensions"));
+            buildExtensions(getJSONArray(jsonReport, "extensions"), consumer);
 
-        addSectionSpacing(consumer);
-        consumer.accept(getTitle("Codelists"));
-        buildCodelists(getJSONObject(jsonReport, "codeLists"), consumer);
+            addSectionSpacing(consumer);
+            consumer.accept(getTitle("Codelists"));
+            buildCodelists(getJSONObject(jsonReport, "codeLists"), consumer);
+        }
 
         if (options.isIncludeGenericAttributes()) {
             addSectionSpacing(consumer);
@@ -220,9 +222,18 @@ public class ReportTextBuilder {
     }
 
     private void buildGenericAttributes(JSONObject genericAttributes, Consumer<String> consumer) {
-        consumer.accept("Total attributes: " + genericAttributes.size());
-        genericAttributes.forEach((name, types) ->
-                consumer.accept(getListItem(quote(name) + ": " + join((JSONArray) types, String.class))));
+        consumer.accept("Total attributes: " + genericAttributes.values().stream()
+                .filter(JSONObject.class::isInstance)
+                .map(JSONObject.class::cast)
+                .mapToInt(JSONObject::size)
+                .sum());
+        genericAttributes.forEach((featureType, attributes) -> {
+            if (attributes instanceof JSONObject object) {
+                consumer.accept(featureType + ":");
+                object.forEach((name, types) ->
+                        consumer.accept(getListItem(quote(name) + ": " + join((JSONArray) types, String.class))));
+            }
+        });
     }
 
     private void buildEndOfReport(Consumer<String> consumer) {

@@ -28,10 +28,7 @@ import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 
 import java.sql.SQLException;
-import java.sql.Types;
-import java.time.OffsetDateTime;
 import java.util.Collections;
-import java.util.stream.Collectors;
 
 public class AttributeImporter extends PropertyImporter {
 
@@ -58,46 +55,23 @@ public class AttributeImporter extends PropertyImporter {
     }
 
     private PropertyDescriptor doImport(Attribute attribute, long propertyId, long parentId, long featureId) throws ImportException, SQLException {
-        Long intValue = attribute.getIntValue().orElse(null);
-        if (intValue != null) {
-            stmt.setLong(7, intValue);
-        } else {
-            stmt.setNull(7, Types.BIGINT);
-        }
+        setLongOrNull(7, attribute.getIntValue().orElse(null));
+        setDoubleOrNull(8, attribute.getDoubleValue().orElse(null));
+        setStringOrNull(9, attribute.getStringValue().orElse(null));
+        setTimestampOrNull(10, attribute.getTimeStamp().orElse(null));
+        setStringOrNull(11, attribute.getURI().orElse(null));
+        setStringOrNull(12, attribute.getCodeSpace().orElse(null));
+        setStringOrNull(13, attribute.getUom().orElse(null));
 
-        Double doubleValue = attribute.getDoubleValue().orElse(null);
-        if (doubleValue != null) {
-            stmt.setDouble(8, doubleValue);
-        } else {
-            stmt.setNull(8, Types.DOUBLE);
-        }
-
-        stmt.setString(9, attribute.getStringValue().orElse(null));
-
-        OffsetDateTime timestamp = attribute.getTimeStamp().orElse(null);
-        if (timestamp != null) {
-            stmt.setObject(10, timestamp, Types.TIMESTAMP_WITH_TIMEZONE);
-        } else {
-            stmt.setNull(10, Types.TIMESTAMP_WITH_TIMEZONE);
-        }
-
-        stmt.setString(11, attribute.getURI().orElse(null));
-        stmt.setString(12, attribute.getCodeSpace().orElse(null));
-        stmt.setString(13, attribute.getUom().orElse(null));
-
-        String arrayValue = attribute.getArrayValue()
+        JSONArray arrayValue = attribute.getArrayValue()
                 .map(array -> new JSONArray(array.getValues().stream()
                         .map(Value::rawValue)
-                        .collect(Collectors.toList())).toString())
+                        .toList()))
                 .orElse(null);
-        if (arrayValue != null) {
-            stmt.setObject(14, arrayValue, adapter.getSchemaAdapter().getOtherSqlType());
-        } else {
-            stmt.setNull(14, adapter.getSchemaAdapter().getOtherSqlType());
-        }
 
-        stmt.setString(15, attribute.getGenericContent().orElse(null));
-        stmt.setString(16, attribute.getGenericContentMimeType().orElse(null));
+        setJsonOrNull(14, getJson(arrayValue));
+        setStringOrNull(15, attribute.getGenericContent().orElse(null));
+        setStringOrNull(16, attribute.getGenericContentMimeType().orElse(null));
 
         PropertyDescriptor descriptor = super.doImport(attribute, propertyId, parentId, featureId);
 

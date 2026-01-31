@@ -48,6 +48,7 @@ public class ExportOptions {
     @JSONField(serialize = false, deserialize = false)
     private OutputFile outputFile;
     private int numberOfThreads;
+    private boolean useAbsoluteResourcePaths;
     private SrsReference targetSrs;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
@@ -83,6 +84,15 @@ public class ExportOptions {
 
     public ExportOptions setNumberOfThreads(int numberOfThreads) {
         this.numberOfThreads = numberOfThreads;
+        return this;
+    }
+
+    public boolean isUseAbsoluteResourcePaths() {
+        return useAbsoluteResourcePaths;
+    }
+
+    public ExportOptions setUseAbsoluteResourcePaths(boolean useAbsoluteResourcePaths) {
+        this.useAbsoluteResourcePaths = useAbsoluteResourcePaths;
         return this;
     }
 

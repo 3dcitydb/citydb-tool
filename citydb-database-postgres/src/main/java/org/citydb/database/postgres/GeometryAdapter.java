@@ -30,27 +30,21 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
 import org.postgresql.util.PGobject;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter {
     private final WKBParser parser = new WKBParser();
     private final BoxParser boxParser = new BoxParser();
     private final WKBWriter writer = new WKBWriter().includeSRID(true);
     private final WKTWriter textWriter = new WKTWriter().includeSRID(true);
-    private final SpatialOperationHelper spatialOperationHelper = new SpatialOperationHelper();
+    private final SpatialOperationHelper spatialOperationHelper;
 
     GeometryAdapter(DatabaseAdapter adapter) {
         super(adapter);
-    }
-
-    @Override
-    public int getGeometrySqlType() {
-        return Types.OTHER;
-    }
-
-    @Override
-    public String getGeometryTypeName() {
-        return "ST_Geometry";
+        spatialOperationHelper = new SpatialOperationHelper(adapter);
     }
 
     @Override
@@ -69,13 +63,13 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     @Override
-    public Object getGeometry(Geometry<?> geometry, boolean force3D) {
+    public Object getGeometry(Geometry<?> geometry, boolean force3D, Connection connection) {
         return writer.write(geometry, force3D);
     }
 
     @Override
     public String getAsText(Geometry<?> geometry) throws GeometryException {
-        return textWriter.write(geometry);
+        return "'" + textWriter.write(geometry) + "'";
     }
 
     @Override

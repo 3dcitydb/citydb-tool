@@ -23,10 +23,10 @@ package org.citydb.core.file.helper;
 
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
-import org.apache.commons.compress.parallel.InputStreamSupplier;
 import org.citydb.core.concurrent.CountLatch;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Deque;
 import java.util.Objects;
@@ -40,8 +40,6 @@ public class ParallelZipCreator {
     private final ThreadLocal<ScatterZipOutputStream> threadLocal;
     private final Deque<ScatterZipOutputStream> streams = new ConcurrentLinkedDeque<>();
     private final CountLatch countLatch = new CountLatch();
-
-    private IOException exception;
 
     public ParallelZipCreator(Path tempDir, int compressionLevel) {
         Objects.requireNonNull(tempDir, "The temporary directory must not be null.");
@@ -58,7 +56,7 @@ public class ParallelZipCreator {
                 streams.push(stream);
                 return stream;
             } catch (IOException e) {
-                throw new RuntimeException("Failed to create scatter ZIP output stream.", e);
+                throw new UncheckedIOException("Failed to create scatter ZIP output stream.", e);
             }
         });
     }
@@ -67,13 +65,13 @@ public class ParallelZipCreator {
         this(tempDir, Deflater.DEFAULT_COMPRESSION);
     }
 
-    public void addArchiveEntry(ZipArchiveEntry entry, InputStreamSupplier source) {
+    public void addArchiveEntry(ZipArchiveEntry entry, Pipe pipe) {
         countLatch.increment();
         service.execute(() -> {
             try {
-                threadLocal.get().addArchiveEntry(entry, source);
-            } catch (IOException e) {
-                exception = e;
+                threadLocal.get().addArchiveEntry(entry, pipe::sink);
+            } catch (Exception e) {
+                pipe.cancel(e.getMessage(), e.getCause());
             } finally {
                 countLatch.decrement();
             }
@@ -83,10 +81,6 @@ public class ParallelZipCreator {
     public void writeTo(ZipArchiveOutputStream target) throws IOException {
         try {
             countLatch.await();
-            if (exception != null) {
-                throw exception;
-            }
-
             for (ScatterZipOutputStream stream : streams) {
                 stream.writeTo(target);
                 stream.close();

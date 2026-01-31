@@ -30,7 +30,7 @@ import org.citydb.sqlbuilder.query.SetOperator;
 import org.citydb.sqlbuilder.query.Sets;
 import org.citydb.sqlbuilder.schema.Column;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.util.PlainText;
+import org.citydb.sqlbuilder.util.PlainSql;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -56,7 +56,7 @@ public class StatisticsHelper extends org.citydb.database.util.StatisticsHelper 
                                 StringLiteral.of(adapter.getConnectionDetails().getDatabase()))),
                 Select.newInstance()
                         .select(pgTables.column("tablename"), Function.of("pg_total_relation_size",
-                                PlainText.of("schemaname || '.' || tablename")))
+                                PlainSql.of("schemaname || '.' || tablename")))
                         .from(pgTables)
                         .where(pgTables.column("schemaname").eq(adapter.getConnectionDetails().getSchema())));
 

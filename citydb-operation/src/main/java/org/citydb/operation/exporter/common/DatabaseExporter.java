@@ -42,6 +42,7 @@ import org.citydb.operation.exporter.util.TableHelper;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
 
 public abstract class DatabaseExporter {
     protected final ExportHelper helper;
@@ -58,6 +59,10 @@ public abstract class DatabaseExporter {
         schemaMapping = helper.getSchemaMapping();
         tableHelper = helper.getTableHelper();
         operationHelper = helper.getOperationHelper();
+    }
+
+    protected void setLongArrayOrNull(int index, Collection<Long> values) throws SQLException {
+        adapter.getSchemaAdapter().getSqlHelper().setLongArrayOrNull(stmt, index, values);
     }
 
     protected Long getLong(String column, ResultSet rs) throws SQLException {

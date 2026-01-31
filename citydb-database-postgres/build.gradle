@@ -1,4 +1,4 @@
 dependencies {
     implementation project(':citydb-database')
-    implementation 'org.postgresql:postgresql:42.7.7'
+    implementation 'org.postgresql:postgresql:42.7.8'
 }

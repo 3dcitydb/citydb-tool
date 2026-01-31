@@ -24,7 +24,9 @@ package org.citydb.database.postgres;
 import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.function.Function;
+import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
+import org.citydb.sqlbuilder.operation.BooleanExpression;
 
 public class OperationHelper extends org.citydb.database.util.OperationHelper {
 
@@ -60,5 +62,10 @@ public class OperationHelper extends org.citydb.database.util.OperationHelper {
     @Override
     public Expression upper(ScalarExpression expression) {
         return Function.of("upper", expression);
+    }
+
+    @Override
+    public BooleanExpression inArray(ScalarExpression operand, Placeholder values) {
+        return operand.eqAny(values);
     }
 }

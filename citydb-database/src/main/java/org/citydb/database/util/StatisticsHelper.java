@@ -98,8 +98,9 @@ public abstract class StatisticsHelper {
         Map<FeatureType, Long> featureCount = new IdentityHashMap<>();
         try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
              ResultSet rs = stmt.executeQuery()) {
+            SchemaMapping schemaMapping = getSchemaMapping();
             while (rs.next()) {
-                FeatureType featureType = getSchemaMapping().getFeatureType(rs.getInt(1));
+                FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
                 featureCount.put(featureType, rs.getLong(2));
             }
         }
@@ -132,8 +133,9 @@ public abstract class StatisticsHelper {
         Map<FeatureType, FeatureInfo> featureCount = new IdentityHashMap<>();
         try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
              ResultSet rs = stmt.executeQuery()) {
+            SchemaMapping schemaMapping = getSchemaMapping();
             while (rs.next()) {
-                FeatureType featureType = getSchemaMapping().getFeatureType(rs.getInt(1));
+                FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
                 Envelope envelope = adapter.getGeometryAdapter().getEnvelope(rs.getObject(3));
                 featureCount.put(featureType, new FeatureInfo(rs.getLong(2), envelope != null ?
                         envelope.setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID()) :
@@ -388,8 +390,9 @@ public abstract class StatisticsHelper {
         Map<FeatureType, Long> surfaceDataCount = new IdentityHashMap<>();
         try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
              ResultSet rs = stmt.executeQuery()) {
+            SchemaMapping schemaMapping = getSchemaMapping();
             while (rs.next()) {
-                FeatureType featureType = getSchemaMapping().getFeatureType(rs.getInt(1));
+                FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
                 surfaceDataCount.put(featureType, rs.getLong(2));
             }
         }
@@ -397,13 +400,13 @@ public abstract class StatisticsHelper {
         return surfaceDataCount;
     }
 
-    public boolean hasGlobalAppearances(FeatureScope scope) throws SQLException {
+    public boolean hasGlobalAppearances() throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
-            return hasGlobalAppearances(scope, connection);
+            return hasGlobalAppearances(connection);
         }
     }
 
-    public boolean hasGlobalAppearances(FeatureScope scope, Connection connection) throws SQLException {
+    public boolean hasGlobalAppearances(Connection connection) throws SQLException {
         Table appearance = Table.of(org.citydb.database.schema.Table.APPEARANCE.getName(), getSchema());
 
         Select select = Select.newInstance()
@@ -419,33 +422,33 @@ public abstract class StatisticsHelper {
         }
     }
 
-    public Map<String, Set<DataType>> getGenericAttributes(FeatureScope scope) throws SQLException {
+    public Map<FeatureType, Map<String, Set<DataType>>> getGenericAttributes(FeatureScope scope) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection(true)) {
             return getGenericAttributes(scope, connection);
         }
     }
 
-    public Map<String, Set<DataType>> getGenericAttributes(FeatureScope scope, Connection connection) throws SQLException {
+    public Map<FeatureType, Map<String, Set<DataType>>> getGenericAttributes(FeatureScope scope, Connection connection) throws SQLException {
+        Select select = Select.newInstance();
         Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(), getSchema());
+        Table feature = joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
+        SchemaMapping schemaMapping = getSchemaMapping();
 
-        Select select = Select.newInstance()
-                .distinct(true)
+        select.distinct(true)
+                .select(feature.column("objectclass_id"))
                 .select(property.columns("name", "datatype_id"))
                 .from(property)
                 .where(property.column("namespace_id")
-                        .eq(getSchemaMapping().getNamespaceByURI(Namespaces.GENERICS).getId()));
+                        .eq(schemaMapping.getNamespaceByURI(Namespaces.GENERICS).getId()));
 
-        if (scope != FeatureScope.ALL) {
-            joinFeatures(scope, select, property.column("feature_id"), Joins.INNER_JOIN);
-        }
-
-        Map<String, Set<DataType>> genericAttributes = new IdentityHashMap<>();
+        Map<FeatureType, Map<String, Set<DataType>>> genericAttributes = new IdentityHashMap<>();
         try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                DataType dataType = getSchemaMapping().getDataType(rs.getInt(2));
-                genericAttributes.computeIfAbsent(rs.getString(1),
-                                v -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
+                DataType dataType = schemaMapping.getDataType(rs.getInt(3));
+                genericAttributes.computeIfAbsent(featureType, k -> new IdentityHashMap<>())
+                        .computeIfAbsent(rs.getString(2), k -> new HashSet<>())
                         .add(dataType);
             }
         }
@@ -515,7 +518,7 @@ public abstract class StatisticsHelper {
         return featureCount;
     }
 
-    private void joinFeatures(FeatureScope scope, Select select, Column column, String joinType) {
+    private Table joinFeatures(FeatureScope scope, Select select, Column column, String joinType) {
         Table feature = Table.of(org.citydb.database.schema.Table.FEATURE.getName(), getSchema());
         Column terminationDate = feature.column("termination_date");
 
@@ -525,6 +528,8 @@ public abstract class StatisticsHelper {
             case ACTIVE -> select.where(terminationDate.isNull());
             case TERMINATED -> select.where(terminationDate.isNotNull());
         }
+
+        return feature;
     }
 
     private SchemaMapping getSchemaMapping() {

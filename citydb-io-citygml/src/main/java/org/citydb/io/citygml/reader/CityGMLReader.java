@@ -27,7 +27,7 @@ import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.file.InputFile;
 import org.citydb.io.citygml.CityGMLAdapterContext;
-import org.citydb.io.citygml.reader.preprocess.Preprocessor;
+import org.citydb.io.citygml.reader.preprocess.CityGMLPreprocessor;
 import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
@@ -59,7 +59,7 @@ public class CityGMLReader implements FeatureReader {
 
     private volatile boolean isPreprocessed;
     private volatile boolean shouldRun = true;
-    private Preprocessor preprocessor;
+    private CityGMLPreprocessor preprocessor;
     private Throwable exception;
 
     public CityGMLReader(InputFile file, ReadOptions options, CityGMLAdapterContext context) throws ReadException {
@@ -85,7 +85,7 @@ public class CityGMLReader implements FeatureReader {
 
         factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options, formatOptions);
         filter = options.getFilter().orElseGet(Filter::acceptAll);
-        preprocessor = new Preprocessor()
+        preprocessor = new CityGMLPreprocessor()
                 .resolveCrossLodReferences(formatOptions.isResolveCrossLodReferences())
                 .createCityObjectRelations(formatOptions.isCreateCityObjectRelations())
                 .useLod4AsLod3(formatOptions.isUseLod4AsLod3())

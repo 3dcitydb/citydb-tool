@@ -25,7 +25,6 @@ import org.citydb.model.address.Address;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
-import org.citydb.model.common.Reference;
 import org.citydb.model.feature.Feature;
 
 import java.util.Objects;
@@ -33,28 +32,31 @@ import java.util.Optional;
 
 public class AddressProperty extends Property<AddressProperty> implements InlineOrByReferenceProperty<Address> {
     private Address address;
-    private Reference reference;
+    private String reference;
 
     private AddressProperty(Name name, Address address) {
         super(name, DataType.ADDRESS_PROPERTY);
         Objects.requireNonNull(address, "The address must not be null.");
         this.address = asChild(address);
-        reference = null;
     }
 
-    private AddressProperty(Name name, Reference reference) {
+    private AddressProperty(Name name, String reference) {
         super(name, DataType.ADDRESS_PROPERTY);
         Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = asChild(reference);
-        address = null;
+        this.reference = reference;
     }
 
     public static AddressProperty of(Name name, Address address) {
         return new AddressProperty(name, address);
     }
 
-    public static AddressProperty of(Name name, Reference reference) {
+    public static AddressProperty of(Name name, String reference) {
         return new AddressProperty(name, reference);
+    }
+
+    public static AddressProperty asReference(Name name, Address address) {
+        Objects.requireNonNull(address, "The referenced address must not be null.");
+        return new AddressProperty(name, address.getOrCreateObjectId());
     }
 
     @Override
@@ -73,18 +75,23 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
     }
 
     @Override
-    public Optional<Reference> getReference() {
+    public Optional<String> getReference() {
         return Optional.ofNullable(reference);
     }
 
     @Override
-    public AddressProperty setReference(Reference reference) {
+    public AddressProperty setReference(String reference) {
         if (reference != null) {
-            this.reference = asChild(reference);
+            this.reference = reference;
             address = null;
         }
 
         return this;
+    }
+
+    @Override
+    public AddressProperty setReference(Address address) {
+        return address != null ? setReference(address.getOrCreateObjectId()) : this;
     }
 
     @Override

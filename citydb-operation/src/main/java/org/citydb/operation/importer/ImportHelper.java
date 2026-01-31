@@ -21,15 +21,16 @@
 
 package org.citydb.operation.importer;
 
+import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Referencable;
-import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.util.AffineTransformer;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.feature.FeatureImporter;
@@ -54,34 +55,36 @@ public class ImportHelper {
     private final DatabaseAdapter adapter;
     private final ImportOptions options;
     private final ReferenceManager referenceManager;
+    private final PersistentMapStore store;
     private final ImportLogger importLogger;
     private final Connection connection;
     private final SchemaMapping schemaMapping;
     private final TableHelper tableHelper;
-    private final SequenceHelper sequenceHelper;
+    private final SequenceGenerator sequenceGenerator;
     private final AffineTransformer transformer;
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
     private final Importer.TransactionMode transactionMode;
+    private final boolean failFast;
     private final int batchSize;
 
     private OffsetDateTime importTime;
     private SequenceValues sequenceValues;
-    private boolean failFast;
     private int batchCounter;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
-                 ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
+                 PersistentMapStore store, ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
         this.adapter = adapter;
         this.options = options;
         this.referenceManager = referenceManager;
+        this.store = store;
         this.importLogger = importLogger;
         this.transactionMode = transactionMode;
 
         connection = adapter.getPool().getConnection(false);
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
-        sequenceHelper = new SequenceHelper(this);
+        sequenceGenerator = new SequenceGenerator(this);
         transformer = options.getAffineTransform().map(AffineTransformer::of).orElse(null);
         failFast = options.isFailFast();
         batchSize = options.getBatchSize() > 0 ?
@@ -162,6 +165,16 @@ public class ImportHelper {
         return null;
     }
 
+    public boolean lookupAndPut(ImplicitGeometry implicitGeometry) {
+        String objectId = implicitGeometry.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("implicit-geometries").putIfAbsent(objectId, true) != null;
+    }
+
+    public boolean lookupAndPut(ExternalFile externalFile) {
+        String objectId = externalFile.getObjectId().orElse(null);
+        return objectId != null && store.getOrCreateMap("external-files").putIfAbsent(objectId, true) != null;
+    }
+
     FeatureDescriptor importFeature(Feature feature) throws ImportException {
         try {
             if (transformer != null) {
@@ -169,7 +182,7 @@ public class ImportHelper {
             }
 
             importTime = OffsetDateTime.now().withNano(0);
-            generateSequenceValues(feature);
+            sequenceValues = sequenceGenerator.generateNextValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
             if (importLogger != null) {
@@ -181,10 +194,6 @@ public class ImportHelper {
         } catch (Exception e) {
             throw new ImportException("Failed to import feature.", e);
         }
-    }
-
-    private void generateSequenceValues(Visitable visitable) throws SQLException {
-        sequenceValues = sequenceHelper.nextSequenceValues(visitable);
     }
 
     void executeBatch(boolean force, boolean commit) throws ImportException, SQLException {
@@ -233,7 +242,7 @@ public class ImportHelper {
     void close() throws ImportException, SQLException {
         updateImportLog(false);
         logEntries.clear();
-        sequenceHelper.close();
+        sequenceGenerator.close();
 
         try {
             tableHelper.close();

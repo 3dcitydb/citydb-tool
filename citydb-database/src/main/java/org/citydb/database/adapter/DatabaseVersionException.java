@@ -19,22 +19,24 @@
  * limitations under the License.
  */
 
-package org.citydb.model.common;
+package org.citydb.database.adapter;
 
-import java.util.Objects;
+import org.citydb.database.DatabaseException;
 
-public class Reference extends Child {
-    private final String target;
+public class DatabaseVersionException extends DatabaseException {
 
-    private Reference(String target) {
-        this.target = Objects.requireNonNull(target, "The reference target must not be null.");
+    public DatabaseVersionException() {
     }
 
-    public static Reference of(String target) {
-        return new Reference(target);
+    public DatabaseVersionException(String message) {
+        super(message);
     }
 
-    public String getTarget() {
-        return target;
+    public DatabaseVersionException(Throwable cause) {
+        super(cause);
+    }
+
+    public DatabaseVersionException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

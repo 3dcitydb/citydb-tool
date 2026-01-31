@@ -24,11 +24,11 @@ package org.citydb.database.util;
 import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.literal.Literal;
+import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.In;
 import org.citydb.sqlbuilder.operation.Operators;
-import org.citydb.sqlbuilder.schema.Column;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,33 +53,35 @@ public abstract class OperationHelper {
 
     public abstract Expression upper(ScalarExpression expression);
 
-    public BooleanExpression in(Column column, Collection<?> values) {
-        return in(column, values, false);
+    public abstract BooleanExpression inArray(ScalarExpression operand, Placeholder values);
+
+    public BooleanExpression in(ScalarExpression operand, Collection<?> values) {
+        return in(operand, values, false);
     }
 
-    public BooleanExpression in(Column column, Collection<?> values, boolean negate) {
-        List<ScalarExpression> expressions = Literal.ofScalarList(values);
-        if (expressions == null || expressions.isEmpty()) {
-            return Operators.isNull(column, negate);
-        } else if (expressions.size() == 1) {
-            return Operators.eq(column, expressions.iterator().next(), negate);
+    public BooleanExpression in(ScalarExpression operand, Collection<?> values, boolean negate) {
+        List<? extends Literal<?>> literals = values.stream().map(Literal::of).toList();
+        if (literals.isEmpty()) {
+            return Operators.isNull(operand, negate);
+        } else if (literals.size() == 1) {
+            return Operators.eq(operand, literals.iterator().next(), negate);
         }
 
         int size = schemaAdapter.getMaximumNumberOfItemsForInOperator();
-        if (expressions.size() > size) {
+        if (literals.size() > size) {
             List<In> operators = new ArrayList<>();
-            while (expressions.size() > size) {
-                operators.add(In.of(column, expressions.subList(0, size), negate));
-                expressions = expressions.subList(size, expressions.size());
+            while (literals.size() > size) {
+                operators.add(In.of(operand, literals.subList(0, size), negate));
+                literals = literals.subList(size, literals.size());
             }
 
-            if (!expressions.isEmpty()) {
-                operators.add(In.of(column, expressions, negate));
+            if (!literals.isEmpty()) {
+                operators.add(In.of(operand, literals, negate));
             }
 
             return negate ? Operators.and(operators) : Operators.or(operators);
         } else {
-            return In.of(column, expressions, negate);
+            return In.of(operand, literals, negate);
         }
     }
 }

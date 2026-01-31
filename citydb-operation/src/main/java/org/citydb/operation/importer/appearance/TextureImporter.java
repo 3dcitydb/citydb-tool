@@ -21,7 +21,10 @@
 
 package org.citydb.operation.importer.appearance;
 
-import org.citydb.model.appearance.*;
+import org.citydb.model.appearance.Color;
+import org.citydb.model.appearance.Texture;
+import org.citydb.model.appearance.TextureType;
+import org.citydb.model.appearance.WrapMode;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
@@ -39,10 +42,9 @@ public abstract class TextureImporter extends SurfaceDataImporter {
     }
 
     long doImport(Texture<?> texture, long surfaceDataId) throws ImportException, SQLException {
-        TextureImageProperty imageProperty = texture.getTextureImageProperty().orElse(null);
-        if (imageProperty != null) {
-            ExternalFile textureImage = imageProperty.getObject().orElse(null);
-            if (textureImage != null) {
+        ExternalFile textureImage = texture.getTextureImage().orElse(null);
+        if (textureImage != null) {
+            if (canImport(textureImage)) {
                 try {
                     stmt.setLong(7, tableHelper.getOrCreateImporter(TextureImageImporter.class)
                             .doImport(textureImage));
@@ -51,17 +53,17 @@ public abstract class TextureImporter extends SurfaceDataImporter {
                             "Failed to import texture file " + textureImage.getFileLocation() + "."), e);
                     stmt.setNull(7, Types.BIGINT);
                 }
-            } else if (imageProperty.getReference().isPresent()) {
-                cacheReference(CacheType.TEXTURE_IMAGE, imageProperty.getReference().get(), surfaceDataId);
+            } else {
+                cacheReference(CacheType.TEXTURE_IMAGE, textureImage.getOrCreateObjectId(), surfaceDataId);
                 stmt.setNull(7, Types.BIGINT);
             }
         } else {
             stmt.setNull(7, Types.BIGINT);
         }
 
-        stmt.setString(8, texture.getTextureType().map(TextureType::getDatabaseValue).orElse(null));
-        stmt.setString(9, texture.getWrapMode().map(WrapMode::getDatabaseValue).orElse(null));
-        stmt.setString(10, texture.getBorderColor().map(Color::toRGBA).orElse(null));
+        setStringOrNull(8, texture.getTextureType().map(TextureType::getDatabaseValue).orElse(null));
+        setStringOrNull(9, texture.getWrapMode().map(WrapMode::getDatabaseValue).orElse(null));
+        setStringOrNull(10, texture.getBorderColor().map(Color::toRGBA).orElse(null));
 
         return super.doImport(texture, surfaceDataId);
     }

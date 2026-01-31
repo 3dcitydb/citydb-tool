@@ -23,33 +23,35 @@ package org.citydb.model.appearance;
 
 import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
-import org.citydb.model.common.Reference;
 
 import java.util.Objects;
 import java.util.Optional;
 
 public class SurfaceDataProperty extends Child implements InlineOrByReferenceProperty<SurfaceData<?>> {
     private SurfaceData<?> surfaceData;
-    private Reference reference;
+    private String reference;
 
     private SurfaceDataProperty(SurfaceData<?> surfaceData) {
         Objects.requireNonNull(surfaceData, "The surface data must not be null.");
         this.surfaceData = asChild(surfaceData);
-        reference = null;
     }
 
-    private SurfaceDataProperty(Reference reference) {
+    private SurfaceDataProperty(String reference) {
         Objects.requireNonNull(reference, "The reference must not be null.");
-        this.reference = asChild(reference);
-        surfaceData = null;
+        this.reference = reference;
     }
 
     public static SurfaceDataProperty of(SurfaceData<?> surfaceData) {
         return new SurfaceDataProperty(surfaceData);
     }
 
-    public static SurfaceDataProperty of(Reference reference) {
+    public static SurfaceDataProperty of(String reference) {
         return new SurfaceDataProperty(reference);
+    }
+
+    public static SurfaceDataProperty asReference(SurfaceData<?> surfaceData) {
+        Objects.requireNonNull(surfaceData, "The referenced surface data must not be null.");
+        return new SurfaceDataProperty(surfaceData.getOrCreateObjectId());
     }
 
     @Override
@@ -68,8 +70,23 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
     }
 
     @Override
-    public Optional<Reference> getReference() {
+    public Optional<String> getReference() {
         return Optional.ofNullable(reference);
+    }
+
+    @Override
+    public SurfaceDataProperty setReference(String reference) {
+        if (reference != null) {
+            this.reference = reference;
+            surfaceData = null;
+        }
+
+        return this;
+    }
+
+    @Override
+    public SurfaceDataProperty setReference(SurfaceData<?> surfaceData) {
+        return surfaceData != null ? setReference(surfaceData.getOrCreateObjectId()) : this;
     }
 
     public boolean removeFromParent() {
@@ -79,15 +96,5 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
         } else {
             return false;
         }
-    }
-
-    @Override
-    public SurfaceDataProperty setReference(Reference reference) {
-        if (reference != null) {
-            this.reference = asChild(reference);
-            surfaceData = null;
-        }
-
-        return this;
     }
 }

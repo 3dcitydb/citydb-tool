@@ -100,7 +100,7 @@ public class Postprocessor {
             @Override
             public void visit(FeatureProperty property) {
                 property.getReference()
-                        .filter(reference -> featureIds.contains(reference.getTarget()))
+                        .filter(featureIds::contains)
                         .ifPresent(reference -> property.removeFromParent());
                 super.visit(property);
             }
@@ -110,7 +110,7 @@ public class Postprocessor {
                 Iterator<SurfaceDataProperty> iterator = appearance.getSurfaceData().iterator();
                 while (iterator.hasNext()) {
                     iterator.next().getReference()
-                            .filter(reference -> surfaceDataIds.contains(reference.getTarget()))
+                            .filter(surfaceDataIds::contains)
                             .ifPresent(reference -> iterator.remove());
                 }
             }
@@ -118,7 +118,7 @@ public class Postprocessor {
             @Override
             public void visit(ImplicitGeometryProperty property) {
                 property.getReference()
-                        .map(reference -> implicitGeometries.remove(reference.getTarget()))
+                        .map(implicitGeometries::remove)
                         .ifPresent(property::setObject);
             }
         });
