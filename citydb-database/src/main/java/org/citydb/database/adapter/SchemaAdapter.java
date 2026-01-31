@@ -52,8 +52,6 @@ public abstract class SchemaAdapter {
         indexHelper = IndexHelper.newInstance(adapter);
     }
 
-    public abstract int getOtherSqlType();
-
     public abstract String getDefaultSchema();
 
     public abstract Optional<Table> getDummyTable();

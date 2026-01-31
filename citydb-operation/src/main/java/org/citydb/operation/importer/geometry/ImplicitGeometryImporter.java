@@ -64,7 +64,7 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
             stmt.setNull(3, Types.VARCHAR);
             stmt.setNull(4, Types.VARCHAR);
             stmt.setNull(5, Types.VARCHAR);
-            stmt.setNull(6, adapter.getSchemaAdapter().getOtherSqlType());
+            setBytesOrNull(6, null);
             stmt.setLong(7, tableHelper.getOrCreateImporter(GeometryImporter.class)
                     .doImport(implicitGeometry.getGeometry().get(), true, featureId)
                     .getId());

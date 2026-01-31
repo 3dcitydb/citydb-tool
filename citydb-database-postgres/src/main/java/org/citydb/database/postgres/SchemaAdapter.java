@@ -71,11 +71,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public int getOtherSqlType() {
-        return java.sql.Types.OTHER;
-    }
-
-    @Override
     public String getDefaultSchema() {
         return "citydb";
     }
