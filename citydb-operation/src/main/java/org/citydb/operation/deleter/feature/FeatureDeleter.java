@@ -31,6 +31,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Set;
 
 public class FeatureDeleter extends DatabaseDeleter {
     private final JSONObject metadata = new JSONObject();
@@ -57,18 +58,18 @@ public class FeatureDeleter extends DatabaseDeleter {
     }
 
     @Override
-    protected void executeBatch(Long[] ids) throws SQLException {
+    protected void executeBatch(Set<Long> ids) throws SQLException {
         if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
             metadata.put("termination_date", helper.getOptions().getTerminationDate()
                     .orElseGet(() -> OffsetDateTime.now().withNano(0)));
 
-            stmt.setArray(1, helper.getConnection().createArrayOf("bigint", ids));
+            setLongArrayOrNull(1, ids);
             stmt.setString(2, helper.getAdapter().getConnectionDetails().getSchema());
             setJsonOrNull(3, metadata.toString());
             stmt.setBoolean(4, helper.getOptions().isTerminateWithSubFeatures());
             stmt.execute();
         } else {
-            stmt.setArray(1, helper.getConnection().createArrayOf("bigint", ids));
+            setLongArrayOrNull(1, ids);
             stmt.setString(2, helper.getAdapter().getConnectionDetails().getSchema());
             stmt.execute();
         }
