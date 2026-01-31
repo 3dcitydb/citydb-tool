@@ -63,7 +63,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         super(adapter);
         featureHierarchyQuery = LazyCheckedInitializer.of(this::readFeatureHierarchyQuery);
         recursiveImplicitGeometryQuery = LazyCheckedInitializer.of(this::readRecursiveImplicitGeometryQuery);
-        sqlHelper = new SqlHelper(this.adapter);
+        sqlHelper = new SqlHelper(adapter);
         operationHelper = new OperationHelper(this);
         statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
