@@ -13,7 +13,6 @@ ext {
     appIssueTrackerUrl = 'https://github.com/3dcitydb/citydb-tool/issues'
     appCopyrightYear = '2022-' + date.format('yyyy')
 
-    vendorName = 'virtualcitysystems GmbH'
-    vendorCountry = 'Germany'
-    vendorWebsiteUrl = 'https://vc.systems'
+    vendorName = citydbShortName + ' Contributors'
+    vendorWebsiteUrl = 'https://github.com/3dcitydb'
 }
