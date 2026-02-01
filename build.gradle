@@ -95,7 +95,7 @@ subprojects {
                 <a href="${appIssueTrackerUrl}">Report a bug or suggest an enhancement</a><br>
                 ${project.name} is open source and licensed under the <a target="_blank" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.<br>
                 Official website and more information at: <a target="_blank" href="$appWebsiteUrl">$appWebsiteUrl</a><br>
-                Copyright &copy; $appCopyrightYear $vendorName<br>
+                Copyright &copy; $appCopyrightYear $vendorName
                 """.replaceAll("[\r|\n]+", "")
             addStringOption('doctitle', project.name + ' ' + project.version)
             addStringOption('Xdoclint:none', '-quiet')
