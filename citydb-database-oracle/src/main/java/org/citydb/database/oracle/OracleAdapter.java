@@ -56,8 +56,6 @@ public class OracleAdapter extends DatabaseAdapter {
 
     @Override
     public void setDefaultConnectionProperties(Properties properties) {
-        properties.setProperty("oracle.net.CONNECT_TIMEOUT", "60000");
-        properties.setProperty("oracle.jdbc.ReadTimeout", "60000");
-        properties.setProperty("oracle.jdbc.fetchSize", "1000");
+        properties.setProperty("defaultRowPrefetch", "1000");
     }
 }

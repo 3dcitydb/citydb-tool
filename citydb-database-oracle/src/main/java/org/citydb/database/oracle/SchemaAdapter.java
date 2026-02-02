@@ -75,7 +75,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     @Override
     public String getDefaultSchema() {
-        return adapter.getConnectionDetails().getUser().toUpperCase();
+        return adapter.getConnectionDetails().getUser();
     }
 
     @Override
