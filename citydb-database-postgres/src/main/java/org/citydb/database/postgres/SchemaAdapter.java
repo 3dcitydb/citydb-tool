@@ -115,47 +115,37 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 adapter.getConnectionDetails().getSchema());
 
         Select featureQuery = Select.newInstance()
-                .select(table.column("id").as("feature_id"),
-                        table.column("id").as("val_feature_id"),
-                        IntegerLiteral.of(0).as("val_relation_type"));
+                .select(table.column("id").as("val_feature_id"));
         Select propertyQuery = Select.newInstance()
-                .select(property.column("feature_id"),
-                        property.column("val_feature_id"),
-                        property.column("val_relation_type"))
+                .select(property.column("val_feature_id"))
                 .from(property)
                 .join(hierarchy).on(hierarchy.column("val_feature_id").eq(property.column("feature_id")))
                 .where(property.column("val_feature_id").isNotNull(),
                         property.column("val_relation_type").eq(RelationType.CONTAINS.getDatabaseValue()));
-        Select hierarchyQuery = Select.newInstance()
-                .withRecursive(CommonTableExpression.of(hierarchy.getName(), featureQuery.unionAll(propertyQuery)))
-                .select(hierarchy.column("val_feature_id"))
-                .from(hierarchy);
+
+        CommonTableExpression cte = CommonTableExpression.of(hierarchy.getName(), featureQuery.unionAll(propertyQuery));
+        Select select = Select.newInstance()
+                .withRecursive(cte)
+                .select(IntegerLiteral.of(1))
+                .from(property)
+                .join(cte.asTable()).on(cte.asTable().column("val_feature_id").eq(property.column("feature_id")))
+                .fetch(1);
 
         if (searchDepth >= 0 && searchDepth != Integer.MAX_VALUE) {
             featureQuery.select(IntegerLiteral.of(0).as("depth"));
             propertyQuery.select(Case.newInstance()
-                            .when(property.column("namespace_id").eq(1).and(property.column("name").eq("boundary")))
-                            .then(PlainSql.of("depth"))
-                            .orElse(PlainSql.of("depth").plus(1)))
-                    .where(PlainSql.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
-            hierarchyQuery.where(PlainSql.of("depth").lt(IntegerLiteral.of(searchDepth + 1)));
+                    .when(property.column("namespace_id").eq(1).and(property.column("name").eq("boundary")))
+                    .then(PlainSql.of("depth"))
+                    .orElse(PlainSql.of("depth").plus(1)));
+            propertyQuery.where(hierarchy.column("depth").lt(IntegerLiteral.of(searchDepth + 1)));
+            select.where(cte.asTable().column("depth").lt(IntegerLiteral.of(searchDepth + 1)));
         } else {
             featureQuery.select(BooleanLiteral.FALSE.as("is_cycle"),
                     PlainSql.of("array[]::bigint[]").as("path"));
             propertyQuery.select(property.column("id").eqAny(PlainSql.of("(path)")),
                             PlainSql.of("path || {}", property.column("id")))
-                    .where(Not.of(PlainSql.of("is_cycle")));
+                    .where(Not.of(hierarchy.column("is_cycle")));
         }
-
-        hierarchy = Table.of(hierarchyQuery);
-        property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
-                adapter.getConnectionDetails().getSchema());
-
-        Select select = Select.newInstance()
-                .select(IntegerLiteral.of(1))
-                .from(property)
-                .join(hierarchy).on(hierarchy.column("val_feature_id").eq(property.column("feature_id")))
-                .fetch(1);
 
         if (!lods.isEmpty()) {
             select.where(adapter.getSchemaAdapter().getOperationHelper()
