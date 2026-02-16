@@ -81,7 +81,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public int getMaximumBatchSize() {
+    public int getDefaultBatchSize() {
         return 1000;
     }
 

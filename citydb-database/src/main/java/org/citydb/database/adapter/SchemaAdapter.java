@@ -56,7 +56,7 @@ public abstract class SchemaAdapter {
 
     public abstract Optional<Table> getDummyTable();
 
-    public abstract int getMaximumBatchSize();
+    public abstract int getDefaultBatchSize();
 
     public abstract int getMaximumNumberOfItemsForInOperator();
 

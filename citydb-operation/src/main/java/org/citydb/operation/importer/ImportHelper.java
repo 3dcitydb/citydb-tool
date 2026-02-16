@@ -89,7 +89,7 @@ public class ImportHelper {
         failFast = options.isFailFast();
         batchSize = options.getBatchSize() > 0 ?
                 options.getBatchSize() :
-                adapter.getSchemaAdapter().getMaximumBatchSize();
+                adapter.getSchemaAdapter().getDefaultBatchSize();
     }
 
     public DatabaseAdapter getAdapter() {

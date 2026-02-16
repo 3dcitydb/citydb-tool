@@ -54,7 +54,7 @@ public class ReferenceManager {
                 options.getNumberOfThreads() :
                 Math.max(2, Runtime.getRuntime().availableProcessors()));
         countLatch = new CountLatch();
-        batchSize = Math.min(1000, adapter.getSchemaAdapter().getMaximumBatchSize());
+        batchSize = Math.min(1000, adapter.getSchemaAdapter().getDefaultBatchSize());
     }
 
     public static ReferenceManager newInstance(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options) {
