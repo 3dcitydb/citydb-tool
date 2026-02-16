@@ -58,8 +58,8 @@ public abstract class DatabaseDeleter {
 
     protected void addBatch(long id) throws DeleteException, SQLException {
         batches.add(id);
-        if (batches.size() == helper.getAdapter().getSchemaAdapter().getMaximumBatchSize()) {
-            executeBatch();
+        if (batches.size() == helper.getBatchSize()) {
+            helper.executeBatch(this);
         }
     }
 

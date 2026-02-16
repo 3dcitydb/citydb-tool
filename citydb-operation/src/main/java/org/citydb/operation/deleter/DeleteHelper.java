@@ -44,7 +44,7 @@ public class DeleteHelper {
     private final Deleter.TransactionMode transactionMode;
     private final int batchSize;
 
-    private int batchCounter;
+    private boolean shouldCommit;
 
     DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options, DeleteLogger logger,
                  Deleter.TransactionMode transactionMode) {
@@ -56,7 +56,7 @@ public class DeleteHelper {
 
         tableHelper = new TableHelper(this);
         batchSize = options.getBatchSize() > 0 ?
-                Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
+                options.getBatchSize() :
                 DeleteOptions.DEFAULT_BATCH_SIZE;
     }
 
@@ -70,6 +70,10 @@ public class DeleteHelper {
 
     public DeleteOptions getOptions() {
         return options;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
     }
 
     public TableHelper getTableHelper() {
@@ -90,13 +94,16 @@ public class DeleteHelper {
         }
     }
 
+    public void executeBatch(DatabaseDeleter deleter) throws DeleteException, SQLException {
+        deleter.executeBatch();
+        shouldCommit = true;
+    }
+
     void executeBatch(boolean force, boolean commit) throws DeleteException, SQLException {
-        if (force || ++batchCounter == batchSize) {
+        if (force || shouldCommit) {
             try {
-                if (batchCounter > 0) {
-                    for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
-                        deleter.executeBatch();
-                    }
+                for (DatabaseDeleter deleter : tableHelper.getDeleters()) {
+                    deleter.executeBatch();
                 }
 
                 if (commit) {
@@ -110,7 +117,7 @@ public class DeleteHelper {
                 connection.rollback();
                 throw e;
             } finally {
-                batchCounter = 0;
+                shouldCommit = false;
             }
         }
     }
