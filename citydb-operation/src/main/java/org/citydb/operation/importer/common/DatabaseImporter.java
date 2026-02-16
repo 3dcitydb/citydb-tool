@@ -257,12 +257,8 @@ public abstract class DatabaseImporter {
 
     protected void addBatch() throws SQLException {
         stmt.addBatch();
-        if (++batchCounter == adapter.getSchemaAdapter().getMaximumBatchSize()) {
-            for (Table table : tableHelper.getCommitOrder(table)) {
-                for (DatabaseImporter importer : tableHelper.getImporters(table)) {
-                    importer.executeBatch();
-                }
-            }
+        if (++batchCounter == helper.getBatchSize()) {
+            helper.executeBatch(table);
         }
     }
 

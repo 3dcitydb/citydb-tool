@@ -35,12 +35,10 @@ import java.util.Optional;
 
 @SerializableConfig(name = "importOptions")
 public class ImportOptions {
-    public static final int DEFAULT_BATCH_SIZE = 20;
-
     private boolean failFast;
     private String tempDirectory;
     private int numberOfThreads;
-    private int batchSize = DEFAULT_BATCH_SIZE;
+    private int batchSize;
     private String updatingPerson;
     private String reasonForUpdate;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)

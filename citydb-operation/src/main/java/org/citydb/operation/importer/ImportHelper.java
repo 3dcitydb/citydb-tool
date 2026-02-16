@@ -70,7 +70,7 @@ public class ImportHelper {
 
     private OffsetDateTime importTime;
     private SequenceValues sequenceValues;
-    private int batchCounter;
+    private boolean shouldCommit;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
                  PersistentMapStore store, ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
@@ -88,8 +88,8 @@ public class ImportHelper {
         transformer = options.getAffineTransform().map(AffineTransformer::of).orElse(null);
         failFast = options.isFailFast();
         batchSize = options.getBatchSize() > 0 ?
-                Math.min(options.getBatchSize(), adapter.getSchemaAdapter().getMaximumBatchSize()) :
-                ImportOptions.DEFAULT_BATCH_SIZE;
+                options.getBatchSize() :
+                adapter.getSchemaAdapter().getMaximumBatchSize();
     }
 
     public DatabaseAdapter getAdapter() {
@@ -106,6 +106,10 @@ public class ImportHelper {
 
     public Connection getConnection() {
         return connection;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
     }
 
     public TableHelper getTableHelper() {
@@ -196,14 +200,22 @@ public class ImportHelper {
         }
     }
 
+    public void executeBatch(Table table) throws SQLException {
+        for (Table candidate : tableHelper.getCommitOrder(table)) {
+            for (DatabaseImporter importer : tableHelper.getImporters(candidate)) {
+                importer.executeBatch();
+            }
+        }
+
+        shouldCommit = true;
+    }
+
     void executeBatch(boolean force, boolean commit) throws ImportException, SQLException {
-        if (force || ++batchCounter == batchSize) {
+        if (force || shouldCommit) {
             try {
-                if (batchCounter > 0) {
-                    for (Table table : tableHelper.getCommitOrder()) {
-                        for (DatabaseImporter importer : tableHelper.getImporters(table)) {
-                            importer.executeBatch();
-                        }
+                for (Table table : tableHelper.getCommitOrder()) {
+                    for (DatabaseImporter importer : tableHelper.getImporters(table)) {
+                        importer.executeBatch();
                     }
                 }
 
@@ -222,7 +234,7 @@ public class ImportHelper {
                 connection.rollback();
                 throw e;
             } finally {
-                batchCounter = 0;
+                shouldCommit = false;
             }
         }
     }
