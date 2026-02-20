@@ -24,7 +24,6 @@ package org.citydb.database.adapter;
 import org.citydb.core.version.Version;
 import org.citydb.database.metadata.DatabaseMetadata;
 import org.citydb.database.metadata.DatabaseProperty;
-import org.citydb.database.schema.Index;
 import org.citydb.database.schema.SchemaException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.SchemaMappingBuilder;
@@ -44,12 +43,10 @@ import java.util.stream.Collectors;
 
 public abstract class SchemaAdapter {
     protected final DatabaseAdapter adapter;
-    private final IndexHelper indexHelper;
     private SchemaMapping schemaMapping;
 
     protected SchemaAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
-        indexHelper = IndexHelper.newInstance(adapter);
     }
 
     public abstract String getDefaultSchema();
@@ -66,15 +63,11 @@ public abstract class SchemaAdapter {
 
     public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table);
 
-    public abstract String getCreateIndex(Index index, boolean ignoreNulls);
-
-    public abstract String getDropIndex(Index index);
-
-    public abstract String getIndexExists(Index index);
-
     public abstract SqlHelper getSqlHelper();
 
     public abstract OperationHelper getOperationHelper();
+
+    public abstract IndexHelper getIndexHelper();
 
     public abstract SequenceHelper getSequenceHelper(Connection connection) throws SQLException;
 
@@ -102,10 +95,6 @@ public abstract class SchemaAdapter {
 
     public SchemaMapping getSchemaMapping() {
         return schemaMapping;
-    }
-
-    public IndexHelper getIndexHelper() {
-        return indexHelper;
     }
 
     protected String getVendorProductString(DatabaseMetadata metadata) {

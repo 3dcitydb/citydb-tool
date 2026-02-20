@@ -25,7 +25,6 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Collection;
@@ -33,7 +32,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-public class IndexHelper {
+public abstract class IndexHelper {
     public static final Set<Index> DEFAULT_INDEXES = new LinkedHashSet<>(List.of(
             Index.APPEARANCE_THEME,
             Index.FEATURE_IDENTIFIER,
@@ -73,16 +72,18 @@ public class IndexHelper {
         OFF
     }
 
-    private final DatabaseAdapter adapter;
+    protected final DatabaseAdapter adapter;
     private Statement stmt;
 
-    private IndexHelper(DatabaseAdapter adapter) {
+    protected IndexHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
     }
 
-    public static IndexHelper newInstance(DatabaseAdapter adapter) {
-        return new IndexHelper(adapter);
-    }
+    protected abstract void create(Index index, boolean ignoreNulls, Statement stmt) throws SQLException;
+
+    protected abstract void drop(Index index, Statement stmt) throws SQLException;
+
+    protected abstract boolean exists(Index index, Statement stmt) throws SQLException;
 
     public IndexHelper create(Index index) throws SQLException {
         return create(index, false);
@@ -101,7 +102,7 @@ public class IndexHelper {
     public IndexHelper create(Index index, boolean ignoreNulls, Connection connection) throws SQLException {
         if (!exists(index, connection)) {
             try (Statement stmt = createStatement(connection)) {
-                stmt.executeUpdate(adapter.getSchemaAdapter().getCreateIndex(index, ignoreNulls));
+                create(index, ignoreNulls, stmt);
             }
         }
 
@@ -117,7 +118,7 @@ public class IndexHelper {
     public IndexHelper drop(Index index, Connection connection) throws SQLException {
         if (exists(index, connection)) {
             try (Statement stmt = createStatement(connection)) {
-                stmt.executeUpdate(adapter.getSchemaAdapter().getDropIndex(index));
+                drop(index, stmt);
             }
         }
 
@@ -131,9 +132,8 @@ public class IndexHelper {
     }
 
     public boolean exists(Index index, Connection connection) throws SQLException {
-        try (Statement stmt = createStatement(connection);
-             ResultSet rs = stmt.executeQuery(adapter.getSchemaAdapter().getIndexExists(index))) {
-            return rs.next() && rs.getBoolean(1);
+        try (Statement stmt = createStatement(connection)) {
+            return exists(index, stmt);
         }
     }
 

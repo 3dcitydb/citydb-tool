@@ -25,7 +25,6 @@ import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseProperty;
-import org.citydb.database.schema.Index;
 import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -55,6 +54,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final LazyCheckedInitializer<String, IOException> recursiveImplicitGeometryQuery;
     private final SqlHelper sqlHelper;
     private final OperationHelper operationHelper;
+    private final IndexHelper indexHelper;
     private final StatisticsHelper statisticsHelper;
     private final TempTableHelper tempTableHelper;
     private final ChangelogHelper changelogHelper;
@@ -65,6 +65,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         recursiveImplicitGeometryQuery = LazyCheckedInitializer.of(this::readRecursiveImplicitGeometryQuery);
         sqlHelper = new SqlHelper(adapter);
         operationHelper = new OperationHelper(this);
+        indexHelper = new IndexHelper(adapter);
         statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
         changelogHelper = new ChangelogHelper(adapter);
@@ -162,36 +163,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public String getCreateIndex(Index index, boolean ignoreNulls) {
-        String stmt = "create index if not exists " + index.getName() +
-                " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable() +
-                (index.getType() == Index.Type.SPATIAL ? " using gist " : " ") +
-                "(" + String.join(", ", index.getColumns()) + ")";
-
-        if (ignoreNulls) {
-            stmt += " where " + index.getColumns().stream()
-                    .map(column -> column + " is not null")
-                    .collect(Collectors.joining(" and "));
-        }
-
-        return stmt;
-    }
-
-    @Override
-    public String getDropIndex(Index index) {
-        return "drop index if exists " + adapter.getConnectionDetails().getSchema() + "." + index.getName();
-    }
-
-    @Override
-    public String getIndexExists(Index index) {
-        return "select 1 from pg_index i " +
-                "join pg_class c on c.oid = i.indexrelid " +
-                "join pg_namespace n on n.oid = c.relnamespace " +
-                "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
-                "and c.relname = '" + index.getName() + "' limit 1";
-    }
-
-    @Override
     public SqlHelper getSqlHelper() {
         return sqlHelper;
     }
@@ -199,6 +170,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public OperationHelper getOperationHelper() {
         return operationHelper;
+    }
+
+    @Override
+    public IndexHelper getIndexHelper() {
+        return indexHelper;
     }
 
     @Override
