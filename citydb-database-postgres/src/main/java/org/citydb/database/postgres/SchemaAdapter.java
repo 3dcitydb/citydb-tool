@@ -247,16 +247,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    protected String getChangelogEnabled(String schemaName) {
-        return "select exists ( " +
-                "select 1 from information_schema.triggers s " +
-                "where s.trigger_schema = '" + schemaName + "' " +
-                "and event_object_table = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
-                "and trigger_name = 'feature_changelog_trigger'" +
-                ")";
-    }
-
-    @Override
     protected List<DatabaseProperty> getDatabaseProperties(Version version, Connection connection) throws SQLException {
         List<DatabaseProperty> properties = new ArrayList<>();
         if (version.compareTo(Version.of(5, 1, 0)) < 0) {

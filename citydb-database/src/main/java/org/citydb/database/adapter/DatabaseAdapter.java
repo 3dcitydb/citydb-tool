@@ -174,9 +174,8 @@ public abstract class DatabaseAdapter {
     }
 
     private boolean isChangelogEnabled(String schemaName, Connection connection) throws DatabaseException {
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(schemaAdapter.getChangelogEnabled(schemaName))) {
-            return rs.next() && rs.getBoolean(1);
+        try {
+            return schemaAdapter.getChangelogHelper().isChangelogEnabled(schemaName, connection);
         } catch (SQLException e) {
             throw new DatabaseException("Failed to verify whether the changelog is enabled for the 3DCityDB.", e);
         }

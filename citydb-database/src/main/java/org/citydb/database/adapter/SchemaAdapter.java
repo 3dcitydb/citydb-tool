@@ -87,8 +87,6 @@ public abstract class SchemaAdapter {
 
     protected abstract SpatialReferenceType getSpatialReferenceType(String type);
 
-    protected abstract String getChangelogEnabled(String schemaName);
-
     void buildSchemaMapping() throws SchemaException {
         schemaMapping = SchemaMappingBuilder.newInstance().build(adapter);
     }
