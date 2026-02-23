@@ -22,12 +22,9 @@
 package org.citydb.database.adapter;
 
 import com.alibaba.fastjson2.JSONObject;
-import org.citydb.config.common.SrsReference;
 import org.citydb.database.geometry.GeometryBuilder;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.PropertiesBuilder;
-import org.citydb.database.srs.SpatialReference;
-import org.citydb.database.srs.SrsException;
 import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.database.util.SrsHelper;
 import org.citydb.model.geometry.Envelope;
@@ -35,18 +32,18 @@ import org.citydb.model.geometry.Geometry;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 
-import java.sql.*;
-import java.util.Optional;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public abstract class GeometryAdapter {
     protected final DatabaseAdapter adapter;
     private final GeometryBuilder geometryBuilder = new GeometryBuilder();
     private final PropertiesBuilder propertiesBuilder = new PropertiesBuilder();
-    private final SrsHelper srsHelper;
 
     protected GeometryAdapter(DatabaseAdapter adapter) {
         this.adapter = adapter;
-        srsHelper = SrsHelper.newInstance(adapter);
     }
 
     public abstract Geometry<?> getGeometry(Object geometryObject) throws GeometryException;
@@ -61,9 +58,7 @@ public abstract class GeometryAdapter {
 
     public abstract SpatialOperationHelper getSpatialOperationHelper();
 
-    public SrsHelper getSrsHelper() {
-        return srsHelper;
-    }
+    public abstract SrsHelper getSrsHelper();
 
     public Object getGeometry(Geometry<?> geometry, Connection connection) throws GeometryException {
         return getGeometry(geometry, true, connection);
@@ -121,66 +116,5 @@ public abstract class GeometryAdapter {
         try (Connection connection = adapter.getPool().getConnection()) {
             return hasImplicitGeometries(connection);
         }
-    }
-
-    public SpatialReference getSpatialReference(int srid) throws SrsException, SQLException {
-        return getSpatialReference(srid, null);
-    }
-
-    public SpatialReference getSpatialReference(String identifier) throws SrsException, SQLException {
-        return getSpatialReference(srsHelper.parseSRID(identifier), identifier);
-    }
-
-    public SpatialReference getSpatialReference(int srid, String identifier) throws SrsException, SQLException {
-        SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
-        if (srid == databaseSrs.getSRID()) {
-            return databaseSrs.getIdentifier().equals(identifier) ?
-                    databaseSrs :
-                    SpatialReference.of(srid,
-                            databaseSrs.getType(),
-                            databaseSrs.getName(),
-                            identifier,
-                            databaseSrs.getWKT());
-        } else {
-            try (Connection connection = adapter.getPool().getConnection();
-                 Statement statement = connection.createStatement();
-                 ResultSet rs = statement.executeQuery(adapter.getSchemaAdapter().getSpatialReference(srid))) {
-                if (rs.next()) {
-                    return SpatialReference.of(srid,
-                            adapter.getSchemaAdapter().getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
-                            rs.getString("coord_ref_sys_name"),
-                            identifier,
-                            rs.getString("wktext"));
-                }
-            }
-
-            throw new SrsException("The SRID " + srid + " is not supported by the database.");
-        }
-    }
-
-    public Optional<SpatialReference> getSpatialReference(SrsReference reference) throws SrsException, SQLException {
-        if (reference != null) {
-            if (reference.getSRID().isPresent()) {
-                return Optional.of(getSpatialReference(reference.getSRID().get(),
-                        reference.getIdentifier().orElse(null)));
-            } else if (reference.getIdentifier().isPresent()) {
-                return Optional.of(getSpatialReference(reference.getIdentifier().get()));
-            }
-        }
-
-        return Optional.empty();
-    }
-
-    public Optional<SpatialReference> getSpatialReference(org.citydb.model.geometry.SrsReference reference) throws SrsException, SQLException {
-        if (reference != null) {
-            if (reference.getSRID().isPresent()) {
-                return Optional.of(getSpatialReference(reference.getSRID().get(),
-                        reference.getSrsIdentifier().orElse(null)));
-            } else if (reference.getSrsIdentifier().isPresent()) {
-                return Optional.of(getSpatialReference(reference.getSrsIdentifier().get()));
-            }
-        }
-
-        return Optional.empty();
     }
 }

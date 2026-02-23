@@ -113,7 +113,7 @@ public class DimensionScheme extends TilingScheme {
         double gridX, gridY;
         if (gridPoint != null) {
             try {
-                SpatialReference reference = adapter.getGeometryAdapter().getSpatialReference(gridPoint)
+                SpatialReference reference = adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(gridPoint)
                         .orElse(adapter.getDatabaseMetadata().getSpatialReference());
                 Point point = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID() ?
                         adapter.getGeometryAdapter().transform(gridPoint) :

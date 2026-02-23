@@ -25,7 +25,6 @@ import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseProperty;
-import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.function.Function;
@@ -213,37 +212,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         } else {
             return "select citydb_pkg.schema_exists('" + schemaName + "')";
         }
-    }
-
-    @Override
-    protected String getDatabaseSrs() {
-        return "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
-                "from citydb_pkg.db_metadata('" + adapter.getConnectionDetails().getSchema() + "')";
-    }
-
-    @Override
-    protected String getSpatialReference(int srid) {
-        if (adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0) {
-            return "select split_part(srtext, '\"', 2) as coord_ref_sys_name, " +
-                    "split_part(srtext, '[', 1) as coord_ref_sys_kind, " +
-                    "srtext as wktext from spatial_ref_sys where srid = " + srid;
-        } else {
-            return "select coord_ref_sys_name, coord_ref_sys_kind, wktext " +
-                    "from citydb_pkg.get_coord_ref_sys_info(" + srid + ")";
-        }
-    }
-
-    @Override
-    protected SpatialReferenceType getSpatialReferenceType(String type) {
-        return switch (type.toUpperCase(Locale.ROOT)) {
-            case "PROJCRS", "PROJECTEDCRS", "PROJCS" -> SpatialReferenceType.PROJECTED_CRS;
-            case "GEOGCRS", "GEOGRAPHICCRS", "GEOGCS" -> SpatialReferenceType.GEOGRAPHIC_CRS;
-            case "GEODCRS", "GEODETICCRS" -> SpatialReferenceType.GEODETIC_CRS;
-            case "GEOCCS" -> SpatialReferenceType.GEOCENTRIC_CRS;
-            case "COMPOUNDCRS", "COMPDCS", "COMPD_CS" -> SpatialReferenceType.COMPOUND_CRS;
-            case "ENGCRS", "ENGINEERINGCRS", "LOCAL_CS" -> SpatialReferenceType.ENGINEERING_CRS;
-            default -> SpatialReferenceType.UNKNOWN_CRS;
-        };
     }
 
     @Override

@@ -88,7 +88,7 @@ public class ChangelogHelper {
 
     public SpatialReference getTargetSrs(ChangelogQuery query) throws QueryBuildException {
         try {
-            return geometryAdapter.getSpatialReference(query.getTargetSrs().orElse(null))
+            return geometryAdapter.getSrsHelper().getSpatialReference(query.getTargetSrs().orElse(null))
                     .orElse(adapter.getDatabaseMetadata().getSpatialReference());
         } catch (SrsException | SQLException e) {
             throw new QueryBuildException("The requested target SRS is not supported.", e);

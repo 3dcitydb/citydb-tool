@@ -98,7 +98,7 @@ public class BboxPredicate implements FilterPredicate {
 
     private int getTargetSRID(Envelope envelope) {
         try {
-            return adapter.getGeometryAdapter().getSpatialReference(envelope)
+            return adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(envelope)
                     .orElse(adapter.getDatabaseMetadata().getSpatialReference())
                     .getSRID();
         } catch (SrsException | SQLException e) {

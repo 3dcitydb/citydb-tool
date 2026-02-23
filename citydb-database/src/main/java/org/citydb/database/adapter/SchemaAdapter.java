@@ -27,7 +27,6 @@ import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.database.schema.SchemaException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.SchemaMappingBuilder;
-import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.util.*;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.query.Select;
@@ -80,12 +79,6 @@ public abstract class SchemaAdapter {
     protected abstract String getCityDBVersion();
 
     protected abstract String getSchemaExists(String schemaName, Version version);
-
-    protected abstract String getDatabaseSrs();
-
-    protected abstract String getSpatialReference(int srid);
-
-    protected abstract SpatialReferenceType getSpatialReferenceType(String type);
 
     void buildSchemaMapping() throws SchemaException {
         schemaMapping = SchemaMappingBuilder.newInstance().build(adapter);

@@ -64,7 +64,7 @@ public class Tile {
     public boolean isOnTile(Point point) throws TilingException {
         if (point != null) {
             try {
-                SpatialReference reference = adapter.getGeometryAdapter().getSpatialReference(extent)
+                SpatialReference reference = adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(extent)
                         .orElse(adapter.getDatabaseMetadata().getSpatialReference());
                 if (reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID()) {
                     point = adapter.getGeometryAdapter().transform(point);

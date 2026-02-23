@@ -79,7 +79,7 @@ public abstract class DatabaseAdapter {
             }
 
             databaseMetadata = DatabaseMetadata.of(version,
-                    getDatabaseSrs(connection),
+                    getDatabaseSrs(schema, connection),
                     isChangelogEnabled(schema, connection),
                     connection.getMetaData(),
                     schemaAdapter::getVendorProductString,
@@ -156,21 +156,13 @@ public abstract class DatabaseAdapter {
         }
     }
 
-    private SpatialReference getDatabaseSrs(Connection connection) throws DatabaseException {
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(schemaAdapter.getDatabaseSrs())) {
-            if (rs.next()) {
-                return SpatialReference.of(rs.getInt("srid"),
-                        schemaAdapter.getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
-                        rs.getString("coord_ref_sys_name"),
-                        rs.getString("srs_name"),
-                        rs.getString("wktext"));
-            }
+    private SpatialReference getDatabaseSrs(String schemaName, Connection connection) throws DatabaseException {
+        try {
+            return geometryAdapter.getSrsHelper().getDatabaseSrs(schemaName, connection).orElseThrow(() ->
+                    new DatabaseException("Failed to retrieve the spatial reference system of the 3DCityDB."));
         } catch (SQLException e) {
             throw new DatabaseException("Failed to retrieve the spatial reference system of the 3DCityDB.", e);
         }
-
-        throw new DatabaseException("Failed to retrieve the spatial reference system of the 3DCityDB.");
     }
 
     private boolean isChangelogEnabled(String schemaName, Connection connection) throws DatabaseException {

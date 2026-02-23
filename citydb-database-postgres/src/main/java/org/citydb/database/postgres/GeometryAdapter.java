@@ -41,10 +41,12 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     private final WKBWriter writer = new WKBWriter().includeSRID(true);
     private final WKTWriter textWriter = new WKTWriter().includeSRID(true);
     private final SpatialOperationHelper spatialOperationHelper;
+    private final SrsHelper srsHelper;
 
     GeometryAdapter(DatabaseAdapter adapter) {
         super(adapter);
         spatialOperationHelper = new SpatialOperationHelper(adapter);
+        srsHelper = new SrsHelper(adapter);
     }
 
     @Override
@@ -84,5 +86,10 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     @Override
     public SpatialOperationHelper getSpatialOperationHelper() {
         return spatialOperationHelper;
+    }
+
+    @Override
+    public SrsHelper getSrsHelper() {
+        return srsHelper;
     }
 }

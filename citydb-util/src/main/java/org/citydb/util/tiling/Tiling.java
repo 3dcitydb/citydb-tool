@@ -91,7 +91,7 @@ public class Tiling {
 
         Envelope extent;
         try {
-            SpatialReference reference = adapter.getGeometryAdapter().getSpatialReference(this.extent)
+            SpatialReference reference = adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(this.extent)
                     .orElse(adapter.getDatabaseMetadata().getSpatialReference());
             extent = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID() ?
                     adapter.getGeometryAdapter().transform(this.extent) :

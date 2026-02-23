@@ -21,19 +21,25 @@
 
 package org.citydb.database.util;
 
+import org.citydb.config.common.SrsReference;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.srs.SpatialReference;
+import org.citydb.database.srs.SpatialReferenceType;
 import org.citydb.database.srs.SrsException;
 import org.citydb.database.srs.SrsUnit;
 import org.geotools.api.referencing.crs.CoordinateReferenceSystem;
 import org.geotools.measure.Units;
 
 import javax.measure.Unit;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SrsHelper {
-    private final DatabaseAdapter adapter;
+public abstract class SrsHelper {
+    protected final DatabaseAdapter adapter;
     private final Pattern httpPattern = Pattern.compile(
             "https?://www.opengis.net/def/crs/([^/]+?)/[^/]+?/([^/]+?)(?:/.*)?", Pattern.CASE_INSENSITIVE);
     private final Pattern urnPattern = Pattern.compile(
@@ -41,12 +47,70 @@ public class SrsHelper {
     private final Pattern epsgPattern = Pattern.compile("EPSG:([0-9]+)", Pattern.CASE_INSENSITIVE);
     private final Matcher matcher = Pattern.compile("").matcher("");
 
-    private SrsHelper(DatabaseAdapter adapter) {
+    protected SrsHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
     }
 
-    public static SrsHelper newInstance(DatabaseAdapter adapter) {
-        return new SrsHelper(adapter);
+    public abstract Optional<SpatialReference> getDatabaseSrs(String schemaName, Connection connection) throws SQLException;
+
+    protected abstract SpatialReference getSpatialReference(int srid, String identifier, Connection connection) throws SQLException;
+
+    protected abstract SpatialReferenceType getSpatialReferenceType(String type);
+
+    public SpatialReference getSpatialReference(int srid) throws SrsException, SQLException {
+        return getSpatialReference(srid, getDefaultIdentifier(srid));
+    }
+
+    public SpatialReference getSpatialReference(String identifier) throws SrsException, SQLException {
+        return getSpatialReference(parseSRID(identifier), identifier);
+    }
+
+    public SpatialReference getSpatialReference(int srid, String identifier) throws SrsException, SQLException {
+        SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
+        if (srid == databaseSrs.getSRID()) {
+            return databaseSrs.getIdentifier().equals(identifier) ?
+                    databaseSrs :
+                    SpatialReference.of(srid,
+                            databaseSrs.getType(),
+                            databaseSrs.getName(),
+                            identifier,
+                            databaseSrs.getWKT());
+        } else {
+            try (Connection connection = adapter.getPool().getConnection()) {
+                SpatialReference srs = getSpatialReference(srid, identifier, connection);
+                if (srs == null) {
+                    throw new SrsException("The SRID " + srid + " is not supported by the database.");
+                }
+
+                return srs;
+            }
+        }
+    }
+
+    public Optional<SpatialReference> getSpatialReference(SrsReference reference) throws SrsException, SQLException {
+        if (reference != null) {
+            if (reference.getSRID().isPresent()) {
+                return Optional.of(getSpatialReference(reference.getSRID().get(),
+                        reference.getIdentifier().orElse(null)));
+            } else if (reference.getIdentifier().isPresent()) {
+                return Optional.of(getSpatialReference(reference.getIdentifier().get()));
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    public Optional<SpatialReference> getSpatialReference(org.citydb.model.geometry.SrsReference reference) throws SrsException, SQLException {
+        if (reference != null) {
+            if (reference.getSRID().isPresent()) {
+                return Optional.of(getSpatialReference(reference.getSRID().get(),
+                        reference.getSrsIdentifier().orElse(null)));
+            } else if (reference.getSrsIdentifier().isPresent()) {
+                return Optional.of(getSpatialReference(reference.getSrsIdentifier().get()));
+            }
+        }
+
+        return Optional.empty();
     }
 
     public String getDefaultIdentifier(int srid) {
