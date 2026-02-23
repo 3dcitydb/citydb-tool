@@ -23,9 +23,7 @@ package org.citydb.database.postgres;
 
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
-import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.adapter.DatabaseVersionException;
 import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
