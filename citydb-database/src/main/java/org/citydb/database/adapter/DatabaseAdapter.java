@@ -31,9 +31,7 @@ import org.citydb.database.schema.SchemaException;
 import org.citydb.database.srs.SpatialReference;
 
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Objects;
 import java.util.Properties;
 
@@ -124,27 +122,20 @@ public abstract class DatabaseAdapter {
     }
 
     private Version getCityDBVersion(Connection connection) throws DatabaseException {
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(schemaAdapter.getCityDBVersion())) {
-            if (rs.next()) {
-                Version version = Version.of(rs.getInt("major_version"),
-                        rs.getInt("minor_version"),
-                        rs.getInt("minor_revision"),
-                        rs.getString("version"));
-
-                if (!DatabaseConstants.VERSION_SUPPORT.isSupported(version)) {
-                    throw new DatabaseVersionException("The " + DatabaseConstants.CITYDB_SHORT_NAME +
-                            " version " + version + " is not supported. " +
-                            "Supported versions are " + DatabaseConstants.VERSION_SUPPORT + ".");
-                }
-
-                return version;
+        try {
+            Version version = schemaAdapter.getCityDBVersion(connection);
+            if (version == null) {
+                throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.");
+            } else if (!DatabaseConstants.VERSION_SUPPORT.isSupported(version)) {
+                throw new DatabaseVersionException("The " + DatabaseConstants.CITYDB_SHORT_NAME +
+                        " version " + version + " is not supported. " +
+                        "Supported versions are " + DatabaseConstants.VERSION_SUPPORT + ".");
             }
+
+            return version;
         } catch (SQLException e) {
             throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.", e);
         }
-
-        throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.");
     }
 
     private boolean schemaExists(String schemaName, Version version, Connection connection) throws DatabaseException {

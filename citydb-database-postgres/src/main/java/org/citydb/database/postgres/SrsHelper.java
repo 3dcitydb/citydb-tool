@@ -41,11 +41,10 @@ public class SrsHelper extends org.citydb.database.util.SrsHelper {
 
     @Override
     public Optional<SpatialReference> getDatabaseSrs(String schemaName, Connection connection) throws SQLException {
-        String query = "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
-                "from citydb_pkg.db_metadata('" + schemaName + "')";
-
         try (Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(query)) {
+             ResultSet rs = statement.executeQuery("select srid, srs_name, coord_ref_sys_name, " +
+                     "coord_ref_sys_kind, wktext " +
+                     "from citydb_pkg.db_metadata('" + schemaName + "')")) {
             if (rs.next()) {
                 return Optional.of(SpatialReference.of(rs.getInt("srid"),
                         getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),

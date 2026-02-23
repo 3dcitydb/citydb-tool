@@ -76,7 +76,7 @@ public abstract class SchemaAdapter {
 
     public abstract ChangelogHelper getChangelogHelper();
 
-    protected abstract String getCityDBVersion();
+    protected abstract Version getCityDBVersion(Connection connection) throws SQLException;
 
     protected abstract boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException;
 

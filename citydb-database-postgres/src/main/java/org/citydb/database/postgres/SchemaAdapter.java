@@ -23,7 +23,9 @@ package org.citydb.database.postgres;
 
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.adapter.DatabaseVersionException;
 import org.citydb.database.metadata.DatabaseProperty;
 import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -197,8 +199,19 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    protected String getCityDBVersion() {
-        return "select major_version, minor_version, minor_revision, version from citydb_pkg.citydb_version()";
+    protected Version getCityDBVersion(Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("select major_version, minor_version, minor_revision, version " +
+                     "from citydb_pkg.citydb_version()")) {
+            if (rs.next()) {
+                return Version.of(rs.getInt("major_version"),
+                        rs.getInt("minor_version"),
+                        rs.getInt("minor_revision"),
+                        rs.getString("version"));
+            }
+        }
+
+        return null;
     }
 
     @Override
