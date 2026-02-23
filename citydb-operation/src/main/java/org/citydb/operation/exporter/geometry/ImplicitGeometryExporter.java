@@ -42,31 +42,25 @@ import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class ImplicitGeometryExporter extends DatabaseExporter {
-    private final Table implicitGeometry;
-    private final Select select;
     private final BlobExporter blobExporter;
     private final ExternalFileHelper externalFileHelper;
 
     public ImplicitGeometryExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        implicitGeometry = tableHelper.getTable(org.citydb.database.schema.Table.IMPLICIT_GEOMETRY);
-        select = getBaseQuery();
+        Table implicitGeometry = tableHelper.getTable(org.citydb.database.schema.Table.IMPLICIT_GEOMETRY);
         blobExporter = new BlobExporter(implicitGeometry, "id", "library_object", helper);
         externalFileHelper = ExternalFileHelper.newInstance(helper)
                 .withRelativeOutputFolder(ExportConstants.LIBRARY_OBJECTS_DIR)
                 .withFileNamePrefix(ExportConstants.LIBRARY_OBJECTS_PREFIX)
                 .createUniqueFileNames(true);
-        stmt = helper.getConnection().prepareStatement(Select.of(select)
-                .where(implicitGeometry.column("id").eq(Placeholder.empty()))
-                .toSql());
+        stmt = helper.getConnection().prepareStatement(getQuery(implicitGeometry).toSql());
     }
 
-    private Select getBaseQuery() {
+    private Select getQuery(Table implicitGeometry) {
         Table geometryData = tableHelper.getTable(org.citydb.database.schema.Table.GEOMETRY_DATA);
         return Select.newInstance()
                 .select(implicitGeometry.columns("id", "mime_type", "mime_type_codespace", "reference_to_library",
@@ -74,12 +68,8 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
                 .select(geometryData.columns("implicit_geometry", "geometry_properties", "feature_id"))
                 .from(implicitGeometry)
                 .leftJoin(geometryData).on(geometryData.column("id")
-                        .eq(implicitGeometry.column("relative_geometry_id")));
-    }
-
-    private Select getQuery(Set<Long> ids) {
-        return Select.of(select)
-                .where(operationHelper.in(implicitGeometry.column("id"), ids));
+                        .eq(implicitGeometry.column("relative_geometry_id")))
+                .where(operationHelper.inArray(implicitGeometry.column("id"), Placeholder.empty()));
     }
 
     public ImplicitGeometry doExport(long id) throws ExportException, SQLException {
@@ -87,21 +77,16 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
                 .doExport(Collections.emptySet(), Collections.singleton(id))
                 .values();
 
-        stmt.setLong(1, id);
+        setLongArrayOrNull(1, List.of(id));
         try (ResultSet rs = stmt.executeQuery()) {
             return doExport(appearances, rs).get(id);
         }
     }
 
     public Map<Long, ImplicitGeometry> doExport(Set<Long> ids, Collection<Appearance> appearances) throws ExportException, SQLException {
-        if (ids.size() == 1) {
-            stmt.setLong(1, ids.iterator().next());
+        if (!ids.isEmpty()) {
+            setLongArrayOrNull(1, ids);
             try (ResultSet rs = stmt.executeQuery()) {
-                return doExport(appearances, rs);
-            }
-        } else if (!ids.isEmpty()) {
-            try (Statement stmt = helper.getConnection().createStatement();
-                 ResultSet rs = stmt.executeQuery(getQuery(ids).toSql())) {
                 return doExport(appearances, rs);
             }
         } else {

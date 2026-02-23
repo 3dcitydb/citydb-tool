@@ -38,19 +38,19 @@ public class IndexHelper extends org.citydb.database.util.IndexHelper {
 
     @Override
     protected void createIndex(Index index, boolean ignoreNulls, Connection connection) throws SQLException {
-        String createIndex = "create index if not exists " + index.getName() +
+        String sql = "create index if not exists " + index.getName() +
                 " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable() +
                 (index.getType() == Index.Type.SPATIAL ? " using gist " : " ") +
                 "(" + String.join(", ", index.getColumns()) + ")";
 
         if (ignoreNulls) {
-            createIndex += " where " + index.getColumns().stream()
+            sql += " where " + index.getColumns().stream()
                     .map(column -> column + " is not null")
                     .collect(Collectors.joining(" and "));
         }
 
         try (Statement stmt = connection.createStatement()) {
-            stmt.execute(createIndex);
+            stmt.execute(sql);
         }
     }
 
