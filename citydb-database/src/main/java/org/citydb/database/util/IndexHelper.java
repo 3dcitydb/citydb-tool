@@ -26,7 +26,6 @@ import org.citydb.database.schema.Index;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -73,17 +72,16 @@ public abstract class IndexHelper {
     }
 
     protected final DatabaseAdapter adapter;
-    private Statement stmt;
 
     protected IndexHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
     }
 
-    protected abstract void create(Index index, boolean ignoreNulls, Statement stmt) throws SQLException;
+    protected abstract void createIndex(Index index, boolean ignoreNulls, Connection connection) throws SQLException;
 
-    protected abstract void drop(Index index, Statement stmt) throws SQLException;
+    protected abstract void dropIndex(Index index, Connection connection) throws SQLException;
 
-    protected abstract boolean exists(Index index, Statement stmt) throws SQLException;
+    protected abstract boolean indexExists(Index index, Connection connection) throws SQLException;
 
     public IndexHelper create(Index index) throws SQLException {
         return create(index, false);
@@ -101,9 +99,7 @@ public abstract class IndexHelper {
 
     public IndexHelper create(Index index, boolean ignoreNulls, Connection connection) throws SQLException {
         if (!exists(index, connection)) {
-            try (Statement stmt = createStatement(connection)) {
-                create(index, ignoreNulls, stmt);
-            }
+            createIndex(index, ignoreNulls, connection);
         }
 
         return this;
@@ -117,9 +113,7 @@ public abstract class IndexHelper {
 
     public IndexHelper drop(Index index, Connection connection) throws SQLException {
         if (exists(index, connection)) {
-            try (Statement stmt = createStatement(connection)) {
-                drop(index, stmt);
-            }
+            dropIndex(index, connection);
         }
 
         return this;
@@ -132,9 +126,7 @@ public abstract class IndexHelper {
     }
 
     public boolean exists(Index index, Connection connection) throws SQLException {
-        try (Statement stmt = createStatement(connection)) {
-            return exists(index, stmt);
-        }
+        return indexExists(index, connection);
     }
 
     public Status existAll(Collection<Index> indexes) throws SQLException {
@@ -155,19 +147,5 @@ public abstract class IndexHelper {
         }
 
         return result != null ? result : Status.OFF;
-    }
-
-    private Statement createStatement(Connection connection) throws SQLException {
-        return stmt = connection.createStatement();
-    }
-
-    public void cancel() {
-        if (stmt != null) {
-            try {
-                stmt.cancel();
-            } catch (SQLException e) {
-                //
-            }
-        }
     }
 }

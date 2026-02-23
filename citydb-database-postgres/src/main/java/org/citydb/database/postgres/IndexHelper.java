@@ -24,6 +24,7 @@ package org.citydb.database.postgres;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -36,7 +37,7 @@ public class IndexHelper extends org.citydb.database.util.IndexHelper {
     }
 
     @Override
-    protected void create(Index index, boolean ignoreNulls, Statement stmt) throws SQLException {
+    protected void createIndex(Index index, boolean ignoreNulls, Connection connection) throws SQLException {
         String createIndex = "create index if not exists " + index.getName() +
                 " on " + adapter.getConnectionDetails().getSchema() + "." + index.getTable() +
                 (index.getType() == Index.Type.SPATIAL ? " using gist " : " ") +
@@ -48,21 +49,26 @@ public class IndexHelper extends org.citydb.database.util.IndexHelper {
                     .collect(Collectors.joining(" and "));
         }
 
-        stmt.execute(createIndex);
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createIndex);
+        }
     }
 
     @Override
-    protected void drop(Index index, Statement stmt) throws SQLException {
-        stmt.execute("drop index if exists " + adapter.getConnectionDetails().getSchema() + "." + index.getName());
+    protected void dropIndex(Index index, Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute("drop index if exists " + adapter.getConnectionDetails().getSchema() + "." + index.getName());
+        }
     }
 
     @Override
-    protected boolean exists(Index index, Statement stmt) throws SQLException {
-        try (ResultSet rs = stmt.executeQuery("select 1 from pg_index i " +
-                "join pg_class c on c.oid = i.indexrelid " +
-                "join pg_namespace n on n.oid = c.relnamespace " +
-                "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
-                "and c.relname = '" + index.getName() + "' limit 1")) {
+    protected boolean indexExists(Index index, Connection connection) throws SQLException {
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("select 1 from pg_index i " +
+                     "join pg_class c on c.oid = i.indexrelid " +
+                     "join pg_namespace n on n.oid = c.relnamespace " +
+                     "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
+                     "and c.relname = '" + index.getName() + "' limit 1")) {
             return rs.next() && rs.getBoolean(1);
         }
     }
