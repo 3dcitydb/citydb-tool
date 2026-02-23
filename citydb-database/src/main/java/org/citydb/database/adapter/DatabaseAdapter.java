@@ -148,9 +148,8 @@ public abstract class DatabaseAdapter {
     }
 
     private boolean schemaExists(String schemaName, Version version, Connection connection) throws DatabaseException {
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(schemaAdapter.getSchemaExists(schemaName, version))) {
-            return rs.next() && rs.getBoolean(1);
+        try {
+            return schemaAdapter.schemaExists(schemaName, version, connection);
         } catch (SQLException e) {
             throw new DatabaseException("Failed to verify whether '" + schemaName + "' is a 3DCityDB schema.", e);
         }

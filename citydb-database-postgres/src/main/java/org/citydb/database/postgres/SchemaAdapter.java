@@ -202,15 +202,18 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    protected String getSchemaExists(String schemaName, Version version) {
-        if (version.compareTo(Version.of(5, 1, 0)) < 0) {
-            return "select coalesce(( " +
-                    "select 1 from information_schema.schemata s " +
-                    "join information_schema.tables t on t.table_schema = s.schema_name " +
-                    "where s.schema_name = '" + schemaName + "' and t.table_name = 'database_srs'" +
-                    "limit 1), 0)";
-        } else {
-            return "select citydb_pkg.schema_exists('" + schemaName + "')";
+    protected boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException {
+        String query = version.compareTo(Version.of(5, 1, 0)) < 0 ?
+                "select coalesce(( " +
+                        "select 1 from information_schema.schemata s " +
+                        "join information_schema.tables t on t.table_schema = s.schema_name " +
+                        "where s.schema_name = '" + schemaName + "' and t.table_name = 'database_srs'" +
+                        "limit 1), 0)" :
+                "select citydb_pkg.schema_exists('" + schemaName + "')";
+
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            return rs.next() && rs.getBoolean(1);
         }
     }
 

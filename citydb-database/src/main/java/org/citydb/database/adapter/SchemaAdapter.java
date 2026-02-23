@@ -78,7 +78,7 @@ public abstract class SchemaAdapter {
 
     protected abstract String getCityDBVersion();
 
-    protected abstract String getSchemaExists(String schemaName, Version version);
+    protected abstract boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException;
 
     void buildSchemaMapping() throws SchemaException {
         schemaMapping = SchemaMappingBuilder.newInstance().build(adapter);
@@ -86,6 +86,12 @@ public abstract class SchemaAdapter {
 
     public SchemaMapping getSchemaMapping() {
         return schemaMapping;
+    }
+
+    public boolean schemaExists(String schemaName) throws SQLException {
+        try (Connection connection = adapter.getPool().getConnection()) {
+            return schemaExists(schemaName, adapter.getDatabaseMetadata().getVersion(), connection);
+        }
     }
 
     protected String getVendorProductString(DatabaseMetadata metadata) {
