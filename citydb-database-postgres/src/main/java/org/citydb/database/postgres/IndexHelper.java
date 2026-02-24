@@ -63,13 +63,15 @@ public class IndexHelper extends org.citydb.database.util.IndexHelper {
 
     @Override
     protected boolean indexExists(Index index, Connection connection) throws SQLException {
+        String sql = "select 1 from pg_index i " +
+                "join pg_class c on c.oid = i.indexrelid " +
+                "join pg_namespace n on n.oid = c.relnamespace " +
+                "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
+                "and c.relname = '" + index.getName() + "' limit 1";
+
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery("select 1 from pg_index i " +
-                     "join pg_class c on c.oid = i.indexrelid " +
-                     "join pg_namespace n on n.oid = c.relnamespace " +
-                     "where n.nspname = '" + adapter.getConnectionDetails().getSchema() + "' " +
-                     "and c.relname = '" + index.getName() + "' limit 1")) {
-            return rs.next() && rs.getBoolean(1);
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next();
         }
     }
 }

@@ -88,6 +88,10 @@ public abstract class SchemaAdapter {
         return schemaMapping;
     }
 
+    public boolean schemaExists(String schemaName, Connection connection) throws SQLException {
+        return schemaExists(schemaName, adapter.getDatabaseMetadata().getVersion(), connection);
+    }
+
     public boolean schemaExists(String schemaName) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection()) {
             return schemaExists(schemaName, adapter.getDatabaseMetadata().getVersion(), connection);

@@ -26,10 +26,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SpatialReferenceType;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -41,16 +38,19 @@ public class SrsHelper extends org.citydb.database.util.SrsHelper {
 
     @Override
     public Optional<SpatialReference> getDatabaseSrs(String schemaName, Connection connection) throws SQLException {
-        try (Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery("select srid, srs_name, coord_ref_sys_name, " +
-                     "coord_ref_sys_kind, wktext " +
-                     "from citydb_pkg.db_metadata('" + schemaName + "')")) {
-            if (rs.next()) {
-                return Optional.of(SpatialReference.of(rs.getInt("srid"),
-                        getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
-                        rs.getString("coord_ref_sys_name"),
-                        rs.getString("srs_name"),
-                        rs.getString("wktext")));
+        String sql = "select srid, srs_name, coord_ref_sys_name, coord_ref_sys_kind, wktext " +
+                "from citydb_pkg.db_metadata(?)";
+
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, schemaName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(SpatialReference.of(rs.getInt("srid"),
+                            getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),
+                            rs.getString("coord_ref_sys_name"),
+                            rs.getString("srs_name"),
+                            rs.getString("wktext")));
+                }
             }
         }
 
@@ -59,7 +59,7 @@ public class SrsHelper extends org.citydb.database.util.SrsHelper {
 
     @Override
     protected SpatialReference getSpatialReference(int srid, String identifier, Connection connection) throws SQLException {
-        String query = adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0 ?
+        String sql = adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0 ?
                 "select split_part(srtext, '\"', 2) as coord_ref_sys_name, " +
                         "split_part(srtext, '[', 1) as coord_ref_sys_kind, " +
                         "srtext as wktext from spatial_ref_sys where srid = " + srid :
@@ -67,7 +67,7 @@ public class SrsHelper extends org.citydb.database.util.SrsHelper {
                         "from citydb_pkg.get_coord_ref_sys_info(" + srid + ")";
 
         try (Statement statement = connection.createStatement();
-             ResultSet rs = statement.executeQuery(query)) {
+             ResultSet rs = statement.executeQuery(sql)) {
             if (rs.next()) {
                 return SpatialReference.of(srid,
                         getSpatialReferenceType(rs.getString("coord_ref_sys_kind")),

@@ -33,9 +33,9 @@ import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.sqlbuilder.util.PlainSql;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper {
     private final PostgresqlAdapter adapter;
@@ -46,15 +46,17 @@ public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper
 
     @Override
     public boolean isChangelogEnabled(String schemaName, Connection connection) throws SQLException {
-        String query = "select exists (" +
-                "select 1 from information_schema.triggers " +
-                "where trigger_schema = '" + schemaName + "' " +
+        String sql = "select 1 from information_schema.triggers " +
+                "where trigger_schema = ? " +
                 "and event_object_table = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
-                "and trigger_name = 'feature_changelog_trigger')";
+                "and trigger_name = 'feature_changelog_trigger' " +
+                "limit 1";
 
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            return rs.next() && rs.getBoolean(1);
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, schemaName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 

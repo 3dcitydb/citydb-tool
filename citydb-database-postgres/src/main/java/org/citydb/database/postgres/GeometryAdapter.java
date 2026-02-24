@@ -26,6 +26,7 @@ import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.WKBParser;
 import org.citydb.database.geometry.WKBWriter;
 import org.citydb.database.geometry.WKTWriter;
+import org.citydb.database.schema.Table;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
 import org.postgresql.util.PGobject;
@@ -78,7 +79,7 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     public boolean hasImplicitGeometries(Connection connection) throws SQLException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery("select 1 from " + adapter.getConnectionDetails().getSchema() +
-                     ".implicit_geometry limit 1")) {
+                     "." + Table.IMPLICIT_GEOMETRY.getName() + " limit 1")) {
             return rs.next();
         }
     }

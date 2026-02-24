@@ -41,10 +41,7 @@ import org.citydb.sqlbuilder.util.PlainSql;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -214,17 +211,19 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     @Override
     protected boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException {
-        String query = version.compareTo(Version.of(5, 1, 0)) < 0 ?
+        String sql = version.compareTo(Version.of(5, 1, 0)) < 0 ?
                 "select coalesce(( " +
                         "select 1 from information_schema.schemata s " +
                         "join information_schema.tables t on t.table_schema = s.schema_name " +
-                        "where s.schema_name = '" + schemaName + "' and t.table_name = 'database_srs'" +
+                        "where s.schema_name = ? and t.table_name = 'database_srs' " +
                         "limit 1), 0)" :
-                "select citydb_pkg.schema_exists('" + schemaName + "')";
+                "select citydb_pkg.schema_exists(?)";
 
-        try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
-            return rs.next() && rs.getBoolean(1);
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, schemaName);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() && rs.getBoolean(1);
+            }
         }
     }
 
