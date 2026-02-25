@@ -278,14 +278,14 @@ public class CommandHelper {
         try {
             return DatabaseAdapterManager.newInstance().load(PluginManager.getInstance().getClassLoader());
         } catch (DatabaseAdapterException e) {
-            throw new ExecutionException("Failed to initialize the database adapter manager.", e);
+            throw new ExecutionException("Failed to load database adapters.", e);
         }
     }
 
     private IOAdapterManager createIOAdapterManager() throws ExecutionException {
         IOAdapterManager manager = IOAdapterManager.newInstance().load(PluginManager.getInstance().getClassLoader());
         if (manager.hasExceptions()) {
-            throw new ExecutionException("Failed to initialize the IO adapter manager.",
+            throw new ExecutionException("Failed to load IO adapters.",
                     manager.getExceptions().values().stream()
                             .flatMap(Collection::stream)
                             .findFirst().orElse(new IOAdapterException()));
