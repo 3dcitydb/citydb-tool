@@ -127,7 +127,7 @@ public abstract class ImportController implements Command {
     }
 
     protected boolean doImport() throws ExecutionException {
-        IOAdapterManager ioManager = helper.createIOAdapterManager();
+        IOAdapterManager ioManager = helper.getIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
 
         List<InputFile> inputFiles = getInputFiles(ioAdapter, ioManager);

@@ -33,6 +33,7 @@ import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.ConnectionInfoBuilder;
 import org.citydb.config.Config;
 import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
 import picocli.CommandLine;
 
@@ -58,10 +59,11 @@ public class ConnectCommand implements Command {
     public Integer call() throws ExecutionException {
         ConnectionDetails connectionDetails = helper.getConnectionDetails(connectionOptions, config);
         DatabaseManager databaseManager = helper.getDatabaseManager();
+        DatabaseAdapterManager databaseAdapterManager = helper.getDatabaseAdapterManager();
 
         try {
             logger.info("Testing connection to database {}.", connectionDetails.toConnectString());
-            databaseManager.connect(connectionDetails);
+            databaseManager.connect(connectionDetails, databaseAdapterManager);
         } catch (Exception e) {
             throw new ExecutionException("Failed to connect to the database.", e);
         }

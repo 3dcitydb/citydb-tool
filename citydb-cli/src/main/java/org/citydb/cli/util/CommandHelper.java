@@ -29,10 +29,13 @@ import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
+import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.adapter.DatabaseAdapterException;
+import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
 import org.citydb.database.postgres.PostgresqlAdapter;
 import org.citydb.database.schema.Index;
@@ -41,6 +44,7 @@ import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.operation.exporter.options.ValidityOptions;
+import org.citydb.plugin.PluginManager;
 import org.citydb.query.Query;
 import org.citydb.query.QueryHelper;
 import org.citydb.query.builder.QueryBuildException;
@@ -61,6 +65,10 @@ public class CommandHelper {
     private static final CommandHelper instance = new CommandHelper();
     private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
+    private final LazyCheckedInitializer<DatabaseAdapterManager, ExecutionException> databaseAdapterManager =
+            LazyCheckedInitializer.of(this::createDatabaseAdapterManager);
+    private final LazyCheckedInitializer<IOAdapterManager, ExecutionException> ioAdapterManager =
+            LazyCheckedInitializer.of(this::createIOAdapterManager);
 
     private CommandHelper() {
     }
@@ -71,6 +79,10 @@ public class CommandHelper {
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+
+    public DatabaseAdapterManager getDatabaseAdapterManager() throws ExecutionException {
+        return databaseAdapterManager.get();
     }
 
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
@@ -85,7 +97,7 @@ public class CommandHelper {
     public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
             logger.info("Connecting to database {}.", connectionDetails.toConnectString());
-            databaseManager.connect(connectionDetails);
+            databaseManager.connect(connectionDetails, databaseAdapterManager.get());
             databaseManager.reportDatabaseInfo(logger::info);
             return databaseManager;
         } catch (DatabaseException | SQLException e) {
@@ -121,16 +133,8 @@ public class CommandHelper {
                 .setDatabaseNameIfAbsent(PostgresqlAdapter.DATABASE_NAME);
     }
 
-    public IOAdapterManager createIOAdapterManager() throws ExecutionException {
-        IOAdapterManager manager = IOAdapterManager.newInstance().load();
-        if (manager.hasExceptions()) {
-            throw new ExecutionException("Failed to initialize IO adapter manager.",
-                    manager.getExceptions().values().stream()
-                            .flatMap(Collection::stream)
-                            .findFirst().orElse(new IOAdapterException()));
-        }
-
-        return manager;
+    public IOAdapterManager getIOAdapterManager() throws ExecutionException {
+        return ioAdapterManager.get();
     }
 
     public QueryExecutor getQueryExecutor(Query query, SqlBuildOptions options, DatabaseAdapter adapter) throws ExecutionException {
@@ -268,5 +272,25 @@ public class CommandHelper {
         } else {
             logException("An unexpected " + e.getClass().getName() + " error has occurred during execution.", e);
         }
+    }
+
+    private DatabaseAdapterManager createDatabaseAdapterManager() throws ExecutionException {
+        try {
+            return DatabaseAdapterManager.newInstance().load(PluginManager.getInstance().getClassLoader());
+        } catch (DatabaseAdapterException e) {
+            throw new ExecutionException("Failed to initialize the database adapter manager.", e);
+        }
+    }
+
+    private IOAdapterManager createIOAdapterManager() throws ExecutionException {
+        IOAdapterManager manager = IOAdapterManager.newInstance().load(PluginManager.getInstance().getClassLoader());
+        if (manager.hasExceptions()) {
+            throw new ExecutionException("Failed to initialize the IO adapter manager.",
+                    manager.getExceptions().values().stream()
+                            .flatMap(Collection::stream)
+                            .findFirst().orElse(new IOAdapterException()));
+        }
+
+        return manager;
     }
 }

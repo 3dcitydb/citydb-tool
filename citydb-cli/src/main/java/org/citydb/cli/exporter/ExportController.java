@@ -124,7 +124,7 @@ public abstract class ExportController implements Command {
     }
 
     protected boolean doExport() throws ExecutionException {
-        IOAdapterManager ioManager = helper.createIOAdapterManager();
+        IOAdapterManager ioManager = helper.getIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
         OutputFileBuilder builder = OutputFileBuilder.newInstance()
                 .tempDirectory(helper.resolveAgainstWorkingDir(tempDirectory))
