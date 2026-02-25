@@ -126,7 +126,9 @@ public abstract class DatabaseAdapter {
             Version version = schemaAdapter.getCityDBVersion(connection);
             if (version == null) {
                 throw new DatabaseException("Failed to retrieve the version of the 3DCityDB.");
-            } else if (!DatabaseConstants.VERSION_SUPPORT.isSupported(version)) {
+            }
+
+            if (!DatabaseConstants.VERSION_SUPPORT.isSupported(version)) {
                 throw new DatabaseVersionException("The " + DatabaseConstants.CITYDB_SHORT_NAME +
                         " version " + version + " is not supported. " +
                         "Supported versions are " + DatabaseConstants.VERSION_SUPPORT + ".");
