@@ -2,8 +2,23 @@
 
 ## [Unreleased]
 
+### Changed
+- The CityGML/CityJSON reader now produces self-contained top-level features. Referenced objects (e.g., implicit
+  geometries and surface data) can be resolved within the same feature instance, simplifying parallel processing. A new
+  `ReferenceResolver` helper class provides convenient access to these objects. References to other top-level features
+  are not resolved locally and remain global. With this change, the resulting top-level feature structure is identical
+  to the database export. [#73](https://github.com/3dcitydb/citydb-tool/pull/73)
+- Improved error handling when writing ZIP output files.
+- Faster import of features with many appearances.
+- Faster import of features with deeply nested sub-features.
+- Removed `TextureImageProperty` and `Reference` from the data model.
+- Reworked `DatabaseAdapter` interface to simplify support for databases beyond PostgreSQL/PostGIS.
+
 ### Fixed
 - Fixed an issue where the file name was not correctly retrieved from texture images provided as URLs.
+- Fixed reading and importing duplicate features from the same dataset.
+- Local references to library objects are now correctly set during CityGML exports.
+- Fixed loading of database and IO adapters as external plugins.
 
 ## [1.2.0] - 2025-12-06
 
