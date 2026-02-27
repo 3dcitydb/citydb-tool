@@ -16,8 +16,8 @@
 
 ### Fixed
 - Fixed an issue where the file name was not correctly retrieved from texture images provided as URLs.
-- Fixed reading and importing duplicate sub-features from the same dataset.
-- Local references to library objects are now correctly set during CityGML exports.
+- Fixed reading and importing of duplicate sub-features within the same top-level feature.
+- Fixed local references to library objects during CityGML exports.
 - Fixed loading of database and IO adapters as external plugins.
 
 ## [1.2.0] - 2025-12-06
