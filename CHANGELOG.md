@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fixed an issue where the file name was not correctly retrieved from texture images provided as URLs.
+
 ## [1.2.0] - 2025-12-06
 
 ### Added
