@@ -42,6 +42,9 @@ subprojects {
         maven {
             url = 'https://3dcitydb.org/maven'
         }
+        maven {
+            url = 'https://repo.opensourcebim.org/maven'
+        }
         mavenCentral()
     }
 
@@ -64,6 +67,18 @@ subprojects {
             exportAllPackages()
         }
         module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305') {
+            exportAllPackages()
+        }
+        module('org.opensourcebim:pluginbase', 'org.opensourcebim.bimserver') {
+            mergeJar('org.opensourcebim:shared')
+            mergeJar('org.opensourcebim:ifcplugins')
+            requires('org.slf4j')
+            requires('com.google.common')
+            requires('buildingsmartlibrary')
+            requires('org.apache.commons.codec')
+            requiresTransitive('org.eclipse.emf.ecore')
+            requiresTransitive('org.eclipse.emf.common')
+            requiresTransitive('org.eclipse.emf.ecore.xmi')
             exportAllPackages()
         }
     }

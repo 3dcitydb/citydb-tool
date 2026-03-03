@@ -13,3 +13,4 @@ bin/
 *.iml
 *.iws
 out/
+/.claude/settings.local.json

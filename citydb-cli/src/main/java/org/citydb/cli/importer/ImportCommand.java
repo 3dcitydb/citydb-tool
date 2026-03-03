@@ -25,6 +25,7 @@ import org.citydb.cli.common.Command;
 import org.citydb.cli.extension.ImportFormatCommand;
 import org.citydb.cli.importer.citygml.CityGMLImportCommand;
 import org.citydb.cli.importer.cityjson.CityJSONImportCommand;
+import org.citydb.cli.importer.ifc.IfcImportCommand;
 import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
@@ -54,6 +55,7 @@ public class ImportCommand implements Command {
     public void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {
         commandLine.addSubcommand(new CityGMLImportCommand());
         commandLine.addSubcommand(new CityJSONImportCommand());
+        commandLine.addSubcommand(new IfcImportCommand());
         for (ImportFormatCommand extension : pluginManager.getAllExtensions(ImportFormatCommand.class)) {
             Command.addSubcommand(extension, commandLine, pluginManager);
         }

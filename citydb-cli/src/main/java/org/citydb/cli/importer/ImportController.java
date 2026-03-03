@@ -142,6 +142,7 @@ public abstract class ImportController implements Command {
         ImportOptions importOptions = getImportOptions();
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
+        configureFormatOptions(readOptions.getFormatOptions(), databaseManager.getAdapter());
 
         Filter filter = getFilter(importOptions, databaseManager.getAdapter());
         readOptions.setFilter(filter);
@@ -233,6 +234,10 @@ public abstract class ImportController implements Command {
         }
 
         return shouldRun;
+    }
+
+    protected void configureFormatOptions(ConfigObject<InputFormatOptions> formatOptions,
+                                          DatabaseAdapter adapter) throws ExecutionException {
     }
 
     protected List<InputFile> getInputFiles(IOAdapter ioAdapter, IOAdapterManager ioManager) throws ExecutionException {

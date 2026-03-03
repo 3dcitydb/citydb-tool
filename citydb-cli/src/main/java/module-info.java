@@ -13,6 +13,7 @@ module org.citydb.cli {
     requires transitive org.citydb.util;
     requires transitive info.picocli;
     requires org.citydb.core;
+    requires org.citydb.io.ifc;
 
     exports org.citydb.cli;
     exports org.citydb.cli.common;
@@ -28,6 +29,7 @@ module org.citydb.cli {
     exports org.citydb.cli.importer;
     exports org.citydb.cli.importer.citygml;
     exports org.citydb.cli.importer.cityjson;
+    exports org.citydb.cli.importer.ifc;
     exports org.citydb.cli.importer.duplicate;
     exports org.citydb.cli.importer.filter;
     exports org.citydb.cli.importer.options;
@@ -53,6 +55,7 @@ module org.citydb.cli {
     opens org.citydb.cli.importer to info.picocli;
     opens org.citydb.cli.importer.citygml to info.picocli;
     opens org.citydb.cli.importer.cityjson to info.picocli;
+    opens org.citydb.cli.importer.ifc to info.picocli;
     opens org.citydb.cli.importer.options to info.picocli;
     opens org.citydb.cli.index to info.picocli;
     opens org.citydb.cli.index.create to info.picocli;

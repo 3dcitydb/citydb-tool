@@ -30,6 +30,14 @@ ENV CITYDB_TOOL_VERSION=${CITYDB_TOOL_VERSION}
 # Copy from builder
 COPY --from=builder --chown=1000:1000 /build/citydb-cli/build/install/citydb-tool-docker /opt/citydb-tool
 
+# Install Python and ifcopenshell for IFC geometry extraction
+RUN set -x && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3 python3-pip && \
+    pip3 install --no-cache-dir --break-system-packages ifcopenshell && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # Put start script in path
 RUN set -x && \
     ln -sf /opt/citydb-tool/citydb /usr/local/bin

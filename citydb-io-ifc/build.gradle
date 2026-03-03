@@ -1,0 +1,30 @@
+configurations {
+    // Exclude transitive dependencies from BIMserver JARs to avoid split-package JPMS conflicts
+    implementation {
+        exclude group: 'org.apache.maven'
+        exclude group: 'org.apache.maven.resolver'
+        exclude group: 'org.eclipse.jdt'
+        exclude group: 'org.eclipse.jdt.core'
+        exclude group: 'org.eclipse.equinox'
+        exclude group: 'org.eclipse.core'
+        exclude group: 'org.eclipse.persistence'
+        exclude group: 'commonj.sdo'
+        exclude group: 'org.codehaus.plexus'
+        exclude group: 'org.eclipse.tycho'
+        exclude group: 'com.sun.xml.ws'
+    }
+}
+
+dependencies {
+    implementation project(':citydb-io')
+    implementation('org.opensourcebim:pluginbase:1.6.0')
+    implementation('org.opensourcebim:shared:1.6.0')
+    implementation('org.opensourcebim:ifcplugins:0.0.106')
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'org.geotools:gt-referencing:34.1'
+    implementation 'org.geotools:gt-epsg-wkt:34.1'
+}
+
+javadoc {
+    failOnError = false
+}
