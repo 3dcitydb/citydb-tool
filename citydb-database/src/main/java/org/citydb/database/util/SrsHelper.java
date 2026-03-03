@@ -22,6 +22,7 @@
 package org.citydb.database.util;
 
 import org.citydb.config.common.SrsReference;
+import org.citydb.core.exception.UncheckedException;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.srs.SpatialReferenceType;
@@ -34,18 +35,21 @@ import javax.measure.Unit;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public abstract class SrsHelper {
-    protected final DatabaseAdapter adapter;
-    private final Pattern httpPattern = Pattern.compile(
+    private static final Pattern HTTP_PATTERN = Pattern.compile(
             "https?://www.opengis.net/def/crs/([^/]+?)/[^/]+?/([^/]+?)(?:/.*)?", Pattern.CASE_INSENSITIVE);
-    private final Pattern urnPattern = Pattern.compile(
+    private static final Pattern URN_PATTERN = Pattern.compile(
             "urn:ogc:def:crs(?:,crs)?:([^:]+?):[^:]*?:([^,]+?)(?:,.*)?", Pattern.CASE_INSENSITIVE);
-    private final Pattern epsgPattern = Pattern.compile("EPSG:([0-9]+)", Pattern.CASE_INSENSITIVE);
-    private final Matcher matcher = Pattern.compile("").matcher("");
+    private static final Pattern EPSG_PATTERN = Pattern.compile("EPSG:([0-9]+)", Pattern.CASE_INSENSITIVE);
+
+    protected final DatabaseAdapter adapter;
+    private final Map<String, Integer> identifiers = new ConcurrentHashMap<>();
 
     protected SrsHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
@@ -118,27 +122,34 @@ public abstract class SrsHelper {
     }
 
     public int parseSRID(String identifier) throws SrsException {
-        int code = 0;
-        if (identifier != null && !identifier.isEmpty()) {
-            String candidate = identifier.toLowerCase(Locale.ROOT);
-            if (candidate.startsWith("http")) {
-                code = parseHttpSchema(identifier);
-            } else if (candidate.startsWith("urn")) {
-                code = parseUrnSchema(identifier);
-            } else if (candidate.startsWith("epsg")) {
-                code = parseEpsgSchema(identifier);
-            }
+        if (identifier == null || identifier.isEmpty()) {
+            throw new SrsException("Unknown SRS identifier schema '" + identifier + "'.");
         }
 
-        if (code != 0) {
-            return code;
-        } else {
-            throw new SrsException("Unknown SRS identifier schema '" + identifier + "'.");
+        try {
+            return identifiers.computeIfAbsent(identifier, k -> {
+                try {
+                    String candidate = k.toLowerCase(Locale.ROOT);
+                    if (candidate.startsWith("http")) {
+                        return parseHttpSchema(k);
+                    } else if (candidate.startsWith("urn")) {
+                        return parseUrnSchema(k);
+                    } else if (candidate.startsWith("epsg")) {
+                        return parseEpsgSchema(k);
+                    }
+
+                    throw new SrsException("Unknown SRS identifier schema '" + k + "'.");
+                } catch (SrsException e) {
+                    throw UncheckedException.wrap(e);
+                }
+            });
+        } catch (RuntimeException e) {
+            throw UncheckedException.unwrap(e, SrsException.class);
         }
     }
 
     private int parseHttpSchema(String identifier) throws SrsException {
-        matcher.reset(identifier).usePattern(httpPattern);
+        Matcher matcher = HTTP_PATTERN.matcher(identifier);
         if (matcher.matches()) {
             String code = matcher.group(2);
             if (code.equalsIgnoreCase("CRS84")) {
@@ -154,14 +165,14 @@ public abstract class SrsHelper {
     }
 
     private int parseUrnSchema(String identifier) throws SrsException {
-        matcher.reset(identifier).usePattern(urnPattern);
+        Matcher matcher = URN_PATTERN.matcher(identifier);
         return matcher.matches() ?
                 parseCode(matcher.group(2), identifier) :
                 0;
     }
 
     private int parseEpsgSchema(String identifier) throws SrsException {
-        matcher.reset(identifier).usePattern(epsgPattern);
+        Matcher matcher = EPSG_PATTERN.matcher(identifier);
         return matcher.matches() ?
                 parseCode(matcher.group(1), identifier) :
                 0;

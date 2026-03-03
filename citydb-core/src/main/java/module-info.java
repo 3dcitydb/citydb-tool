@@ -9,6 +9,7 @@ module org.citydb.core {
 
     exports org.citydb.core.cache;
     exports org.citydb.core.concurrent;
+    exports org.citydb.core.exception;
     exports org.citydb.core.file;
     exports org.citydb.core.file.input;
     exports org.citydb.core.file.output;

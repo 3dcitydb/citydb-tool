@@ -21,6 +21,7 @@
 
 package org.citydb.cli.importer.filter;
 
+import org.citydb.core.exception.UncheckedException;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.srs.SrsException;
 import org.citydb.io.reader.filter.FilterException;
@@ -39,8 +40,6 @@ public class BboxPredicate implements FilterPredicate {
     private final DatabaseAdapter adapter;
     private final int srid;
     private final Map<Integer, Envelope> bboxes = new ConcurrentHashMap<>();
-
-    private Exception exception;
 
     private BboxPredicate(Envelope bbox, BboxMode mode, DatabaseAdapter adapter) {
         this.bbox = bbox;
@@ -76,23 +75,21 @@ public class BboxPredicate implements FilterPredicate {
 
     private Envelope getOrTransformBbox(Envelope envelope) throws FilterException {
         int targetSRID = getTargetSRID(envelope);
-        if (srid != targetSRID) {
-            Envelope bbox = bboxes.computeIfAbsent(targetSRID, k -> {
+        if (srid == targetSRID) {
+            return bbox;
+        }
+
+        try {
+            return bboxes.computeIfAbsent(targetSRID, k -> {
                 try {
-                    return adapter.getGeometryAdapter().transform(this.bbox, targetSRID);
+                    return adapter.getGeometryAdapter().transform(bbox, k);
                 } catch (Exception e) {
-                    exception = e;
-                    return null;
+                    throw UncheckedException.wrap(
+                            new FilterException("Failed to transform the bounding box filter to the feature SRS.", e));
                 }
             });
-
-            if (exception != null) {
-                throw new FilterException("Failed to transform the bounding box filter to the feature SRS.", exception);
-            } else {
-                return bbox;
-            }
-        } else {
-            return bbox;
+        } catch (RuntimeException e) {
+            throw UncheckedException.unwrap(e, FilterException.class);
         }
     }
 
