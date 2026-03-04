@@ -72,6 +72,7 @@ public class HierarchyBuilder {
     }
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
+        Set<Long> propertyIds = new HashSet<>();
         Set<Long> featureIds = new HashSet<>();
         Set<Long> geometryIds = new HashSet<>();
         Set<Long> appearanceIds = new HashSet<>();
@@ -79,7 +80,7 @@ public class HierarchyBuilder {
         Set<Long> implicitGeometryIds = new HashSet<>();
         Map<Long, Integer> referees = new HashMap<>();
 
-        while (rs.next()) {
+        while (rs.next() && propertyIds.add(rs.getLong("id"))) {
             long featureId = rs.getLong("val_feature_id");
             if (!rs.wasNull() && hierarchy.getFeature(featureId) == null) {
                 featureIds.add(featureId);
