@@ -7,17 +7,18 @@
   geometries and surface data) can be resolved within the same feature instance, simplifying parallel processing. A new
   `ReferenceResolver` helper class provides convenient access to these objects. References to other top-level features
   are not resolved locally and remain global. With this change, the resulting top-level feature structure is identical
-  to the database export. [#73](https://github.com/3dcitydb/citydb-tool/pull/73)
+  to that of the database export. [#73](https://github.com/3dcitydb/citydb-tool/pull/73)
 - Improved error handling when writing ZIP output files.
-- Faster import of features with many appearances.
-- Faster import of features with deeply nested sub-features.
+- Improved import performance for features having many appearances.
+- Improved import performance for features with deeply nested sub-features.
 - Removed `TextureImageProperty` and `Reference` from the data model.
 - Reworked `DatabaseAdapter` interface to simplify support for databases beyond PostgreSQL/PostGIS.
 
 ### Fixed
 - Fixed an issue where the file name was not correctly retrieved from texture images provided as URLs.
 - Fixed reading and importing of duplicate sub-features within the same top-level feature.
-- Fixed local references to library objects during CityGML exports.
+- Fixed local references to library objects in CityGML exports.
+- Fixed missing sub-features that are referenced from multiple parent features in CityGML exports.
 - Fixed loading of database and IO adapters as external plugins.
 
 ## [1.2.0] - 2025-12-06
