@@ -64,10 +64,12 @@ public class FileLocator {
     }
 
     public static FileLocator of(InputFile file, String location) throws IOException {
-        try {
-            return FileLocator.of(new URL(location));
-        } catch (Exception e) {
-            //
+        if (location.indexOf("://") > 0) {
+            try {
+                return FileLocator.of(new URL(location));
+            } catch (Exception e) {
+                //
+            }
         }
 
         if ("/".equals(file.getSeparator())) {

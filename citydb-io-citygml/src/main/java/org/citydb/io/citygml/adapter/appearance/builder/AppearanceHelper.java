@@ -106,7 +106,7 @@ public class AppearanceHelper {
     }
 
     public void processTargets(AbstractFeature feature) {
-        if (processAppearances) {
+        if (processAppearances && !surfaceData.isEmpty()) {
             AppearanceCollector collector = new AppearanceCollector();
             for (AppearanceCollector.Context context : collector.collect(feature)) {
                 for (Appearance appearance : context.appearances) {
