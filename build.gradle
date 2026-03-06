@@ -63,9 +63,6 @@ subprojects {
             requires('org.apache.tomcat.juli')
             exportAllPackages()
         }
-        module('com.google.code.findbugs:jsr305', 'com.google.code.findbugs.jsr305') {
-            exportAllPackages()
-        }
     }
 
     idea {

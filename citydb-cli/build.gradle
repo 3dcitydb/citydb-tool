@@ -14,7 +14,7 @@ configurations {
     }
 }
 
-def log4j_version = '2.25.2'
+def log4j_version = '2.25.3'
 
 dependencies {
     api project(':citydb-database')
@@ -30,7 +30,7 @@ dependencies {
     implementation "org.apache.logging.log4j:log4j-core:$log4j_version"
     implementation "org.apache.logging.log4j:log4j-slf4j2-impl:$log4j_version"
     implementation "org.apache.logging.log4j:log4j-jul:$log4j_version"
-    citydb 'org.citydb:3dcitydb:5.1.2'
+    citydb 'org.citydb:3dcitydb:5.1.3'
 }
 
 processResources {
