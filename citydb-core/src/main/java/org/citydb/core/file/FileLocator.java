@@ -56,20 +56,16 @@ public class FileLocator {
     }
 
     public static FileLocator of(String location) {
-        try {
-            return FileLocator.of(new URL(location));
-        } catch (Exception e) {
-            return new FileLocator(Path.of(location));
-        }
+        URL url = parseURL(location);
+        return url != null ?
+                new FileLocator(url) :
+                new FileLocator(Path.of(location));
     }
 
     public static FileLocator of(InputFile file, String location) throws IOException {
-        if (location.indexOf("://") > 0) {
-            try {
-                return FileLocator.of(new URL(location));
-            } catch (Exception e) {
-                //
-            }
+        URL url = parseURL(location);
+        if (url != null) {
+            return FileLocator.of(url);
         }
 
         if ("/".equals(file.getSeparator())) {
@@ -120,6 +116,18 @@ public class FileLocator {
         return path != null ?
                 path.getFileName().toString() :
                 Paths.get(url.getPath()).getFileName().toString();
+    }
+
+    private static URL parseURL(String location) {
+        if (location.indexOf("://") > 0) {
+            try {
+                return new URL(location);
+            } catch (Exception e) {
+                //
+            }
+        }
+
+        return null;
     }
 
     @Override
