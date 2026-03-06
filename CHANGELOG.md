@@ -2,12 +2,16 @@
 
 ## [Unreleased]
 
+### Added
+- Added `ImplicitGeometryScope` reader option to control how implicit geometries are shared between top-level
+  features when reading CityGML/CityJSON files.
+  - `GLOBAL` (default): implicit geometries are parsed once and reused across all top-level features.
+  - `TOP_LEVEL_FEATURE`: implicit geometries are resolved per top-level feature and reused only within that
+    feature. This mode produces self-contained features, simplifying parallel processing. A new `ReferenceResolver`
+    helper class provides convenient access to referenced objects. With this mode, the resulting top-level feature
+    structure matches that of the database export. [#73](https://github.com/3dcitydb/citydb-tool/pull/73)
+
 ### Changed
-- The CityGML/CityJSON reader now produces self-contained top-level features. Referenced objects (e.g., implicit
-  geometries and surface data) can be resolved within the same feature instance, simplifying parallel processing. A new
-  `ReferenceResolver` helper class provides convenient access to these objects. References to other top-level features
-  are not resolved locally and remain global. With this change, the resulting top-level feature structure is identical
-  to that of the database export. [#73](https://github.com/3dcitydb/citydb-tool/pull/73)
 - Improved error handling when writing ZIP output files.
 - Improved import performance for features having many appearances.
 - Improved import performance for features with deeply nested sub-features.
@@ -16,10 +20,11 @@
 
 ### Fixed
 - Fixed an issue where the file name was not correctly retrieved from texture images provided as URLs.
-- Fixed reading and importing of duplicate sub-features within the same top-level feature.
+- Fixed reading and importing duplicate sub-features within the same top-level feature.
 - Fixed local references to library objects in CityGML exports.
-- Fixed missing sub-features that are referenced from multiple parent features in CityGML exports.
-- Fixed loading of database and IO adapters as external plugins.
+- Fixed missing sub-features referenced from multiple parent features in CityGML exports.
+- Fixed CityJSON export to avoid using newline-delimited `CityJSONSeq` for CityJSON version `1.0`.
+- Fixed loading of database and I/O adapters as external plugins.
 
 ## [1.2.0] - 2025-12-06
 
