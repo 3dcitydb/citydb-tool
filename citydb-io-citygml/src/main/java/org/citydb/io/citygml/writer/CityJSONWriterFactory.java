@@ -25,6 +25,7 @@ import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citygml4j.cityjson.CityJSONContext;
+import org.citygml4j.cityjson.model.CityJSONVersion;
 import org.citygml4j.cityjson.writer.AbstractCityJSONWriter;
 import org.citygml4j.cityjson.writer.CityJSONOutputFactory;
 import org.citygml4j.cityjson.writer.OutputEncoding;
@@ -61,7 +62,9 @@ public class CityJSONWriterFactory {
                     .writeGenericAttributeTypes(formatOptions.isWriteGenericAttributeTypes());
 
             OutputEncoding encoding = getOutputEncoding(options.getEncoding().orElse(null));
-            AbstractCityJSONWriter<?> writer = formatOptions.isJsonLines() ?
+            boolean shouldStream = formatOptions.isJsonLines() && formatOptions.getVersion() != CityJSONVersion.v1_0;
+
+            AbstractCityJSONWriter<?> writer = shouldStream ?
                     factory.createCityJSONFeatureWriter(file.openStream(), encoding) :
                     factory.createCityJSONWriter(file.openStream(), encoding)
                             .withIndent(formatOptions.isPrettyPrint() ? "  " : null);
