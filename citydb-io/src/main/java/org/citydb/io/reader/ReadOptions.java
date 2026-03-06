@@ -25,6 +25,7 @@ import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.io.reader.filter.Filter;
+import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citydb.io.reader.options.InputFormatOptions;
 
 import java.nio.file.Path;
@@ -39,6 +40,8 @@ public class ReadOptions {
     private boolean computeEnvelopes;
     private ConfigObject<InputFormatOptions> formatOptions;
 
+    @JSONField(serialize = false, deserialize = false)
+    private ImplicitGeometryScope implicitGeometryScope;
     @JSONField(serialize = false, deserialize = false)
     private Filter filter;
 
@@ -101,6 +104,15 @@ public class ReadOptions {
 
     public ReadOptions setFormatOptions(ConfigObject<InputFormatOptions> formatOptions) {
         this.formatOptions = formatOptions;
+        return this;
+    }
+
+    public ImplicitGeometryScope getImplicitGeometryScope() {
+        return implicitGeometryScope != null ? implicitGeometryScope : ImplicitGeometryScope.GLOBAL;
+    }
+
+    public ReadOptions setImplicitGeometryScope(ImplicitGeometryScope implicitGeometryScope) {
+        this.implicitGeometryScope = implicitGeometryScope;
         return this;
     }
 

@@ -37,6 +37,7 @@ import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.ReadOptions;
+import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.common.Child;
@@ -94,6 +95,7 @@ public class ModelBuilderHelper {
     private boolean failFast;
     private boolean computeEnvelopes;
     private boolean includeXALSource;
+    private ImplicitGeometryScope implicitGeometryScope;
 
     ModelBuilderHelper(InputFile file, PersistentMapStore store, CityGMLAdapterContext context) {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
@@ -110,6 +112,7 @@ public class ModelBuilderHelper {
         rootSrsName = metadata.getSrsName();
         failFast = options.isFailFast();
         computeEnvelopes = options.isComputeEnvelopes();
+        implicitGeometryScope = options.getImplicitGeometryScope();
         appearanceHelper.initialize(formatOptions);
         return this;
     }
@@ -201,7 +204,16 @@ public class ModelBuilderHelper {
     }
 
     public boolean lookupAndPut(AbstractGeometry geometry) {
-        return geometry.getId() != null && !geometryIdCache.add(geometry.getId());
+        String objectId = geometry.getId();
+        if (objectId != null) {
+            if (implicitGeometryScope == ImplicitGeometryScope.GLOBAL) {
+                return store.getOrCreateMap("implicit-geometries").putIfAbsent(objectId, true) != null;
+            } else {
+                return !geometryIdCache.add(objectId);
+            }
+        }
+
+        return false;
     }
 
     public boolean lookupAndPut(org.citygml4j.core.model.core.Address address) {
