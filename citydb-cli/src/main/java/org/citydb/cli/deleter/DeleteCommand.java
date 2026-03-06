@@ -133,7 +133,7 @@ public class DeleteCommand implements Command {
         } else if (autoCommit) {
             logger.info("Committing delete operation after {} feature(s).", commitAfter);
             deleter.setTransactionMode(Deleter.TransactionMode.AUTO_COMMIT);
-            deleteOptions.setBatchSize(commitAfter);
+            deleteOptions.setCommitAfter(commitAfter);
         }
 
         try {

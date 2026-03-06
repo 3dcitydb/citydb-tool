@@ -31,10 +31,13 @@ import java.util.Optional;
 
 @SerializableConfig(name = "deleteOptions")
 public class DeleteOptions {
+    public static final int DEFAULT_COMMIT_AFTER = 1000;
+
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private DeleteMode mode = DeleteMode.TERMINATE;
     @JSONField(serialize = false, deserialize = false)
     private int numberOfThreads;
+    private int commitAfter = DEFAULT_COMMIT_AFTER;
     private boolean terminateWithSubFeatures = true;
     private OffsetDateTime terminationDate;
     private String updatingPerson;
@@ -56,6 +59,15 @@ public class DeleteOptions {
 
     public DeleteOptions setNumberOfThreads(int numberOfThreads) {
         this.numberOfThreads = numberOfThreads;
+        return this;
+    }
+
+    public int getCommitAfter() {
+        return commitAfter;
+    }
+
+    public DeleteOptions setCommitAfter(int commitAfter) {
+        this.commitAfter = commitAfter;
         return this;
     }
 
