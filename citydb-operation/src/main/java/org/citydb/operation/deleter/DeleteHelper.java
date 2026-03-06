@@ -55,9 +55,7 @@ public class DeleteHelper {
         this.transactionMode = transactionMode;
 
         tableHelper = new TableHelper(this);
-        batchSize = options.getBatchSize() > 0 ?
-                options.getBatchSize() :
-                DeleteOptions.DEFAULT_BATCH_SIZE;
+        batchSize = 1000;
     }
 
     public DatabaseAdapter getAdapter() {

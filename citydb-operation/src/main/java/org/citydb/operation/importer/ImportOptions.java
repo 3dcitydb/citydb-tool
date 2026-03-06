@@ -38,7 +38,6 @@ public class ImportOptions {
     private boolean failFast;
     private String tempDirectory;
     private int numberOfThreads;
-    private int batchSize;
     private String updatingPerson;
     private String reasonForUpdate;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
@@ -76,15 +75,6 @@ public class ImportOptions {
 
     public ImportOptions setNumberOfThreads(int numberOfThreads) {
         this.numberOfThreads = numberOfThreads;
-        return this;
-    }
-
-    public int getBatchSize() {
-        return batchSize;
-    }
-
-    public ImportOptions setBatchSize(int batchSize) {
-        this.batchSize = batchSize;
         return this;
     }
 

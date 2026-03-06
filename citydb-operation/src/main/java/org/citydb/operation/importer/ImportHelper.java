@@ -87,9 +87,7 @@ public class ImportHelper {
         sequenceGenerator = new SequenceGenerator(this);
         transformer = options.getAffineTransform().map(AffineTransformer::of).orElse(null);
         failFast = options.isFailFast();
-        batchSize = options.getBatchSize() > 0 ?
-                options.getBatchSize() :
-                adapter.getSchemaAdapter().getDefaultBatchSize();
+        batchSize = adapter.getSchemaAdapter().getDefaultBatchSize();
     }
 
     public DatabaseAdapter getAdapter() {
