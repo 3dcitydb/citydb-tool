@@ -520,7 +520,7 @@ public class ModelBuilderHelper {
 
     public AddressProperty getAddressProperty(Name name, org.citygml4j.core.model.core.AddressProperty source) throws ModelBuildException {
         if (source != null) {
-            if (source.isSetInlineObject()) {
+            if (source.getObject() != null) {
                 org.citygml4j.core.model.core.Address address = source.getObject();
                 if (lookupAndPut(address)) {
                     return AddressProperty.of(name, address.getId());
@@ -547,7 +547,7 @@ public class ModelBuilderHelper {
 
     public FeatureProperty getFeatureProperty(Name name, AbstractInlineOrByReferenceProperty<? extends AbstractGML> source, RelationType relationType) throws ModelBuildException {
         if (source != null && !AbstractGeometry.class.isAssignableFrom(source.getTargetType())) {
-            if (source.isSetInlineObject()) {
+            if (source.getObject() != null) {
                 AbstractGML object = source.getObject();
                 if (lookupAndPut(object)) {
                     return FeatureProperty.of(name, object.getId(), relationType);
