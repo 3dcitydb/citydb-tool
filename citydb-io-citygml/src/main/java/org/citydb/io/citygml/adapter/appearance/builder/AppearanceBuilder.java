@@ -52,7 +52,7 @@ public class AppearanceBuilder implements ModelBuilder<org.citygml4j.core.model.
         if (source.isSetSurfaceData()) {
             for (AbstractSurfaceDataProperty property : source.getSurfaceData()) {
                 if (property != null) {
-                    if (property.getObject() != null) {
+                    if (property.isSetInlineObject()) {
                         AbstractSurfaceData object = property.getObject();
                         if (helper.lookupAndPut(object)) {
                             target.getSurfaceData().add(SurfaceDataProperty.of(object.getId()));
