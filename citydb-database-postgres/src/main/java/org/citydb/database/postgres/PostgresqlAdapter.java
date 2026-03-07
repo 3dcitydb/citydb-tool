@@ -59,6 +59,7 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     public void setDefaultConnectionProperties(Properties properties) {
         PGProperty.DEFAULT_ROW_FETCH_SIZE.set(properties, 1000);
         PGProperty.REWRITE_BATCHED_INSERTS.set(properties, true);
+        PGProperty.TCP_KEEP_ALIVE.set(properties, true);
     }
 
     @Override
