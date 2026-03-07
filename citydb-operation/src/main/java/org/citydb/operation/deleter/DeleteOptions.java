@@ -37,7 +37,7 @@ public class DeleteOptions {
     private DeleteMode mode = DeleteMode.TERMINATE;
     @JSONField(serialize = false, deserialize = false)
     private int numberOfThreads;
-    private int commitAfter = DEFAULT_COMMIT_AFTER;
+    private int commitAfter;
     private boolean terminateWithSubFeatures = true;
     private OffsetDateTime terminationDate;
     private String updatingPerson;

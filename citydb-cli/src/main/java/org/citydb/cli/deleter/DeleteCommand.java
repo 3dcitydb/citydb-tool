@@ -71,7 +71,7 @@ public class DeleteCommand implements Command {
 
     @CommandLine.Option(names = {"-c", "--commit"}, paramLabel = "<number>",
             description = "Commit after deleting this number of features.")
-    private Integer commitAfter;
+    private int commitAfter;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Metadata options for terminate operations:%n")
@@ -103,7 +103,7 @@ public class DeleteCommand implements Command {
     @Override
     public Integer call() throws ExecutionException {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
-        boolean autoCommit = !preview && commitAfter != null;
+        boolean autoCommit = !preview && commitAfter > 0;
 
         DeleteLogger deleteLogger = new DeleteLogger(autoCommit, databaseManager.getAdapter());
         DeleteOptions deleteOptions = getDeleteOptions();
@@ -129,11 +129,16 @@ public class DeleteCommand implements Command {
 
         if (preview) {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
-            deleter.setTransactionMode(Deleter.TransactionMode.AUTO_ROLLBACK);
+            if (commitAfter > 0) {
+                deleter.setTransactionMode(Deleter.TransactionMode.AUTO_ROLLBACK);
+                deleteOptions.setCommitAfter(commitAfter);
+            }
         } else if (autoCommit) {
             logger.info("Committing delete operation after {} feature(s).", commitAfter);
             deleter.setTransactionMode(Deleter.TransactionMode.AUTO_COMMIT);
             deleteOptions.setCommitAfter(commitAfter);
+        } else {
+            logger.info("Committing delete operation in a single transaction.");
         }
 
         try {
@@ -251,7 +256,7 @@ public class DeleteCommand implements Command {
 
     @Override
     public void preprocess(CommandLine commandLine) {
-        if (commitAfter != null && commitAfter <= 0) {
+        if (Command.hasMatchedOption("--commit", commandSpec) && commitAfter <= 0) {
             throw new CommandLine.ParameterException(commandLine,
                     "Error: The number for --commit must be a positive integer but was '" + commitAfter + "'");
         }
