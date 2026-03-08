@@ -34,17 +34,12 @@ import java.util.*;
 public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
     private final SqlHelper helper;
     private final PreparedStatement stmt;
-    private final int prefixLength;
-    private final Map<Sequence, String> prefixedSequenceNames = new EnumMap<>(Sequence.class);
+    private final String schemaPrefix;
 
     SequenceHelper(Connection connection, DatabaseAdapter adapter) throws SQLException {
         super(connection);
         helper = adapter.getSchemaAdapter().getSqlHelper();
-        String prefix = adapter.getConnectionDetails().getSchema() + ".";
-        prefixLength = prefix.length();
-        for (Sequence sequence : Sequence.values()) {
-            prefixedSequenceNames.put(sequence, prefix + sequence.getName());
-        }
+        schemaPrefix = adapter.getConnectionDetails().getSchema() + ".";
 
         stmt = connection.prepareStatement("select e.key, array_agg(nextval(e.key)) " +
                 "from jsonb_each_text(?::jsonb) as e " +
@@ -58,7 +53,7 @@ public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
         helper.setJsonOrNull(stmt, 1, getJson(counts));
         try (ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                Sequence sequence = Sequence.of(rs.getString(1).substring(prefixLength));
+                Sequence sequence = Sequence.of(rs.getString(1).substring(schemaPrefix.length()));
                 Long[] values = (Long[]) rs.getArray(2).getArray();
                 results.put(sequence, Arrays.asList(values));
             }
@@ -73,7 +68,8 @@ public class SequenceHelper extends org.citydb.database.util.SequenceHelper {
         while (iterator.hasNext()) {
             Map.Entry<Sequence, Integer> entry = iterator.next();
             json.append('"')
-                    .append(prefixedSequenceNames.get(entry.getKey()))
+                    .append(schemaPrefix)
+                    .append(entry.getKey().getName())
                     .append("\":")
                     .append(entry.getValue());
             if (iterator.hasNext()) {
