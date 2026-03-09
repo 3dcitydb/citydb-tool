@@ -71,7 +71,7 @@ public class DeleteCommand implements Command {
 
     @CommandLine.Option(names = {"-c", "--commit"}, paramLabel = "<number>",
             description = "Commit after deleting this number of features.")
-    private int commitAfter;
+    private int commit;
 
     @CommandLine.ArgGroup(exclusive = false,
             heading = "Metadata options for terminate operations:%n")
@@ -103,10 +103,12 @@ public class DeleteCommand implements Command {
     @Override
     public Integer call() throws ExecutionException {
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+
+        DeleteOptions deleteOptions = getDeleteOptions();
+        int commitAfter = deleteOptions.getCommitAfter();
         boolean autoCommit = !preview && commitAfter > 0;
 
         DeleteLogger deleteLogger = new DeleteLogger(autoCommit, databaseManager.getAdapter());
-        DeleteOptions deleteOptions = getDeleteOptions();
         Deleter deleter = Deleter.newInstance()
                 .setDeleteLogger(deleteLogger);
 
@@ -217,6 +219,10 @@ public class DeleteCommand implements Command {
             deleteOptions.setMode(mode == Mode.terminate ? DeleteMode.TERMINATE : DeleteMode.DELETE);
         }
 
+        if (Command.hasMatchedOption("--commit", commandSpec)) {
+            deleteOptions.setCommitAfter(commit);
+        }
+
         if (Command.hasMatchedOption("--no-terminate-all", commandSpec)) {
             deleteOptions.setTerminateWithSubFeatures(terminateAll);
         }
@@ -256,9 +262,9 @@ public class DeleteCommand implements Command {
 
     @Override
     public void preprocess(CommandLine commandLine) {
-        if (Command.hasMatchedOption("--commit", commandSpec) && commitAfter <= 0) {
+        if (Command.hasMatchedOption("--commit", commandSpec) && commit <= 0) {
             throw new CommandLine.ParameterException(commandLine,
-                    "Error: The number for --commit must be a positive integer but was '" + commitAfter + "'");
+                    "Error: The number for --commit must be a positive integer but was '" + commit + "'");
         }
     }
 
