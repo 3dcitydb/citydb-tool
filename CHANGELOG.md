@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-03-09
+
 ### Added
 - Added `ImplicitGeometryScope` reader option to control how implicit geometries are shared between top-level
   features when reading CityGML/CityJSON files.
@@ -83,7 +85,8 @@
 
 This is the initial release of citydb-tool.
 
-[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.2.0..HEAD
+[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.3.0..HEAD
+[1.3.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.0
 [1.2.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.2.0
 [1.1.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.1.0
 [1.0.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.0.0
