@@ -22,31 +22,30 @@ public class FileMetadata {
     }
 
     public static FileMetadata of(CityGMLReader reader) throws CityGMLReadException {
+        reader.hasNext();
+
         FileMetadata metadata = new FileMetadata();
         metadata.encoding = reader.getEncoding();
+        metadata.version = CityGMLVersionHelper.getInstance().getCityGMLVersion(reader.getNamespaces());
 
-        if (reader.hasNext()) {
-            metadata.version = CityGMLVersionHelper.getInstance().getCityGMLVersion(reader.getNamespaces());
-            FeatureInfo featureInfo = reader.getParentInfo();
-            if (featureInfo != null
-                    && featureInfo.getBoundedBy() != null
-                    && featureInfo.getBoundedBy().isSetEnvelope()) {
-                metadata.srsName = featureInfo.getBoundedBy().getEnvelope().getSrsName();
-            }
+        FeatureInfo featureInfo = reader.getParentInfo();
+        if (featureInfo != null
+                && featureInfo.getBoundedBy() != null
+                && featureInfo.getBoundedBy().isSetEnvelope()) {
+            metadata.srsName = featureInfo.getBoundedBy().getEnvelope().getSrsName();
         }
 
         return metadata;
     }
 
     public static FileMetadata of(CityJSONReader reader) throws CityJSONReadException {
-        FileMetadata metadata = new FileMetadata();
+        reader.hasNext();
 
-        if (reader.hasNext()) {
-            if (reader.getMetadata() != null
-                    && reader.getMetadata().getReferenceSystem() != null) {
-                ReferenceSystem referenceSystem = reader.getMetadata().getReferenceSystem();
-                metadata.srsName = referenceSystem.getAuthority() + ":" + referenceSystem.getCode();
-            }
+        FileMetadata metadata = new FileMetadata();
+        if (reader.getMetadata() != null
+                && reader.getMetadata().getReferenceSystem() != null) {
+            ReferenceSystem referenceSystem = reader.getMetadata().getReferenceSystem();
+            metadata.srsName = referenceSystem.getAuthority() + ":" + referenceSystem.getCode();
         }
 
         return metadata;
