@@ -18,6 +18,13 @@ import java.util.List;
 import java.util.Objects;
 
 public class Filter implements org.citydb.io.reader.filter.Filter {
+    public static final Filter ACCEPT_ALL = new Filter() {
+        @Override
+        public Result test(Feature feature) {
+            return Result.ACCEPT;
+        }
+    };
+
     private final List<FilterPredicate> predicates;
     private final long startIndex;
     private final long limit;
@@ -60,16 +67,9 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
         long startIndex = options.getCountLimit().flatMap(CountLimit::getStartIndex).orElse(0L);
         long limit = options.getCountLimit().flatMap(CountLimit::getLimit).orElse(Long.MAX_VALUE);
 
-        return new Filter(predicates, startIndex, limit);
-    }
-
-    public static Filter acceptAll() {
-        return new Filter() {
-            @Override
-            public Result test(Feature feature) {
-                return Result.ACCEPT;
-            }
-        };
+        return !predicates.isEmpty() || startIndex > 0 || limit < Long.MAX_VALUE ?
+                new Filter(predicates, startIndex, limit) :
+                Filter.ACCEPT_ALL;
     }
 
     public boolean isCountWithinLimit() {

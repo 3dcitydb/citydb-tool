@@ -30,6 +30,7 @@ import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.filter.FilterException;
+import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.importer.Importer;
@@ -128,7 +129,10 @@ public abstract class ImportController implements Command {
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
 
         Filter filter = getFilter(importOptions, databaseManager.getAdapter());
-        readOptions.setFilter(filter);
+        readOptions.setFilter(filter)
+                .setImplicitGeometryScope(filter == Filter.ACCEPT_ALL ?
+                        ImplicitGeometryScope.GLOBAL :
+                        ImplicitGeometryScope.TOP_LEVEL_FEATURE);
 
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
         ImportMode importMode = importOptions.getMode();
@@ -237,7 +241,7 @@ public abstract class ImportController implements Command {
             org.citydb.io.reader.options.FilterOptions filterOptions = importOptions.getFilterOptions().orElse(null);
             return filterOptions != null && !filterOptions.isEmpty() ?
                     Filter.of(filterOptions, adapter) :
-                    Filter.acceptAll();
+                    Filter.ACCEPT_ALL;
         } catch (FilterException e) {
             throw new ExecutionException("Failed to build import filter.", e);
         }
