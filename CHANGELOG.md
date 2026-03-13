@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fixed the import of implicit geometries when import filters are used.
+
 ## [1.3.0] - 2026-03-09
 
 ### Added
