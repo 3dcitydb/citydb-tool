@@ -62,9 +62,7 @@ public class ReferenceManager {
     public void resolveReferences() {
         countLatch.await();
         for (CacheType type : CacheType.values()) {
-            if (shouldRun
-                    && store.hasMap(type.ordinal() + "r")
-                    && store.hasMap(type.ordinal() + "t")) {
+            if (shouldRun && store.hasMap(type.ordinal() + "r")) {
                 logger.debug("Resolving local {} references...", type.getLabel());
                 store.withCurrentVersion(() -> {
                     Map<String, Long> targets = store.getOrCreateMap(type.ordinal() + "t");
