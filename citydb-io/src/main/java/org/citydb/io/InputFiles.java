@@ -23,11 +23,11 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 public class InputFiles {
@@ -123,12 +123,19 @@ public class InputFiles {
 
                 // find files matching the pattern
                 PathMatcher matcher = FileSystems.getDefault().getPathMatcher(pattern);
-                try (Stream<Path> stream = Files.walk(path, FileVisitOption.FOLLOW_LINKS)) {
-                    stream.filter(Files::isRegularFile)
-                            .filter(p -> matcher.matches(p.toAbsolutePath().normalize()))
-                            .filter(p -> filter == null || filter.test(p))
-                            .forEach(p -> detect(p, inputFiles, defaultPattern, false));
-                }
+                Files.walkFileTree(path, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE,
+                        new SimpleFileVisitor<>() {
+                            @Override
+                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                                if (attrs.isRegularFile()
+                                        && matcher.matches(file.toAbsolutePath().normalize())
+                                        && (filter == null || filter.test(file))) {
+                                    detect(file, inputFiles, defaultPattern, false);
+                                }
+
+                                return FileVisitResult.CONTINUE;
+                            }
+                        });
             }
         }
 
@@ -187,18 +194,23 @@ public class InputFiles {
 
     private void processZip(Path file, List<InputFile> inputFiles, String pattern) {
         URI uri = URI.create("jar:" + file.toAbsolutePath().toUri());
-        try (FileSystem fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap());
-             Stream<Path> stream = Files.walk(fileSystem.getPath("/"))) {
+        try (FileSystem fileSystem = FileSystems.newFileSystem(uri, Collections.emptyMap())) {
             PathMatcher matcher = fileSystem.getPathMatcher(pattern);
-            stream.filter(Files::isRegularFile)
-                    .filter(p -> matcher.matches(p.toAbsolutePath().normalize()))
-                    .filter(p -> filter == null || filter.test(p))
-                    .forEach(p -> {
-                        MediaType mediaType = getMediaType(p);
+            Files.walkFileTree(fileSystem.getPath("/"), new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if (attrs.isRegularFile()
+                            && matcher.matches(file.toAbsolutePath().normalize())
+                            && (filter == null || filter.test(file))) {
+                        MediaType mediaType = getMediaType(file);
                         if (isSupportedMediaType(mediaType)) {
-                            inputFiles.add(new ZipInputFile(p.toString(), file, uri, mediaType));
+                            inputFiles.add(new ZipInputFile(file.toString(), file, uri, mediaType));
                         }
-                    });
+                    }
+
+                    return FileVisitResult.CONTINUE;
+                }
+            });
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to open ZIP file " + file + ".", e);
         }
