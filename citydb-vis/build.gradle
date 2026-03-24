@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':citydb-io')
+    implementation 'com.openize:drako:26.3.0'
+}
