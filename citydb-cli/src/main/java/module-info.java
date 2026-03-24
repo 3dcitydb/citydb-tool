@@ -2,6 +2,7 @@ module org.citydb.cli {
     requires org.citydb.config;
     requires org.citygml4j.core;
     requires org.citydb.io.citygml;
+    requires org.citydb.vis;
     requires org.apache.logging.log4j.core;
     requires org.apache.logging.log4j.jul;
     requires org.citydb.database.postgres;
@@ -21,7 +22,7 @@ module org.citydb.cli {
     exports org.citydb.cli.exporter;
     exports org.citydb.cli.exporter.citygml;
     exports org.citydb.cli.exporter.cityjson;
-    exports org.citydb.cli.exporter.extension;
+    exports org.citydb.cli.exporter.vis;
     exports org.citydb.cli.exporter.options;
     exports org.citydb.cli.exporter.util;
     exports org.citydb.cli.extension;
@@ -49,6 +50,7 @@ module org.citydb.cli {
     opens org.citydb.cli.exporter to info.picocli;
     opens org.citydb.cli.exporter.citygml to info.picocli;
     opens org.citydb.cli.exporter.cityjson to info.picocli;
+    opens org.citydb.cli.exporter.vis to info.picocli;
     opens org.citydb.cli.exporter.options to info.picocli;
     opens org.citydb.cli.importer to info.picocli;
     opens org.citydb.cli.importer.citygml to info.picocli;
