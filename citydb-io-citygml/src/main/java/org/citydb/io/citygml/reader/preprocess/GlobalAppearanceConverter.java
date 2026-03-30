@@ -9,7 +9,6 @@ import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citygml4j.core.model.appearance.*;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractCityObject;
-import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.model.deprecated.appearance.DeprecatedPropertiesOfParameterizedTexture;
 import org.citygml4j.core.model.deprecated.appearance.TextureAssociationReference;
@@ -17,6 +16,7 @@ import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.citygml4j.core.visitor.ObjectWalker;
 import org.citygml4j.core.visitor.VisitableObject;
 import org.xmlobjects.copy.Copier;
+import org.xmlobjects.copy.CopySession;
 import org.xmlobjects.gml.model.base.AbstractGML;
 import org.xmlobjects.gml.model.base.AbstractInlineOrByReferenceProperty;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GlobalAppearanceConverter {
     private final Copier copier;
     private final Map<String, List<AbstractSurfaceData>> targets = new ConcurrentHashMap<>();
-    private final String ID = "id";
 
     private Mode mode = Mode.TOPLEVEL;
 
@@ -59,12 +58,6 @@ public class GlobalAppearanceConverter {
     void preprocess(List<Appearance> appearances) {
         if (!appearances.isEmpty()) {
             ObjectWalker preprocessor = new ObjectWalker() {
-                private int id;
-
-                @Override
-                public void visit(AbstractFeature feature) {
-                    feature.getLocalProperties().set(ID, id++);
-                }
 
                 @Override
                 public void visit(AbstractInlineOrByReferenceProperty<?> property) {
@@ -142,8 +135,9 @@ public class GlobalAppearanceConverter {
 
     void convertGlobalAppearance(VisitableObject object) {
         if (!targets.isEmpty()) {
-            AppearanceProcessor processor = new AppearanceProcessor(object);
-            object.accept(processor);
+            try (CopySession session = copier.createSession()) {
+                object.accept(new AppearanceProcessor(object, session));
+            }
         }
     }
 
@@ -155,8 +149,10 @@ public class GlobalAppearanceConverter {
 
     private class AppearanceProcessor extends ObjectWalker {
         private final AbstractCityObject topLevelFeature;
+        private final CopySession session;
 
-        AppearanceProcessor(VisitableObject object) {
+        AppearanceProcessor(VisitableObject object, CopySession session) {
+            this.session = session;
             topLevelFeature = object instanceof AbstractCityObject cityObject ?
                     cityObject :
                     object.getParent(AbstractCityObject.class);
@@ -216,44 +212,33 @@ public class GlobalAppearanceConverter {
         }
 
         private Appearance getOrCreateAppearance(AbstractGML target, Appearance globalAppearance) {
-            List<AbstractAppearanceProperty> appearances = target instanceof AbstractCityObject ?
-                    ((AbstractCityObject) target).getAppearances() :
-                    ((ImplicitGeometry) target).getAppearances();
-
-            for (AbstractAppearanceProperty property : appearances) {
-                if (property.getObject() instanceof Appearance appearance) {
-                    if (globalAppearance.getLocalProperties().getAndCompare(ID, appearance.getLocalProperties().get(ID))) {
-                        return appearance;
-                    }
-                }
+            Appearance appearance = session.lookupClone(globalAppearance, Appearance.class);
+            if (appearance != null) {
+                return appearance;
             }
 
-            Appearance appearance = copier.shallowCopy(globalAppearance);
+            List<AbstractAppearanceProperty> appearances = target instanceof AbstractCityObject cityObject ?
+                    cityObject.getAppearances() :
+                    ((ImplicitGeometry) target).getAppearances();
+
+            appearance = copier.shallowCopy(globalAppearance, session);
             appearance.setId(target instanceof ImplicitGeometry ? FeatureHelper.createId() : null);
             appearance.setSurfaceData(null);
             appearance.setLocalProperties(null);
-            appearance.getLocalProperties().set(ID, globalAppearance.getLocalProperties().get(ID));
             appearances.add(new AbstractAppearanceProperty(appearance));
 
             return appearance;
         }
 
         private AbstractSurfaceData getOrCreateSurfaceData(AbstractGML target, Appearance globalAppearance, AbstractSurfaceData globalSurfaceData) {
-            Appearance appearance = getOrCreateAppearance(target, globalAppearance);
-            for (AbstractSurfaceDataProperty property : appearance.getSurfaceData()) {
-                if (property.getObject() != null) {
-                    AbstractSurfaceData surfaceData = property.getObject();
-                    if (globalSurfaceData.getLocalProperties().getAndCompare(ID, surfaceData.getLocalProperties().get(ID))) {
-                        return surfaceData;
-                    }
-                }
+            AbstractSurfaceData surfaceData = session.lookupClone(globalSurfaceData, AbstractSurfaceData.class);
+            if (surfaceData != null) {
+                return surfaceData;
             }
 
-            AbstractSurfaceData surfaceData = copier.shallowCopy(globalSurfaceData);
+            surfaceData = copier.shallowCopy(globalSurfaceData, session);
             surfaceData.setId(null);
             surfaceData.setLocalProperties(null);
-            surfaceData.getLocalProperties().set(ID, globalSurfaceData.getLocalProperties().get(ID));
-            appearance.getSurfaceData().add(new AbstractSurfaceDataProperty(surfaceData));
 
             if (surfaceData instanceof ParameterizedTexture texture) {
                 texture.setTextureParameterizations(null);
@@ -262,6 +247,9 @@ public class GlobalAppearanceConverter {
             } else if (surfaceData instanceof GeoreferencedTexture texture) {
                 texture.setTargets(null);
             }
+
+            Appearance appearance = getOrCreateAppearance(target, globalAppearance);
+            appearance.getSurfaceData().add(new AbstractSurfaceDataProperty(surfaceData));
 
             return surfaceData;
         }
