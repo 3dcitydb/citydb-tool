@@ -48,9 +48,9 @@ public class CityGMLPreprocessor {
         Copier copier = CopierBuilder.newCopier();
         appearanceConverter = new GlobalAppearanceConverter(copier);
         implicitGeometryResolver = new ImplicitGeometryResolver(copier);
-        globalReferenceResolver = new GeometryReferenceResolver(copier);
+        globalReferenceResolver = new GeometryReferenceResolver();
         propertiesProcessor = new DeprecatedPropertiesProcessor(copier);
-        crossLodResolver = new CrossLodReferenceResolver(copier)
+        crossLodResolver = new CrossLodReferenceResolver()
                 .setMode(CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
     }
 
