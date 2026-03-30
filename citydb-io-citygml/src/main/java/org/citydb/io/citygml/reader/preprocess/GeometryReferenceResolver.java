@@ -10,24 +10,24 @@ import org.citygml4j.core.model.core.*;
 import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.citygml4j.core.util.reference.ResolveMode;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.copy.Copier;
 import org.xmlobjects.gml.model.basictypes.Code;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.util.id.DefaultIdCreator;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GeometryReferenceResolver {
-    private final CopyBuilder copyBuilder;
+    private final Copier copier;
     private final Map<String, GeometryReference> references = new ConcurrentHashMap<>();
     private final GeometryProcessor geometryProcessor = new GeometryProcessor();
 
     private boolean createCityObjectRelations;
 
-    GeometryReferenceResolver(CopyBuilder copyBuilder) {
-        this.copyBuilder = copyBuilder;
+    GeometryReferenceResolver(Copier copier) {
+        this.copier = copier;
     }
 
     GeometryReferenceResolver createCityObjectRelations(boolean createCityObjectRelations) {
@@ -108,7 +108,7 @@ public class GeometryReferenceResolver {
                     if (cityObject != null) {
                         String target = reference.getTarget(featureId, childIds.get(cityObject));
                         if (target != null) {
-                            AbstractGeometry geometry = reference.createGeometryFor(featureId, copyBuilder);
+                            AbstractGeometry geometry = reference.createGeometryFor(featureId, copier);
                             property.setInlineObjectIfValid(geometry);
                             property.setHref(null);
 
@@ -195,8 +195,8 @@ public class GeometryReferenceResolver {
         private final Map<Integer, String> geometryIds = new HashMap<>();
         private final Map<String, String> targets = new HashMap<>();
 
-        AbstractGeometry createGeometryFor(int featureId, CopyBuilder copyBuilder) {
-            GeometryCopyBuilder geometryCopyBuilder = new GeometryCopyBuilder(copyBuilder);
+        AbstractGeometry createGeometryFor(int featureId, Copier copier) {
+            GeometryCopyBuilder geometryCopyBuilder = new GeometryCopyBuilder(copier);
             AbstractGeometry copy = geometryCopyBuilder.copy(geometry);
             copy.setId(getOrCreateGeometryId(featureId));
             return copy;

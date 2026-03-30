@@ -53,17 +53,17 @@ import org.citygml4j.core.model.waterbody.WaterBody;
 import org.citygml4j.core.visitor.ObjectWalker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xmlobjects.copy.Copier;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.model.geometry.aggregates.*;
 import org.xmlobjects.gml.model.geometry.complexes.CompositeSurface;
 import org.xmlobjects.gml.model.geometry.primitives.*;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DeprecatedPropertiesProcessor {
-    private final CopyBuilder copyBuilder;
+    private final Copier copier;
     private final DeprecatedPropertiesWalker deprecatedPropertiesWalker = new DeprecatedPropertiesWalker();
     private final LodFilter lodFilter = new LodFilter()
             .setMode(LodFilter.Mode.REMOVE)
@@ -74,8 +74,8 @@ public class DeprecatedPropertiesProcessor {
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
 
-    DeprecatedPropertiesProcessor(CopyBuilder copyBuilder) {
-        this.copyBuilder = copyBuilder;
+    DeprecatedPropertiesProcessor(Copier copier) {
+        this.copier = copier;
     }
 
     boolean isUseLod4AsLod3() {
@@ -750,7 +750,7 @@ public class DeprecatedPropertiesProcessor {
         }
 
         public <S extends T, D extends T, T> D copy(S src, D dest, Class<T> template) {
-            return copyBuilder.shallowCopy(src, dest, template);
+            return copier.shallowCopy(src, dest, template);
         }
     }
 }

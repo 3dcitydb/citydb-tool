@@ -9,17 +9,17 @@ import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.AbstractSpaceBoundary;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.copy.Copier;
 import org.xmlobjects.gml.model.GMLObject;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.util.reference.ReferenceResolver;
 import org.xmlobjects.model.Child;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.*;
 
 public class CrossLodReferenceResolver {
-    private final CopyBuilder copyBuilder;
+    private final Copier copier;
     private Mode mode = Mode.RESOLVE;
     private boolean copyAppearance = true;
 
@@ -28,8 +28,8 @@ public class CrossLodReferenceResolver {
         REMOVE_LOD4_REFERENCES
     }
 
-    CrossLodReferenceResolver(CopyBuilder copyBuilder) {
-        this.copyBuilder = copyBuilder;
+    CrossLodReferenceResolver(Copier copier) {
+        this.copier = copier;
     }
 
     CrossLodReferenceResolver setMode(Mode mode) {
@@ -52,7 +52,7 @@ public class CrossLodReferenceResolver {
         Map<AbstractGeometry, List<GeometryProperty<?>>> references = lodReferenceCollector.process(feature);
         if (!references.isEmpty()) {
             if (mode == Mode.RESOLVE) {
-                GeometryCopyBuilder geometryCopyBuilder = new GeometryCopyBuilder(copyBuilder)
+                GeometryCopyBuilder geometryCopyBuilder = new GeometryCopyBuilder(copier)
                         .copyAppearance(copyAppearance)
                         .withAppearanceHelper(new AppearanceHelper(feature));
                 for (Map.Entry<AbstractGeometry, List<GeometryProperty<?>>> entry : references.entrySet()) {

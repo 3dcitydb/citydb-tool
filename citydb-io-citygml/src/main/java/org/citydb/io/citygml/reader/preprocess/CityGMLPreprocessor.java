@@ -19,8 +19,9 @@ import org.citygml4j.core.visitor.ObjectWalker;
 import org.citygml4j.xml.reader.CityGMLChunk;
 import org.citygml4j.xml.reader.CityGMLInputFactory;
 import org.citygml4j.xml.reader.CityGMLReader;
+import org.xmlobjects.copy.Copier;
+import org.xmlobjects.copy.CopierBuilder;
 import org.xmlobjects.gml.util.reference.ReferenceResolver;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,12 +45,12 @@ public class CityGMLPreprocessor {
     private volatile boolean shouldRun = true;
 
     public CityGMLPreprocessor() {
-        CopyBuilder copyBuilder = new CopyBuilder();
-        appearanceConverter = new GlobalAppearanceConverter(copyBuilder);
-        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder);
-        globalReferenceResolver = new GeometryReferenceResolver(copyBuilder);
-        propertiesProcessor = new DeprecatedPropertiesProcessor(copyBuilder);
-        crossLodResolver = new CrossLodReferenceResolver(copyBuilder)
+        Copier copier = CopierBuilder.newCopier();
+        appearanceConverter = new GlobalAppearanceConverter(copier);
+        implicitGeometryResolver = new ImplicitGeometryResolver(copier);
+        globalReferenceResolver = new GeometryReferenceResolver(copier);
+        propertiesProcessor = new DeprecatedPropertiesProcessor(copier);
+        crossLodResolver = new CrossLodReferenceResolver(copier)
                 .setMode(CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
     }
 
