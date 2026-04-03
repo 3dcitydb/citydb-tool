@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 public class InputFiles {
+    private static final Pattern PATH_ELEMENT_PATTERN = Pattern.compile("[^*?{}!\\[\\]]+");
     private final Collection<String> pathsOrGlobPatterns;
     private final TikaConfig tikaConfig;
     private final Set<String> extensions = new HashSet<>();
@@ -143,7 +144,7 @@ public class InputFiles {
     }
 
     private LinkedList<String> parse(String file) {
-        Matcher matcher = Pattern.compile("[^*?{}!\\[\\]]+").matcher("");
+        Matcher matcher = PATH_ELEMENT_PATTERN.matcher("");
         LinkedList<String> elements = new LinkedList<>();
         Path path = null;
 
