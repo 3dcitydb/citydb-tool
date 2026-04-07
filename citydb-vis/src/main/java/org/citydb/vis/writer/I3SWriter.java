@@ -14,8 +14,11 @@ import org.citydb.vis.scene.SceneLayer;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.model.appearance.*;
+import org.citydb.model.common.ExternalFile;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.*;
+import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 
@@ -78,11 +81,19 @@ public class I3SWriter implements FeatureWriter {
     private final CountLatch countLatch;
     private final ShardedMeshStore meshStore;
     private final AttributeStore attrStore;
+    private final TextureStore textureStore;
     private volatile boolean shouldRun = true;
 
     private final I3SGeometryEncoder geometryEncoder;
     private final I3SJsonSerializer jsonSerializer;
     private final I3SAttributeEncoder attributeEncoder;
+
+    // Diagnostic counters for texture binding
+    private final AtomicLong texDiagHasAppearance = new AtomicLong();
+    private final AtomicLong texDiagHasParamTex = new AtomicLong();
+    private final AtomicLong texDiagHasTexCoords = new AtomicLong();
+    private final AtomicLong texDiagTexCoordMapSize = new AtomicLong();
+    private final AtomicLong texDiagMeshHasTC = new AtomicLong();
 
     public I3SWriter(OutputFile outputFile, WriteOptions options) {
         this.outputFile = outputFile;
@@ -97,6 +108,7 @@ public class I3SWriter implements FeatureWriter {
         try {
             this.meshStore = new ShardedMeshStore(cpuCores);
             this.attrStore = new AttributeStore();
+            this.textureStore = new TextureStore(outputFile);
         } catch (IOException e) {
             throw new RuntimeException("Failed to create disk-backed stores", e);
         }
@@ -148,15 +160,67 @@ public class I3SWriter implements FeatureWriter {
             return CompletableFuture.completedFuture(true);
         }
 
+        // Extract texture coordinates and images from appearances (on caller thread).
+        // Each ParameterizedTexture maps specific LinearRings to UV coordinates
+        // and references a texture image. We track per-ring texture IDs so each
+        // polygon surface gets its own texture in the atlas.
+        Map<LinearRing, List<TextureCoordinate>> texCoordMap = null;
+        Map<LinearRing, Integer> ringTextureMap = null;
+        int textureId = -1;
+        if (feature.hasAppearances()) {
+            texDiagHasAppearance.incrementAndGet();
+            texCoordMap = new IdentityHashMap<>();
+            ringTextureMap = new IdentityHashMap<>();
+            for (AppearanceProperty ap : feature.getAppearances().getAll()) {
+                Appearance appearance = ap.getObject();
+                if (appearance == null) continue;
+                for (SurfaceDataProperty sdp : appearance.getSurfaceData()) {
+                    SurfaceData<?> sd = sdp.getObject().orElse(null);
+                    if (sd instanceof ParameterizedTexture pt) {
+                        texDiagHasParamTex.incrementAndGet();
+                        if (pt.hasTextureCoordinates()) {
+                            texDiagHasTexCoords.incrementAndGet();
+                            // Register this PT's texture image
+                            int ptTextureId = -1;
+                            ExternalFile img = pt.getTextureImage().orElse(null);
+                            if (img != null) {
+                                ptTextureId = textureStore.register(img);
+                                if (textureId < 0) textureId = ptTextureId;
+                            }
+                            // Map each ring to its UV coordinates AND texture ID
+                            Map<LinearRing, List<TextureCoordinate>> ptCoords =
+                                    pt.getTextureCoordinates();
+                            texCoordMap.putAll(ptCoords);
+                            if (ptTextureId >= 0) {
+                                for (LinearRing ring : ptCoords.keySet()) {
+                                    ringTextureMap.put(ring, ptTextureId);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            texDiagTexCoordMapSize.addAndGet(texCoordMap.size());
+            if (texCoordMap.isEmpty()) {
+                texCoordMap = null;
+                ringTextureMap = null;
+            }
+        }
+
         // Capture the geometry list for the async task
         List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
+        final Map<LinearRing, List<TextureCoordinate>> finalTexCoordMap = texCoordMap;
+        final Map<LinearRing, Integer> finalRingTextureMap = ringTextureMap;
+        final int finalTextureId = textureId;
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
         service.execute(() -> {
             try {
                 PolygonTriangulator triangulator = new PolygonTriangulator();
-                TriangleMesh mesh = triangulateGeometries(geomProps, featureId, triangulator);
+                TriangleMesh mesh = triangulateGeometries(geomProps, featureId, triangulator,
+                        finalTexCoordMap, finalRingTextureMap);
                 if (!mesh.isEmpty()) {
+                    if (mesh.hasTexCoords()) texDiagMeshHasTC.incrementAndGet();
                     Envelope env = envelope;
                     if (formatOptions.isClampToGround()) {
                         double minZ = clampMeshToGround(mesh);
@@ -200,7 +264,7 @@ public class I3SWriter implements FeatureWriter {
 
                     // Only compact spatial metadata stays on heap
                     spatialEntries.add(new SpatialEntry(featureId, cx, cy, bbox,
-                            meshHandle, attrOffset));
+                            meshHandle, attrOffset, finalTextureId));
                 }
                 result.complete(true);
             } catch (Throwable e) {
@@ -230,6 +294,14 @@ public class I3SWriter implements FeatureWriter {
             if (!shouldRun || spatialEntries.isEmpty()) {
                 return;
             }
+
+            // Texture diagnostics
+            System.err.println("[I3S-TEX-DIAG] hasAppearance=" + texDiagHasAppearance.get()
+                    + " hasParamTex=" + texDiagHasParamTex.get()
+                    + " hasTexCoords=" + texDiagHasTexCoords.get()
+                    + " texCoordMapEntries=" + texDiagTexCoordMapSize.get()
+                    + " meshHasTC=" + texDiagMeshHasTC.get()
+                    + " textureStoreCount=" + textureStore.getTextureCount());
 
             // --- Phase 1: Prepare data ---
             List<SpatialEntry> entries = new ArrayList<>(spatialEntries);
@@ -264,8 +336,10 @@ public class I3SWriter implements FeatureWriter {
             Set<Integer> meshNodeIndices = merged.meshNodeIndices();
 
             // --- Phase 5: Write output ---
+            boolean hasTextures = textureStore.hasTextures();
             SceneLayer sceneLayer = buildSceneLayer(allNodes, extent);
-            writeI3SFolder(sceneLayer, allNodes, attrFields, globalEntryMap, meshNodeIndices);
+            writeI3SFolder(sceneLayer, allNodes, attrFields, globalEntryMap,
+                    meshNodeIndices, hasTextures);
 
         } catch (Exception e) {
             throw new WriteException("Failed to write I3S scene layer.", e);
@@ -309,7 +383,9 @@ public class I3SWriter implements FeatureWriter {
      */
     private TriangleMesh triangulateGeometries(List<GeometryProperty> geometryProperties,
                                                 long featureId,
-                                                PolygonTriangulator triangulator) {
+                                                PolygonTriangulator triangulator,
+                                                Map<LinearRing, List<TextureCoordinate>> texCoordMap,
+                                                Map<LinearRing, Integer> ringTextureMap) {
         TriangleMesh mesh = new TriangleMesh();
 
         for (GeometryProperty property : geometryProperties) {
@@ -321,7 +397,8 @@ public class I3SWriter implements FeatureWriter {
             switch (geometry.getGeometryType()) {
                 case POLYGON, MULTI_SURFACE, COMPOSITE_SURFACE, SOLID,
                         MULTI_SOLID, COMPOSITE_SOLID, TRIANGULATED_SURFACE -> {
-                    TriangleMesh geomMesh = triangulator.triangulate(geometry, featureId);
+                    TriangleMesh geomMesh = triangulator.triangulate(geometry, featureId,
+                            texCoordMap, ringTextureMap);
                     mesh.merge(geomMesh);
                 }
                 default -> {
@@ -385,13 +462,14 @@ public class I3SWriter implements FeatureWriter {
     private void writeI3SFolder(SceneLayer sceneLayer, List<I3SNode> allNodes,
                                 List<I3SAttributeEncoder.AttrField> attrFields,
                                 Map<Integer, List<SpatialEntry>> globalEntryMap,
-                                Set<Integer> meshNodeIndices) throws IOException {
+                                Set<Integer> meshNodeIndices,
+                                boolean hasTextures) throws IOException {
         Path outputDir = stripI3sSuffix(outputFile.getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
         Files.createDirectories(layerDir);
 
         // Scene layer JSON
-        jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields);
+        jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields, hasTextures);
 
         // Identify nodes with feature data
         List<I3SNode> meshNodes = allNodes.stream()
@@ -418,28 +496,69 @@ public class I3SWriter implements FeatureWriter {
                         Files.createDirectories(nodeDir.resolve("attributes").resolve("f_" + i));
                     }
 
-                    // Load meshes from sharded store, merge, encode geometry
+                    // Load meshes from sharded store, merge
                     TriangleMesh merged = new TriangleMesh();
                     for (SpatialEntry entry : entries) {
                         TriangleMesh m = meshStore.load(entry.meshHandle());
                         merged.merge(m);
                     }
+
+                    // Collect unique per-polygon texture IDs from merged mesh
+                    Set<Integer> uniqueTexIds = new LinkedHashSet<>();
+                    for (int texId : merged.getTriangleTextureIds()) {
+                        if (texId >= 0) uniqueTexIds.add(texId);
+                    }
+
+                    double texScale = formatOptions.getTextureScale();
+
+                    // Compute UV extents per texture for tiling support
+                    Map<Integer, float[]> uvExtents = computeUVExtents(merged);
+
+                    int nodeTextureId = uniqueTexIds.isEmpty() ? -1 : 0;
+                    node.setTextureId(nodeTextureId);
+
+                    // Build texture atlas and remap UVs before geometry encoding
+                    boolean isAtlas = false;
+                    if (uniqueTexIds.size() > 1) {
+                        TextureAtlas atlas = TextureAtlas.build(
+                                uniqueTexIds, textureStore, texScale,
+                                formatOptions.getMaxAtlasSize(), uvExtents);
+                        if (atlas != null) {
+                            atlas.remapUVs(merged);
+                            Path textureDir = nodeDir.resolve("textures");
+                            Files.createDirectories(textureDir);
+                            atlas.write(textureDir.resolve("0"));
+                            isAtlas = true;
+                        }
+                    } else if (!uniqueTexIds.isEmpty()) {
+                        int singleTexId = uniqueTexIds.iterator().next();
+                        Path textureDir = nodeDir.resolve("textures");
+                        Files.createDirectories(textureDir);
+                        textureStore.copyScaled(singleTexId,
+                                textureDir.resolve("0"), texScale);
+                    }
+
                     node.setMesh(merged);
-                    // writeNodeGeometry releases the mesh internally after extracting data
                     geometryEncoder.writeNodeGeometry(layerDir, node);
 
-                    // Reconstruct FeatureData from SpatialEntry + AttributeStore for metadata
                     List<FeatureData> featureDataList = new ArrayList<>(entries.size());
                     for (SpatialEntry entry : entries) {
-                        AttributeStore.FeatureAttrs attrs = attrStore.load(entry.attrOffset());
+                        AttributeStore.FeatureAttrs attrs =
+                                attrStore.load(entry.attrOffset());
                         featureDataList.add(new FeatureData(
                                 entry.id(), attrs.objectId(), attrs.featureType(),
                                 entry.centerX(), entry.centerY(), entry.bbox(),
-                                attrs.attributes(), entry.meshHandle()));
+                                attrs.attributes(), entry.meshHandle(),
+                                entry.textureId()));
                     }
 
                     jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
-                    attributeEncoder.writeNodeAttributes(layerDir, node, attrFields, featureDataList);
+                    attributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
+                            featureDataList);
+
+                    if (nodeTextureId >= 0) {
+                        jsonSerializer.writeSharedResource(layerDir, node, isAtlas);
+                    }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -453,7 +572,36 @@ public class I3SWriter implements FeatureWriter {
         attrStore.close();
 
         // Node pages AFTER geometry so vertex counts are accurate
-        jsonSerializer.writeNodePages(layerDir, allNodes, meshNodeIndices);
+        jsonSerializer.writeNodePages(layerDir, allNodes, meshNodeIndices, hasTextures);
+    }
+
+    /**
+     * Compute per-texture UV extent from the mesh's triangle texture IDs
+     * and vertex UV coordinates. Returns texId → [minU, minV, maxU, maxV].
+     */
+    private static Map<Integer, float[]> computeUVExtents(TriangleMesh mesh) {
+        Map<Integer, float[]> extents = new HashMap<>();
+        List<int[]> triangles = mesh.getTriangles();
+        List<Integer> triTexIds = mesh.getTriangleTextureIds();
+        List<float[]> texCoords = mesh.getTexCoords();
+
+        for (int t = 0; t < triangles.size(); t++) {
+            int texId = triTexIds.get(t);
+            if (texId >= 0) {
+                float[] ext = extents.computeIfAbsent(texId,
+                        k -> new float[]{Float.MAX_VALUE, Float.MAX_VALUE,
+                                -Float.MAX_VALUE, -Float.MAX_VALUE});
+                int[] tri = triangles.get(t);
+                for (int vi : tri) {
+                    float[] uv = texCoords.get(vi);
+                    ext[0] = Math.min(ext[0], uv[0]);
+                    ext[1] = Math.min(ext[1], uv[1]);
+                    ext[2] = Math.max(ext[2], uv[0]);
+                    ext[3] = Math.max(ext[3], uv[1]);
+                }
+            }
+        }
+        return extents;
     }
 
     private Path stripI3sSuffix(Path path) {
@@ -474,5 +622,6 @@ public class I3SWriter implements FeatureWriter {
             attrStore.close();
         } catch (IOException ignored) {
         }
+        textureStore.close();
     }
 }
