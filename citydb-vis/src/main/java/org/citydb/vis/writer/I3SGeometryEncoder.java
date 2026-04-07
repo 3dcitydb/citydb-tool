@@ -21,21 +21,43 @@ import java.util.*;
 /**
  * Encodes I3S node meshes into binary geometry buffers.
  * Handles vertex welding, degenerate triangle removal, and ENU-to-ECEF normal transformation.
- * Produces both raw (buffer 0) and Draco-compressed (buffer 1) geometry.
+ * Produces both raw and Draco-compressed geometry.
+ * <p>
+ * When textures are present (mesh has texCoords), produces dual-buffer layout:
+ * <ul>
+ *   <li>geometries/0 — raw binary (position, normal, uv0, featureId, faceRange)</li>
+ *   <li>geometries/1 — Draco compressed (position, normal, uv0, feature-index)</li>
+ * </ul>
+ * When no textures, keeps the single-buffer Draco-only layout for compatibility.
  */
 class I3SGeometryEncoder {
-    /** Unique ID assigned to the feature-index Draco attribute, used for metadata injection. */
-    private static final short FEATURE_INDEX_UNIQUE_ID = 2;
+    /**
+     * Unique ID for the feature-index Draco attribute (used for metadata injection).
+     * Must match the attribute's actual index in the Draco file.
+     * - Without UV: POSITION(0), NORMAL(1), GENERIC(2) → uniqueId=2
+     * - With UV:    POSITION(0), TEX_COORD(1), GENERIC(2) → uniqueId=2
+     *   (Normal omitted from Draco when textured — CesiumJS generates normals)
+     */
+    private static final short FEATURE_INDEX_UID = 2;
 
     void writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
+        boolean hasTexCoords = mesh.hasTexCoords();
+
+        // Sync node texture state with actual mesh data: if mesh has no UVs,
+        // clear the texture flag so node pages reference the correct geometry
+        // definition (0=no uv0 vs 1=with uv0).
+        if (!hasTexCoords) {
+            node.setTextureId(-1);
+        }
 
         BoundingVolume mbs = node.getMbs();
         double centerX = mbs != null ? mbs.getCenterX() : 0;
         double centerY = mbs != null ? mbs.getCenterY() : 0;
         double centerZ = mbs != null ? mbs.getCenterZ() : 0;
 
-        // Weld vertex positions using spatial hash grid — O(N) instead of O(N²)
+        // Weld vertex positions using spatial hash grid — O(N) instead of O(N²).
+        // UV-aware: vertices with different UVs are NOT welded (texture seam preservation).
         float[][] weldedPositions = weldVertexPositions(mesh, centerX, centerY, centerZ);
 
         // Filter out degenerate triangles (welding may collapse vertices)
@@ -76,9 +98,10 @@ class I3SGeometryEncoder {
             faceRanges.add(new int[]{start, validTriIndices.size() - 1});
         }
 
-        // Collect positions and ECEF normals into arrays (shared by raw and Draco)
+        // Collect positions, ECEF normals, and UVs into arrays (shared by raw and Draco)
         float[][] outPositions = new float[vertexCount][];
         float[][] outNormals = new float[vertexCount][3];
+        float[][] outUVs = hasTexCoords ? new float[vertexCount][] : null;
         int idx = 0;
         for (int ti : validTriIndices) {
             int base = ti * 3;
@@ -90,11 +113,14 @@ class I3SGeometryEncoder {
                 outNormals[idx][0] = (float) (-sinLon * ne - sinLat * cosLon * nn + cosLat * cosLon * nu);
                 outNormals[idx][1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
                 outNormals[idx][2] = (float) (cosLat * nn + sinLat * nu);
+                if (outUVs != null) {
+                    outUVs[idx] = mesh.getTexCoords().get(tri[j]);
+                }
                 idx++;
             }
         }
 
-        // Release source mesh — all needed data is now in outPositions/outNormals
+        // Release source mesh — all needed data is now in output arrays
         node.setMesh(null);
 
         // Compute per-vertex feature index (for Draco)
@@ -115,22 +141,29 @@ class I3SGeometryEncoder {
         triFeatureIds = null;
         validTriIndices = null;
 
-        // Write raw geometry to geometries/1 (backup, not declared) — must run
-        // before Draco because writeDracoGeometry nulls array entries.
-        writeRawGeometry(layerDir, node, outPositions, outNormals, faceRanges);
+        // Dual-buffer layout for both textured and untextured:
+        // geometries/0 = raw, geometries/1 = Draco
+        // Matches geometryDefinitions where buffer[0]=raw, buffer[1]=Draco
+        writeRawGeometry(layerDir, node, outPositions, outNormals,
+                hasTexCoords ? outUVs : null, faceRanges, "0");
 
-        // Write Draco geometry to geometries/0 (declared in geometryDefinitions).
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
-                vertexFeatureIndices, numTriangles);
+                hasTexCoords ? outUVs : null,
+                vertexFeatureIndices, numTriangles, "1");
+
         outPositions = null;
         outNormals = null;
+        outUVs = null;
     }
 
     private void writeRawGeometry(Path layerDir, I3SNode node,
                                   float[][] positions, float[][] normals,
-                                  List<int[]> faceRanges) throws IOException {
+                                  float[][] uvs,
+                                  List<int[]> faceRanges,
+                                  String bufferName) throws IOException {
         int vertexCount = positions.length;
-        int bufferSize = 8 + vertexCount * 12 + vertexCount * 12
+        int uvSize = uvs != null ? vertexCount * 8 : 0; // Float32 x 2 per vertex
+        int bufferSize = 8 + vertexCount * 12 + vertexCount * 12 + uvSize
                 + faceRanges.size() * 8 + faceRanges.size() * 8;
         ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
@@ -150,6 +183,14 @@ class I3SGeometryEncoder {
             buffer.putFloat(n[2]);
         }
 
+        // UV coordinates (only when textures present)
+        if (uvs != null) {
+            for (float[] uv : uvs) {
+                buffer.putFloat(uv[0]);
+                buffer.putFloat(uv[1]);
+            }
+        }
+
         // Feature IDs: UInt64 per feature (0-based sequential index)
         for (int i = 0; i < faceRanges.size(); i++) {
             buffer.putLong(i);
@@ -162,25 +203,25 @@ class I3SGeometryEncoder {
         }
 
         Files.write(layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
-                .resolve("geometries").resolve("1"), buffer.array());
+                .resolve("geometries").resolve(bufferName), buffer.array());
     }
 
     /**
-     * Encode geometry using Draco compression and write to geometries/1.
+     * Encode geometry using Draco compression.
      * Attributes are added in this order to match the compressedAttributes
-     * declaration in geometryDefinitions: position, normal, feature-index.
+     * declaration in geometryDefinitions: position, normal, uv0, feature-index.
      */
     private void writeDracoGeometry(Path layerDir, I3SNode node,
                                     double centerLatDeg,
                                     float[][] positions, float[][] normals,
-                                    int[] featureIndices, int numTriangles) throws IOException {
+                                    float[][] uvs,
+                                    int[] featureIndices, int numTriangles,
+                                    String bufferName) throws IOException {
         int numVertices = positions.length;
+        boolean hasUV = uvs != null;
 
         // Draco uses uniform quantization for POSITION — the largest axis range
-        // determines the grid.  Our positions are Float32 offsets where X/Y are in
-        // degrees (~0.001) and Z is in meters (~300).  Without scaling, X/Y collapse.
-        // Scale X/Y to meters so all axes share a comparable range.
-        // CesiumJS will multiply decoded positions by i3s-scale_x/y to convert back.
+        // determines the grid.  Scale X/Y to meters so all axes share a comparable range.
         double scaleX = 111_320.0 * Math.cos(Math.toRadians(centerLatDeg));
         double scaleY = 111_320.0;
 
@@ -200,17 +241,31 @@ class I3SGeometryEncoder {
         dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.POSITION, posVectors));
         posVectors = null;
 
-        // Normal attribute — same pattern
-        Vector3[] normVectors = new Vector3[numVertices];
-        for (int i = 0; i < numVertices; i++) {
-            normVectors[i] = new Vector3(normals[i][0], normals[i][1], normals[i][2]);
-            normals[i] = null;
+        // Include normal in Draco only for untextured nodes.
+        // For textured nodes, CesiumJS generates normals from geometry (matching SF reference).
+        if (!hasUV) {
+            Vector3[] normVectors = new Vector3[numVertices];
+            for (int i = 0; i < numVertices; i++) {
+                normVectors[i] = new Vector3(normals[i][0], normals[i][1], normals[i][2]);
+            }
+            dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.NORMAL, normVectors));
         }
-        dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.NORMAL, normVectors));
-        normVectors = null;
+
+        // UV attribute (TEX_COORD) — CesiumJS auto-maps TEX_COORD → "uv0s"
+        if (hasUV) {
+            Vector2[] uvVectors = new Vector2[numVertices];
+            for (int i = 0; i < numVertices; i++) {
+                uvVectors[i] = new Vector2(uvs[i][0], uvs[i][1]);
+                uvs[i] = null;
+            }
+            dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.TEX_COORD, uvVectors));
+            uvVectors = null;
+        }
 
         // Feature-index attribute (GENERIC, INT32, 1 component per vertex).
         // Set uniqueId explicitly so we can reference it in injected metadata.
+        // The uniqueId must match the attribute's position in the Draco file.
+        short featureIndexUniqueId = FEATURE_INDEX_UID;
         DataBuffer intBuffer = new DataBuffer();
         intBuffer.setCapacity(numVertices * 4);
         for (int i = 0; i < numVertices; i++) {
@@ -219,7 +274,7 @@ class I3SGeometryEncoder {
         PointAttribute featureAttr = new PointAttribute(
                 AttributeType.GENERIC, DataType.INT32, 1, false, 4, 0, intBuffer);
         featureAttr.setNumUniqueEntries(numVertices);
-        featureAttr.setUniqueId(FEATURE_INDEX_UNIQUE_ID);
+        featureAttr.setUniqueId(featureIndexUniqueId);
         dracoMesh.addAttribute(featureAttr);
 
         // Faces: triangle soup — sequential indices (0,1,2), (3,4,5), ...
@@ -229,18 +284,20 @@ class I3SGeometryEncoder {
 
         DracoEncodeOptions options = new DracoEncodeOptions();
         options.setPositionBits(14);
-        options.setNormalBits(10);
+        if (!hasUV) {
+            options.setNormalBits(10);
+        }
+        if (hasUV) {
+            options.setTextureCoordinateBits(12);
+        }
         options.setCompressionLevel(DracoCompressionLevel.STANDARD);
 
         try {
             byte[] compressed = Draco.encode(dracoMesh, options);
-            // The Drako library does not encode per-attribute metadata.
-            // CesiumJS requires "i3s-attribute-type": "feature-index" metadata
-            // on the GENERIC attribute to identify it for feature picking.
-            // Inject the metadata section into the encoded Draco binary.
-            compressed = injectDracoMetadata(compressed, 1.0 / scaleX, 1.0 / scaleY);
+            compressed = injectDracoMetadata(compressed, 1.0 / scaleX, 1.0 / scaleY,
+                    featureIndexUniqueId);
             Files.write(layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
-                    .resolve("geometries").resolve("0"), compressed);
+                    .resolve("geometries").resolve(bufferName), compressed);
         } catch (DrakoException e) {
             throw new IOException("Draco encoding failed for node " + node.getIndex(), e);
         }
@@ -266,8 +323,9 @@ class I3SGeometryEncoder {
      * </ul>
      */
     private static byte[] injectDracoMetadata(byte[] dracoData,
-                                              double invScaleX, double invScaleY) {
-        byte[] metadataSection = buildMetadataSection(invScaleX, invScaleY);
+                                              double invScaleX, double invScaleY,
+                                              short featureIndexUniqueId) {
+        byte[] metadataSection = buildMetadataSection(invScaleX, invScaleY, featureIndexUniqueId);
 
         // Set the metadata flag in the header (flags field is at offset 9-10, LE)
         short flags = (short) (((dracoData[10] & 0xFF) << 8) | (dracoData[9] & 0xFF));
@@ -303,7 +361,8 @@ class I3SGeometryEncoder {
      *     varint  num_sub_metadata
      * </pre>
      */
-    private static byte[] buildMetadataSection(double invScaleX, double invScaleY) {
+    private static byte[] buildMetadataSection(double invScaleX, double invScaleY,
+                                                short featureIndexUniqueId) {
         byte[] attrTypeKey = "i3s-attribute-type".getBytes(StandardCharsets.UTF_8);
         byte[] attrTypeVal = "feature-index".getBytes(StandardCharsets.UTF_8);
         byte[] scaleXKey = "i3s-scale_x".getBytes(StandardCharsets.UTF_8);
@@ -315,8 +374,6 @@ class I3SGeometryEncoder {
         ByteBuffer buf = ByteBuffer.allocate(256);
 
         // --- 2 attribute metadata entries ---
-        // CesiumJS reads i3s-scale_x/y and i3s-attribute-type from
-        // per-attribute metadata (GetAttributeMetadata), not geometry-level.
         buf.put(encodeVarint(2));
 
         // Attribute 0 (POSITION, unique_id=0): scale factors
@@ -332,8 +389,8 @@ class I3SGeometryEncoder {
         buf.put(scaleYVal);
         buf.put(encodeVarint(0)); // 0 sub-metadata
 
-        // Attribute 2 (GENERIC, unique_id=2): feature-index type
-        buf.put(encodeVarint(FEATURE_INDEX_UNIQUE_ID));
+        // Attribute N (GENERIC): feature-index type
+        buf.put(encodeVarint(featureIndexUniqueId));
         buf.put(encodeVarint(1)); // 1 entry
         buf.put(encodeVarint(attrTypeKey.length));
         buf.put(attrTypeKey);
@@ -359,7 +416,6 @@ class I3SGeometryEncoder {
         if (value < 0x80) {
             return new byte[]{(byte) value};
         }
-        // For values ≥ 128, encode multi-byte varint
         byte[] tmp = new byte[5];
         int pos = 0;
         int v = value;
@@ -377,6 +433,10 @@ class I3SGeometryEncoder {
      * Weld vertex positions: find vertices within 2cm of each other and map
      * them to the same Float32 position. Uses a spatial hash grid for O(N)
      * performance instead of O(N²) brute force.
+     * <p>
+     * UV-aware: two vertices are only welded if they share the same position
+     * AND the same UV coordinates (within tolerance). This preserves texture
+     * seams where adjacent polygons meet with different UVs.
      */
     private float[][] weldVertexPositions(TriangleMesh mesh, double centerX,
                                           double centerY, double centerZ) {
@@ -384,8 +444,11 @@ class I3SGeometryEncoder {
         double scaleY = 111_320.0;
         float weldTolerance = 0.02f; // 2cm
         float weldTolerance2 = weldTolerance * weldTolerance;
+        boolean hasUV = mesh.hasTexCoords();
+        float uvTolerance = 0.001f; // UV tolerance for seam preservation
 
         List<double[]> positions = mesh.getPositions();
+        List<float[]> texCoords = mesh.getTexCoords();
         int posCount = positions.size();
 
         float[][] f32 = new float[posCount][3];
@@ -424,6 +487,15 @@ class I3SGeometryEncoder {
                             float ey = mPos[i][1] - mPos[j][1];
                             float ez = mPos[i][2] - mPos[j][2];
                             if (ex * ex + ey * ey + ez * ez < weldTolerance2) {
+                                // UV-aware: only weld if UVs also match
+                                if (hasUV) {
+                                    float[] uvI = texCoords.get(i);
+                                    float[] uvJ = texCoords.get(j);
+                                    if (Math.abs(uvI[0] - uvJ[0]) > uvTolerance
+                                            || Math.abs(uvI[1] - uvJ[1]) > uvTolerance) {
+                                        continue; // Different UVs → texture seam, don't weld
+                                    }
+                                }
                                 remap[i] = j;
                                 break outer;
                             }

@@ -39,6 +39,19 @@ public class VisExportCommand extends ExportController {
                     "Useful when no terrain is loaded in the viewer.")
     private boolean clampToGround;
 
+    @CommandLine.Option(names = "--texture-scale", paramLabel = "<factor>",
+            defaultValue = "1.0",
+            description = "Texture resolution scale factor between 0.01 and 1.0 (default: ${DEFAULT-VALUE}). " +
+                    "Lower values reduce texture size and improve loading speed in the viewer.")
+    private double textureScale;
+
+    @CommandLine.Option(names = "--max-atlas-size", paramLabel = "<pixels>",
+            defaultValue = "8192",
+            description = "Maximum texture atlas dimension in pixels (default: ${DEFAULT-VALUE}). " +
+                    "Higher values preserve texture quality for buildings with many textures. " +
+                    "Common GPU limits: 4096 (old mobile), 8192 (desktop), 16384 (high-end).")
+    private int maxAtlasSize;
+
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
@@ -75,6 +88,14 @@ public class VisExportCommand extends ExportController {
 
         if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
             options.setClampToGround(clampToGround);
+        }
+
+        if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
+            options.setTextureScale(textureScale);
+        }
+
+        if (Command.hasMatchedOption("--max-atlas-size", commandSpec)) {
+            options.setMaxAtlasSize(maxAtlasSize);
         }
 
         return options;

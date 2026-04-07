@@ -91,6 +91,9 @@ class MeshStore implements Closeable {
      *   int32  vertexCount
      *   float64[vc*3]  positions (x,y,z interleaved)
      *   float32[vc*3]  normals   (nx,ny,nz interleaved)
+     *   byte   hasTexCoords      (0 or 1)
+     *   if hasTexCoords:
+     *     float32[vc*2]  texCoords (u,v interleaved)
      *   int32  triangleCount
      *   int32[tc*3]    triangles (v0,v1,v2 interleaved)
      *   int64[tc]      featureIds
@@ -99,12 +102,16 @@ class MeshStore implements Closeable {
     private static ByteBuffer serialize(TriangleMesh mesh) {
         List<double[]> positions = mesh.getPositions();
         List<float[]> normals = mesh.getNormals();
+        List<float[]> texCoords = mesh.getTexCoords();
         List<int[]> triangles = mesh.getTriangles();
         List<Long> featureIds = mesh.getFeatureIds();
+        boolean hasTC = mesh.hasTexCoords();
 
         int vc = positions.size();
         int tc = triangles.size();
-        int dataSize = 4 + vc * 24 + vc * 12 + 4 + tc * 12 + tc * 8;
+        int dataSize = 4 + vc * 24 + vc * 12 + 1
+                + (hasTC ? vc * 8 : 0)
+                + 4 + tc * 12 + tc * 8 + tc * 4;
 
         ByteBuffer buf = ByteBuffer.allocate(4 + dataSize).order(ByteOrder.LITTLE_ENDIAN);
         buf.putInt(dataSize);
@@ -119,6 +126,13 @@ class MeshStore implements Closeable {
             buf.putFloat(n[1]);
             buf.putFloat(n[2]);
         }
+        buf.put((byte) (hasTC ? 1 : 0));
+        if (hasTC) {
+            for (float[] uv : texCoords) {
+                buf.putFloat(uv[0]);
+                buf.putFloat(uv[1]);
+            }
+        }
         buf.putInt(tc);
         for (int[] t : triangles) {
             buf.putInt(t[0]);
@@ -127,6 +141,10 @@ class MeshStore implements Closeable {
         }
         for (long fid : featureIds) {
             buf.putLong(fid);
+        }
+        List<Integer> triTexIds = mesh.getTriangleTextureIds();
+        for (int texId : triTexIds) {
+            buf.putInt(texId);
         }
 
         buf.flip();
@@ -144,6 +162,20 @@ class MeshStore implements Closeable {
         for (int i = 0; i < vc; i++) {
             normals.add(new float[]{buf.getFloat(), buf.getFloat(), buf.getFloat()});
         }
+        boolean hasTC = buf.get() != 0;
+        if (hasTC) {
+            mesh.setHasTexCoords(true);
+        }
+        List<float[]> texCoords = mesh.getTexCoords();
+        if (hasTC) {
+            for (int i = 0; i < vc; i++) {
+                texCoords.add(new float[]{buf.getFloat(), buf.getFloat()});
+            }
+        } else {
+            for (int i = 0; i < vc; i++) {
+                texCoords.add(new float[]{0f, 0f});
+            }
+        }
         int tc = buf.getInt();
         List<int[]> triangles = mesh.getTriangles();
         List<Long> featureIds = mesh.getFeatureIds();
@@ -152,6 +184,10 @@ class MeshStore implements Closeable {
         }
         for (int i = 0; i < tc; i++) {
             featureIds.add(buf.getLong());
+        }
+        List<Integer> triTexIds = mesh.getTriangleTextureIds();
+        for (int i = 0; i < tc; i++) {
+            triTexIds.add(buf.getInt());
         }
         return mesh;
     }
