@@ -227,8 +227,19 @@ class I3SNodeBuilder {
 
     private static void setLodThresholds(I3SNode node,
                                          Map<Integer, List<SpatialEntry>> nodeEntryMap) {
-        boolean hasFeatures = nodeEntryMap.containsKey(node.getIndex());
-        node.setLodThreshold(hasFeatures ? 0 : 65536);
+        // maxScreenThresholdSQ: when screen-space area (px²) exceeds this, refine to children.
+        // Leaf nodes (have geometry, no children): set HIGH threshold so they always display
+        //   — no children to refine to, so a large value means "always show."
+        // Internal nodes (no geometry, have children): set HIGH threshold so they eagerly
+        //   refine to children that contain the actual geometry.
+        boolean isLeaf = node.getChildren().isEmpty();
+        if (isLeaf) {
+            // Leaf: large threshold = always visible (never needs refinement)
+            node.setLodThreshold(131072);
+        } else {
+            // Internal: large threshold = always refine to show children
+            node.setLodThreshold(65536);
+        }
 
         for (I3SNode child : node.getChildren()) {
             setLodThresholds(child, nodeEntryMap);

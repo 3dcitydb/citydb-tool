@@ -26,6 +26,7 @@ public class I3SNode {
     private int featureCount;
     private double lodThreshold;
     private int outputVertexCount = -1;
+    private int textureId = -1;
 
     public I3SNode(int index, int level) {
         this.index = index;
@@ -121,6 +122,18 @@ public class I3SNode {
 
     public void setOutputVertexCount(int count) {
         this.outputVertexCount = count;
+    }
+
+    public int getTextureId() {
+        return textureId;
+    }
+
+    public void setTextureId(int textureId) {
+        this.textureId = textureId;
+    }
+
+    public boolean hasTexture() {
+        return textureId >= 0;
     }
 
     public void updateBoundingVolume() {

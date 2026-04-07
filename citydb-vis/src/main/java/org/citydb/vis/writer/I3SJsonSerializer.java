@@ -19,12 +19,13 @@ import java.util.UUID;
 
 /**
  * Writes all JSON files for an I3S scene layer: the scene layer descriptor,
- * node pages, and per-node feature data.
+ * node pages, per-node feature data, and shared resources.
  */
 class I3SJsonSerializer {
 
     void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
-                             List<I3SAttributeEncoder.AttrField> attrFields) throws IOException {
+                             List<I3SAttributeEncoder.AttrField> attrFields,
+                             boolean hasTextures) throws IOException {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
         json.append("  \"id\": 0,\n");
@@ -32,6 +33,12 @@ class I3SJsonSerializer {
         json.append("  \"name\": \"").append(escapeJson(sceneLayer.getName())).append("\",\n");
         json.append("  \"description\": \"").append(escapeJson(sceneLayer.getDescription())).append("\",\n");
         json.append("  \"layerType\": \"").append(SceneLayer.LAYER_TYPE).append("\",\n");
+
+        json.append("  \"heightModelInfo\": {\n");
+        json.append("    \"heightModel\": \"gravity_related_height\",\n");
+        json.append("    \"vertCRS\": \"EGM96_Geoid\",\n");
+        json.append("    \"heightUnit\": \"meter\"\n");
+        json.append("  },\n");
 
         json.append("  \"spatialReference\": {\n");
         json.append("    \"wkid\": ").append(sceneLayer.getWkid()).append(",\n");
@@ -42,7 +49,7 @@ class I3SJsonSerializer {
         json.append("    \"id\": \"").append(UUID.randomUUID()).append("\",\n");
         json.append("    \"profile\": \"meshpyramids\",\n");
         json.append("    \"version\": \"").append(SceneLayer.I3S_VERSION).append("\",\n");
-        json.append("    \"resourcePattern\": [\"3dNodeIndexDocument\", \"Geometry\", \"Attributes\"],\n");
+        json.append("    \"resourcePattern\": [\"3dNodeIndexDocument\", \"SharedResource\", \"Geometry\", \"Attributes\"],\n");
         json.append("    \"rootNode\": \"./nodes/0\",\n");
         double[] storeExtent = sceneLayer.getExtent();
         if (storeExtent != null) {
@@ -54,6 +61,9 @@ class I3SJsonSerializer {
         json.append("    \"indexCRS\": \"http://www.opengis.net/def/crs/EPSG/0/4326\",\n");
         json.append("    \"vertexCRS\": \"http://www.opengis.net/def/crs/EPSG/0/4326\",\n");
         json.append("    \"normalReferenceFrame\": \"earth-centered\",\n");
+        if (hasTextures) {
+            json.append("    \"textureEncoding\": [\"image/jpeg\"],\n");
+        }
         json.append("    \"lodType\": \"MeshPyramid\",\n");
         json.append("    \"lodModel\": \"node-switching\",\n");
         json.append("    \"defaultGeometrySchema\": {\n");
@@ -63,10 +73,19 @@ class I3SJsonSerializer {
         json.append("        {\"property\": \"featureCount\", \"type\": \"UInt32\"}\n");
         json.append("      ],\n");
         json.append("      \"topology\": \"PerAttributeArray\",\n");
-        json.append("      \"ordering\": [\"position\", \"normal\"],\n");
+        if (hasTextures) {
+            json.append("      \"ordering\": [\"position\", \"normal\", \"uv0\"],\n");
+        } else {
+            json.append("      \"ordering\": [\"position\", \"normal\"],\n");
+        }
         json.append("      \"vertexAttributes\": {\n");
         json.append("        \"position\": {\"valueType\": \"Float32\", \"valuesPerElement\": 3},\n");
-        json.append("        \"normal\": {\"valueType\": \"Float32\", \"valuesPerElement\": 3}\n");
+        if (hasTextures) {
+            json.append("        \"normal\": {\"valueType\": \"Float32\", \"valuesPerElement\": 3},\n");
+            json.append("        \"uv0\": {\"valueType\": \"Float32\", \"valuesPerElement\": 2}\n");
+        } else {
+            json.append("        \"normal\": {\"valueType\": \"Float32\", \"valuesPerElement\": 3}\n");
+        }
         json.append("      },\n");
         json.append("      \"featureAttributeOrder\": [\"id\", \"faceRange\"],\n");
         json.append("      \"featureAttributes\": {\n");
@@ -77,22 +96,75 @@ class I3SJsonSerializer {
         json.append("    \"geometryEncoding\": \"application/octet-stream\"\n");
         json.append("  },\n");
 
-        // Geometry definitions — Draco at index 0 (only declared buffer).
-        // CesiumJS _findBestGeometryBuffers fallback hardcodes bufferIndex=0,
-        // so the Draco buffer must be at index 0. The decode() function checks
-        // for "DRACO" magic bytes and uses Draco-only decoding (mutually
-        // exclusive with the binary decoder), so no raw buffer is needed here.
-        json.append("  \"geometryDefinitions\": [{\n");
-        json.append("    \"geometryBuffers\": [{\n");
-        json.append("      \"compressedAttributes\": {\n");
-        json.append("        \"encoding\": \"draco\",\n");
-        json.append("        \"attributes\": [\"position\", \"normal\", \"feature-index\"]\n");
-        json.append("      }\n");
-        json.append("    }]\n");
-        json.append("  }],\n");
+        // Geometry definitions
+        // Definition 0: dual buffer, no uv0 (for untextured nodes)
+        // Definition 1: dual buffer with uv0 (for textured nodes, only when hasTextures)
+        json.append("  \"geometryDefinitions\": [\n");
+        // Definition 0: dual buffer (raw + Draco), no uv0
+        json.append("    {\n");
+        json.append("      \"geometryBuffers\": [\n");
+        json.append("        {\n");
+        json.append("          \"offset\": 8,\n");
+        json.append("          \"position\": {\"type\": \"Float32\", \"component\": 3},\n");
+        json.append("          \"normal\": {\"type\": \"Float32\", \"component\": 3},\n");
+        json.append("          \"featureId\": {\"type\": \"UInt64\", \"component\": 1, \"binding\": \"per-feature\"},\n");
+        json.append("          \"faceRange\": {\"type\": \"UInt32\", \"component\": 2, \"binding\": \"per-feature\"}\n");
+        json.append("        },\n");
+        json.append("        {\n");
+        json.append("          \"compressedAttributes\": {\n");
+        json.append("            \"encoding\": \"draco\",\n");
+        json.append("            \"attributes\": [\"position\", \"normal\", \"feature-index\"]\n");
+        json.append("          }\n");
+        json.append("        }\n");
+        json.append("      ]\n");
+        if (hasTextures) {
+            json.append("    },\n");
+            // Definition 1: dual buffer (raw + Draco) with uv0
+            json.append("    {\n");
+            json.append("      \"geometryBuffers\": [\n");
+            json.append("        {\n");
+            json.append("          \"offset\": 8,\n");
+            json.append("          \"position\": {\"type\": \"Float32\", \"component\": 3},\n");
+            json.append("          \"normal\": {\"type\": \"Float32\", \"component\": 3},\n");
+            json.append("          \"uv0\": {\"type\": \"Float32\", \"component\": 2},\n");
+            json.append("          \"featureId\": {\"type\": \"UInt64\", \"component\": 1, \"binding\": \"per-feature\"},\n");
+            json.append("          \"faceRange\": {\"type\": \"UInt32\", \"component\": 2, \"binding\": \"per-feature\"}\n");
+            json.append("        },\n");
+            json.append("        {\n");
+            json.append("          \"compressedAttributes\": {\n");
+            json.append("            \"encoding\": \"draco\",\n");
+            json.append("            \"attributes\": [\"position\", \"uv0\", \"feature-index\"]\n");
+            json.append("          }\n");
+            json.append("        }\n");
+            json.append("      ]\n");
+        }
+        json.append("    }\n");
+        json.append("  ],\n");
 
-        // Material: doubleSided ensures both front and back faces are rendered
-        json.append("  \"materialDefinitions\": [{\"doubleSided\": true}],\n");
+        // Texture set definitions (only when textures present)
+        if (hasTextures) {
+            json.append("  \"textureSetDefinitions\": [{\n");
+            json.append("    \"formats\": [{\"name\": \"0\", \"format\": \"jpg\"}]\n");
+            json.append("  }],\n");
+        }
+
+        // Material definitions (matching SF reference format)
+        if (hasTextures) {
+            // materialDef 0: no texture (for untextured nodes)
+            // materialDef 1: with texture (PBR baseColorTexture)
+            json.append("  \"materialDefinitions\": [\n");
+            json.append("    {\"cullFace\": \"back\", \"pbrMetallicRoughness\": {\"metallicFactor\": 0}},\n");
+            json.append("    {\n");
+            json.append("      \"cullFace\": \"back\",\n");
+            json.append("      \"pbrMetallicRoughness\": {\n");
+            json.append("        \"baseColorTexture\": {\"textureSetDefinitionId\": 0, \"texCoord\": 0},\n");
+            json.append("        \"metallicFactor\": 0\n");
+            json.append("      }\n");
+            json.append("    }\n");
+            json.append("  ],\n");
+        } else {
+            json.append("  \"materialDefinitions\": [{\"cullFace\": \"back\", \"pbrMetallicRoughness\": {\"metallicFactor\": 0}}],\n");
+        }
 
         // Use the axis-aligned bounding box directly for fullExtent
         double[] extent = sceneLayer.getExtent();
@@ -169,7 +241,8 @@ class I3SJsonSerializer {
      * have geometry (instead of the full nodeFeatureMap).
      */
     void writeNodePages(Path layerDir, List<I3SNode> nodes,
-                        Set<Integer> meshNodeIndices) throws IOException {
+                        Set<Integer> meshNodeIndices,
+                        boolean hasTextures) throws IOException {
         int pageSize = NodePage.DEFAULT_PAGE_SIZE;
         int pageCount = (nodes.size() + pageSize - 1) / pageSize;
 
@@ -211,9 +284,20 @@ class I3SJsonSerializer {
                 if (hasMesh) {
                     int vtxCount = node.getOutputVertexCount();
                     int ftCount = node.getFeatureCount();
+                    boolean nodeHasTexture = hasTextures && node.hasTexture();
+
+                    // material: definition 1 (textured PBR) or 0 (untextured)
+                    // resource: node index (for texture file) or -1
+                    // geometry: definition 0 (no uv0) or 1 (with uv0)
+                    int matDef = nodeHasTexture ? 1 : 0;
+                    int matRes = nodeHasTexture ? node.getIndex() : -1;
+                    int geoDef = nodeHasTexture ? 1 : 0;
+
                     json.append("      \"mesh\": {")
-                            .append("\"material\": {\"definition\": 0, \"resource\": -1}, ")
-                            .append("\"geometry\": {\"definition\": 0, \"resource\": ").append(node.getIndex())
+                            .append("\"material\": {\"definition\": ").append(matDef)
+                            .append(", \"resource\": ").append(matRes).append("}, ")
+                            .append("\"geometry\": {\"definition\": ").append(geoDef)
+                            .append(", \"resource\": ").append(node.getIndex())
                             .append(", \"vertexCount\": ").append(vtxCount)
                             .append(", \"featureCount\": ").append(ftCount)
                             .append("}, \"attribute\": {\"resource\": ").append(node.getIndex()).append("}},\n");
@@ -231,6 +315,58 @@ class I3SJsonSerializer {
             Files.write(nodePageDir.resolve("index.json"),
                     json.toString().getBytes(StandardCharsets.UTF_8));
         }
+    }
+
+    /**
+     * Write per-node shared resource (legacy material/texture definitions).
+     * CesiumJS reads this for texture metadata.
+     */
+    void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas) throws IOException {
+        StringBuilder json = new StringBuilder();
+        json.append("{\n");
+
+        // Material definition (legacy format for CesiumJS compatibility)
+        json.append("  \"materialDefinitions\": {\n");
+        json.append("    \"Mat0\": {\n");
+        json.append("      \"type\": \"standard\",\n");
+        json.append("      \"name\": \"standard\",\n");
+        json.append("      \"params\": {\n");
+        json.append("        \"vertexColors\": false,\n");
+        json.append("        \"reflectivity\": 0,\n");
+        json.append("        \"ambient\": [0, 0, 0],\n");
+        json.append("        \"diffuse\": [1, 1, 1],\n");
+        json.append("        \"specular\": [0.09803921568, 0.09803921568, 0.09803921568],\n");
+        json.append("        \"shininess\": 1,\n");
+        json.append("        \"renderMode\": \"solid\",\n");
+        json.append("        \"cullFace\": \"back\"\n");
+        json.append("      }\n");
+        json.append("    }\n");
+        json.append("  },\n");
+
+        // Texture definition
+        json.append("  \"textureDefinitions\": {\n");
+        json.append("    \"0\": {\n");
+        json.append("      \"encoding\": [\"image/jpeg\"],\n");
+        json.append("      \"wrap\": [\"none\", \"none\"],\n");
+        json.append("      \"atlas\": ").append(isAtlas).append(",\n");
+        json.append("      \"uvSet\": \"uv0\",\n");
+        json.append("      \"channels\": \"rgb\",\n");
+        json.append("      \"images\": [{\n");
+        json.append("        \"id\": \"0\",\n");
+        json.append("        \"size\": 512,\n");
+        json.append("        \"pixelInWorldUnits\": 0,\n");
+        json.append("        \"href\": [\"../textures/0\"]\n");
+        json.append("      }]\n");
+        json.append("    }\n");
+        json.append("  }\n");
+
+        json.append("}\n");
+
+        Path sharedDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
+                .resolve("shared");
+        Files.createDirectories(sharedDir);
+        Files.write(sharedDir.resolve("index.json"),
+                json.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     /**
