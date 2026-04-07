@@ -5,11 +5,13 @@
 
 package org.citydb.vis.geometry;
 
+import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.geometry.*;
 import org.citydb.model.walker.ModelWalker;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Triangulates polygon surfaces using an ear-clipping algorithm.
@@ -22,11 +24,22 @@ public class PolygonTriangulator {
 
 
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId) {
+        return triangulate(geometry, featureId, null);
+    }
+
+    public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
+                                    Map<LinearRing, List<TextureCoordinate>> texCoordMap) {
+        return triangulate(geometry, featureId, texCoordMap, null);
+    }
+
+    public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
+                                    Map<LinearRing, List<TextureCoordinate>> texCoordMap,
+                                    Map<LinearRing, Integer> ringTextureMap) {
         TriangleMesh mesh = new TriangleMesh();
         List<Polygon> polygons = collectPolygons(geometry);
 
         for (Polygon polygon : polygons) {
-            triangulatePolygon(polygon, featureId, mesh);
+            triangulatePolygon(polygon, featureId, mesh, texCoordMap, ringTextureMap);
         }
 
         return mesh;
@@ -43,13 +56,22 @@ public class PolygonTriangulator {
         return polygons;
     }
 
-    private void triangulatePolygon(Polygon polygon, long featureId, TriangleMesh mesh) {
+    private void triangulatePolygon(Polygon polygon, long featureId, TriangleMesh mesh,
+                                    Map<LinearRing, List<TextureCoordinate>> texCoordMap,
+                                    Map<LinearRing, Integer> ringTextureMap) {
         LinearRing exteriorRing = polygon.getExteriorRing();
         List<Coordinate> outerPoints = exteriorRing.getPoints();
 
         if (outerPoints.size() < 4) {
             return;
         }
+
+        // Look up UV coordinates and texture ID for the exterior ring
+        List<TextureCoordinate> outerTexCoords = texCoordMap != null
+                ? texCoordMap.get(exteriorRing) : null;
+        boolean hasUV = outerTexCoords != null && outerTexCoords.size() >= outerPoints.size();
+        int polyTextureId = (ringTextureMap != null)
+                ? ringTextureMap.getOrDefault(exteriorRing, -1) : -1;
 
         // Compute centroid latitude for degree-to-meter conversion
         double centroidLat = 0;
@@ -60,14 +82,27 @@ public class PolygonTriangulator {
         double scaleX = METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(centroidLat));
         double scaleY = METERS_PER_DEGREE_LAT;
 
-        // Build original coordinate ring (degrees/meters)
+        // Build original coordinate ring and parallel UV ring (degrees/meters)
         List<double[]> ring;
+        List<float[]> uvRing;
         if (polygon.hasInteriorRings()) {
-            ring = bridgeHoles(outerPoints, polygon.getInteriorRings(), scaleX, scaleY);
+            RingData bridged = bridgeHolesWithUV(outerPoints,
+                    hasUV ? toUVArray(outerTexCoords) : null,
+                    polygon.getInteriorRings(), texCoordMap, scaleX, scaleY);
+            ring = bridged.positions;
+            uvRing = bridged.uvs;
         } else {
             ring = toDoubleArray(outerPoints);
             if (ring.size() > 1) {
                 ring.remove(ring.size() - 1);
+            }
+            if (hasUV) {
+                uvRing = toUVArray(outerTexCoords);
+                if (uvRing.size() > 1) {
+                    uvRing.remove(uvRing.size() - 1);
+                }
+            } else {
+                uvRing = null;
             }
         }
 
@@ -95,6 +130,9 @@ public class PolygonTriangulator {
         if (reverseWinding) {
             reverseList(ring);
             reverseList(scaledRing);
+            if (uvRing != null) {
+                reverseList(uvRing);
+            }
         }
 
         // Apply polygon reversed flag (e.g., shared polygon in a solid)
@@ -110,8 +148,14 @@ public class PolygonTriangulator {
 
         // Add vertices using ORIGINAL coordinates (degrees/meters) for output
         int baseVertex = mesh.getVertexCount();
-        for (double[] pt : ring) {
-            mesh.addVertex(pt[0], pt[1], pt[2], normal[0], normal[1], normal[2]);
+        for (int i = 0; i < ring.size(); i++) {
+            double[] pt = ring.get(i);
+            if (uvRing != null) {
+                float[] uv = uvRing.get(i);
+                mesh.addVertex(pt[0], pt[1], pt[2], normal[0], normal[1], normal[2], uv[0], uv[1]);
+            } else {
+                mesh.addVertex(pt[0], pt[1], pt[2], normal[0], normal[1], normal[2]);
+            }
         }
 
         // Add triangles — if original polygon was CW, swap winding to restore face direction
@@ -121,13 +165,13 @@ public class PolygonTriangulator {
                         baseVertex + tri[0],
                         baseVertex + tri[2],
                         baseVertex + tri[1],
-                        featureId);
+                        featureId, polyTextureId);
             } else {
                 mesh.addTriangle(
                         baseVertex + tri[0],
                         baseVertex + tri[1],
                         baseVertex + tri[2],
-                        featureId);
+                        featureId, polyTextureId);
             }
         }
     }
@@ -177,6 +221,101 @@ public class PolygonTriangulator {
             case 1 -> new double[]{point[0], point[2]};
             default -> new double[]{point[0], point[1]};
         };
+    }
+
+    private record RingData(List<double[]> positions, List<float[]> uvs) {}
+
+    private RingData bridgeHolesWithUV(List<Coordinate> outerPoints, List<float[]> outerUVs,
+                                       List<LinearRing> holes,
+                                       Map<LinearRing, List<TextureCoordinate>> texCoordMap,
+                                       double scaleX, double scaleY) {
+        List<double[]> result = toDoubleArray(outerPoints);
+        if (result.size() > 1) {
+            result.remove(result.size() - 1);
+        }
+        List<float[]> uvResult = outerUVs != null ? new ArrayList<>(outerUVs) : null;
+        if (uvResult != null && uvResult.size() > 1) {
+            uvResult.remove(uvResult.size() - 1);
+        }
+
+        for (LinearRing hole : holes) {
+            List<double[]> holePoints = toDoubleArray(hole.getPoints());
+            if (holePoints.size() > 1) {
+                holePoints.remove(holePoints.size() - 1);
+            }
+            if (holePoints.size() < 3) {
+                continue;
+            }
+
+            // Look up UV for this hole ring
+            List<float[]> holeUVs = null;
+            if (uvResult != null && texCoordMap != null) {
+                List<TextureCoordinate> holeTexCoords = texCoordMap.get(hole);
+                if (holeTexCoords != null && holeTexCoords.size() > holePoints.size()) {
+                    holeUVs = toUVArray(holeTexCoords);
+                    if (holeUVs.size() > 1) {
+                        holeUVs.remove(holeUVs.size() - 1);
+                    }
+                }
+            }
+
+            // Find the rightmost point of the hole
+            int holeIdx = 0;
+            double maxU = Double.NEGATIVE_INFINITY;
+            for (int i = 0; i < holePoints.size(); i++) {
+                double u = holePoints.get(i)[0] * scaleX;
+                if (u > maxU) {
+                    maxU = u;
+                    holeIdx = i;
+                }
+            }
+
+            int outerIdx = findClosestVisible(result, holePoints.get(holeIdx), scaleX, scaleY);
+
+            // Bridge: insert hole into outer ring at the connection point
+            List<double[]> merged = new ArrayList<>(result.size() + holePoints.size() + 2);
+            List<float[]> mergedUV = uvResult != null
+                    ? new ArrayList<>(result.size() + holePoints.size() + 2) : null;
+
+            for (int i = 0; i <= outerIdx; i++) {
+                merged.add(result.get(i));
+                if (mergedUV != null) mergedUV.add(uvResult.get(i));
+            }
+            for (int i = 0; i < holePoints.size(); i++) {
+                int idx = (holeIdx + i) % holePoints.size();
+                merged.add(holePoints.get(idx));
+                if (mergedUV != null) {
+                    mergedUV.add(holeUVs != null ? holeUVs.get(idx) : new float[]{0f, 0f});
+                }
+            }
+            // Close the hole bridge
+            merged.add(holePoints.get(holeIdx));
+            if (mergedUV != null) {
+                mergedUV.add(holeUVs != null ? holeUVs.get(holeIdx) : new float[]{0f, 0f});
+            }
+            merged.add(result.get(outerIdx));
+            if (mergedUV != null) mergedUV.add(uvResult.get(outerIdx));
+
+            for (int i = outerIdx + 1; i < result.size(); i++) {
+                merged.add(result.get(i));
+                if (mergedUV != null) mergedUV.add(uvResult.get(i));
+            }
+
+            result = merged;
+            uvResult = mergedUV;
+        }
+
+        return new RingData(result, uvResult);
+    }
+
+    private static List<float[]> toUVArray(List<TextureCoordinate> texCoords) {
+        List<float[]> result = new ArrayList<>(texCoords.size());
+        for (TextureCoordinate tc : texCoords) {
+            // CityGML: T=0 at bottom (OGC convention).
+            // I3S/glTF: V=0 at top. Flip V axis.
+            result.add(new float[]{tc.getS(), 1.0f - tc.getT()});
+        }
+        return result;
     }
 
     private List<double[]> bridgeHoles(List<Coordinate> outerPoints, List<LinearRing> holes,
@@ -232,6 +371,10 @@ public class PolygonTriangulator {
         return result;
     }
 
+    /**
+     * Find the closest point on the outer ring that is visible from the hole point,
+     * i.e. the bridge segment does not cross any existing edge of the ring.
+     */
     private int findClosestVisible(List<double[]> ring, double[] holePoint,
                                    double scaleX, double scaleY) {
         double hpx = holePoint[0] * scaleX;
@@ -243,13 +386,56 @@ public class PolygonTriangulator {
             double rx = ring.get(i)[0] * scaleX;
             double ry = ring.get(i)[1] * scaleY;
             double dist = (rx - hpx) * (rx - hpx) + (ry - hpy) * (ry - hpy);
-            if (dist < minDist) {
+            if (dist < minDist
+                    && !bridgeCrossesEdge(ring, hpx, hpy, rx, ry, i, scaleX, scaleY)) {
                 minDist = dist;
                 closest = i;
             }
         }
 
         return closest;
+    }
+
+    /**
+     * Check if the bridge segment (px,py)→(qx,qy) crosses any edge of the ring,
+     * excluding edges that share the vertex at {@code skipVertex}.
+     */
+    private static boolean bridgeCrossesEdge(List<double[]> ring,
+                                             double px, double py, double qx, double qy,
+                                             int skipVertex, double scaleX, double scaleY) {
+        int n = ring.size();
+        for (int i = 0; i < n; i++) {
+            int j = (i + 1) % n;
+            if (i == skipVertex || j == skipVertex) continue;
+
+            double ax = ring.get(i)[0] * scaleX;
+            double ay = ring.get(i)[1] * scaleY;
+            double bx = ring.get(j)[0] * scaleX;
+            double by = ring.get(j)[1] * scaleY;
+
+            if (segmentsIntersectStrict(px, py, qx, qy, ax, ay, bx, by)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Strict segment intersection test (excludes endpoint touching). */
+    private static boolean segmentsIntersectStrict(double p1x, double p1y, double p2x, double p2y,
+                                                   double p3x, double p3y, double p4x, double p4y) {
+        double d1 = cross2D(p3x, p3y, p4x, p4y, p1x, p1y);
+        double d2 = cross2D(p3x, p3y, p4x, p4y, p2x, p2y);
+        double d3 = cross2D(p1x, p1y, p2x, p2y, p3x, p3y);
+        double d4 = cross2D(p1x, p1y, p2x, p2y, p4x, p4y);
+
+        return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0))
+                && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+    }
+
+    /** Cross product of vectors (o→a) × (o→b). */
+    private static double cross2D(double ox, double oy, double ax, double ay,
+                                  double bx, double by) {
+        return (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
     }
 
     /**
@@ -316,8 +502,9 @@ public class PolygonTriangulator {
 
             if (!earFound) {
                 if (indices.size() > 2) {
-                    // Try to find a non-degenerate triangle among remaining vertices,
-                    // preserving CCW winding order required by the algorithm.
+                    // Fallback: find a non-degenerate triple that does NOT contain
+                    // any other polygon vertex — same containment check as the
+                    // normal ear path, but also accepting concave (CW) triples.
                     boolean forced = false;
                     for (int i = 0; i < indices.size() && !forced; i++) {
                         int prevIdx = (i - 1 + indices.size()) % indices.size();
@@ -327,20 +514,46 @@ public class PolygonTriangulator {
                         double[] c = project2D(vertices.get(indices.get(nextIdx)), projAxis);
                         double cross = cross2D(a, b, c);
                         if (Math.abs(cross) > TOLERANCE) {
-                            if (cross > 0) {
-                                triangles.add(new int[]{indices.get(prevIdx), indices.get(i), indices.get(nextIdx)});
-                            } else {
-                                // Negative cross = CW triple — swap to keep CCW winding
-                                triangles.add(new int[]{indices.get(nextIdx), indices.get(i), indices.get(prevIdx)});
+                            // Containment check: skip if any other vertex is inside
+                            boolean valid = true;
+                            for (int j = 0; j < indices.size(); j++) {
+                                if (j == prevIdx || j == i || j == nextIdx) continue;
+                                double[] p = project2D(vertices.get(indices.get(j)), projAxis);
+                                if (pointInTriangle(p, a, b, c)) {
+                                    valid = false;
+                                    break;
+                                }
                             }
-                            indices.remove(i);
-                            forced = true;
+                            if (valid) {
+                                if (cross > 0) {
+                                    triangles.add(new int[]{indices.get(prevIdx), indices.get(i), indices.get(nextIdx)});
+                                } else {
+                                    triangles.add(new int[]{indices.get(nextIdx), indices.get(i), indices.get(prevIdx)});
+                                }
+                                indices.remove(i);
+                                forced = true;
+                            }
                         }
                     }
                     if (!forced) {
-                        // All remaining vertices are collinear — skip without creating
-                        // a degenerate triangle
-                        indices.remove(0);
+                        // All remaining vertices are collinear or all triples
+                        // contain other vertices — remove most-collinear vertex
+                        // to simplify the polygon and retry
+                        int removeIdx = 0;
+                        double minAbsCross = Double.MAX_VALUE;
+                        for (int i = 0; i < indices.size(); i++) {
+                            int prevIdx = (i - 1 + indices.size()) % indices.size();
+                            int nextIdx = (i + 1) % indices.size();
+                            double[] a = project2D(vertices.get(indices.get(prevIdx)), projAxis);
+                            double[] b = project2D(vertices.get(indices.get(i)), projAxis);
+                            double[] c = project2D(vertices.get(indices.get(nextIdx)), projAxis);
+                            double absCross = Math.abs(cross2D(a, b, c));
+                            if (absCross < minAbsCross) {
+                                minAbsCross = absCross;
+                                removeIdx = i;
+                            }
+                        }
+                        indices.remove(removeIdx);
                     }
                 }
                 attempts++;
@@ -383,10 +596,10 @@ public class PolygonTriangulator {
         return result;
     }
 
-    private void reverseList(List<double[]> list) {
+    private <T> void reverseList(List<T> list) {
         int left = 0, right = list.size() - 1;
         while (left < right) {
-            double[] temp = list.get(left);
+            T temp = list.get(left);
             list.set(left, list.get(right));
             list.set(right, temp);
             left++;
