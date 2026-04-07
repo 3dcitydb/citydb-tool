@@ -1,6 +1,7 @@
 module org.citydb.vis {
     requires org.citydb.io;
     requires drako;
+    requires java.desktop;
 
     exports org.citydb.vis;
     exports org.citydb.vis.geometry;
