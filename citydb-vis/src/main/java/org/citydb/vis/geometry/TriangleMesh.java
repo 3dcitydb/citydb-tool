@@ -7,21 +7,28 @@ package org.citydb.vis.geometry;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TriangleMesh {
     private final List<double[]> positions;
     private final List<float[]> normals;
+    private final List<float[]> texCoords;
     private final List<int[]> triangles;
     private final List<Long> featureIds;
+    private final List<Integer> triangleTextureIds;
+    private boolean hasTexCoords;
 
     public TriangleMesh() {
         positions = new ArrayList<>();
         normals = new ArrayList<>();
+        texCoords = new ArrayList<>();
         triangles = new ArrayList<>();
         featureIds = new ArrayList<>();
+        triangleTextureIds = new ArrayList<>();
     }
 
     public List<double[]> getPositions() {
@@ -34,6 +41,18 @@ public class TriangleMesh {
 
     public List<int[]> getTriangles() {
         return triangles;
+    }
+
+    public List<float[]> getTexCoords() {
+        return texCoords;
+    }
+
+    public boolean hasTexCoords() {
+        return hasTexCoords;
+    }
+
+    public void setHasTexCoords(boolean hasTexCoords) {
+        this.hasTexCoords = hasTexCoords;
     }
 
     public List<Long> getFeatureIds() {
@@ -56,24 +75,84 @@ public class TriangleMesh {
         int index = positions.size();
         positions.add(new double[]{x, y, z});
         normals.add(new float[]{nx, ny, nz});
+        texCoords.add(new float[]{0f, 0f});
+        return index;
+    }
+
+    public int addVertex(double x, double y, double z, float nx, float ny, float nz,
+                         float u, float v) {
+        int index = positions.size();
+        positions.add(new double[]{x, y, z});
+        normals.add(new float[]{nx, ny, nz});
+        texCoords.add(new float[]{u, v});
+        hasTexCoords = true;
         return index;
     }
 
     public void addTriangle(int v0, int v1, int v2, long featureId) {
-        triangles.add(new int[]{v0, v1, v2});
-        featureIds.add(featureId);
+        addTriangle(v0, v1, v2, featureId, -1);
     }
 
+    public void addTriangle(int v0, int v1, int v2, long featureId, int textureId) {
+        triangles.add(new int[]{v0, v1, v2});
+        featureIds.add(featureId);
+        triangleTextureIds.add(textureId);
+    }
 
+    public List<Integer> getTriangleTextureIds() {
+        return triangleTextureIds;
+    }
+
+    /**
+     * Extract a sub-mesh containing only triangles whose texture ID is in the
+     * given set. Vertices are copied (not shared with the original mesh).
+     *
+     * @param textureIds       texture IDs to include
+     * @param includeUntextured if true, triangles with textureId &lt; 0 are also included
+     */
+    public TriangleMesh extractByTextureIds(Set<Integer> textureIds, boolean includeUntextured) {
+        TriangleMesh result = new TriangleMesh();
+        Map<Integer, Integer> vertexMap = new HashMap<>();
+
+        for (int t = 0; t < triangles.size(); t++) {
+            int texId = triangleTextureIds.get(t);
+            if (textureIds.contains(texId) || (includeUntextured && texId < 0)) {
+                int[] tri = triangles.get(t);
+                int[] newTri = new int[3];
+                for (int j = 0; j < 3; j++) {
+                    int oldIdx = tri[j];
+                    Integer newIdx = vertexMap.get(oldIdx);
+                    if (newIdx == null) {
+                        double[] pos = positions.get(oldIdx);
+                        float[] norm = normals.get(oldIdx);
+                        float[] uv = texCoords.get(oldIdx);
+                        newIdx = result.addVertex(pos[0], pos[1], pos[2],
+                                norm[0], norm[1], norm[2], uv[0], uv[1]);
+                        vertexMap.put(oldIdx, newIdx);
+                    }
+                    newTri[j] = newIdx;
+                }
+                result.addTriangle(newTri[0], newTri[1], newTri[2],
+                        featureIds.get(t), texId);
+            }
+        }
+
+        return result;
+    }
 
     public void merge(TriangleMesh other) {
         int offset = positions.size();
         positions.addAll(other.positions);
         normals.addAll(other.normals);
+        texCoords.addAll(other.texCoords);
+        if (other.hasTexCoords) {
+            hasTexCoords = true;
+        }
         for (int[] tri : other.triangles) {
             triangles.add(new int[]{tri[0] + offset, tri[1] + offset, tri[2] + offset});
         }
         featureIds.addAll(other.featureIds);
+        triangleTextureIds.addAll(other.triangleTextureIds);
     }
 
     /**
@@ -101,8 +180,10 @@ public class TriangleMesh {
                 mPos[i][2] = p[2];
             }
 
-            // Find all T-junctions: vertex vi lies on edge of triangle ti
-            List<int[]> splits = new ArrayList<>(); // {triIndex, edgeSlot, tJunctionVertex}
+            // Find all T-junctions: vertex vi lies on edge of triangle ti.
+            // Store the parametric position t along the edge for correct UV interpolation.
+            List<int[]> splits = new ArrayList<>();   // {triIndex, edgeSlot, tJunctionVertex}
+            List<Double> splitParams = new ArrayList<>(); // parametric t for each split
             int triCount = triangles.size();
 
             for (int vi = 0; vi < vertexCount; vi++) {
@@ -136,6 +217,7 @@ public class TriangleMesh {
 
                         if (dist2 < tol2) {
                             splits.add(new int[]{ti, e, vi});
+                            splitParams.add(t);
                             break;
                         }
                     }
@@ -147,8 +229,10 @@ public class TriangleMesh {
             Set<Integer> removed = new HashSet<>();
             List<int[]> newTriangles = new ArrayList<>();
             List<Long> newFeatureIds = new ArrayList<>();
+            List<Integer> newTriTexIds = new ArrayList<>();
 
-            for (int[] split : splits) {
+            for (int s = 0; s < splits.size(); s++) {
+                int[] split = splits.get(s);
                 int ti = split[0], edgeSlot = split[1], vi = split[2];
                 if (removed.contains(ti)) continue;
 
@@ -157,35 +241,50 @@ public class TriangleMesh {
                 int ei2 = tri[(edgeSlot + 1) % 3];
                 int ei3 = tri[(edgeSlot + 2) % 3];
                 long fid = featureIds.get(ti);
+                int texId = triangleTextureIds.get(ti);
 
-                // New vertex at vi's position with the split triangle's normal
+                // New vertex at vi's position with the split triangle's normal.
+                // Interpolate UV along the edge at the parametric position t.
                 float[] triNormal = normals.get(ei1);
                 double[] viPos = positions.get(vi);
+                float[] uv1 = texCoords.get(ei1);
+                float[] uv2 = texCoords.get(ei2);
+                float tParam = (float) splitParams.get(s).doubleValue();
+                float interpU = uv1[0] + tParam * (uv2[0] - uv1[0]);
+                float interpV = uv1[1] + tParam * (uv2[1] - uv1[1]);
                 int newVi = addVertex(viPos[0], viPos[1], viPos[2],
-                        triNormal[0], triNormal[1], triNormal[2]);
+                        triNormal[0], triNormal[1], triNormal[2],
+                        interpU, interpV);
 
                 removed.add(ti);
                 newTriangles.add(new int[]{ei1, newVi, ei3});
                 newFeatureIds.add(fid);
+                newTriTexIds.add(texId);
                 newTriangles.add(new int[]{newVi, ei2, ei3});
                 newFeatureIds.add(fid);
+                newTriTexIds.add(texId);
             }
 
             List<int[]> updatedTri = new ArrayList<>();
             List<Long> updatedFid = new ArrayList<>();
+            List<Integer> updatedTexId = new ArrayList<>();
             for (int ti = 0; ti < triCount; ti++) {
                 if (!removed.contains(ti)) {
                     updatedTri.add(triangles.get(ti));
                     updatedFid.add(featureIds.get(ti));
+                    updatedTexId.add(triangleTextureIds.get(ti));
                 }
             }
             updatedTri.addAll(newTriangles);
             updatedFid.addAll(newFeatureIds);
+            updatedTexId.addAll(newTriTexIds);
 
             triangles.clear();
             triangles.addAll(updatedTri);
             featureIds.clear();
             featureIds.addAll(updatedFid);
+            triangleTextureIds.clear();
+            triangleTextureIds.addAll(updatedTexId);
         }
     }
 
@@ -196,16 +295,20 @@ public class TriangleMesh {
         if (indices.isEmpty()) return;
         List<int[]> kept = new ArrayList<>();
         List<Long> keptIds = new ArrayList<>();
+        List<Integer> keptTexIds = new ArrayList<>();
         for (int i = 0; i < triangles.size(); i++) {
             if (!indices.contains(i)) {
                 kept.add(triangles.get(i));
                 keptIds.add(featureIds.get(i));
+                keptTexIds.add(triangleTextureIds.get(i));
             }
         }
         triangles.clear();
         triangles.addAll(kept);
         featureIds.clear();
         featureIds.addAll(keptIds);
+        triangleTextureIds.clear();
+        triangleTextureIds.addAll(keptTexIds);
     }
 
     /**
@@ -218,6 +321,7 @@ public class TriangleMesh {
         Set<String> seen = new HashSet<>();
         List<int[]> kept = new ArrayList<>();
         List<Long> keptIds = new ArrayList<>();
+        List<Integer> keptTexIds = new ArrayList<>();
 
         for (int i = 0; i < triangles.size(); i++) {
             int[] tri = triangles.get(i);
@@ -232,6 +336,7 @@ public class TriangleMesh {
             if (seen.add(key)) {
                 kept.add(tri);
                 keptIds.add(featureIds.get(i));
+                keptTexIds.add(triangleTextureIds.get(i));
             }
         }
 
@@ -240,6 +345,8 @@ public class TriangleMesh {
             triangles.addAll(kept);
             featureIds.clear();
             featureIds.addAll(keptIds);
+            triangleTextureIds.clear();
+            triangleTextureIds.addAll(keptTexIds);
         }
     }
 
