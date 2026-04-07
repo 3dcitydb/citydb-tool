@@ -14,6 +14,8 @@ public class I3SFormatOptions implements OutputFormatOptions {
     private int maxTreeDepth = 16;
     private boolean compressVertices;
     private boolean clampToGround;
+    private double textureScale = 1.0;
+    private int maxAtlasSize = 8192;
 
     public int getMaxFeaturesPerNode() {
         return maxFeaturesPerNode;
@@ -48,6 +50,24 @@ public class I3SFormatOptions implements OutputFormatOptions {
 
     public I3SFormatOptions setClampToGround(boolean clampToGround) {
         this.clampToGround = clampToGround;
+        return this;
+    }
+
+    public double getTextureScale() {
+        return textureScale;
+    }
+
+    public I3SFormatOptions setTextureScale(double textureScale) {
+        this.textureScale = Math.max(0.01, Math.min(1.0, textureScale));
+        return this;
+    }
+
+    public int getMaxAtlasSize() {
+        return maxAtlasSize;
+    }
+
+    public I3SFormatOptions setMaxAtlasSize(int maxAtlasSize) {
+        this.maxAtlasSize = Math.max(1024, Math.min(16384, maxAtlasSize));
         return this;
     }
 }

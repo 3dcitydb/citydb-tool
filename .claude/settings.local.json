@@ -99,7 +99,18 @@
       "Bash(grep -r com.openize.drako /c/devel/3dcitydb/citydb-tool-vis-export --include=*.java --include=*.gradle)",
       "Bash(grep -i \"\\\\.java$\")",
       "Bash(jar_path=\"/c/Users/yao/.gradle/caches/modules-2/files-2.1/com.openize/drako/26.3.0/7b70d03deb57d2b8e70ade349a69ec678501532e/drako-26.3.0.jar\")",
-      "WebFetch(domain:search.maven.org)"
+      "WebFetch(domain:search.maven.org)",
+      "Bash(grep:*)",
+      "Bash(./gradlew build:*)",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) for n in data['nodes'][:5]: if n.get\\('mesh'\\): print\\(f'node {n[\\\\\"index\\\\\"]}: material={n[\\\\\"mesh\\\\\"][\\\\\"material\\\\\"]}, geo_def={n[\\\\\"mesh\\\\\"][\\\\\"geometry\\\\\"][\\\\\"definition\\\\\"]}'\\) else: print\\(f'node {n[\\\\\"index\\\\\"]}: mesh=null'\\) \")",
+      "Bash(python3 -c ':*)",
+      "Read(//tmp/**)",
+      "Bash(wc -l C:/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/appearance/*.jpg)",
+      "Bash(find:*)",
+      "Read(//c/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data/layers/0/nodes$n/shared/**)",
+      "Read(//c/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data/layers/0/nodes$n/textures/**)",
+      "Read(//c/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data/layers/0/nodes$n/geometries\" 2>/dev/**)",
+      "Bash([ -d \"C:/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data_without_texture/layers/0/nodes/$node/textures\" ])"
     ]
   }
 }
