@@ -337,9 +337,10 @@ public class I3SWriter implements FeatureWriter {
 
             // --- Phase 5: Write output ---
             boolean hasTextures = textureStore.hasTextures();
+            boolean useDds = formatOptions.isGpuTextureCompression();
             SceneLayer sceneLayer = buildSceneLayer(allNodes, extent);
             writeI3SFolder(sceneLayer, allNodes, attrFields, globalEntryMap,
-                    meshNodeIndices, hasTextures);
+                    meshNodeIndices, hasTextures, useDds);
 
         } catch (Exception e) {
             throw new WriteException("Failed to write I3S scene layer.", e);
@@ -463,13 +464,14 @@ public class I3SWriter implements FeatureWriter {
                                 List<I3SAttributeEncoder.AttrField> attrFields,
                                 Map<Integer, List<SpatialEntry>> globalEntryMap,
                                 Set<Integer> meshNodeIndices,
-                                boolean hasTextures) throws IOException {
+                                boolean hasTextures, boolean useDds) throws IOException {
         Path outputDir = stripI3sSuffix(outputFile.getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
         Files.createDirectories(layerDir);
 
         // Scene layer JSON
-        jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields, hasTextures);
+        jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
+                hasTextures, useDds);
 
         // Identify nodes with feature data
         List<I3SNode> meshNodes = allNodes.stream()
@@ -528,6 +530,9 @@ public class I3SWriter implements FeatureWriter {
                             Path textureDir = nodeDir.resolve("textures");
                             Files.createDirectories(textureDir);
                             atlas.write(textureDir.resolve("0"));
+                            if (useDds) {
+                                atlas.writeDds(textureDir.resolve("0_0_1"));
+                            }
                             isAtlas = true;
                         }
                     } else if (!uniqueTexIds.isEmpty()) {
@@ -536,6 +541,10 @@ public class I3SWriter implements FeatureWriter {
                         Files.createDirectories(textureDir);
                         textureStore.copyScaled(singleTexId,
                                 textureDir.resolve("0"), texScale);
+                        if (useDds) {
+                            textureStore.copyScaledDds(singleTexId,
+                                    textureDir.resolve("0_0_1"), texScale);
+                        }
                     }
 
                     node.setMesh(merged);
@@ -557,7 +566,8 @@ public class I3SWriter implements FeatureWriter {
                             featureDataList);
 
                     if (nodeTextureId >= 0) {
-                        jsonSerializer.writeSharedResource(layerDir, node, isAtlas);
+                        jsonSerializer.writeSharedResource(layerDir, node, isAtlas,
+                                useDds);
                     }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
