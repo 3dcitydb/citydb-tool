@@ -346,6 +346,7 @@ public class I3SWriter implements FeatureWriter {
             throw new WriteException("Failed to write I3S scene layer.", e);
         } finally {
             closeStores();
+            deleteAppearanceDir();
         }
     }
 
@@ -633,5 +634,25 @@ public class I3SWriter implements FeatureWriter {
         } catch (IOException ignored) {
         }
         textureStore.close();
+    }
+
+    /**
+     * Delete the intermediate "appearance" directory created by the export
+     * pipeline for raw texture files. These are no longer needed after
+     * textures have been packed into per-node atlases.
+     */
+    private void deleteAppearanceDir() {
+        try {
+            Path appearanceDir = outputFile.getFile().getParent().resolve("appearance");
+            if (Files.isDirectory(appearanceDir)) {
+                try (var walk = Files.walk(appearanceDir)) {
+                    walk.sorted(java.util.Comparator.reverseOrder())
+                            .forEach(p -> {
+                                try { Files.delete(p); } catch (IOException ignored) {}
+                            });
+                }
+            }
+        } catch (IOException ignored) {
+        }
     }
 }
