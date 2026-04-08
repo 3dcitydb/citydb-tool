@@ -110,7 +110,15 @@
       "Read(//c/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data/layers/0/nodes$n/shared/**)",
       "Read(//c/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data/layers/0/nodes$n/textures/**)",
       "Read(//c/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data/layers/0/nodes$n/geometries\" 2>/dev/**)",
-      "Bash([ -d \"C:/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data_without_texture/layers/0/nodes/$node/textures\" ])"
+      "Bash([ -d \"C:/devel/3dcitydb/citydb-tool-vis-export/out/viewer/i3s/data_without_texture/layers/0/nodes/$node/textures\" ])",
+      "Bash(read dir:*)",
+      "Bash(xargs du:*)",
+      "WebFetch(domain:github.khronos.org)",
+      "WebFetch(domain:sourceforge.net)",
+      "Bash(xxd:*)",
+      "Bash(gunzip -c /tmp/sf_dds_full.bin)",
+      "Bash(mkdir -p C:/tmp)",
+      "Read(//c/tmp/**)"
     ]
   }
 }
