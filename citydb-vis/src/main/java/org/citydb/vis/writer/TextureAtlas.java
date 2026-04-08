@@ -26,7 +26,7 @@ import java.util.List;
  * the source texture is repeated in the atlas region to cover the full UV range.
  */
 class TextureAtlas {
-    static final int DEFAULT_MAX_ATLAS_SIZE = 8192;
+    static final int DEFAULT_MAX_ATLAS_SIZE = 2048;
 
     private final Map<Integer, float[]> uvRegions;
     private final BufferedImage image;
@@ -408,5 +408,9 @@ class TextureAtlas {
 
     void write(Path target) throws IOException {
         ImageIO.write(image, "jpg", target.toFile());
+    }
+
+    void writeDds(Path target) throws IOException {
+        DdsEncoder.writeImage(image, target);
     }
 }
