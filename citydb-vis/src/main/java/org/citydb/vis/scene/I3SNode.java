@@ -76,14 +76,6 @@ public class I3SNode {
         return this;
     }
 
-    public boolean isLeaf() {
-        return children.isEmpty();
-    }
-
-    public boolean isRoot() {
-        return parent == null;
-    }
-
     public TriangleMesh getMesh() {
         return mesh;
     }
@@ -102,11 +94,6 @@ public class I3SNode {
         return this;
     }
 
-    public I3SNode incrementFeatureCount() {
-        featureCount++;
-        return this;
-    }
-
     public double getLodThreshold() {
         return lodThreshold;
     }
@@ -122,10 +109,6 @@ public class I3SNode {
 
     public void setOutputVertexCount(int count) {
         this.outputVertexCount = count;
-    }
-
-    public int getTextureId() {
-        return textureId;
     }
 
     public void setTextureId(int textureId) {
