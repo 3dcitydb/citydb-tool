@@ -49,8 +49,9 @@ public class TriangleMesh {
         return hasTexCoords;
     }
 
-    public void setHasTexCoords(boolean hasTexCoords) {
+    public TriangleMesh setHasTexCoords(boolean hasTexCoords) {
         this.hasTexCoords = hasTexCoords;
+        return this;
     }
 
     public List<Long> getFeatureIds() {
