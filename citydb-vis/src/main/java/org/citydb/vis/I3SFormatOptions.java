@@ -12,7 +12,6 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 public class I3SFormatOptions implements OutputFormatOptions {
     private int maxFeaturesPerNode = 64;
     private int maxTreeDepth = 16;
-    private boolean compressVertices;
     private boolean clampToGround;
     private double textureScale = 1.0;
     private int maxAtlasSize = 2048;
@@ -32,15 +31,6 @@ public class I3SFormatOptions implements OutputFormatOptions {
 
     public I3SFormatOptions setMaxTreeDepth(int maxTreeDepth) {
         this.maxTreeDepth = maxTreeDepth;
-        return this;
-    }
-
-    public boolean isCompressVertices() {
-        return compressVertices;
-    }
-
-    public I3SFormatOptions setCompressVertices(boolean compressVertices) {
-        this.compressVertices = compressVertices;
         return this;
     }
 
