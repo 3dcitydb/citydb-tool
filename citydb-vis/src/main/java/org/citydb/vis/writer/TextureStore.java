@@ -8,7 +8,9 @@ package org.citydb.vis.writer;
 import org.citydb.core.file.OutputFile;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.Closeable;
 import java.io.IOException;
@@ -155,5 +157,4 @@ class TextureStore implements Closeable {
         g.dispose();
         return rgb;
     }
-
 }

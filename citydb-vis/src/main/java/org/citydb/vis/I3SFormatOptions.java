@@ -60,5 +60,4 @@ public class I3SFormatOptions implements OutputFormatOptions {
         this.maxAtlasSize = Math.max(1024, Math.min(16384, maxAtlasSize));
         return this;
     }
-
 }
