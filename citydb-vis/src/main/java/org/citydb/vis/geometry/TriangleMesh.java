@@ -7,10 +7,8 @@ package org.citydb.vis.geometry;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class TriangleMesh {
@@ -89,10 +87,6 @@ public class TriangleMesh {
         return index;
     }
 
-    public void addTriangle(int v0, int v1, int v2, long featureId) {
-        addTriangle(v0, v1, v2, featureId, -1);
-    }
-
     public void addTriangle(int v0, int v1, int v2, long featureId, int textureId) {
         triangles.add(new int[]{v0, v1, v2});
         featureIds.add(featureId);
@@ -101,43 +95,6 @@ public class TriangleMesh {
 
     public List<Integer> getTriangleTextureIds() {
         return triangleTextureIds;
-    }
-
-    /**
-     * Extract a sub-mesh containing only triangles whose texture ID is in the
-     * given set. Vertices are copied (not shared with the original mesh).
-     *
-     * @param textureIds       texture IDs to include
-     * @param includeUntextured if true, triangles with textureId &lt; 0 are also included
-     */
-    public TriangleMesh extractByTextureIds(Set<Integer> textureIds, boolean includeUntextured) {
-        TriangleMesh result = new TriangleMesh();
-        Map<Integer, Integer> vertexMap = new HashMap<>();
-
-        for (int t = 0; t < triangles.size(); t++) {
-            int texId = triangleTextureIds.get(t);
-            if (textureIds.contains(texId) || (includeUntextured && texId < 0)) {
-                int[] tri = triangles.get(t);
-                int[] newTri = new int[3];
-                for (int j = 0; j < 3; j++) {
-                    int oldIdx = tri[j];
-                    Integer newIdx = vertexMap.get(oldIdx);
-                    if (newIdx == null) {
-                        double[] pos = positions.get(oldIdx);
-                        float[] norm = normals.get(oldIdx);
-                        float[] uv = texCoords.get(oldIdx);
-                        newIdx = result.addVertex(pos[0], pos[1], pos[2],
-                                norm[0], norm[1], norm[2], uv[0], uv[1]);
-                        vertexMap.put(oldIdx, newIdx);
-                    }
-                    newTri[j] = newIdx;
-                }
-                result.addTriangle(newTri[0], newTri[1], newTri[2],
-                        featureIds.get(t), texId);
-            }
-        }
-
-        return result;
     }
 
     public void merge(TriangleMesh other) {
@@ -286,29 +243,6 @@ public class TriangleMesh {
             triangleTextureIds.clear();
             triangleTextureIds.addAll(updatedTexId);
         }
-    }
-
-    /**
-     * Remove triangles at the given indices.
-     */
-    public void removeTriangles(Set<Integer> indices) {
-        if (indices.isEmpty()) return;
-        List<int[]> kept = new ArrayList<>();
-        List<Long> keptIds = new ArrayList<>();
-        List<Integer> keptTexIds = new ArrayList<>();
-        for (int i = 0; i < triangles.size(); i++) {
-            if (!indices.contains(i)) {
-                kept.add(triangles.get(i));
-                keptIds.add(featureIds.get(i));
-                keptTexIds.add(triangleTextureIds.get(i));
-            }
-        }
-        triangles.clear();
-        triangles.addAll(kept);
-        featureIds.clear();
-        featureIds.addAll(keptIds);
-        triangleTextureIds.clear();
-        triangleTextureIds.addAll(keptTexIds);
     }
 
     /**
