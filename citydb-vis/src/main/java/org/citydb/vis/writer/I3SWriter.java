@@ -34,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -87,13 +88,6 @@ public class I3SWriter implements FeatureWriter {
     private final I3SGeometryEncoder geometryEncoder;
     private final I3SJsonSerializer jsonSerializer;
     private final I3SAttributeEncoder attributeEncoder;
-
-    // Diagnostic counters for texture binding
-    private final AtomicLong texDiagHasAppearance = new AtomicLong();
-    private final AtomicLong texDiagHasParamTex = new AtomicLong();
-    private final AtomicLong texDiagHasTexCoords = new AtomicLong();
-    private final AtomicLong texDiagTexCoordMapSize = new AtomicLong();
-    private final AtomicLong texDiagMeshHasTC = new AtomicLong();
 
     public I3SWriter(OutputFile outputFile, WriteOptions options) {
         this.outputFile = outputFile;
@@ -168,7 +162,6 @@ public class I3SWriter implements FeatureWriter {
         Map<LinearRing, Integer> ringTextureMap = null;
         int textureId = -1;
         if (feature.hasAppearances()) {
-            texDiagHasAppearance.incrementAndGet();
             texCoordMap = new IdentityHashMap<>();
             ringTextureMap = new IdentityHashMap<>();
             for (AppearanceProperty ap : feature.getAppearances().getAll()) {
@@ -177,9 +170,7 @@ public class I3SWriter implements FeatureWriter {
                 for (SurfaceDataProperty sdp : appearance.getSurfaceData()) {
                     SurfaceData<?> sd = sdp.getObject().orElse(null);
                     if (sd instanceof ParameterizedTexture pt) {
-                        texDiagHasParamTex.incrementAndGet();
                         if (pt.hasTextureCoordinates()) {
-                            texDiagHasTexCoords.incrementAndGet();
                             // Register this PT's texture image
                             int ptTextureId = -1;
                             ExternalFile img = pt.getTextureImage().orElse(null);
@@ -200,7 +191,6 @@ public class I3SWriter implements FeatureWriter {
                     }
                 }
             }
-            texDiagTexCoordMapSize.addAndGet(texCoordMap.size());
             if (texCoordMap.isEmpty()) {
                 texCoordMap = null;
                 ringTextureMap = null;
@@ -220,7 +210,6 @@ public class I3SWriter implements FeatureWriter {
                 TriangleMesh mesh = triangulateGeometries(geomProps, featureId, triangulator,
                         finalTexCoordMap, finalRingTextureMap);
                 if (!mesh.isEmpty()) {
-                    if (mesh.hasTexCoords()) texDiagMeshHasTC.incrementAndGet();
                     Envelope env = envelope;
                     if (formatOptions.isClampToGround()) {
                         double minZ = clampMeshToGround(mesh);
@@ -295,13 +284,7 @@ public class I3SWriter implements FeatureWriter {
                 return;
             }
 
-            // Texture diagnostics
-            System.err.println("[I3S-TEX-DIAG] hasAppearance=" + texDiagHasAppearance.get()
-                    + " hasParamTex=" + texDiagHasParamTex.get()
-                    + " hasTexCoords=" + texDiagHasTexCoords.get()
-                    + " texCoordMapEntries=" + texDiagTexCoordMapSize.get()
-                    + " meshHasTC=" + texDiagMeshHasTC.get()
-                    + " textureStoreCount=" + textureStore.getTextureCount());
+            long t0 = System.currentTimeMillis();
 
             // --- Phase 1: Prepare data ---
             List<SpatialEntry> entries = new ArrayList<>(spatialEntries);
@@ -335,11 +318,18 @@ public class I3SWriter implements FeatureWriter {
             Map<Integer, List<SpatialEntry>> globalEntryMap = merged.nodeEntryMap();
             Set<Integer> meshNodeIndices = merged.meshNodeIndices();
 
+            long t1 = System.currentTimeMillis();
+            System.err.println("[I3S] Spatial indexing: " + (t1 - t0) + " ms ("
+                    + allNodes.size() + " nodes, " + meshNodeIndices.size() + " with mesh)");
+
             // --- Phase 5: Write output ---
             boolean hasTextures = textureStore.hasTextures();
             SceneLayer sceneLayer = buildSceneLayer(allNodes, extent);
             writeI3SFolder(sceneLayer, allNodes, attrFields, globalEntryMap,
                     meshNodeIndices, hasTextures);
+
+            long t2 = System.currentTimeMillis();
+            System.err.println("[I3S] Node output: " + (t2 - t1) + " ms");
 
         } catch (Exception e) {
             throw new WriteException("Failed to write I3S scene layer.", e);
@@ -480,10 +470,10 @@ public class I3SWriter implements FeatureWriter {
 
         // Parallel: encode geometry + write features/attributes per node.
         // Each node is fully independent — different file paths, no shared mutable state.
-        // Limit parallelism to 2 to cap peak memory — Draco encoding requires ~3x the
-        // mesh data in memory (source arrays + Vector3[] + encoder internals).
-        int geometryParallelism = 2;
+        int geometryParallelism = Runtime.getRuntime().availableProcessors();
         ForkJoinPool geometryPool = new ForkJoinPool(geometryParallelism);
+        AtomicInteger nodesProcessed = new AtomicInteger(0);
+        int totalMeshNodes = meshNodes.size();
         try {
             geometryPool.submit(() -> meshNodes.parallelStream().forEach(node -> {
                 try {
@@ -560,6 +550,11 @@ public class I3SWriter implements FeatureWriter {
 
                     if (nodeTextureId >= 0) {
                         jsonSerializer.writeSharedResource(layerDir, node, isAtlas);
+                    }
+
+                    int done = nodesProcessed.incrementAndGet();
+                    if (done % 100 == 0 || done == totalMeshNodes) {
+                        System.err.println("[I3S] Nodes written: " + done + "/" + totalMeshNodes);
                     }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
