@@ -5,7 +5,17 @@
 
 package org.citydb.vis.writer;
 
-import com.openize.drako.*;
+import com.openize.drako.AttributeType;
+import com.openize.drako.DataBuffer;
+import com.openize.drako.DataType;
+import com.openize.drako.Draco;
+import com.openize.drako.DracoCompressionLevel;
+import com.openize.drako.DracoEncodeOptions;
+import com.openize.drako.DracoMesh;
+import com.openize.drako.DrakoException;
+import com.openize.drako.PointAttribute;
+import com.openize.drako.Vector2;
+import com.openize.drako.Vector3;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.I3SNode;
@@ -16,7 +26,11 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Encodes I3S node meshes into binary geometry buffers.
@@ -39,6 +53,10 @@ class I3SGeometryEncoder {
      *   (Normal omitted from Draco when textured — CesiumJS generates normals)
      */
     private static final short FEATURE_INDEX_UID = 2;
+    /** Draco header size: "DRACO" (5) + major (1) + minor (1) + type (1) + method (1) + flags (2) */
+    private static final int DRACO_HEADER_SIZE = 11;
+    /** Bit in the Draco header flags field that indicates metadata is present. */
+    private static final short DRACO_METADATA_FLAG = (short) 0x8000;
 
     void writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
@@ -156,7 +174,7 @@ class I3SGeometryEncoder {
         outUVs = null;
     }
 
-    private void writeRawGeometry(Path layerDir, I3SNode node,
+    private static void writeRawGeometry(Path layerDir, I3SNode node,
                                   float[][] positions, float[][] normals,
                                   float[][] uvs,
                                   List<int[]> faceRanges,
@@ -211,7 +229,7 @@ class I3SGeometryEncoder {
      * Attributes are added in this order to match the compressedAttributes
      * declaration in geometryDefinitions: position, normal, uv0, feature-index.
      */
-    private void writeDracoGeometry(Path layerDir, I3SNode node,
+    private static void writeDracoGeometry(Path layerDir, I3SNode node,
                                     double centerLatDeg,
                                     float[][] positions, float[][] normals,
                                     float[][] uvs,
@@ -304,11 +322,6 @@ class I3SGeometryEncoder {
     }
 
     // ---- Draco metadata injection ----------------------------------------
-
-    /** Draco header size: "DRACO" (5) + major (1) + minor (1) + type (1) + method (1) + flags (2) */
-    private static final int DRACO_HEADER_SIZE = 11;
-    /** Bit in the Draco header flags field that indicates metadata is present. */
-    private static final short DRACO_METADATA_FLAG = (short) 0x8000;
 
     /**
      * Inject metadata into an encoded Draco binary.  The Drako Java library
@@ -438,7 +451,7 @@ class I3SGeometryEncoder {
      * AND the same UV coordinates (within tolerance). This preserves texture
      * seams where adjacent polygons meet with different UVs.
      */
-    private float[][] weldVertexPositions(TriangleMesh mesh, double centerX,
+    private static float[][] weldVertexPositions(TriangleMesh mesh, double centerX,
                                           double centerY, double centerZ) {
         double scaleX = 111_320.0 * Math.cos(Math.toRadians(centerY));
         double scaleY = 111_320.0;

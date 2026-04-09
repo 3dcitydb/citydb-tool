@@ -107,12 +107,14 @@ public class I3SNode {
         return outputVertexCount >= 0 ? outputVertexCount : (mesh != null ? mesh.getTriangleCount() * 3 : 0);
     }
 
-    public void setOutputVertexCount(int count) {
+    public I3SNode setOutputVertexCount(int count) {
         this.outputVertexCount = count;
+        return this;
     }
 
-    public void setTextureId(int textureId) {
+    public I3SNode setTextureId(int textureId) {
         this.textureId = textureId;
+        return this;
     }
 
     public boolean hasTexture() {

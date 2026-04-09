@@ -5,7 +5,13 @@
 
 package org.citydb.vis.writer;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
@@ -27,6 +33,13 @@ class AttributeStore implements Closeable {
     private final Path tempFile;
     private final FileChannel channel;
     private long writePosition = 0;
+
+    /**
+     * Loaded attribute data for a single feature.
+     */
+    record FeatureAttrs(String objectId, String featureType,
+                        Map<String, Object> attributes) {
+    }
 
     AttributeStore() throws IOException {
         tempFile = Files.createTempFile("i3s-attr-", ".bin");
@@ -172,12 +185,5 @@ class AttributeStore implements Closeable {
             }
             totalRead += read;
         }
-    }
-
-    /**
-     * Loaded attribute data for a single feature.
-     */
-    record FeatureAttrs(String objectId, String featureType,
-                        Map<String, Object> attributes) {
     }
 }
