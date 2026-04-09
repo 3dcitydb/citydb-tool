@@ -121,7 +121,10 @@
       "Read(//c/tmp/**)",
       "WebFetch(domain:mvnrepository.com)",
       "Bash(/c/Users/yao/AppData/Local/Programs/Python/Python312/python:*)",
-      "Bash(awk '{print $NF}')"
+      "Bash(awk '{print $NF}')",
+      "Bash(gh api:*)",
+      "Bash(gh search:*)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }
