@@ -1,6 +1,7 @@
 module org.citydb.vis {
     requires org.citydb.io;
     requires drako;
+    requires texture.atlas.creator;
     requires java.desktop;
 
     exports org.citydb.vis;
