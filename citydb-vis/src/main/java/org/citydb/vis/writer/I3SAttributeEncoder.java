@@ -16,7 +16,10 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -28,12 +31,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * data structures.
  */
 class I3SAttributeEncoder {
-
     enum AttrType { STRING, INT, DOUBLE }
 
     record AttrField(String name, AttrType type) {}
 
-    // --- Incremental type tracking (thread-safe) ---
+    // ---- Incremental type tracking (thread-safe) ----
 
     private final ConcurrentHashMap<String, AttrType> trackedTypes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> trackedCounts = new ConcurrentHashMap<>();
@@ -46,7 +48,7 @@ class I3SAttributeEncoder {
         for (Map.Entry<String, Object> entry : attributes.entrySet()) {
             String name = entry.getKey();
             AttrType valueType = classifyType(entry.getValue());
-            trackedTypes.merge(name, valueType, this::promoteType);
+            trackedTypes.merge(name, valueType, I3SAttributeEncoder::promoteType);
             trackedCounts.computeIfAbsent(name, k -> new AtomicLong(0)).incrementAndGet();
         }
     }
@@ -79,7 +81,7 @@ class I3SAttributeEncoder {
         return fields;
     }
 
-    // --- Attribute extraction ---
+    // ---- Attribute extraction ----
 
     /**
      * Extract typed attribute values from a Feature.
@@ -98,7 +100,7 @@ class I3SAttributeEncoder {
         return result;
     }
 
-    // --- Binary encoding ---
+    // ---- Binary encoding ----
 
     /**
      * Write binary attribute data for all fields of a single node.
@@ -171,21 +173,21 @@ class I3SAttributeEncoder {
         }
     }
 
-    // --- Internal helpers ---
+    // ---- Internal helpers ----
 
-    private AttrType classifyType(Object value) {
+    private static AttrType classifyType(Object value) {
         if (value instanceof Long) return AttrType.INT;
         if (value instanceof Double) return AttrType.DOUBLE;
         return AttrType.STRING;
     }
 
-    private Object getFieldValue(FeatureData fd, String fieldName) {
+    private static Object getFieldValue(FeatureData fd, String fieldName) {
         if ("OBJECTID".equals(fieldName)) return fd.objectId();
         if ("featureType".equals(fieldName)) return fd.featureType();
         return fd.attributes().get(fieldName);
     }
 
-    private Object getAttributeValue(Attribute attr) {
+    private static Object getAttributeValue(Attribute attr) {
         if (attr.getIntValue().isPresent()) {
             return attr.getIntValue().get();
         }
@@ -214,7 +216,7 @@ class I3SAttributeEncoder {
         return null;
     }
 
-    private AttrType promoteType(AttrType a, AttrType b) {
+    private static AttrType promoteType(AttrType a, AttrType b) {
         if (a == b) return a;
         if (a == AttrType.STRING || b == AttrType.STRING) return AttrType.STRING;
         return AttrType.DOUBLE;
