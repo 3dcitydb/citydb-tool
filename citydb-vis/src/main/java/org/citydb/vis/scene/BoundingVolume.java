@@ -29,10 +29,6 @@ public class BoundingVolume {
         this.radius = radius;
     }
 
-    public static BoundingVolume of(double centerX, double centerY, double centerZ, double radius) {
-        return new BoundingVolume(centerX, centerY, centerZ, radius);
-    }
-
     /**
      * Create MBS from an axis-aligned bounding box in geographic coordinates (EPSG:4326).
      * Converts degree extents to meters for the radius computation.
@@ -64,10 +60,6 @@ public class BoundingVolume {
         return centerZ;
     }
 
-    public double getRadius() {
-        return radius;
-    }
-
     public double[] toMbs() {
         return new double[]{centerX, centerY, centerZ, radius};
     }
@@ -94,7 +86,7 @@ public class BoundingVolume {
         double ratio = dist > 0 ? (newRadius - radius) / dist : 0;
 
         // Interpolate center in degree space
-        return BoundingVolume.of(
+        return new BoundingVolume(
                 centerX + (other.centerX - centerX) * ratio,
                 centerY + (other.centerY - centerY) * ratio,
                 centerZ + dzMeters * ratio,
