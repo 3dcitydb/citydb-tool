@@ -409,8 +409,4 @@ class TextureAtlas {
     void write(Path target) throws IOException {
         ImageIO.write(image, "jpg", target.toFile());
     }
-
-    void writeDds(Path target) throws IOException {
-        DdsEncoder.writeImage(image, target);
-    }
 }
