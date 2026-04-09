@@ -45,7 +45,6 @@ public class VisExportCommand extends ExportController {
                     "Lower values reduce texture size and improve loading speed in the viewer.")
     private double textureScale;
 
-
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
@@ -87,7 +86,6 @@ public class VisExportCommand extends ExportController {
         if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
             options.setTextureScale(textureScale);
         }
-
 
         return options;
     }
