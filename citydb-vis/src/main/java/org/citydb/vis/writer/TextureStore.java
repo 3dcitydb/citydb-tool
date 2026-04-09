@@ -6,7 +6,6 @@
 package org.citydb.vis.writer;
 
 import org.citydb.core.file.OutputFile;
-import org.citydb.model.common.ExternalFile;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -34,7 +33,6 @@ class TextureStore implements Closeable {
     private final OutputFile outputFile;
     private final ConcurrentHashMap<String, Integer> uriToId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, String> idToUri = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Integer, String> idToFormat = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger(0);
 
     TextureStore(OutputFile outputFile) {
@@ -43,20 +41,14 @@ class TextureStore implements Closeable {
 
     /**
      * Register a texture image URI. Deduplicates by URI and assigns a stable ID.
-     * Does NOT read the file — file I/O is deferred to {@link #copyTo}.
+     * Does NOT read the file — file I/O is deferred to the close phase.
      *
      * @return texture ID (>= 0)
      */
-    int register(ExternalFile textureImage) {
-        String uri = textureImage.getFileLocation();
+    int register(String uri) {
         return uriToId.computeIfAbsent(uri, k -> {
             int id = nextId.getAndIncrement();
             idToUri.put(id, uri);
-
-            // Detect format from mime type or URI extension
-            String format = detectFormat(textureImage, uri);
-            idToFormat.put(id, format);
-
             return id;
         });
     }
@@ -69,7 +61,7 @@ class TextureStore implements Closeable {
      * Must be called after BlobExporter has flushed all batches (i.e., after
      * {@code Exporter.closeSession()}).
      */
-    void copyTo(int textureId, Path target) throws IOException {
+    private void copyTo(int textureId, Path target) throws IOException {
         String uri = idToUri.get(textureId);
         if (uri == null) return;
 
@@ -137,17 +129,6 @@ class TextureStore implements Closeable {
         return Files.exists(source) ? source : null;
     }
 
-    /**
-     * Get the image format for a registered texture (e.g., "jpg", "png").
-     */
-    String getFormat(int textureId) {
-        return idToFormat.getOrDefault(textureId, "jpg");
-    }
-
-    int getTextureCount() {
-        return nextId.get();
-    }
-
     boolean hasTextures() {
         return nextId.get() > 0;
     }
@@ -175,18 +156,4 @@ class TextureStore implements Closeable {
         return rgb;
     }
 
-    private static String detectFormat(ExternalFile file, String uri) {
-        // Try mime type first
-        String mime = file.getMimeType().orElse("");
-        if (mime.contains("png")) return "png";
-        if (mime.contains("jpeg") || mime.contains("jpg")) return "jpg";
-
-        // Fall back to URI extension
-        String lower = uri.toLowerCase();
-        if (lower.endsWith(".png")) return "png";
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "jpg";
-        if (lower.endsWith(".gif")) return "gif";
-
-        return "jpg"; // default
-    }
 }

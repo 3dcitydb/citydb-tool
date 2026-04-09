@@ -6,7 +6,6 @@
 package org.citydb.vis.writer;
 
 import org.citydb.vis.scene.I3SNode;
-import org.citydb.vis.scene.NodePage;
 import org.citydb.vis.scene.SceneLayer;
 
 import java.io.IOException;
@@ -22,6 +21,7 @@ import java.util.UUID;
  * node pages, per-node feature data, and shared resources.
  */
 class I3SJsonSerializer {
+    private static final int NODES_PER_PAGE = 64;
 
     void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
                              List<I3SAttributeEncoder.AttrField> attrFields,
@@ -227,7 +227,7 @@ class I3SJsonSerializer {
         json.append("\n  ],\n");
 
         json.append("  \"nodePages\": {\n");
-        json.append("    \"nodesPerPage\": ").append(NodePage.DEFAULT_PAGE_SIZE).append(",\n");
+        json.append("    \"nodesPerPage\": ").append(NODES_PER_PAGE).append(",\n");
         json.append("    \"lodSelectionMetricType\": \"maxScreenThresholdSQ\"\n");
         json.append("  }\n");
         json.append("}\n");
@@ -243,7 +243,7 @@ class I3SJsonSerializer {
     void writeNodePages(Path layerDir, List<I3SNode> nodes,
                         Set<Integer> meshNodeIndices,
                         boolean hasTextures) throws IOException {
-        int pageSize = NodePage.DEFAULT_PAGE_SIZE;
+        int pageSize = NODES_PER_PAGE;
         int pageCount = (nodes.size() + pageSize - 1) / pageSize;
 
         for (int page = 0; page < pageCount; page++) {

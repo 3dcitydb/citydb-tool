@@ -23,14 +23,9 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Handles I3S attribute type detection and binary attribute encoding.
  * <p>
- * Supports two modes:
- * <ul>
- *   <li><b>Incremental tracking</b> (optimized): call {@link #trackFieldTypes}
- *       during the write phase, then {@link #finalizeFields} during close.
- *       Thread-safe — uses concurrent data structures.</li>
- *   <li><b>Batch detection</b> (legacy): call {@link #collectAttributeFields}
- *       with the full feature list during close.</li>
- * </ul>
+ * Call {@link #trackFieldTypes} during the write phase, then
+ * {@link #finalizeFields} during close. Thread-safe — uses concurrent
+ * data structures.
  */
 class I3SAttributeEncoder {
 
@@ -81,54 +76,6 @@ class I3SAttributeEncoder {
 
         List<AttrField> fields = new ArrayList<>();
         result.forEach((name, type) -> fields.add(new AttrField(name, type)));
-        return fields;
-    }
-
-    // --- Legacy batch detection ---
-
-    /**
-     * Collect all attribute fields with their detected types (single-pass batch mode).
-     */
-    List<AttrField> collectAttributeFields(List<FeatureData> features) {
-        Map<String, AttrType> typeMap = new LinkedHashMap<>();
-        Set<String> allAttrNames = new LinkedHashSet<>();
-        typeMap.put("OBJECTID", AttrType.STRING);
-        typeMap.put("featureType", AttrType.STRING);
-        for (FeatureData fd : features) {
-            for (Map.Entry<String, Object> entry : fd.attributes().entrySet()) {
-                String name = entry.getKey();
-                allAttrNames.add(name);
-                AttrType valueType = classifyType(entry.getValue());
-                AttrType existing = typeMap.get(name);
-                if (existing == null) {
-                    typeMap.put(name, valueType);
-                } else {
-                    typeMap.put(name, promoteType(existing, valueType));
-                }
-            }
-        }
-        Set<String> intFieldNames = new HashSet<>();
-        for (Map.Entry<String, AttrType> e : typeMap.entrySet()) {
-            if (e.getValue() == AttrType.INT) intFieldNames.add(e.getKey());
-        }
-        if (!intFieldNames.isEmpty()) {
-            for (FeatureData fd : features) {
-                Iterator<String> it = intFieldNames.iterator();
-                while (it.hasNext()) {
-                    if (!fd.attributes().containsKey(it.next())) {
-                        it.remove();
-                    }
-                }
-                if (intFieldNames.isEmpty()) break;
-            }
-            for (String name : allAttrNames) {
-                if (typeMap.get(name) == AttrType.INT && !intFieldNames.contains(name)) {
-                    typeMap.put(name, AttrType.DOUBLE);
-                }
-            }
-        }
-        List<AttrField> fields = new ArrayList<>();
-        typeMap.forEach((name, type) -> fields.add(new AttrField(name, type)));
         return fields;
     }
 

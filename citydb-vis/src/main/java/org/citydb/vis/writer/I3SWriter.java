@@ -160,7 +160,6 @@ public class I3SWriter implements FeatureWriter {
         // polygon surface gets its own texture in the atlas.
         Map<LinearRing, List<TextureCoordinate>> texCoordMap = null;
         Map<LinearRing, Integer> ringTextureMap = null;
-        int textureId = -1;
         if (feature.hasAppearances()) {
             texCoordMap = new IdentityHashMap<>();
             ringTextureMap = new IdentityHashMap<>();
@@ -175,8 +174,7 @@ public class I3SWriter implements FeatureWriter {
                             int ptTextureId = -1;
                             ExternalFile img = pt.getTextureImage().orElse(null);
                             if (img != null) {
-                                ptTextureId = textureStore.register(img);
-                                if (textureId < 0) textureId = ptTextureId;
+                                ptTextureId = textureStore.register(img.getFileLocation());
                             }
                             // Map each ring to its UV coordinates AND texture ID
                             Map<LinearRing, List<TextureCoordinate>> ptCoords =
@@ -201,7 +199,6 @@ public class I3SWriter implements FeatureWriter {
         List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
         final Map<LinearRing, List<TextureCoordinate>> finalTexCoordMap = texCoordMap;
         final Map<LinearRing, Integer> finalRingTextureMap = ringTextureMap;
-        final int finalTextureId = textureId;
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
         service.execute(() -> {
@@ -253,7 +250,7 @@ public class I3SWriter implements FeatureWriter {
 
                     // Only compact spatial metadata stays on heap
                     spatialEntries.add(new SpatialEntry(featureId, cx, cy, bbox,
-                            meshHandle, attrOffset, finalTextureId));
+                            meshHandle, attrOffset));
                 }
                 result.complete(true);
             } catch (Throwable e) {
@@ -324,7 +321,7 @@ public class I3SWriter implements FeatureWriter {
 
             // --- Phase 5: Write output ---
             boolean hasTextures = textureStore.hasTextures();
-            SceneLayer sceneLayer = buildSceneLayer(allNodes, extent);
+            SceneLayer sceneLayer = buildSceneLayer(extent);
             writeI3SFolder(sceneLayer, allNodes, attrFields, globalEntryMap,
                     meshNodeIndices, hasTextures);
 
@@ -426,17 +423,11 @@ public class I3SWriter implements FeatureWriter {
         return minZ;
     }
 
-    private SceneLayer buildSceneLayer(List<I3SNode> nodes, double[] extent) {
+    private SceneLayer buildSceneLayer(double[] extent) {
         SceneLayer layer = new SceneLayer();
         layer.setName("3DCityDB I3S Export");
         layer.setDescription("Exported from 3DCityDB using citydb-tool");
-        layer.setNodeCount(nodes.size());
         layer.setExtent(extent);
-
-        if (!nodes.isEmpty() && nodes.get(0).getMbs() != null) {
-            layer.setFullExtent(nodes.get(0).getMbs());
-        }
-
         layer.setWkid(EPSG_4326);
         return layer;
     }
@@ -539,9 +530,7 @@ public class I3SWriter implements FeatureWriter {
                                 attrStore.load(entry.attrOffset());
                         featureDataList.add(new FeatureData(
                                 entry.id(), attrs.objectId(), attrs.featureType(),
-                                entry.centerX(), entry.centerY(), entry.bbox(),
-                                attrs.attributes(), entry.meshHandle(),
-                                entry.textureId()));
+                                attrs.attributes()));
                     }
 
                     jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
