@@ -205,14 +205,20 @@ public class TriangleMesh {
                 // Interpolate UV along the edge at the parametric position t.
                 float[] triNormal = normals.get(ei1);
                 double[] viPos = positions.get(vi);
-                float[] uv1 = texCoords.get(ei1);
-                float[] uv2 = texCoords.get(ei2);
-                float tParam = (float) splitParams.get(s).doubleValue();
-                float interpU = uv1[0] + tParam * (uv2[0] - uv1[0]);
-                float interpV = uv1[1] + tParam * (uv2[1] - uv1[1]);
-                int newVi = addVertex(viPos[0], viPos[1], viPos[2],
-                        triNormal[0], triNormal[1], triNormal[2],
-                        interpU, interpV);
+                int newVi;
+                if (hasTexCoords) {
+                    float[] uv1 = texCoords.get(ei1);
+                    float[] uv2 = texCoords.get(ei2);
+                    float tParam = (float) splitParams.get(s).doubleValue();
+                    float interpU = uv1[0] + tParam * (uv2[0] - uv1[0]);
+                    float interpV = uv1[1] + tParam * (uv2[1] - uv1[1]);
+                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
+                            triNormal[0], triNormal[1], triNormal[2],
+                            interpU, interpV);
+                } else {
+                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
+                            triNormal[0], triNormal[1], triNormal[2]);
+                }
 
                 removed.add(ti);
                 newTriangles.add(new int[]{ei1, newVi, ei3});
