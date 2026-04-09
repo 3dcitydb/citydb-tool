@@ -16,7 +16,6 @@ public class I3SFormatOptions implements OutputFormatOptions {
     private boolean clampToGround;
     private double textureScale = 1.0;
     private int maxAtlasSize = 2048;
-    private boolean gpuTextureCompression = true;
 
     public int getMaxFeaturesPerNode() {
         return maxFeaturesPerNode;
@@ -72,12 +71,4 @@ public class I3SFormatOptions implements OutputFormatOptions {
         return this;
     }
 
-    public boolean isGpuTextureCompression() {
-        return gpuTextureCompression;
-    }
-
-    public I3SFormatOptions setGpuTextureCompression(boolean gpuTextureCompression) {
-        this.gpuTextureCompression = gpuTextureCompression;
-        return this;
-    }
 }
