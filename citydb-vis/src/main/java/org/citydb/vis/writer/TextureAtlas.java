@@ -5,10 +5,14 @@
 
 package org.citydb.vis.writer;
 
+import org.citydb.textureAtlas.TextureAtlasCreator;
+import org.citydb.textureAtlas.model.AtlasRegion;
+import org.citydb.textureAtlas.packer.Packer;
 import org.citydb.vis.geometry.TriangleMesh;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -17,34 +21,33 @@ import java.util.List;
 
 /**
  * Packs multiple texture images into a single atlas and remaps UV coordinates.
- * Uses shelf-based packing: textures sorted by height descending, placed in rows.
+ * Uses the BASIC (Lightmap/BSP) algorithm from texture-atlas-creator for fast
+ * packing with O(n log n) complexity. Textures may be rotated 90° to improve
+ * packing density; rotation is handled transparently in compositing and UV
+ * remapping.
+ * <p>
  * Atlas dimensions are capped at {@code maxAtlasSize} to stay within WebGL
- * texture size limits; when textures cannot fit in a single atlas, they are
- * partitioned into multiple atlases via {@link #buildMultiple}.
+ * texture size limits; when textures exceed the limit, they are scaled down
+ * uniformly to fit.
  * <p>
  * Supports tiled/wrapping textures: when CityGML UV coordinates exceed [0,1],
  * the source texture is repeated in the atlas region to cover the full UV range.
  */
 class TextureAtlas {
-    static final int DEFAULT_MAX_ATLAS_SIZE = 2048;
-
     private final Map<Integer, float[]> uvRegions;
     private final BufferedImage image;
-    private final Set<Integer> containedTextureIds;
     /** Per-texture tile mapping: texId → [offsetU, offsetV, rangeU, rangeV]. */
     private final Map<Integer, float[]> tileOffsets;
+    /** Texture IDs that were rotated 90° CCW by the packer. */
+    private final Set<Integer> rotatedTextureIds;
 
     private TextureAtlas(Map<Integer, float[]> uvRegions, BufferedImage image,
-                         Set<Integer> containedTextureIds,
-                         Map<Integer, float[]> tileOffsets) {
+                         Map<Integer, float[]> tileOffsets,
+                         Set<Integer> rotatedTextureIds) {
         this.uvRegions = uvRegions;
         this.image = image;
-        this.containedTextureIds = containedTextureIds;
         this.tileOffsets = tileOffsets;
-    }
-
-    Set<Integer> getContainedTextureIds() {
-        return containedTextureIds;
+        this.rotatedTextureIds = rotatedTextureIds;
     }
 
     /**
@@ -69,115 +72,13 @@ class TextureAtlas {
         return buildSingleAtlas(dims, images, scale, maxAtlasSize, tileInfo, tileOffsets);
     }
 
-    /**
-     * Build one or more texture atlases from the given texture IDs.
-     * <p>
-     * If all textures fit within a single {@code maxAtlasSize} atlas at the
-     * requested scale, a singleton list is returned. Otherwise the textures are
-     * partitioned into groups using greedy shelf-packing, and each group is
-     * built as a separate atlas — preserving the requested scale instead of
-     * downscaling everything to fit in one atlas.
-     *
-     * @param uvExtents per-texture UV extent: texId → [minU, minV, maxU, maxV].
-     */
-    static List<TextureAtlas> buildMultiple(Collection<Integer> textureIds,
-                                            TextureStore textureStore,
-                                            double textureScale, int maxAtlasSize,
-                                            Map<Integer, float[]> uvExtents) throws IOException {
-        List<int[]> dims = new ArrayList<>();
-        List<BufferedImage> images = new ArrayList<>();
-        Map<Integer, int[]> tileInfo = new HashMap<>();
-        Map<Integer, float[]> tileOffsets = new HashMap<>();
-
-        loadAndPrepareTiled(textureIds, textureStore, uvExtents, dims, images,
-                tileInfo, tileOffsets);
-        if (dims.isEmpty()) return List.of();
-
-        double scale = Math.min(1.0, Math.max(0.01, textureScale));
-
-        if (dims.size() == 1) {
-            TextureAtlas atlas = buildSingleAtlas(dims, images, scale, maxAtlasSize, tileInfo, tileOffsets);
-            return atlas != null ? List.of(atlas) : List.of();
-        }
-
-        // Sort by height descending for shelf packing
-        Integer[] order = new Integer[dims.size()];
-        for (int i = 0; i < order.length; i++) order[i] = i;
-        Arrays.sort(order, (a, b) -> Integer.compare(dims.get(b)[2], dims.get(a)[2]));
-
-        // Check if single atlas is sufficient
-        int[] trialSize = computePackedSize(dims, order, scale, maxAtlasSize);
-        if (trialSize[0] <= maxAtlasSize && trialSize[1] <= maxAtlasSize) {
-            TextureAtlas atlas = buildSingleAtlas(dims, images, scale, maxAtlasSize, tileInfo, tileOffsets);
-            return atlas != null ? List.of(atlas) : List.of();
-        }
-
-        // Partition textures into groups where each group fits within maxAtlasSize
-        List<List<Integer>> groups = new ArrayList<>();
-        List<Integer> currentGroup = new ArrayList<>();
-        int gShelfX = 0, gShelfY = 0, gShelfH = 0, gMaxW = 0;
-
-        for (int idx : order) {
-            int w = Math.max(1, (int) (dims.get(idx)[1] * scale));
-            int h = Math.max(1, (int) (dims.get(idx)[2] * scale));
-
-            int sX = gShelfX, sY = gShelfY, sH = gShelfH;
-            if (sX + w > maxAtlasSize && sX > 0) {
-                sY += sH;
-                sX = 0;
-                sH = 0;
-            }
-            sX += w;
-            sH = Math.max(sH, h);
-            int mW = Math.max(gMaxW, sX);
-
-            boolean fits = mW <= maxAtlasSize && (sY + sH) <= maxAtlasSize;
-
-            if (!fits && !currentGroup.isEmpty()) {
-                groups.add(new ArrayList<>(currentGroup));
-                currentGroup.clear();
-                gShelfX = w;
-                gShelfY = 0;
-                gShelfH = h;
-                gMaxW = w;
-                currentGroup.add(idx);
-            } else {
-                gShelfX = sX;
-                gShelfY = sY;
-                gShelfH = sH;
-                gMaxW = mW;
-                currentGroup.add(idx);
-            }
-        }
-        if (!currentGroup.isEmpty()) {
-            groups.add(currentGroup);
-        }
-
-        // Build each group as a separate atlas
-        List<TextureAtlas> result = new ArrayList<>();
-        for (List<Integer> group : groups) {
-            List<int[]> groupDims = new ArrayList<>();
-            List<BufferedImage> groupImages = new ArrayList<>();
-            for (int idx : group) {
-                groupDims.add(dims.get(idx));
-                groupImages.add(images.get(idx));
-            }
-            TextureAtlas atlas = buildSingleAtlas(groupDims, groupImages, scale,
-                    maxAtlasSize, tileInfo, tileOffsets);
-            if (atlas != null) {
-                result.add(atlas);
-            }
-        }
-        return result;
-    }
-
     // ---- Image loading and tiling preparation --------------------------------
 
     /**
      * Load texture images and compute tiling information from UV extents.
      * <p>
      * Populates {@code dims} with <b>effective</b> (tiled) dimensions so that
-     * shelf packing allocates enough space for all tiles.
+     * packing allocates enough space for all tiles.
      */
     private static void loadAndPrepareTiled(
             Collection<Integer> textureIds, TextureStore textureStore,
@@ -239,58 +140,68 @@ class TextureAtlas {
                                                   Map<Integer, float[]> tileOffsets) {
         if (dims.size() == 1) {
             int texId = dims.get(0)[0];
-            Set<Integer> contained = Set.of(texId);
             int[] ti = tileInfo.getOrDefault(texId, new int[]{1, 1});
             if (ti[0] == 1 && ti[1] == 1) {
                 // No tiling — return single image as-is
                 Map<Integer, float[]> regions = Map.of(texId, new float[]{0f, 0f, 1f, 1f});
                 return new TextureAtlas(regions, TextureStore.toOpaqueRgb(images.get(0)),
-                        contained, tileOffsets);
+                        tileOffsets, Set.of());
             }
             // Single texture with tiling — fall through to atlas compositing
         }
 
-        // Sort by effective height descending for shelf packing
-        Integer[] order = new Integer[dims.size()];
-        for (int i = 0; i < order.length; i++) order[i] = i;
-        Arrays.sort(order, (a, b) -> Integer.compare(dims.get(b)[2], dims.get(a)[2]));
-
-        int[] trialSize = computePackedSize(dims, order, scale, maxAtlasSize);
-
-        // Scale down uniformly if atlas exceeds WebGL max texture size
-        if (trialSize[0] > maxAtlasSize || trialSize[1] > maxAtlasSize) {
-            scale = Math.min(
-                    (double) maxAtlasSize / trialSize[0],
-                    (double) maxAtlasSize / trialSize[1]);
-            int[] check = computePackedSize(dims, order, scale, maxAtlasSize);
-            if (check[0] > maxAtlasSize || check[1] > maxAtlasSize) {
-                scale *= Math.min(
-                        (double) maxAtlasSize / check[0],
-                        (double) maxAtlasSize / check[1]);
-            }
-        }
-
-        // Final pack with computed scale
-        Map<Integer, int[]> pixelRegions = new LinkedHashMap<>();
-        int atlasWidth = 0, atlasHeight = 0;
-        int shelfX = 0, shelfY = 0, shelfH = 0;
-        for (int idx : order) {
-            int[] d = dims.get(idx);
+        // Pack with BASIC (Lightmap/BSP) — O(n log n), may rotate textures
+        Map<Integer, Integer> texIdToIdx = new HashMap<>();
+        Packer packer = new Packer(maxAtlasSize, maxAtlasSize,
+                TextureAtlasCreator.BASIC, false);
+        for (int i = 0; i < dims.size(); i++) {
+            int[] d = dims.get(i);
             int w = Math.max(1, (int) (d[1] * scale));
             int h = Math.max(1, (int) (d[2] * scale));
-            if (shelfX + w > maxAtlasSize && shelfX > 0) {
-                shelfY += shelfH;
-                shelfX = 0;
-                shelfH = 0;
-            }
-            pixelRegions.put(d[0], new int[]{shelfX, shelfY, w, h});
-            shelfX += w;
-            atlasWidth = Math.max(atlasWidth, shelfX);
-            shelfH = Math.max(shelfH, h);
+            packer.addRegion(String.valueOf(d[0]), w, h);
+            texIdToIdx.put(d[0], i);
         }
-        atlasHeight = shelfY + shelfH;
+        var packed = packer.pack(false);
 
-        // Compose atlas image — draw each texture tiled into its allocated region
+        // If any textures overflow to a second page, scale down and retry
+        boolean hasOverflow = false;
+        for (AtlasRegion r : packed.getRegions()) {
+            if (r.level > 0) { hasOverflow = true; break; }
+        }
+        if (hasOverflow) {
+            long totalArea = 0;
+            for (int[] d : dims) {
+                totalArea += (long) Math.max(1, (int) (d[1] * scale))
+                        * Math.max(1, (int) (d[2] * scale));
+            }
+            double areaRatio = (double) ((long) maxAtlasSize * maxAtlasSize) / totalArea;
+            scale *= Math.sqrt(Math.min(1.0, areaRatio * 0.9));
+
+            packer = new Packer(maxAtlasSize, maxAtlasSize,
+                    TextureAtlasCreator.BASIC, false);
+            for (int[] d : dims) {
+                int w = Math.max(1, (int) (d[1] * scale));
+                int h = Math.max(1, (int) (d[2] * scale));
+                packer.addRegion(String.valueOf(d[0]), w, h);
+            }
+            packed = packer.pack(false);
+        }
+
+        // Collect placement results and track rotated textures
+        int atlasWidth = 0, atlasHeight = 0;
+        Map<Integer, int[]> pixelRegions = new LinkedHashMap<>();
+        Set<Integer> rotated = new HashSet<>();
+        for (AtlasRegion r : packed.getRegions()) {
+            int texId = Integer.parseInt(r.texImageName);
+            pixelRegions.put(texId, new int[]{r.x, r.y, r.width, r.height});
+            atlasWidth = Math.max(atlasWidth, r.x + r.width);
+            atlasHeight = Math.max(atlasHeight, r.y + r.height);
+            if (r.isRotated) {
+                rotated.add(texId);
+            }
+        }
+
+        // Compose atlas image — draw each texture into its allocated region
         BufferedImage atlas = new BufferedImage(atlasWidth, atlasHeight,
                 BufferedImage.TYPE_INT_RGB);
         Graphics2D g = atlas.createGraphics();
@@ -299,24 +210,31 @@ class TextureAtlas {
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, atlasWidth, atlasHeight);
 
-        for (int idx : order) {
-            int[] d = dims.get(idx);
-            int[] pr = pixelRegions.get(d[0]);
-            int[] ti = tileInfo.getOrDefault(d[0], new int[]{1, 1});
+        for (Map.Entry<Integer, int[]> entry : pixelRegions.entrySet()) {
+            int texId = entry.getKey();
+            int[] pr = entry.getValue();
+            int idx = texIdToIdx.get(texId);
+            BufferedImage srcImg = images.get(idx);
+            int[] ti = tileInfo.getOrDefault(texId, new int[]{1, 1});
             int tU = ti[0], tV = ti[1];
+            boolean isRotated = rotated.contains(texId);
+
+            if (isRotated) {
+                // Rotated 90° CCW: swap tile counts, rotate source image
+                int tmp = tU; tU = tV; tV = tmp;
+                srcImg = rotateImage90CCW(srcImg);
+            }
 
             if (tU == 1 && tV == 1) {
-                // No tiling — draw source image scaled to region
-                g.drawImage(images.get(idx), pr[0], pr[1], pr[2], pr[3], null);
+                g.drawImage(srcImg, pr[0], pr[1], pr[2], pr[3], null);
             } else {
-                // Draw source image tiled tU × tV times within the region
                 for (int ty = 0; ty < tV; ty++) {
                     for (int tx = 0; tx < tU; tx++) {
                         int x1 = pr[0] + (pr[2] * tx) / tU;
                         int y1 = pr[1] + (pr[3] * ty) / tV;
                         int x2 = pr[0] + (pr[2] * (tx + 1)) / tU;
                         int y2 = pr[1] + (pr[3] * (ty + 1)) / tV;
-                        g.drawImage(images.get(idx), x1, y1, x2 - x1, y2 - y1, null);
+                        g.drawImage(srcImg, x1, y1, x2 - x1, y2 - y1, null);
                     }
                 }
             }
@@ -335,27 +253,24 @@ class TextureAtlas {
             uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
         }
 
-        Set<Integer> contained = new HashSet<>();
-        for (int[] d : dims) contained.add(d[0]);
-        return new TextureAtlas(uvRegions, atlas, contained, tileOffsets);
+        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated);
     }
 
-    private static int[] computePackedSize(List<int[]> dims, Integer[] order, double scale,
-                                              int maxAtlasSize) {
-        int shelfX = 0, shelfY = 0, shelfH = 0, maxW = 0;
-        for (int idx : order) {
-            int w = Math.max(1, (int) (dims.get(idx)[1] * scale));
-            int h = Math.max(1, (int) (dims.get(idx)[2] * scale));
-            if (shelfX + w > maxAtlasSize && shelfX > 0) {
-                shelfY += shelfH;
-                shelfX = 0;
-                shelfH = 0;
-            }
-            shelfX += w;
-            maxW = Math.max(maxW, shelfX);
-            shelfH = Math.max(shelfH, h);
-        }
-        return new int[]{maxW, shelfY + shelfH};
+    /**
+     * Rotate a BufferedImage 90° counter-clockwise.
+     */
+    private static BufferedImage rotateImage90CCW(BufferedImage src) {
+        int w = src.getWidth(), h = src.getHeight();
+        BufferedImage dst = new BufferedImage(h, w, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = dst.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        AffineTransform tx = new AffineTransform();
+        tx.translate(0, w);
+        tx.rotate(-Math.PI / 2);
+        g.drawImage(src, tx, null);
+        g.dispose();
+        return dst;
     }
 
     // ---- UV remapping --------------------------------------------------------
@@ -363,11 +278,11 @@ class TextureAtlas {
     /**
      * Remap UV coordinates from per-texture space to atlas space.
      * <p>
-     * For wrapping/tiling textures (UVs outside [0,1]), the mapping is:
-     * {@code atlasUV = regionOffset + ((origUV - tileOffset) / tileRange) * regionScale}
+     * For rotated textures, applies a 90° CCW UV rotation before the atlas
+     * position transform: {@code rotU = origV, rotV = offU + rangeU - origU}.
      * <p>
-     * For non-tiling textures (UVs in [0,1]), this simplifies to the standard:
-     * {@code atlasUV = regionOffset + origUV * regionScale}
+     * For wrapping/tiling textures (UVs outside [0,1]), the mapping is:
+     * {@code atlasUV = regionOffset + ((uv - tileOffset) / tileRange) * regionScale}
      */
     void remapUVs(TriangleMesh mesh) {
         int vertexCount = mesh.getVertexCount();
@@ -385,7 +300,6 @@ class TextureAtlas {
             }
         }
 
-        // Default: no offset, range=1 (identity for non-tiling textures)
         float[] defaultTile = {0f, 0f, 1f, 1f};
 
         List<float[]> texCoords = mesh.getTexCoords();
@@ -395,12 +309,24 @@ class TextureAtlas {
                 float[] region = uvRegions.get(texId);
                 if (region != null) {
                     float[] tile = tileOffsets.getOrDefault(texId, defaultTile);
-                    float offsetU = tile[0], offsetV = tile[1];
-                    float rangeU = tile[2], rangeV = tile[3];
-
                     float[] uv = texCoords.get(v);
-                    uv[0] = region[0] + ((uv[0] - offsetU) / rangeU) * region[2];
-                    uv[1] = region[1] + ((uv[1] - offsetV) / rangeV) * region[3];
+
+                    if (rotatedTextureIds.contains(texId)) {
+                        // 90° CCW rotation in texture space:
+                        //   rotU = origV  (V axis → U axis)
+                        //   rotV = offU + rangeU - origU  (inverted U axis → V axis)
+                        // Then map with swapped tile parameters:
+                        //   normU = (rotU - offV) / rangeV
+                        //   normV = rotV / rangeU
+                        float origU = uv[0], origV = uv[1];
+                        float rotU = origV;
+                        float rotV = tile[0] + tile[2] - origU;
+                        uv[0] = region[0] + ((rotU - tile[1]) / tile[3]) * region[2];
+                        uv[1] = region[1] + (rotV / tile[2]) * region[3];
+                    } else {
+                        uv[0] = region[0] + ((uv[0] - tile[0]) / tile[2]) * region[2];
+                        uv[1] = region[1] + ((uv[1] - tile[1]) / tile[3]) * region[3];
+                    }
                 }
             }
         }
