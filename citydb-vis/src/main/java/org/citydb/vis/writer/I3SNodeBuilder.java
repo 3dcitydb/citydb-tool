@@ -9,7 +9,12 @@ import org.citydb.vis.I3SFormatOptions;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.I3SNode;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds I3S node hierarchies using a two-level spatial indexing strategy:
@@ -24,18 +29,10 @@ import java.util.*;
  * global tree with sequential node indices via {@link #mergeIntoGlobalTree}.
  */
 class I3SNodeBuilder {
-
     /**
      * Result of building a quadtree for a single spatial grid cell.
      */
-    static class CellTree {
-        final List<I3SNode> nodes;
-        final Map<Integer, List<SpatialEntry>> nodeEntryMap;
-
-        CellTree(List<I3SNode> nodes, Map<Integer, List<SpatialEntry>> nodeEntryMap) {
-            this.nodes = nodes;
-            this.nodeEntryMap = nodeEntryMap;
-        }
+    record CellTree(List<I3SNode> nodes, Map<Integer, List<SpatialEntry>> nodeEntryMap) {
     }
 
     /**
@@ -93,12 +90,12 @@ class I3SNodeBuilder {
         for (CellTree cell : cellTrees) {
             int offset = nextIndex;
 
-            for (I3SNode node : cell.nodes) {
+            for (I3SNode node : cell.nodes()) {
                 int oldIndex = node.getIndex();
                 int newIndex = oldIndex + offset;
 
                 // Transfer entry mapping before reassigning index
-                List<SpatialEntry> entries = cell.nodeEntryMap.get(oldIndex);
+                List<SpatialEntry> entries = cell.nodeEntryMap().get(oldIndex);
                 if (entries != null) {
                     globalEntryMap.put(newIndex, entries);
                     meshNodeIndices.add(newIndex);
@@ -109,10 +106,10 @@ class I3SNodeBuilder {
             }
 
             // Connect cell root as child of global root
-            I3SNode cellRoot = cell.nodes.get(0);
+            I3SNode cellRoot = cell.nodes().get(0);
             globalRoot.addChild(cellRoot);
 
-            nextIndex += cell.nodes.size();
+            nextIndex += cell.nodes().size();
         }
 
         // Compute global root bounding volume from children

@@ -120,7 +120,8 @@
       "Bash(mkdir -p C:/tmp)",
       "Read(//c/tmp/**)",
       "WebFetch(domain:mvnrepository.com)",
-      "Bash(/c/Users/yao/AppData/Local/Programs/Python/Python312/python:*)"
+      "Bash(/c/Users/yao/AppData/Local/Programs/Python/Python312/python:*)",
+      "Bash(awk '{print $NF}')"
     ]
   }
 }
