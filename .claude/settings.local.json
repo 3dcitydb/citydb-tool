@@ -118,7 +118,8 @@
       "Bash(xxd:*)",
       "Bash(gunzip -c /tmp/sf_dds_full.bin)",
       "Bash(mkdir -p C:/tmp)",
-      "Read(//c/tmp/**)"
+      "Read(//c/tmp/**)",
+      "WebFetch(domain:mvnrepository.com)"
     ]
   }
 }
