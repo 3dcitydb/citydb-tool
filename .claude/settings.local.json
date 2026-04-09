@@ -119,7 +119,8 @@
       "Bash(gunzip -c /tmp/sf_dds_full.bin)",
       "Bash(mkdir -p C:/tmp)",
       "Read(//c/tmp/**)",
-      "WebFetch(domain:mvnrepository.com)"
+      "WebFetch(domain:mvnrepository.com)",
+      "Bash(/c/Users/yao/AppData/Local/Programs/Python/Python312/python:*)"
     ]
   }
 }
