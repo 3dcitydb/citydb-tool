@@ -25,7 +25,7 @@ class I3SJsonSerializer {
 
     void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
                              List<I3SAttributeEncoder.AttrField> attrFields,
-                             boolean hasTextures, boolean useDds) throws IOException {
+                             boolean hasTextures) throws IOException {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
         json.append("  \"id\": 0,\n");
@@ -62,11 +62,7 @@ class I3SJsonSerializer {
         json.append("    \"vertexCRS\": \"http://www.opengis.net/def/crs/EPSG/0/4326\",\n");
         json.append("    \"normalReferenceFrame\": \"earth-centered\",\n");
         if (hasTextures) {
-            if (useDds) {
-                json.append("    \"textureEncoding\": [\"image/jpeg\", \"image/vnd-ms.dds\"],\n");
-            } else {
-                json.append("    \"textureEncoding\": [\"image/jpeg\"],\n");
-            }
+            json.append("    \"textureEncoding\": [\"image/jpeg\"],\n");
         }
         json.append("    \"lodType\": \"MeshPyramid\",\n");
         json.append("    \"lodModel\": \"node-switching\",\n");
@@ -148,14 +144,7 @@ class I3SJsonSerializer {
         // Texture set definitions (only when textures present)
         if (hasTextures) {
             json.append("  \"textureSetDefinitions\": [{\n");
-            if (useDds) {
-                json.append("    \"formats\": [\n");
-                json.append("      {\"name\": \"0\", \"format\": \"jpg\"},\n");
-                json.append("      {\"name\": \"0_0_1\", \"format\": \"dds\"}\n");
-                json.append("    ]\n");
-            } else {
-                json.append("    \"formats\": [{\"name\": \"0\", \"format\": \"jpg\"}]\n");
-            }
+            json.append("    \"formats\": [{\"name\": \"0\", \"format\": \"jpg\"}]\n");
             json.append("  }],\n");
         }
 
@@ -332,8 +321,7 @@ class I3SJsonSerializer {
      * Write per-node shared resource (legacy material/texture definitions).
      * CesiumJS reads this for texture metadata.
      */
-    void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas,
-                             boolean useDds) throws IOException {
+    void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas) throws IOException {
         StringBuilder json = new StringBuilder();
         json.append("{\n");
 
@@ -358,11 +346,7 @@ class I3SJsonSerializer {
         // Texture definition
         json.append("  \"textureDefinitions\": {\n");
         json.append("    \"0\": {\n");
-        if (useDds) {
-            json.append("      \"encoding\": [\"image/jpeg\", \"image/vnd-ms.dds\"],\n");
-        } else {
-            json.append("      \"encoding\": [\"image/jpeg\"],\n");
-        }
+        json.append("      \"encoding\": [\"image/jpeg\"],\n");
         json.append("      \"wrap\": [\"none\", \"none\"],\n");
         json.append("      \"atlas\": ").append(isAtlas).append(",\n");
         json.append("      \"uvSet\": \"uv0\",\n");
@@ -371,11 +355,7 @@ class I3SJsonSerializer {
         json.append("        \"id\": \"0\",\n");
         json.append("        \"size\": 512,\n");
         json.append("        \"pixelInWorldUnits\": 0,\n");
-        if (useDds) {
-            json.append("        \"href\": [\"../textures/0\", \"../textures/0_0_1\"]\n");
-        } else {
-            json.append("        \"href\": [\"../textures/0\"]\n");
-        }
+        json.append("        \"href\": [\"../textures/0\"]\n");
         json.append("      }]\n");
         json.append("    }\n");
         json.append("  }\n");
