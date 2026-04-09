@@ -6,7 +6,10 @@
 package org.citydb.vis.geometry;
 
 import org.citydb.model.appearance.TextureCoordinate;
-import org.citydb.model.geometry.*;
+import org.citydb.model.geometry.Coordinate;
+import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.LinearRing;
+import org.citydb.model.geometry.Polygon;
 import org.citydb.model.walker.ModelWalker;
 
 import java.util.ArrayList;
@@ -22,6 +25,7 @@ public class PolygonTriangulator {
     private static final double TOLERANCE = 1e-7;
     private static final double METERS_PER_DEGREE_LAT = 111_320.0;
 
+    private record RingData(List<double[]> positions, List<float[]> uvs) {}
 
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
@@ -36,7 +40,7 @@ public class PolygonTriangulator {
         return mesh;
     }
 
-    private List<Polygon> collectPolygons(Geometry<?> geometry) {
+    private static List<Polygon> collectPolygons(Geometry<?> geometry) {
         List<Polygon> polygons = new ArrayList<>();
         geometry.accept(new ModelWalker() {
             @Override
@@ -47,7 +51,7 @@ public class PolygonTriangulator {
         return polygons;
     }
 
-    private void triangulatePolygon(Polygon polygon, long featureId, TriangleMesh mesh,
+    private static void triangulatePolygon(Polygon polygon, long featureId, TriangleMesh mesh,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
                                     Map<LinearRing, Integer> ringTextureMap) {
         LinearRing exteriorRing = polygon.getExteriorRing();
@@ -171,7 +175,7 @@ public class PolygonTriangulator {
      * Compute the polygon normal using the Newell method.
      * Expects coordinates in consistent units (meters).
      */
-    private float[] computePolygonNormal(List<double[]> points) {
+    private static float[] computePolygonNormal(List<double[]> points) {
         double nx = 0, ny = 0, nz = 0;
         int n = points.size();
 
@@ -192,11 +196,11 @@ public class PolygonTriangulator {
         return new float[]{(float) (nx / length), (float) (ny / length), (float) (nz / length)};
     }
 
-    private boolean isZeroVector(float[] v) {
+    private static boolean isZeroVector(float[] v) {
         return Math.abs(v[0]) < TOLERANCE && Math.abs(v[1]) < TOLERANCE && Math.abs(v[2]) < TOLERANCE;
     }
 
-    private int getDominantAxis(float[] normal) {
+    private static int getDominantAxis(float[] normal) {
         float absX = Math.abs(normal[0]);
         float absY = Math.abs(normal[1]);
         float absZ = Math.abs(normal[2]);
@@ -206,7 +210,7 @@ public class PolygonTriangulator {
         return 2;
     }
 
-    private double[] project2D(double[] point, int projAxis) {
+    private static double[] project2D(double[] point, int projAxis) {
         return switch (projAxis) {
             case 0 -> new double[]{point[1], point[2]};
             case 1 -> new double[]{point[0], point[2]};
@@ -214,9 +218,7 @@ public class PolygonTriangulator {
         };
     }
 
-    private record RingData(List<double[]> positions, List<float[]> uvs) {}
-
-    private RingData bridgeHolesWithUV(List<Coordinate> outerPoints, List<float[]> outerUVs,
+    private static RingData bridgeHolesWithUV(List<Coordinate> outerPoints, List<float[]> outerUVs,
                                        List<LinearRing> holes,
                                        Map<LinearRing, List<TextureCoordinate>> texCoordMap,
                                        double scaleX, double scaleY) {
@@ -313,7 +315,7 @@ public class PolygonTriangulator {
      * Find the closest point on the outer ring that is visible from the hole point,
      * i.e. the bridge segment does not cross any existing edge of the ring.
      */
-    private int findClosestVisible(List<double[]> ring, double[] holePoint,
+    private static int findClosestVisible(List<double[]> ring, double[] holePoint,
                                    double scaleX, double scaleY) {
         double hpx = holePoint[0] * scaleX;
         double hpy = holePoint[1] * scaleY;
@@ -380,7 +382,7 @@ public class PolygonTriangulator {
      * Ear clipping triangulation algorithm.
      * Operates on scaled coordinates (meters) for correct geometric tests.
      */
-    private List<int[]> earClip(List<double[]> vertices, int projAxis) {
+    private static List<int[]> earClip(List<double[]> vertices, int projAxis) {
         List<int[]> triangles = new ArrayList<>();
         int n = vertices.size();
 
@@ -501,11 +503,11 @@ public class PolygonTriangulator {
         return triangles;
     }
 
-    private double cross2D(double[] a, double[] b, double[] c) {
+    private static double cross2D(double[] a, double[] b, double[] c) {
         return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
     }
 
-    private boolean pointInTriangle(double[] p, double[] a, double[] b, double[] c) {
+    private static boolean pointInTriangle(double[] p, double[] a, double[] b, double[] c) {
         double d1 = cross2D(a, b, p);
         double d2 = cross2D(b, c, p);
         double d3 = cross2D(c, a, p);
@@ -516,7 +518,7 @@ public class PolygonTriangulator {
         return !(hasNeg && hasPos);
     }
 
-    private boolean isCCW(List<double[]> ring, int projAxis) {
+    private static boolean isCCW(List<double[]> ring, int projAxis) {
         double area = 0;
         for (int i = 0; i < ring.size(); i++) {
             double[] a = project2D(ring.get(i), projAxis);
@@ -526,7 +528,7 @@ public class PolygonTriangulator {
         return area < 0;
     }
 
-    private List<double[]> toDoubleArray(List<Coordinate> coordinates) {
+    private static List<double[]> toDoubleArray(List<Coordinate> coordinates) {
         List<double[]> result = new ArrayList<>(coordinates.size());
         for (Coordinate c : coordinates) {
             result.add(new double[]{c.getX(), c.getY(), c.getZ()});
@@ -534,7 +536,7 @@ public class PolygonTriangulator {
         return result;
     }
 
-    private <T> void reverseList(List<T> list) {
+    private static <T> void reverseList(List<T> list) {
         int left = 0, right = list.size() - 1;
         while (left < right) {
             T temp = list.get(left);
