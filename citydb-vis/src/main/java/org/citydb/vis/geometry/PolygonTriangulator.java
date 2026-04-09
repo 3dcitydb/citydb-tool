@@ -23,15 +23,6 @@ public class PolygonTriangulator {
     private static final double METERS_PER_DEGREE_LAT = 111_320.0;
 
 
-    public TriangleMesh triangulate(Geometry<?> geometry, long featureId) {
-        return triangulate(geometry, featureId, null);
-    }
-
-    public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
-                                    Map<LinearRing, List<TextureCoordinate>> texCoordMap) {
-        return triangulate(geometry, featureId, texCoordMap, null);
-    }
-
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
                                     Map<LinearRing, Integer> ringTextureMap) {
@@ -315,59 +306,6 @@ public class PolygonTriangulator {
             // I3S/glTF: V=0 at top. Flip V axis.
             result.add(new float[]{tc.getS(), 1.0f - tc.getT()});
         }
-        return result;
-    }
-
-    private List<double[]> bridgeHoles(List<Coordinate> outerPoints, List<LinearRing> holes,
-                                       double scaleX, double scaleY) {
-        List<double[]> result = toDoubleArray(outerPoints);
-        if (result.size() > 1) {
-            result.remove(result.size() - 1);
-        }
-
-        for (LinearRing hole : holes) {
-            List<double[]> holePoints = toDoubleArray(hole.getPoints());
-            if (holePoints.size() > 1) {
-                holePoints.remove(holePoints.size() - 1);
-            }
-
-            if (holePoints.size() < 3) {
-                continue;
-            }
-
-            // Find the rightmost point of the hole (max X in scaled/projected space)
-            int holeIdx = 0;
-            double maxU = Double.NEGATIVE_INFINITY;
-            for (int i = 0; i < holePoints.size(); i++) {
-                double u = holePoints.get(i)[0] * scaleX;
-                if (u > maxU) {
-                    maxU = u;
-                    holeIdx = i;
-                }
-            }
-
-            // Find the closest visible point on the outer ring
-            int outerIdx = findClosestVisible(result, holePoints.get(holeIdx), scaleX, scaleY);
-
-            // Bridge: insert hole into outer ring at the connection point
-            List<double[]> merged = new ArrayList<>(result.size() + holePoints.size() + 2);
-            for (int i = 0; i <= outerIdx; i++) {
-                merged.add(result.get(i));
-            }
-
-            for (int i = 0; i < holePoints.size(); i++) {
-                merged.add(holePoints.get((holeIdx + i) % holePoints.size()));
-            }
-            merged.add(holePoints.get(holeIdx));
-            merged.add(result.get(outerIdx));
-
-            for (int i = outerIdx + 1; i < result.size(); i++) {
-                merged.add(result.get(i));
-            }
-
-            result = merged;
-        }
-
         return result;
     }
 

@@ -74,15 +74,15 @@ class ShardedMeshStore implements Closeable {
         if (first != null) throw first;
     }
 
-    static long encodeHandle(int shardId, long offset) {
+    private static long encodeHandle(int shardId, long offset) {
         return ((long) shardId << 48) | (offset & 0xFFFFFFFFFFFFL);
     }
 
-    static int decodeShardId(long handle) {
+    private static int decodeShardId(long handle) {
         return (int) (handle >>> 48);
     }
 
-    static long decodeOffset(long handle) {
+    private static long decodeOffset(long handle) {
         return handle & 0xFFFFFFFFFFFFL;
     }
 }
