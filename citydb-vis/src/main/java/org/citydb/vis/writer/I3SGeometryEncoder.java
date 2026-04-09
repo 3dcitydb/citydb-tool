@@ -159,15 +159,21 @@ class I3SGeometryEncoder {
         triFeatureIds = null;
         validTriIndices = null;
 
-        // Dual-buffer layout for both textured and untextured:
-        // geometries/0 = raw, geometries/1 = Draco
-        // Matches geometryDefinitions where buffer[0]=raw, buffer[1]=Draco
-        writeRawGeometry(layerDir, node, outPositions, outNormals,
-                hasTexCoords ? outUVs : null, faceRanges, "0");
-
-        writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
-                hasTexCoords ? outUVs : null,
-                vertexFeatureIndices, numTriangles, "1");
+        // Buffer layout depends on texture presence due to a CesiumJS fallback bug:
+        // _findBestGeometryBuffers() requires ["position","uv0"]; when no buffer has
+        // "uv0", it falls back to bufferIndex=0.
+        //
+        // Untextured: geometries/0 = Draco only (not declared → CesiumJS ignores raw)
+        // Textured:   geometries/0 = raw, geometries/1 = Draco (NYC layout)
+        if (hasTexCoords) {
+            writeRawGeometry(layerDir, node, outPositions, outNormals, outUVs,
+                    faceRanges, "0");
+            writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
+                    outUVs, vertexFeatureIndices, numTriangles, "1");
+        } else {
+            writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
+                    null, vertexFeatureIndices, numTriangles, "0");
+        }
 
         outPositions = null;
         outNormals = null;
