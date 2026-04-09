@@ -209,18 +209,6 @@ class I3SJsonSerializer {
     }
 
     private static JSONObject buildGeometryDefinition(boolean withUV) {
-        JSONObject rawBuffer = new JSONObject();
-        rawBuffer.put("offset", 8);
-        rawBuffer.put("position", new JSONObject().fluentPut("type", "Float32").fluentPut("component", 3));
-        rawBuffer.put("normal", new JSONObject().fluentPut("type", "Float32").fluentPut("component", 3));
-        if (withUV) {
-            rawBuffer.put("uv0", new JSONObject().fluentPut("type", "Float32").fluentPut("component", 2));
-        }
-        rawBuffer.put("featureId", new JSONObject()
-                .fluentPut("type", "UInt64").fluentPut("component", 1).fluentPut("binding", "per-feature"));
-        rawBuffer.put("faceRange", new JSONObject()
-                .fluentPut("type", "UInt32").fluentPut("component", 2).fluentPut("binding", "per-feature"));
-
         JSONArray dracoAttrs = withUV
                 ? JSONArray.of("position", "uv0", "feature-index")
                 : JSONArray.of("position", "normal", "feature-index");
@@ -228,6 +216,28 @@ class I3SJsonSerializer {
                 .fluentPut("compressedAttributes", new JSONObject()
                         .fluentPut("encoding", "draco")
                         .fluentPut("attributes", dracoAttrs));
+
+        if (!withUV) {
+            // Untextured: declare only the Draco buffer at index 0.
+            // CesiumJS _findBestGeometryBuffers() requires ["position","uv0"];
+            // without "uv0" it falls back to bufferIndex=0, so the Draco buffer
+            // must be at index 0 for the fallback to load the correct data.
+            return new JSONObject()
+                    .fluentPut("geometryBuffers", JSONArray.of(dracoBuffer));
+        }
+
+        // Textured: dual buffer (raw=0, Draco=1), matching the NYC reference layout.
+        // CesiumJS finds "uv0" in the Draco attributes and selects it via the
+        // normal path — the fallback bug does not apply.
+        JSONObject rawBuffer = new JSONObject();
+        rawBuffer.put("offset", 8);
+        rawBuffer.put("position", new JSONObject().fluentPut("type", "Float32").fluentPut("component", 3));
+        rawBuffer.put("normal", new JSONObject().fluentPut("type", "Float32").fluentPut("component", 3));
+        rawBuffer.put("uv0", new JSONObject().fluentPut("type", "Float32").fluentPut("component", 2));
+        rawBuffer.put("featureId", new JSONObject()
+                .fluentPut("type", "UInt64").fluentPut("component", 1).fluentPut("binding", "per-feature"));
+        rawBuffer.put("faceRange", new JSONObject()
+                .fluentPut("type", "UInt32").fluentPut("component", 2).fluentPut("binding", "per-feature"));
 
         return new JSONObject()
                 .fluentPut("geometryBuffers", JSONArray.of(rawBuffer, dracoBuffer));
