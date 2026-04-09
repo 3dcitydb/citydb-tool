@@ -127,37 +127,6 @@ class TextureStore implements Closeable {
     }
 
     /**
-     * Copy a registered texture image to the target path as a DDS (BC1/DXT1)
-     * GPU-compressed texture, scaling by the given factor.
-     */
-    void copyScaledDds(int textureId, Path target, double scale) throws IOException {
-        Path source = getSourcePath(textureId);
-        if (source == null) return;
-
-        BufferedImage img = ImageIO.read(source.toFile());
-        if (img == null) return;
-
-        if (scale < 1.0) {
-            int newWidth = Math.max(1, (int) (img.getWidth() * scale));
-            int newHeight = Math.max(1, (int) (img.getHeight() * scale));
-            BufferedImage scaled = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-            Graphics2D g = scaled.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.setColor(Color.WHITE);
-            g.fillRect(0, 0, newWidth, newHeight);
-            g.drawImage(img, 0, 0, newWidth, newHeight, null);
-            g.dispose();
-            img = scaled;
-        } else {
-            img = toOpaqueRgb(img);
-        }
-
-        Files.createDirectories(target.getParent());
-        DdsEncoder.writeImage(img, target);
-    }
-
-    /**
      * Get the resolved source file path for a registered texture.
      * Returns null if the texture ID is unknown or the file doesn't exist.
      */
