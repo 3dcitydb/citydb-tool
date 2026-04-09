@@ -5,37 +5,56 @@
 
 package org.citydb.vis.writer;
 
+import org.citydb.config.ConfigException;
+import org.citydb.core.concurrent.CountLatch;
+import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.file.OutputFile;
+import org.citydb.io.writer.FeatureWriter;
+import org.citydb.io.writer.WriteException;
+import org.citydb.io.writer.WriteOptions;
+import org.citydb.model.appearance.Appearance;
+import org.citydb.model.appearance.ParameterizedTexture;
+import org.citydb.model.appearance.SurfaceData;
+import org.citydb.model.appearance.SurfaceDataProperty;
+import org.citydb.model.appearance.TextureCoordinate;
+import org.citydb.model.common.ExternalFile;
+import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.Coordinate;
+import org.citydb.model.geometry.Envelope;
+import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.LinearRing;
+import org.citydb.model.property.AppearanceProperty;
+import org.citydb.model.property.GeometryProperty;
+import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.I3SFormatOptions;
 import org.citydb.vis.geometry.PolygonTriangulator;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.scene.I3SNode;
 import org.citydb.vis.scene.SceneLayer;
-import org.citydb.io.writer.FeatureWriter;
-import org.citydb.io.writer.WriteException;
-import org.citydb.io.writer.WriteOptions;
-import org.citydb.model.appearance.*;
-import org.citydb.model.common.ExternalFile;
-import org.citydb.model.feature.Feature;
-import org.citydb.model.geometry.*;
-import org.citydb.model.property.AppearanceProperty;
-import org.citydb.model.property.GeometryProperty;
-import org.citydb.model.util.GeometryInfo;
-
-import org.citydb.core.concurrent.CountLatch;
-import org.citydb.core.concurrent.ExecutorHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 /**
  * Writes city model features to the OGC I3S (Indexed 3D Scene Layer) format
@@ -73,6 +92,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class I3SWriter implements FeatureWriter {
     private static final int EPSG_4326 = 4326;
+    private final Logger logger = LoggerFactory.getLogger(I3SWriter.class);
 
     private final OutputFile outputFile;
     private final I3SFormatOptions formatOptions;
@@ -83,17 +103,26 @@ public class I3SWriter implements FeatureWriter {
     private final ShardedMeshStore meshStore;
     private final AttributeStore attrStore;
     private final TextureStore textureStore;
-    private volatile boolean shouldRun = true;
-
     private final I3SGeometryEncoder geometryEncoder;
     private final I3SJsonSerializer jsonSerializer;
     private final I3SAttributeEncoder attributeEncoder;
 
-    public I3SWriter(OutputFile outputFile, WriteOptions options) {
+    private volatile boolean shouldRun = true;
+
+    public I3SWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
+        Objects.requireNonNull(outputFile, "The output file must not be null.");
+        Objects.requireNonNull(options, "The write options must not be null.");
+
         this.outputFile = outputFile;
-        this.formatOptions = getFormatOptions(options);
         this.spatialEntries = new ConcurrentLinkedQueue<>();
         this.featureIdCounter = new AtomicLong(0);
+
+        try {
+            this.formatOptions = options.getFormatOptions()
+                    .getOrElse(I3SFormatOptions.class, I3SFormatOptions::new);
+        } catch (ConfigException e) {
+            throw new WriteException("Failed to get I3S format options from config.", e);
+        }
 
         int cpuCores = Runtime.getRuntime().availableProcessors();
         this.service = ExecutorHelper.newFixedAndBlockingThreadPool(cpuCores, 100);
@@ -104,27 +133,12 @@ public class I3SWriter implements FeatureWriter {
             this.attrStore = new AttributeStore();
             this.textureStore = new TextureStore(outputFile);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to create disk-backed stores", e);
+            throw new WriteException("Failed to create disk-backed stores.", e);
         }
 
         this.geometryEncoder = new I3SGeometryEncoder();
         this.jsonSerializer = new I3SJsonSerializer();
         this.attributeEncoder = new I3SAttributeEncoder();
-    }
-
-    private I3SFormatOptions getFormatOptions(WriteOptions options) {
-        if (options != null) {
-            try {
-                I3SFormatOptions i3sOptions = options.getFormatOptions()
-                        .get(I3SFormatOptions.class);
-                if (i3sOptions != null) {
-                    return i3sOptions;
-                }
-            } catch (Exception e) {
-                // fall through to default
-            }
-        }
-        return new I3SFormatOptions();
     }
 
     @Override
@@ -316,8 +330,8 @@ public class I3SWriter implements FeatureWriter {
             Set<Integer> meshNodeIndices = merged.meshNodeIndices();
 
             long t1 = System.currentTimeMillis();
-            System.err.println("[I3S] Spatial indexing: " + (t1 - t0) + " ms ("
-                    + allNodes.size() + " nodes, " + meshNodeIndices.size() + " with mesh)");
+            logger.info("Spatial indexing: {} ms ({} nodes, {} with mesh).",
+                    t1 - t0, allNodes.size(), meshNodeIndices.size());
 
             // --- Phase 5: Write output ---
             boolean hasTextures = textureStore.hasTextures();
@@ -326,7 +340,7 @@ public class I3SWriter implements FeatureWriter {
                     meshNodeIndices, hasTextures);
 
             long t2 = System.currentTimeMillis();
-            System.err.println("[I3S] Node output: " + (t2 - t1) + " ms");
+            logger.info("Node output: {} ms.", t2 - t1);
 
         } catch (Exception e) {
             throw new WriteException("Failed to write I3S scene layer.", e);
@@ -369,7 +383,7 @@ public class I3SWriter implements FeatureWriter {
      * Triangulate geometry properties into a mesh. Thread-safe — uses its own
      * PolygonTriangulator instance and operates only on the provided data.
      */
-    private TriangleMesh triangulateGeometries(List<GeometryProperty> geometryProperties,
+    private static TriangleMesh triangulateGeometries(List<GeometryProperty> geometryProperties,
                                                 long featureId,
                                                 PolygonTriangulator triangulator,
                                                 Map<LinearRing, List<TextureCoordinate>> texCoordMap,
@@ -410,7 +424,7 @@ public class I3SWriter implements FeatureWriter {
     /**
      * Shift all vertex Z values so the building's bottom sits at height 0.
      */
-    private double clampMeshToGround(TriangleMesh mesh) {
+    private static double clampMeshToGround(TriangleMesh mesh) {
         double minZ = Double.MAX_VALUE;
         for (double[] pos : mesh.getPositions()) {
             if (pos[2] < minZ) minZ = pos[2];
@@ -423,7 +437,7 @@ public class I3SWriter implements FeatureWriter {
         return minZ;
     }
 
-    private SceneLayer buildSceneLayer(double[] extent) {
+    private static SceneLayer buildSceneLayer(double[] extent) {
         SceneLayer layer = new SceneLayer();
         layer.setName("3DCityDB I3S Export");
         layer.setDescription("Exported from 3DCityDB using citydb-tool");
@@ -543,7 +557,7 @@ public class I3SWriter implements FeatureWriter {
 
                     int done = nodesProcessed.incrementAndGet();
                     if (done % 100 == 0 || done == totalMeshNodes) {
-                        System.err.println("[I3S] Nodes written: " + done + "/" + totalMeshNodes);
+                        logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
                     }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
@@ -590,7 +604,7 @@ public class I3SWriter implements FeatureWriter {
         return extents;
     }
 
-    private Path stripI3sSuffix(Path path) {
+    private static Path stripI3sSuffix(Path path) {
         String name = path.getFileName().toString();
         int dot = name.lastIndexOf('.');
         if (dot > 0) {
@@ -620,8 +634,8 @@ public class I3SWriter implements FeatureWriter {
         try {
             Path appearanceDir = outputFile.getFile().getParent().resolve("appearance");
             if (Files.isDirectory(appearanceDir)) {
-                try (var walk = Files.walk(appearanceDir)) {
-                    walk.sorted(java.util.Comparator.reverseOrder())
+                try (Stream<Path> walk = Files.walk(appearanceDir)) {
+                    walk.sorted(Comparator.reverseOrder())
                             .forEach(p -> {
                                 try { Files.delete(p); } catch (IOException ignored) {}
                             });
