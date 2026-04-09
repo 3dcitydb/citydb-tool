@@ -15,11 +15,8 @@ public class SceneLayer {
 
     private String name;
     private String description;
-    private String spatialReference;
     private int wkid;
-    private BoundingVolume fullExtent;
     private double[] extent;
-    private int nodeCount;
 
     public String getName() {
         return name;
@@ -39,30 +36,12 @@ public class SceneLayer {
         return this;
     }
 
-    public String getSpatialReference() {
-        return spatialReference;
-    }
-
-    public SceneLayer setSpatialReference(String spatialReference) {
-        this.spatialReference = spatialReference;
-        return this;
-    }
-
     public int getWkid() {
         return wkid;
     }
 
     public SceneLayer setWkid(int wkid) {
         this.wkid = wkid;
-        return this;
-    }
-
-    public BoundingVolume getFullExtent() {
-        return fullExtent;
-    }
-
-    public SceneLayer setFullExtent(BoundingVolume fullExtent) {
-        this.fullExtent = fullExtent;
         return this;
     }
 
@@ -75,12 +54,4 @@ public class SceneLayer {
         return this;
     }
 
-    public int getNodeCount() {
-        return nodeCount;
-    }
-
-    public SceneLayer setNodeCount(int nodeCount) {
-        this.nodeCount = nodeCount;
-        return this;
-    }
 }
