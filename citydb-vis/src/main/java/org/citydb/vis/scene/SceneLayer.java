@@ -53,5 +53,4 @@ public class SceneLayer {
         this.extent = extent;
         return this;
     }
-
 }
