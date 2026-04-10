@@ -126,7 +126,8 @@
       "Bash(gh search:*)",
       "WebFetch(domain:api.github.com)",
       "Bash(./gradlew :citydb-vis:compileJava :citydb-cli:compileJava)",
-      "Bash(./gradlew :citydb-vis:compileJava -q)"
+      "Bash(./gradlew :citydb-vis:compileJava -q)",
+      "Bash(./gradlew :citydb-vis:compileJava --console=plain)"
     ]
   }
 }
