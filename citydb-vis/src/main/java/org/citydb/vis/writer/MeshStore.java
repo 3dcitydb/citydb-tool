@@ -32,8 +32,8 @@ class MeshStore implements Closeable {
     private final FileChannel channel;
     private long writePosition = 0;
 
-    MeshStore() throws IOException {
-        tempFile = Files.createTempFile("i3s-mesh-", ".bin");
+    MeshStore(Path tempDir) throws IOException {
+        tempFile = Files.createTempFile(tempDir, "i3s-mesh-", ".bin");
         tempFile.toFile().deleteOnExit();
         channel = FileChannel.open(tempFile,
                 StandardOpenOption.READ,

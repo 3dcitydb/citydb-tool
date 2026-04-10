@@ -93,6 +93,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class I3SWriter implements FeatureWriter {
     private static final int EPSG_4326 = 4326;
+    private static final String TEMP_DIR_NAME = ".tmp";
     private final Logger logger = LoggerFactory.getLogger(I3SWriter.class);
 
     private final OutputFile outputFile;
@@ -101,6 +102,7 @@ public class I3SWriter implements FeatureWriter {
     private final AtomicLong featureIdCounter;
     private final ExecutorService service;
     private final CountLatch countLatch;
+    private final Path tempDir;
     private final ShardedMeshStore meshStore;
     private final AttributeStore attrStore;
     private final TextureStore textureStore;
@@ -130,8 +132,10 @@ public class I3SWriter implements FeatureWriter {
         this.countLatch = new CountLatch();
 
         try {
-            this.meshStore = new ShardedMeshStore(cpuCores);
-            this.attrStore = new AttributeStore();
+            this.tempDir = outputFile.getFile().getParent().resolve(TEMP_DIR_NAME);
+            Files.createDirectories(tempDir);
+            this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
+            this.attrStore = new AttributeStore(tempDir);
             this.textureStore = new TextureStore(outputFile);
         } catch (IOException e) {
             throw new WriteException("Failed to create disk-backed stores.", e);
@@ -348,8 +352,8 @@ public class I3SWriter implements FeatureWriter {
         } finally {
             logger.info("Closing intermediate stores.");
             closeStores();
-            logger.info("Deleting intermediate appearance directory.");
-            deleteAppearanceDir();
+            logger.info("Deleting intermediate temp directory.");
+            deleteDirectoryTree(tempDir);
         }
     }
 
@@ -628,9 +632,8 @@ public class I3SWriter implements FeatureWriter {
         textureStore.close();
     }
 
-    private void deleteAppearanceDir() {
-        Path appearanceDir = outputFile.getFile().getParent().resolve("appearance");
-        if (!Files.isDirectory(appearanceDir)) {
+    private static void deleteDirectoryTree(Path root) {
+        if (!Files.isDirectory(root)) {
             return;
         }
 
@@ -639,7 +642,7 @@ public class I3SWriter implements FeatureWriter {
         List<Path> files = new ArrayList<>();
         List<Path> dirs = new ArrayList<>();
         try {
-            Files.walkFileTree(appearanceDir, new SimpleFileVisitor<>() {
+            Files.walkFileTree(root, new SimpleFileVisitor<>() {
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                     files.add(file);
