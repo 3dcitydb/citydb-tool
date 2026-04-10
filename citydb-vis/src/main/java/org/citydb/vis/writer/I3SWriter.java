@@ -36,10 +36,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -54,7 +56,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.stream.Stream;
 
 /**
  * Writes city model features to the OGC I3S (Indexed 3D Scene Layer) format
@@ -345,7 +346,9 @@ public class I3SWriter implements FeatureWriter {
         } catch (Exception e) {
             throw new WriteException("Failed to write I3S scene layer.", e);
         } finally {
+            logger.info("Closing intermediate stores.");
             closeStores();
+            logger.info("Deleting intermediate appearance directory.");
             deleteAppearanceDir();
         }
     }
@@ -625,23 +628,51 @@ public class I3SWriter implements FeatureWriter {
         textureStore.close();
     }
 
-    /**
-     * Delete the intermediate "appearance" directory created by the export
-     * pipeline for raw texture files. These are no longer needed after
-     * textures have been packed into per-node atlases.
-     */
     private void deleteAppearanceDir() {
+        Path appearanceDir = outputFile.getFile().getParent().resolve("appearance");
+        if (!Files.isDirectory(appearanceDir)) {
+            return;
+        }
+
+        // Collect all entries in a single walk: files first, directories in
+        // postVisit order so they can be removed bottom-up after their contents.
+        List<Path> files = new ArrayList<>();
+        List<Path> dirs = new ArrayList<>();
         try {
-            Path appearanceDir = outputFile.getFile().getParent().resolve("appearance");
-            if (Files.isDirectory(appearanceDir)) {
-                try (Stream<Path> walk = Files.walk(appearanceDir)) {
-                    walk.sorted(Comparator.reverseOrder())
-                            .forEach(p -> {
-                                try { Files.delete(p); } catch (IOException ignored) {}
-                            });
+            Files.walkFileTree(appearanceDir, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    files.add(file);
+                    return FileVisitResult.CONTINUE;
                 }
-            }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                    dirs.add(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
         } catch (IOException ignored) {
+            return;
+        }
+
+        // Parallelize at file granularity so the work scales with file count
+        // instead of with the number of top-level bucket subdirectories.
+        files.parallelStream().forEach(file -> {
+            try {
+                Files.delete(file);
+            } catch (IOException ignored) {
+                //
+            }
+        });
+
+        // Few directories compared to files; remove them sequentially bottom-up.
+        for (Path dir : dirs) {
+            try {
+                Files.delete(dir);
+            } catch (IOException ignored) {
+                //
+            }
         }
     }
 }

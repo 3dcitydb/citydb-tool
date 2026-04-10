@@ -124,7 +124,9 @@
       "Bash(awk '{print $NF}')",
       "Bash(gh api:*)",
       "Bash(gh search:*)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(./gradlew :citydb-vis:compileJava :citydb-cli:compileJava)",
+      "Bash(./gradlew :citydb-vis:compileJava -q)"
     ]
   }
 }
