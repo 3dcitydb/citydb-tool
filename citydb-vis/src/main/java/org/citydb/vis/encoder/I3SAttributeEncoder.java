@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.encoder;
 
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.Attribute;
@@ -30,10 +30,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link #finalizeFields} during close. Thread-safe — uses concurrent
  * data structures.
  */
-class I3SAttributeEncoder {
-    enum AttrType { STRING, INT, DOUBLE }
+public class I3SAttributeEncoder {
+    public enum AttrType { STRING, INT, DOUBLE }
 
-    record AttrField(String name, AttrType type) {}
+    public record AttrField(String name, AttrType type) {}
 
     // ---- Incremental type tracking (thread-safe) ----
 
@@ -44,7 +44,7 @@ class I3SAttributeEncoder {
      * Track attribute field types incrementally during the write phase.
      * Thread-safe — can be called concurrently from multiple writer threads.
      */
-    void trackFieldTypes(Map<String, Object> attributes) {
+    public void trackFieldTypes(Map<String, Object> attributes) {
         for (Map.Entry<String, Object> entry : attributes.entrySet()) {
             String name = entry.getKey();
             AttrType valueType = classifyType(entry.getValue());
@@ -60,7 +60,7 @@ class I3SAttributeEncoder {
      * @param totalFeatures total number of features processed
      * @return ordered list of attribute fields with final types
      */
-    List<AttrField> finalizeFields(long totalFeatures) {
+    public List<AttrField> finalizeFields(long totalFeatures) {
         Map<String, AttrType> result = new LinkedHashMap<>();
         result.put("OBJECTID", AttrType.STRING);
         result.put("featureType", AttrType.STRING);
@@ -86,7 +86,7 @@ class I3SAttributeEncoder {
     /**
      * Extract typed attribute values from a Feature.
      */
-    Map<String, Object> extractAttributes(Feature feature) {
+    public Map<String, Object> extractAttributes(Feature feature) {
         Map<String, Object> result = new LinkedHashMap<>();
         if (feature.hasAttributes()) {
             for (Attribute attr : feature.getAttributes().getAll()) {
@@ -106,8 +106,8 @@ class I3SAttributeEncoder {
      * Write binary attribute data for all fields of a single node.
      * Accepts the feature list directly (no map lookup).
      */
-    void writeNodeAttributes(Path layerDir, I3SNode node, List<AttrField> attrFields,
-                             List<FeatureData> features) throws IOException {
+    public void writeNodeAttributes(Path layerDir, I3SNode node, List<AttrField> attrFields,
+                                    List<FeatureData> features) throws IOException {
         if (features == null || features.isEmpty()) {
             return;
         }

@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.encoder;
 
 import com.openize.drako.AttributeType;
 import com.openize.drako.DataBuffer;
@@ -44,7 +44,7 @@ import java.util.Map;
  * </ul>
  * When no textures, keeps the single-buffer Draco-only layout for compatibility.
  */
-class I3SGeometryEncoder {
+public class I3SGeometryEncoder {
     /**
      * Unique ID for the feature-index Draco attribute (used for metadata injection).
      * Must match the attribute's actual index in the Draco file.
@@ -58,7 +58,7 @@ class I3SGeometryEncoder {
     /** Bit in the Draco header flags field that indicates metadata is present. */
     private static final short DRACO_METADATA_FLAG = (short) 0x8000;
 
-    void writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
+    public void writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
 

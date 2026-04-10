@@ -28,10 +28,18 @@ import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.I3SFormatOptions;
+import org.citydb.vis.encoder.FeatureData;
+import org.citydb.vis.encoder.I3SAttributeEncoder;
+import org.citydb.vis.encoder.I3SGeometryEncoder;
+import org.citydb.vis.encoder.I3SJsonSerializer;
+import org.citydb.vis.encoder.TextureAtlas;
 import org.citydb.vis.geometry.PolygonTriangulator;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.scene.I3SNode;
 import org.citydb.vis.scene.SceneLayer;
+import org.citydb.vis.store.AttributeStore;
+import org.citydb.vis.store.ShardedMeshStore;
+import org.citydb.vis.store.TextureStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
