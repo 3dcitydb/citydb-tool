@@ -9,6 +9,8 @@ import org.citydb.textureAtlas.TextureAtlasCreator;
 import org.citydb.textureAtlas.model.AtlasRegion;
 import org.citydb.textureAtlas.packer.Packer;
 import org.citydb.vis.geometry.TriangleMesh;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;
@@ -43,6 +45,8 @@ import java.util.Set;
  * the source texture is repeated in the atlas region to cover the full UV range.
  */
 class TextureAtlas {
+    private static final Logger logger = LoggerFactory.getLogger(TextureAtlas.class);
+
     private final Map<Integer, float[]> uvRegions;
     private final BufferedImage image;
     /** Per-texture tile mapping: texId → [offsetU, offsetV, rangeU, rangeV]. */
@@ -98,7 +102,13 @@ class TextureAtlas {
         for (int texId : textureIds) {
             Path source = textureStore.getSourcePath(texId);
             if (source == null) continue;
-            BufferedImage img = ImageIO.read(source.toFile());
+            BufferedImage img;
+            try {
+                img = ImageIO.read(source.toFile());
+            } catch (IOException e) {
+                logger.warn("Skipping corrupt texture {} ({}): {}", texId, source, e.getMessage());
+                continue;
+            }
             if (img == null) continue;
 
             int origW = img.getWidth();

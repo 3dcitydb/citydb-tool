@@ -6,6 +6,8 @@
 package org.citydb.vis.writer;
 
 import org.citydb.core.file.OutputFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;
@@ -32,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * images are copied from the export output directory to the I3S node structure.
  */
 class TextureStore implements Closeable {
+    private static final Logger logger = LoggerFactory.getLogger(TextureStore.class);
+
     private final OutputFile outputFile;
     private final ConcurrentHashMap<String, Integer> uriToId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, String> idToUri = new ConcurrentHashMap<>();
@@ -76,7 +80,13 @@ class TextureStore implements Closeable {
         // in textureSetDefinitions. Raw file copy would preserve PNG format, causing
         // a format mismatch that viewers cannot decode. Also ensures alpha channels
         // are composited over white instead of producing dark/CMYK artifacts.
-        BufferedImage img = ImageIO.read(source.toFile());
+        BufferedImage img;
+        try {
+            img = ImageIO.read(source.toFile());
+        } catch (IOException e) {
+            logger.warn("Skipping corrupt texture {} ({}): {}", textureId, source, e.getMessage());
+            return;
+        }
         if (img != null) {
             ImageIO.write(toOpaqueRgb(img), "jpg", target.toFile());
         } else {
@@ -97,7 +107,13 @@ class TextureStore implements Closeable {
         Path source = getSourcePath(textureId);
         if (source == null) return;
 
-        BufferedImage img = ImageIO.read(source.toFile());
+        BufferedImage img;
+        try {
+            img = ImageIO.read(source.toFile());
+        } catch (IOException e) {
+            logger.warn("Skipping corrupt texture {} ({}): {}", textureId, source, e.getMessage());
+            return;
+        }
         if (img == null) {
             copyTo(textureId, target);
             return;
