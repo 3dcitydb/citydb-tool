@@ -9,6 +9,7 @@ import org.citydb.vis.geometry.TriangleMesh;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * Sharded mesh storage that distributes writes across multiple {@link MeshStore}
@@ -26,12 +27,12 @@ class ShardedMeshStore implements Closeable {
     private final MeshStore[] shards;
     private final int shardCount;
 
-    ShardedMeshStore(int shardCount) throws IOException {
+    ShardedMeshStore(int shardCount, Path tempDir) throws IOException {
         this.shardCount = shardCount;
         this.shards = new MeshStore[shardCount];
         try {
             for (int i = 0; i < shardCount; i++) {
-                shards[i] = new MeshStore();
+                shards[i] = new MeshStore(tempDir);
             }
         } catch (IOException e) {
             // Clean up any shards that were successfully created
