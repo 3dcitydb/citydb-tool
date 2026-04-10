@@ -9,6 +9,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.cli.exporter.ExportOptions;
+import org.citydb.cli.exporter.util.TilingHelper;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
@@ -18,8 +19,10 @@ import org.citydb.io.IOAdapterManager;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.operation.exporter.options.AppearanceOptions;
+import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.executor.QueryExecutor;
+import org.citydb.util.tiling.Tiling;
 import org.citydb.vis.I3SAdapter;
 import org.citydb.vis.I3SFormatOptions;
 import picocli.CommandLine;
@@ -62,9 +65,59 @@ public class VisExportCommand extends ExportController {
     @Override
     protected ExportOptions getExportOptions() throws ExecutionException {
         ExportOptions exportOptions = super.getExportOptions();
-        // Force EPSG:4326 — Cesium only supports WGS84 for I3S layers
+
+        // Force EPSG:4326 — Cesium only supports WGS84 for I3S layers.
+        // Warn if the user explicitly configured a different target SRS
+        // (CLI --target-srs or config file) so it's clear we overrode it.
+        SrsReference originalSrs = exportOptions.getTargetSrs().orElse(null);
+        if (originalSrs != null
+                && originalSrs.getSRID().filter(srid -> srid == 4326).isEmpty()) {
+            logger.warn("Custom target SRS is not supported for I3S export and will be " +
+                    "overridden to EPSG:4326. Cesium only supports WGS84 for I3S layers.");
+        }
         exportOptions.setTargetSrs(SrsReference.of(4326));
+
+        // Affine transforms operate on the exported coordinates. Since I3S
+        // forces output to WGS84 lon/lat, applying a user-supplied transform
+        // would warp the geometry into nonsense coordinates that Cesium cannot
+        // render correctly. Drop it.
+        if (exportOptions.getAffineTransform().isPresent()) {
+            logger.warn("Affine transform is not supported for I3S export and will be ignored. " +
+                    "I3S geometries must be in WGS84 lon/lat for Cesium to render correctly.");
+            exportOptions.setAffineTransform(null);
+        }
+
         return exportOptions;
+    }
+
+    @Override
+    protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
+        Query query = super.getQuery(exportOptions);
+        // Query sorting wraps the writer in SequentialWriter, which serializes
+        // the export pipeline to enforce strict feature ordering. I3S does its
+        // own spatial reordering in the close phase, so any input ordering is
+        // discarded — sorting is pure overhead. Drop it.
+        if (query.getSorting().isPresent()) {
+            logger.warn("Query sorting is not supported for I3S export and will be ignored. " +
+                    "I3S applies its own spatial ordering during scene-layer construction.");
+            query.setSorting(null);
+        }
+        return query;
+    }
+
+    @Override
+    protected Tiling getTiling(ExportOptions exportOptions) {
+        // I3S already provides hierarchical spatial indexing through its own
+        // LoD nodepage tree. External tiling would split the dataset into
+        // disconnected scene layers, break LoD continuity at tile boundaries
+        // and duplicate shared textures across tile sessions. Force-disable it
+        // even when the user has explicitly requested tiling.
+        if (tilingOptions != null || exportOptions.getTiling().isPresent()) {
+            logger.warn("Tiling is not supported for I3S export and will be ignored. " +
+                    "I3S already provides hierarchical spatial indexing (LoD nodepages); " +
+                    "external tiling would break LoD continuity at tile boundaries.");
+        }
+        return TilingHelper.noTiling();
     }
 
     @Override
