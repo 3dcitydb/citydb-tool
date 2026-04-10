@@ -3,12 +3,13 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.encoder;
 
 import org.citydb.textureAtlas.TextureAtlasCreator;
 import org.citydb.textureAtlas.model.AtlasRegion;
 import org.citydb.textureAtlas.packer.Packer;
 import org.citydb.vis.geometry.TriangleMesh;
+import org.citydb.vis.store.TextureStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,7 @@ import java.util.Set;
  * Supports tiled/wrapping textures: when CityGML UV coordinates exceed [0,1],
  * the source texture is repeated in the atlas region to cover the full UV range.
  */
-class TextureAtlas {
+public class TextureAtlas {
     private static final Logger logger = LoggerFactory.getLogger(TextureAtlas.class);
 
     private final Map<Integer, float[]> uvRegions;
@@ -69,9 +70,9 @@ class TextureAtlas {
      * @param uvExtents per-texture UV extent: texId → [minU, minV, maxU, maxV].
      *                  Used to compute tiling for wrapping textures.
      */
-    static TextureAtlas build(Collection<Integer> textureIds, TextureStore textureStore,
-                              double textureScale, int maxAtlasSize,
-                              Map<Integer, float[]> uvExtents) throws IOException {
+    public static TextureAtlas build(Collection<Integer> textureIds, TextureStore textureStore,
+                                     double textureScale, int maxAtlasSize,
+                                     Map<Integer, float[]> uvExtents) throws IOException {
         List<int[]> dims = new ArrayList<>();
         List<BufferedImage> images = new ArrayList<>();
         Map<Integer, int[]> tileInfo = new HashMap<>();
@@ -303,7 +304,7 @@ class TextureAtlas {
      * For wrapping/tiling textures (UVs outside [0,1]), the mapping is:
      * {@code atlasUV = regionOffset + ((uv - tileOffset) / tileRange) * regionScale}
      */
-    void remapUVs(TriangleMesh mesh) {
+    public void remapUVs(TriangleMesh mesh) {
         int vertexCount = mesh.getVertexCount();
         int[] vertexTexId = new int[vertexCount];
         Arrays.fill(vertexTexId, -1);
@@ -351,7 +352,7 @@ class TextureAtlas {
         }
     }
 
-    void write(Path target) throws IOException {
+    public void write(Path target) throws IOException {
         ImageIO.write(image, "jpg", target.toFile());
     }
 }

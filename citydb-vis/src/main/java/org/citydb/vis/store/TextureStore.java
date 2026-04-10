@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.store;
 
 import org.citydb.core.file.OutputFile;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * During the close phase (after BlobExporter has flushed all batches), texture
  * images are copied from the export output directory to the I3S node structure.
  */
-class TextureStore implements Closeable {
+public class TextureStore implements Closeable {
     private static final Logger logger = LoggerFactory.getLogger(TextureStore.class);
 
     private final OutputFile outputFile;
@@ -41,7 +41,7 @@ class TextureStore implements Closeable {
     private final ConcurrentHashMap<Integer, String> idToUri = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger(0);
 
-    TextureStore(OutputFile outputFile) {
+    public TextureStore(OutputFile outputFile) {
         this.outputFile = outputFile;
     }
 
@@ -51,7 +51,7 @@ class TextureStore implements Closeable {
      *
      * @return texture ID (>= 0)
      */
-    int register(String uri) {
+    public int register(String uri) {
         return uriToId.computeIfAbsent(uri, k -> {
             int id = nextId.getAndIncrement();
             idToUri.put(id, uri);
@@ -98,7 +98,7 @@ class TextureStore implements Closeable {
      * Copy a registered texture image to the target path, scaling it down
      * by the given factor. If scale >= 1.0, delegates to {@link #copyTo}.
      */
-    void copyScaled(int textureId, Path target, double scale) throws IOException {
+    public void copyScaled(int textureId, Path target, double scale) throws IOException {
         if (scale >= 1.0) {
             copyTo(textureId, target);
             return;
@@ -140,14 +140,14 @@ class TextureStore implements Closeable {
      * Get the resolved source file path for a registered texture.
      * Returns null if the texture ID is unknown or the file doesn't exist.
      */
-    Path getSourcePath(int textureId) {
+    public Path getSourcePath(int textureId) {
         String uri = idToUri.get(textureId);
         if (uri == null) return null;
         Path source = outputFile.getFile().getParent().resolve(uri);
         return Files.exists(source) ? source : null;
     }
 
-    boolean hasTextures() {
+    public boolean hasTextures() {
         return nextId.get() > 0;
     }
 
@@ -160,7 +160,7 @@ class TextureStore implements Closeable {
      * Convert a BufferedImage to TYPE_INT_RGB with white background.
      * Prevents alpha-over-black darkening and the Java ARGB→JPEG CMYK bug.
      */
-    static BufferedImage toOpaqueRgb(BufferedImage src) {
+    public static BufferedImage toOpaqueRgb(BufferedImage src) {
         if (src.getType() == BufferedImage.TYPE_INT_RGB) {
             return src;
         }
