@@ -41,8 +41,8 @@ class AttributeStore implements Closeable {
                         Map<String, Object> attributes) {
     }
 
-    AttributeStore() throws IOException {
-        tempFile = Files.createTempFile("i3s-attr-", ".bin");
+    AttributeStore(Path tempDir) throws IOException {
+        tempFile = Files.createTempFile(tempDir, "i3s-attr-", ".bin");
         tempFile.toFile().deleteOnExit();
         channel = FileChannel.open(tempFile,
                 StandardOpenOption.READ, StandardOpenOption.WRITE);

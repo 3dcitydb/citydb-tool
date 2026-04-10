@@ -11,6 +11,7 @@ import java.util.Set;
 public class AppearanceOptions {
     private boolean exportAppearances = true;
     private int numberOfTextureBuckets;
+    private String textureOutputFolder;
     private Set<String> themes;
 
     public boolean isExportAppearances() {
@@ -28,6 +29,15 @@ public class AppearanceOptions {
 
     public AppearanceOptions setNumberOfTextureBuckets(int numberOfTextureBuckets) {
         this.numberOfTextureBuckets = numberOfTextureBuckets;
+        return this;
+    }
+
+    public String getTextureOutputFolder() {
+        return textureOutputFolder;
+    }
+
+    public AppearanceOptions setTextureOutputFolder(String textureOutputFolder) {
+        this.textureOutputFolder = textureOutputFolder;
         return this;
     }
 
