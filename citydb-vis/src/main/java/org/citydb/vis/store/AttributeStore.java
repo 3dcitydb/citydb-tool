@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.store;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,7 +29,7 @@ import java.util.Map;
  * <p>
  * Writes are synchronized; reads use positional I/O and are thread-safe.
  */
-class AttributeStore implements Closeable {
+public class AttributeStore implements Closeable {
     private final Path tempFile;
     private final FileChannel channel;
     private long writePosition = 0;
@@ -37,11 +37,11 @@ class AttributeStore implements Closeable {
     /**
      * Loaded attribute data for a single feature.
      */
-    record FeatureAttrs(String objectId, String featureType,
-                        Map<String, Object> attributes) {
+    public record FeatureAttrs(String objectId, String featureType,
+                               Map<String, Object> attributes) {
     }
 
-    AttributeStore(Path tempDir) throws IOException {
+    public AttributeStore(Path tempDir) throws IOException {
         tempFile = Files.createTempFile(tempDir, "i3s-attr-", ".bin");
         tempFile.toFile().deleteOnExit();
         channel = FileChannel.open(tempFile,
@@ -51,8 +51,8 @@ class AttributeStore implements Closeable {
     /**
      * Store feature attributes and return a handle (file offset) for later retrieval.
      */
-    synchronized long store(String objectId, String featureType,
-                            Map<String, Object> attributes) throws IOException {
+    public synchronized long store(String objectId, String featureType,
+                                   Map<String, Object> attributes) throws IOException {
         byte[] data = serialize(objectId, featureType, attributes);
         ByteBuffer buf = ByteBuffer.allocate(4 + data.length).order(ByteOrder.LITTLE_ENDIAN);
         buf.putInt(data.length);
@@ -71,7 +71,7 @@ class AttributeStore implements Closeable {
     /**
      * Load attributes previously stored. Thread-safe — uses positional reads.
      */
-    FeatureAttrs load(long offset) throws IOException {
+    public FeatureAttrs load(long offset) throws IOException {
         ByteBuffer header = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
         readFully(header, offset);
         header.flip();
