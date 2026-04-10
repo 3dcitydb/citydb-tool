@@ -89,8 +89,24 @@ import java.util.concurrent.atomic.AtomicLong;
  *   <li>Disk: sharded temp files (N × ~12 GB) vs single temp file (~100 GB)</li>
  * </ul>
  * <p>
- * Output coordinate system is hard-coded to EPSG:4326 (WGS84) since
- * Cesium only supports this CRS for I3S layers.
+ * <b>Coordinate system:</b> the current implementation hard-codes the output
+ * CRS to EPSG:4326 (WGS 84, lon/lat/ellipsoid-height). This is a simplification
+ * of the writer, not a limitation of the I3S specification — I3S allows any
+ * valid {@code spatialReference} (geographic or projected). The choice is
+ * driven by two practical constraints:
+ * <ul>
+ *   <li>CesiumJS's I3S loader is most mature on the global / geographic path
+ *       (ENU-to-ECEF at each node center); projected CRS support is less
+ *       well-trodden.</li>
+ *   <li>All internal math in this module — ENU-to-ECEF normal rotation in
+ *       {@link I3SGeometryEncoder}, the {@code 111320·cos(lat)} degree-to-meter
+ *       conversions in {@link org.citydb.vis.geometry.PolygonTriangulator} and
+ *       {@link org.citydb.vis.scene.BoundingVolume}, and the Draco position
+ *       quantization with {@code i3s-scale_x/y} metadata — assumes
+ *       {@code X=longitude°, Y=latitude°, Z=meters}.</li>
+ * </ul>
+ * Supporting other CRS would require revisiting every site above, not just
+ * changing the declared {@code wkid}.
  */
 public class I3SWriter implements FeatureWriter {
     private static final int EPSG_4326 = 4326;
