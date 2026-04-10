@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.encoder;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -22,12 +22,12 @@ import java.util.UUID;
  * Writes all JSON files for an I3S scene layer: the scene layer descriptor,
  * node pages, per-node feature data, and shared resources.
  */
-class I3SJsonSerializer {
+public class I3SJsonSerializer {
     private static final int NODES_PER_PAGE = 64;
 
-    void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
-                             List<I3SAttributeEncoder.AttrField> attrFields,
-                             boolean hasTextures) throws IOException {
+    public void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
+                                    List<I3SAttributeEncoder.AttrField> attrFields,
+                                    boolean hasTextures) throws IOException {
         JSONObject root = new JSONObject();
         root.put("id", 0);
         root.put("version", SceneLayer.I3S_VERSION);
@@ -247,9 +247,9 @@ class I3SJsonSerializer {
      * Write node pages. Uses a {@code Set<Integer>} to determine which nodes
      * have geometry (instead of the full nodeFeatureMap).
      */
-    void writeNodePages(Path layerDir, List<I3SNode> nodes,
-                        Set<Integer> meshNodeIndices,
-                        boolean hasTextures) throws IOException {
+    public void writeNodePages(Path layerDir, List<I3SNode> nodes,
+                               Set<Integer> meshNodeIndices,
+                               boolean hasTextures) throws IOException {
         int pageCount = (nodes.size() + NODES_PER_PAGE - 1) / NODES_PER_PAGE;
 
         for (int page = 0; page < pageCount; page++) {
@@ -318,7 +318,7 @@ class I3SJsonSerializer {
      * Write per-node shared resource (legacy material/texture definitions).
      * CesiumJS reads this for texture metadata.
      */
-    void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas) throws IOException {
+    public void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas) throws IOException {
         JSONObject root = new JSONObject();
 
         // Material definition (legacy format for CesiumJS compatibility)
@@ -359,8 +359,8 @@ class I3SJsonSerializer {
     /**
      * Write per-node feature metadata to features/0/index.json.
      */
-    void writeNodeFeatures(Path layerDir, I3SNode node,
-                           List<FeatureData> features) throws IOException {
+    public void writeNodeFeatures(Path layerDir, I3SNode node,
+                                  List<FeatureData> features) throws IOException {
         JSONArray array = new JSONArray();
         if (features != null) {
             for (FeatureData fd : features) {
