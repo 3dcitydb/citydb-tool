@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.store;
 
 import org.citydb.vis.geometry.TriangleMesh;
 
@@ -23,11 +23,11 @@ import java.nio.file.Path;
  * upper 16 bits = shardId, lower 48 bits = offset within the shard file.
  * This supports up to 65,536 shards and 256 TB per shard.
  */
-class ShardedMeshStore implements Closeable {
+public class ShardedMeshStore implements Closeable {
     private final MeshStore[] shards;
     private final int shardCount;
 
-    ShardedMeshStore(int shardCount, Path tempDir) throws IOException {
+    public ShardedMeshStore(int shardCount, Path tempDir) throws IOException {
         this.shardCount = shardCount;
         this.shards = new MeshStore[shardCount];
         try {
@@ -45,7 +45,7 @@ class ShardedMeshStore implements Closeable {
      * Store a mesh in the shard selected by {@code shardHint}.
      * Returns an encoded handle (shardId + offset) for later retrieval.
      */
-    long store(TriangleMesh mesh, int shardHint) throws IOException {
+    public long store(TriangleMesh mesh, int shardHint) throws IOException {
         int shard = Math.abs(shardHint % shardCount);
         long offset = shards[shard].store(mesh);
         return encodeHandle(shard, offset);
@@ -54,7 +54,7 @@ class ShardedMeshStore implements Closeable {
     /**
      * Load a mesh from the encoded handle. Thread-safe — uses positional reads.
      */
-    TriangleMesh load(long handle) throws IOException {
+    public TriangleMesh load(long handle) throws IOException {
         int shard = decodeShardId(handle);
         long offset = decodeOffset(handle);
         return shards[shard].load(offset);
