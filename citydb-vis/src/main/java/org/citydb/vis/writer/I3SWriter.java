@@ -8,6 +8,7 @@ package org.citydb.vis.writer;
 import org.citydb.config.ConfigException;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
+import org.citydb.core.file.FileType;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
@@ -115,6 +116,15 @@ public class I3SWriter implements FeatureWriter {
     public I3SWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
         Objects.requireNonNull(outputFile, "The output file must not be null.");
         Objects.requireNonNull(options, "The write options must not be null.");
+
+        // I3S writes a directory tree of geometry, attribute, and texture files
+        // via raw filesystem operations and cannot be packed into a single
+        // archive stream. Reject archive outputs (.zip, .gz) early so the user
+        // gets a clear error instead of a half-written broken folder.
+        if (outputFile.getFileType() == FileType.ARCHIVE) {
+            throw new WriteException("I3S export does not support archive output (e.g., .zip, .gz). " +
+                    "Specify a regular file path with the .i3s extension.");
+        }
 
         this.outputFile = outputFile;
         this.spatialEntries = new ConcurrentLinkedQueue<>();
