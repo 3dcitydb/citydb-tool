@@ -92,6 +92,10 @@ public class VisExportCommand extends ExportController {
         AppearanceOptions appearanceOptions = exportOptions.getAppearanceOptions()
                 .orElseGet(AppearanceOptions::new);
         appearanceOptions.setNumberOfTextureBuckets(buckets);
+        // Stage textures inside the writer's .tmp/ directory so the entire
+        // intermediate footprint (mesh/attr stores + textures) can be cleaned
+        // up by removing a single subfolder of the output directory.
+        appearanceOptions.setTextureOutputFolder(".tmp/i3s-textures");
         exportOptions.setAppearanceOptions(appearanceOptions);
     }
 
