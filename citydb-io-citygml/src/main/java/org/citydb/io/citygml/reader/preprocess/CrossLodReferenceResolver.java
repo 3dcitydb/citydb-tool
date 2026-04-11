@@ -7,19 +7,16 @@ package org.citydb.io.citygml.reader.preprocess;
 
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.core.AbstractFeature;
-import org.citygml4j.core.model.core.AbstractSpaceBoundary;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.copy.CopySession;
 import org.xmlobjects.gml.model.GMLObject;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
-import org.xmlobjects.gml.util.reference.ReferenceResolver;
 import org.xmlobjects.model.Child;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.*;
 
 public class CrossLodReferenceResolver {
-    private final CopyBuilder copyBuilder;
     private Mode mode = Mode.RESOLVE;
     private boolean copyAppearance = true;
 
@@ -28,8 +25,7 @@ public class CrossLodReferenceResolver {
         REMOVE_LOD4_REFERENCES
     }
 
-    CrossLodReferenceResolver(CopyBuilder copyBuilder) {
-        this.copyBuilder = copyBuilder;
+    CrossLodReferenceResolver() {
     }
 
     CrossLodReferenceResolver setMode(Mode mode) {
@@ -42,68 +38,70 @@ public class CrossLodReferenceResolver {
         return this;
     }
 
-    void resolveCrossLodReferences(AbstractFeature feature, ReferenceResolver referenceResolver) {
-        referenceResolver.resolveReferences(feature);
-        resolveCrossLodReferences(feature);
-    }
-
     void resolveCrossLodReferences(AbstractFeature feature) {
-        CrossLodReferenceCollector lodReferenceCollector = new CrossLodReferenceCollector();
-        Map<AbstractGeometry, List<GeometryProperty<?>>> references = lodReferenceCollector.process(feature);
-        if (!references.isEmpty()) {
-            if (mode == Mode.RESOLVE) {
-                GeometryCopyBuilder geometryCopyBuilder = new GeometryCopyBuilder(copyBuilder)
-                        .copyAppearance(copyAppearance)
-                        .withAppearanceHelper(new AppearanceHelper(feature));
-                for (Map.Entry<AbstractGeometry, List<GeometryProperty<?>>> entry : references.entrySet()) {
-                    GeometryProperty<?> targetProperty = getTargetProperty(entry.getValue());
-                    AbstractGeometry geometry = geometryCopyBuilder.copy(entry.getKey(), feature);
+        ReferenceCollector collector = new ReferenceCollector();
+        Map<Integer, Map<AbstractGeometry, List<GeometryProperty<?>>>> references = collector.collect(feature);
+        if (references.isEmpty()) {
+            return;
+        }
 
-                    targetProperty.setInlineObjectIfValid(geometry);
-                    targetProperty.setHref(null);
+        if (mode == Mode.RESOLVE) {
+            GeometryCopier geometryCopier = new GeometryCopier()
+                    .copyAppearance(copyAppearance)
+                    .withAppearanceHelper(new AppearanceHelper(feature));
+            for (Map<AbstractGeometry, List<GeometryProperty<?>>> lod : references.values()) {
+                try (CopySession session = geometryCopier.createSession()) {
+                    for (Map.Entry<AbstractGeometry, List<GeometryProperty<?>>> entry : lod.entrySet()) {
+                        boolean inline = !session.hasClone(entry.getKey());
+                        AbstractGeometry clone = geometryCopier.copy(entry.getKey(), feature, session);
 
-                    if (entry.getValue().size() > 1) {
-                        entry.getValue().stream()
-                                .filter(property -> property != targetProperty)
-                                .forEach(property -> property.setHref("#" + geometry.getId()));
+                        GeometryProperty<?> targetProperty = entry.getValue().get(0);
+                        if (inline) {
+                            targetProperty.setInlineObjectIfValid(clone);
+                            targetProperty.setHref(null);
+                        } else {
+                            targetProperty.setReferencedObjectIfValid(clone);
+                            targetProperty.setHref("#" + clone.getId());
+                        }
+
+                        if (entry.getValue().size() > 1) {
+                            entry.getValue().stream()
+                                    .skip(1)
+                                    .forEach(property -> {
+                                        property.setReferencedObjectIfValid(clone);
+                                        property.setHref("#" + clone.getId());
+                                    });
+                        }
                     }
                 }
-            } else {
-                references.values().stream()
-                        .flatMap(Collection::stream)
-                        .forEach(property -> {
-                            Child parent = property.getParent();
-                            if (parent instanceof GMLObject object) {
-                                object.unsetProperty(property);
-                            }
-                        });
             }
-        }
-    }
-
-    private GeometryProperty<?> getTargetProperty(List<GeometryProperty<?>> properties) {
-        if (properties.size() > 1) {
-            for (GeometryProperty<?> property : properties) {
-                if (property.getParent(AbstractSpaceBoundary.class) != null) {
-                    return property;
+        } else {
+            for (Map<AbstractGeometry, List<GeometryProperty<?>>> lod : references.values()) {
+                for (List<GeometryProperty<?>> properties : lod.values()) {
+                    for (GeometryProperty<?> property : properties) {
+                        Child parent = property.getParent();
+                        if (parent instanceof GMLObject object) {
+                            object.unsetProperty(property);
+                        }
+                    }
                 }
             }
         }
-
-        return properties.get(0);
     }
 
-    private class CrossLodReferenceCollector extends ObjectWalker {
-        private final Map<AbstractGeometry, List<GeometryProperty<?>>> references = new IdentityHashMap<>();
-        private final Map<GeometryProperty<?>, Integer> propertiesByLod = new IdentityHashMap<>();
+    private class ReferenceCollector extends ObjectWalker {
+        private final Map<Integer, Map<AbstractGeometry, List<GeometryProperty<?>>>> references = new HashMap<>();
+        private final Map<GeometryProperty<?>, Integer> properties = new IdentityHashMap<>();
 
-        public Map<AbstractGeometry, List<GeometryProperty<?>>> process(AbstractFeature feature) {
+        Map<Integer, Map<AbstractGeometry, List<GeometryProperty<?>>>> collect(AbstractFeature feature) {
             GeometryInfo geometryInfo = feature.getGeometryInfo(true);
             for (int lod : geometryInfo.getLods()) {
-                geometryInfo.getGeometries(lod).forEach(property -> propertiesByLod.put(property, lod));
+                for (GeometryProperty<?> property : geometryInfo.getGeometries(lod)) {
+                    properties.put(property, lod);
+                }
             }
 
-            propertiesByLod.keySet().forEach(this::visit);
+            feature.accept(this);
             return references;
         }
 
@@ -111,10 +109,14 @@ public class CrossLodReferenceResolver {
         public void visit(GeometryProperty<?> property) {
             if (property.isSetReferencedObject() && property.getHref() != null) {
                 Integer lod = getLod(property);
-                Integer otherLod = getLod(property.getObject().getParent(GeometryProperty.class));
-                if (lod != null && otherLod != null && !lod.equals(otherLod)) {
-                    if (mode == Mode.RESOLVE || (mode == Mode.REMOVE_LOD4_REFERENCES && otherLod == 4)) {
-                        references.computeIfAbsent(property.getObject(), v -> new ArrayList<>()).add(property);
+                Integer targetLod = getLod(property.getObject().getParent(GeometryProperty.class));
+
+                if (lod != null && targetLod != null && !lod.equals(targetLod)) {
+                    if (mode == Mode.RESOLVE
+                            || (mode == Mode.REMOVE_LOD4_REFERENCES && targetLod == 4)) {
+                        references.computeIfAbsent(lod, k -> new LinkedHashMap<>())
+                                .computeIfAbsent(property.getObject(), k -> new ArrayList<>())
+                                .add(property);
                     }
                 }
             }
@@ -123,12 +125,10 @@ public class CrossLodReferenceResolver {
         }
 
         private Integer getLod(GeometryProperty<?> property) {
-            Integer lod = null;
-            if (property != null) {
-                do {
-                    lod = propertiesByLod.get(property);
-                } while (lod == null && (property = property.getParent(GeometryProperty.class)) != null);
-            }
+            Integer lod;
+            do {
+                lod = properties.get(property);
+            } while (lod == null && (property = property.getParent(GeometryProperty.class)) != null);
 
             return lod;
         }
