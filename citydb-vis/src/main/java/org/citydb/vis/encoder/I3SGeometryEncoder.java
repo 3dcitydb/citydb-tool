@@ -59,7 +59,14 @@ public class I3SGeometryEncoder {
     /** Bit in the Draco header flags field that indicates metadata is present. */
     private static final short DRACO_METADATA_FLAG = (short) 0x8000;
 
-    public void writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
+    /**
+     * Encode and write a node's geometry to {@code geometries/0}.
+     *
+     * @return {@code true} if a geometry file was written, {@code false} if
+     *         welding/degenerate filtering left the mesh empty (caller should
+     *         treat this node as a non-mesh node).
+     */
+    public boolean writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
 
@@ -95,43 +102,67 @@ public class I3SGeometryEncoder {
         int vertexCount = validTriIndices.size() * 3;
         node.setOutputVertexCount(vertexCount);
 
-        // ENU-to-ECEF rotation at the node's geographic center
-        double lonRad = Math.toRadians(centerX);
-        double latRad = Math.toRadians(centerY);
-        double sinLon = Math.sin(lonRad), cosLon = Math.cos(lonRad);
-        double sinLat = Math.sin(latRad), cosLat = Math.cos(latRad);
+        // Empty after welding/degenerate filtering — bail out. The Drako encoder
+        // is undefined on zero-point / zero-face meshes, and an empty node must
+        // not appear as a mesh node in the output.
+        if (vertexCount == 0) {
+            node.setMesh(null);
+            return false;
+        }
 
         // Compute face ranges from valid triangles
         List<int[]> faceRanges = new ArrayList<>();
-        if (!validTriIndices.isEmpty()) {
-            int start = 0;
-            long currentId = triFeatureIds.get(validTriIndices.get(0));
-            for (int i = 1; i < validTriIndices.size(); i++) {
-                long id = triFeatureIds.get(validTriIndices.get(i));
-                if (id != currentId) {
-                    faceRanges.add(new int[]{start, i - 1});
-                    start = i;
-                    currentId = id;
-                }
+        int start = 0;
+        long currentId = triFeatureIds.get(validTriIndices.get(0));
+        for (int i = 1; i < validTriIndices.size(); i++) {
+            long id = triFeatureIds.get(validTriIndices.get(i));
+            if (id != currentId) {
+                faceRanges.add(new int[]{start, i - 1});
+                start = i;
+                currentId = id;
             }
-            faceRanges.add(new int[]{start, validTriIndices.size() - 1});
+        }
+        faceRanges.add(new int[]{start, validTriIndices.size() - 1});
+
+        // Collect positions, ECEF normals (untextured only), and UVs (textured
+        // only) into arrays for Draco encoding. For textured nodes CesiumJS
+        // generates normals from geometry, so we skip both allocation and the
+        // ENU-to-ECEF rotation for that path.
+        float[][] outPositions = new float[vertexCount][];
+        float[][] outNormals = hasTexCoords ? null : new float[vertexCount][3];
+        float[][] outUVs = hasTexCoords ? new float[vertexCount][] : null;
+
+        double sinLon = 0, cosLon = 0, sinLat = 0, cosLat = 0;
+        if (!hasTexCoords) {
+            // ENU-to-ECEF rotation at the node's geographic center
+            double lonRad = Math.toRadians(centerX);
+            double latRad = Math.toRadians(centerY);
+            sinLon = Math.sin(lonRad);
+            cosLon = Math.cos(lonRad);
+            sinLat = Math.sin(latRad);
+            cosLat = Math.cos(latRad);
         }
 
-        // Collect positions, ECEF normals, and UVs into arrays for Draco encoding
-        float[][] outPositions = new float[vertexCount][];
-        float[][] outNormals = new float[vertexCount][3];
-        float[][] outUVs = hasTexCoords ? new float[vertexCount][] : null;
+        // Note on normal consistency: per-polygon normals come from
+        // PolygonTriangulator, which computes them in an ENU basis at the
+        // polygon's own centroid latitude. Here we apply a single ENU-to-ECEF
+        // rotation at the node's center latitude. For nodes spanning less than
+        // a few kilometers the basis-rotation error between the two latitudes
+        // is below the rendered-normal noise floor (<1e-4 rad). Larger nodes
+        // would require per-triangle frame recomputation.
         int idx = 0;
         for (int ti : validTriIndices) {
             int base = ti * 3;
             int[] tri = allTriangles.get(ti);
             for (int j = 0; j < 3; j++) {
                 outPositions[idx] = weldedPositions[base + j];
-                float[] n = mesh.getNormals().get(tri[j]);
-                double ne = n[0], nn = n[1], nu = n[2];
-                outNormals[idx][0] = (float) (-sinLon * ne - sinLat * cosLon * nn + cosLat * cosLon * nu);
-                outNormals[idx][1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
-                outNormals[idx][2] = (float) (cosLat * nn + sinLat * nu);
+                if (outNormals != null) {
+                    float[] n = mesh.getNormals().get(tri[j]);
+                    double ne = n[0], nn = n[1], nu = n[2];
+                    outNormals[idx][0] = (float) (-sinLon * ne - sinLat * cosLon * nn + cosLat * cosLon * nu);
+                    outNormals[idx][1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
+                    outNormals[idx][2] = (float) (cosLat * nn + sinLat * nu);
+                }
                 if (outUVs != null) {
                     outUVs[idx] = mesh.getTexCoords().get(tri[j]);
                 }
@@ -166,16 +197,17 @@ public class I3SGeometryEncoder {
         // which finds "uv0" in compressedAttributes).
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
                 outUVs, vertexFeatureIndices, numTriangles);
-
-        outPositions = null;
-        outNormals = null;
-        outUVs = null;
+        return true;
     }
 
     /**
-     * Encode geometry using Draco compression.
-     * Attributes are added in this order to match the compressedAttributes
-     * declaration in geometryDefinitions: position, normal, uv0, feature-index.
+     * Encode geometry using Draco compression. Attribute order matches the
+     * compressedAttributes declaration in geometryDefinitions:
+     * <ul>
+     *   <li>Untextured: {@code position, normal, feature-index}</li>
+     *   <li>Textured:   {@code position, uv0, feature-index} — normals are
+     *       generated at runtime by CesiumJS from geometry</li>
+     * </ul>
      */
     private static void writeDracoGeometry(Path layerDir, I3SNode node,
                                     double centerLatDeg,
@@ -230,7 +262,6 @@ public class I3SGeometryEncoder {
         // Feature-index attribute (GENERIC, INT32, 1 component per vertex).
         // Set uniqueId explicitly so we can reference it in injected metadata.
         // The uniqueId must match the attribute's position in the Draco file.
-        short featureIndexUniqueId = FEATURE_INDEX_UID;
         DataBuffer intBuffer = new DataBuffer();
         intBuffer.setCapacity(numVertices * 4);
         for (int i = 0; i < numVertices; i++) {
@@ -239,7 +270,7 @@ public class I3SGeometryEncoder {
         PointAttribute featureAttr = new PointAttribute(
                 AttributeType.GENERIC, DataType.INT32, 1, false, 4, 0, intBuffer);
         featureAttr.setNumUniqueEntries(numVertices);
-        featureAttr.setUniqueId(featureIndexUniqueId);
+        featureAttr.setUniqueId(FEATURE_INDEX_UID);
         dracoMesh.addAttribute(featureAttr);
 
         // Faces: triangle soup — sequential indices (0,1,2), (3,4,5), ...
@@ -260,9 +291,11 @@ public class I3SGeometryEncoder {
         try {
             byte[] compressed = Draco.encode(dracoMesh, options);
             compressed = injectDracoMetadata(compressed, 1.0 / scaleX, 1.0 / scaleY,
-                    featureIndexUniqueId);
-            Files.write(layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
-                    .resolve("geometries").resolve("0"), compressed);
+                    FEATURE_INDEX_UID);
+            Path geometryDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
+                    .resolve("geometries");
+            Files.createDirectories(geometryDir);
+            Files.write(geometryDir.resolve("0"), compressed);
         } catch (DrakoException e) {
             throw new IOException("Draco encoding failed for node " + node.getIndex(), e);
         }

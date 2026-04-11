@@ -25,14 +25,13 @@ public class I3SNode {
     private TriangleMesh mesh;
     private int featureCount;
     private double lodThreshold;
-    private int outputVertexCount = -1;
+    private int outputVertexCount;
     private int textureId = -1;
 
     public I3SNode(int index, int level) {
         this.index = index;
         this.level = level;
         this.children = new ArrayList<>();
-        this.mesh = new TriangleMesh();
     }
 
     public int getIndex() {
@@ -104,7 +103,7 @@ public class I3SNode {
     }
 
     public int getOutputVertexCount() {
-        return outputVertexCount >= 0 ? outputVertexCount : (mesh != null ? mesh.getTriangleCount() * 3 : 0);
+        return outputVertexCount;
     }
 
     public I3SNode setOutputVertexCount(int count) {
