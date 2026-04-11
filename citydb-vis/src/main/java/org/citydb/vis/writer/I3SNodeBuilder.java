@@ -30,6 +30,25 @@ import java.util.Set;
  */
 class I3SNodeBuilder {
     /**
+     * LOD threshold used by I3S runtimes (CesiumJS) as a screen-space area
+     * (px²) above which a node should refine to its children.
+     * <p>
+     * A <b>larger</b> value means the node stays visible longer before being
+     * replaced by its children.
+     * <ul>
+     *   <li>Leaf nodes hold the actual geometry and must remain visible across
+     *       a wide range of screen areas — they use the larger value.</li>
+     *   <li>Internal nodes have no geometry (no LOD pyramid yet) and must
+     *       refine to children as soon as meaningful screen area is reached —
+     *       they use the smaller value.</li>
+     * </ul>
+     * These values will need to be revisited when LOD geometry is generated
+     * for intermediate nodes.
+     */
+    private static final double LEAF_NODE_LOD_THRESHOLD = 131_072;
+    private static final double INTERNAL_NODE_LOD_THRESHOLD = 65_536;
+
+    /**
      * Result of building a quadtree for a single spatial grid cell.
      */
     record CellTree(List<I3SNode> nodes, Map<Integer, List<SpatialEntry>> nodeEntryMap) {
@@ -65,7 +84,7 @@ class I3SNodeBuilder {
 
         computeLeafBoundingVolumes(nodes, nodeEntryMap);
         updateBoundingVolumes(root);
-        setLodThresholds(root, nodeEntryMap);
+        setLodThresholds(root);
 
         return new CellTree(nodes, nodeEntryMap);
     }
@@ -114,7 +133,7 @@ class I3SNodeBuilder {
 
         // Compute global root bounding volume from children
         globalRoot.updateBoundingVolume();
-        globalRoot.setLodThreshold(65536);
+        globalRoot.setLodThreshold(INTERNAL_NODE_LOD_THRESHOLD);
 
         return new MergedTree(allNodes, globalEntryMap, meshNodeIndices);
     }
@@ -185,16 +204,17 @@ class I3SNodeBuilder {
                         allNodes, nodeCounter, nodeEntryMap);
             }
         }
-
-        // Fallback: if partitioning produced no children (all in same quadrant), treat as leaf
-        if (node.getChildren().isEmpty()) {
-            node.setFeatureCount(entries.size());
-            nodeEntryMap.put(node.getIndex(), new ArrayList<>(entries));
-        }
     }
 
     /**
      * Compute bounding volumes for leaf nodes from their entries' bounding boxes.
+     * <p>
+     * Relies on the invariant that cell-tree node indices match their position
+     * in {@code allNodes}: {@link #buildCellTree} creates nodes via
+     * {@code counter[0]++} and appends them to the list in the same order, so
+     * {@code allNodes.get(index)} is O(1) and index-stable. Any future change
+     * that inserts or reorders nodes in this list must preserve this invariant
+     * or switch to an {@code IdentityHashMap<I3SNode, ...>} lookup.
      */
     private static void computeLeafBoundingVolumes(List<I3SNode> allNodes,
                                                    Map<Integer, List<SpatialEntry>> nodeEntryMap) {
@@ -210,8 +230,10 @@ class I3SNodeBuilder {
                 if (bb[4] > maxY) maxY = bb[4];
                 if (bb[5] > maxZ) maxZ = bb[5];
             }
-            allNodes.get(entry.getKey())
-                    .setMbs(BoundingVolume.ofBoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
+            I3SNode node = allNodes.get(entry.getKey());
+            assert node.getIndex() == entry.getKey()
+                    : "Cell-tree node index must match its list position.";
+            node.setMbs(BoundingVolume.ofBoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
         }
     }
 
@@ -222,24 +244,16 @@ class I3SNodeBuilder {
         node.updateBoundingVolume();
     }
 
-    private static void setLodThresholds(I3SNode node,
-                                         Map<Integer, List<SpatialEntry>> nodeEntryMap) {
-        // maxScreenThresholdSQ: when screen-space area (px²) exceeds this, refine to children.
-        // Leaf nodes (have geometry, no children): set HIGH threshold so they always display
-        //   — no children to refine to, so a large value means "always show."
-        // Internal nodes (no geometry, have children): set HIGH threshold so they eagerly
-        //   refine to children that contain the actual geometry.
+    private static void setLodThresholds(I3SNode node) {
+        // Leaf: larger threshold → stays visible across a wide range of screen
+        //       areas (has the actual geometry and no children to refine to).
+        // Internal: smaller threshold → refines to children as soon as the node
+        //           takes up meaningful screen area (no geometry of its own).
         boolean isLeaf = node.getChildren().isEmpty();
-        if (isLeaf) {
-            // Leaf: large threshold = always visible (never needs refinement)
-            node.setLodThreshold(131072);
-        } else {
-            // Internal: large threshold = always refine to show children
-            node.setLodThreshold(65536);
-        }
+        node.setLodThreshold(isLeaf ? LEAF_NODE_LOD_THRESHOLD : INTERNAL_NODE_LOD_THRESHOLD);
 
         for (I3SNode child : node.getChildren()) {
-            setLodThresholds(child, nodeEntryMap);
+            setLodThresholds(child);
         }
     }
 }
