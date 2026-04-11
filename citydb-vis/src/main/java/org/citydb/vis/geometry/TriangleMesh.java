@@ -6,7 +6,6 @@
 package org.citydb.vis.geometry;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -74,7 +73,11 @@ public class TriangleMesh {
         int index = positions.size();
         positions.add(new double[]{x, y, z});
         normals.add(new float[]{nx, ny, nz});
-        texCoords.add(new float[]{0f, 0f});
+        // If the mesh already has UVs, pad this vertex so the
+        // texCoords.size() == positions.size() invariant holds.
+        if (hasTexCoords) {
+            texCoords.add(new float[]{0f, 0f});
+        }
         return index;
     }
 
@@ -83,8 +86,15 @@ public class TriangleMesh {
         int index = positions.size();
         positions.add(new double[]{x, y, z});
         normals.add(new float[]{nx, ny, nz});
+        // First UV vertex for this mesh: backfill any earlier non-UV vertices
+        // with {0,0} so the texCoords.size() == positions.size() invariant holds.
+        if (!hasTexCoords) {
+            while (texCoords.size() < index) {
+                texCoords.add(new float[]{0f, 0f});
+            }
+            hasTexCoords = true;
+        }
         texCoords.add(new float[]{u, v});
-        hasTexCoords = true;
         return index;
     }
 
@@ -102,10 +112,25 @@ public class TriangleMesh {
         int offset = positions.size();
         positions.addAll(other.positions);
         normals.addAll(other.normals);
-        texCoords.addAll(other.texCoords);
-        if (other.hasTexCoords) {
+
+        // Maintain the invariant: when hasTexCoords is true,
+        // texCoords.size() == positions.size(). Pad with {0,0} on either side
+        // when mixing textured and untextured meshes within a single node.
+        if (hasTexCoords || other.hasTexCoords) {
+            while (texCoords.size() < offset) {
+                texCoords.add(new float[]{0f, 0f});
+            }
+            if (other.hasTexCoords) {
+                texCoords.addAll(other.texCoords);
+            } else {
+                int otherSize = other.positions.size();
+                for (int i = 0; i < otherSize; i++) {
+                    texCoords.add(new float[]{0f, 0f});
+                }
+            }
             hasTexCoords = true;
         }
+
         for (int[] tri : other.triangles) {
             triangles.add(new int[]{tri[0] + offset, tri[1] + offset, tri[2] + offset});
         }
@@ -117,6 +142,12 @@ public class TriangleMesh {
      * Resolve T-junction vertices by splitting affected triangle edges.
      * A T-junction occurs when a vertex lies on an edge of another triangle
      * without being a vertex of that triangle, causing sub-pixel rendering cracks.
+     * <p>
+     * <b>Performance:</b> this implementation is O(V * T) per iteration and is
+     * intended to run only on per-feature meshes (typically &lt;1000 vertices
+     * and &lt;1000 triangles). Do NOT call it on merged node-level meshes
+     * without first adding a spatial index — the naive scan does not scale to
+     * Bayern-sized nodes.
      *
      * @param scaleX degrees-to-meters scale for X (longitude)
      * @param scaleY degrees-to-meters scale for Y (latitude)
@@ -253,28 +284,41 @@ public class TriangleMesh {
     }
 
     /**
+     * Key for duplicate-triangle detection: three position hashes, compared
+     * by value. Using a record gives auto-generated equals/hashCode that
+     * compare all three 64-bit fields, so two triangles match only if all
+     * nine coordinate-bit patterns are identical — no 64-bit-hash collisions.
+     */
+    private record TriangleKey(long h0, long h1, long h2) {}
+
+    /**
      * Remove duplicate triangles that occupy the same space (same vertex positions
      * regardless of winding order). Duplicates cause Z-fighting artifacts.
+     * <p>
+     * Dedup is exact on {@code Double.doubleToLongBits} — downstream vertex
+     * welding in the geometry encoder handles near-duplicates within 2 cm,
+     * so upstream rounding would be both redundant and incorrect.
      */
     public void removeDuplicateTriangles() {
         if (triangles.size() <= 1) return;
 
-        Set<String> seen = new HashSet<>();
+        Set<TriangleKey> seen = new HashSet<>();
         List<int[]> kept = new ArrayList<>();
         List<Long> keptIds = new ArrayList<>();
         List<Integer> keptTexIds = new ArrayList<>();
 
         for (int i = 0; i < triangles.size(); i++) {
             int[] tri = triangles.get(i);
-            String[] posStrs = {
-                    Arrays.toString(positions.get(tri[0])),
-                    Arrays.toString(positions.get(tri[1])),
-                    Arrays.toString(positions.get(tri[2]))
-            };
-            Arrays.sort(posStrs);
-            String key = posStrs[0] + posStrs[1] + posStrs[2];
+            long h0 = vertexHash(positions.get(tri[0]));
+            long h1 = vertexHash(positions.get(tri[1]));
+            long h2 = vertexHash(positions.get(tri[2]));
 
-            if (seen.add(key)) {
+            // Sort ascending so the key is winding-order-independent.
+            if (h0 > h1) { long t = h0; h0 = h1; h1 = t; }
+            if (h1 > h2) { long t = h1; h1 = h2; h2 = t; }
+            if (h0 > h1) { long t = h0; h0 = h1; h1 = t; }
+
+            if (seen.add(new TriangleKey(h0, h1, h2))) {
                 kept.add(tri);
                 keptIds.add(featureIds.get(i));
                 keptTexIds.add(triangleTextureIds.get(i));
@@ -289,6 +333,17 @@ public class TriangleMesh {
             triangleTextureIds.clear();
             triangleTextureIds.addAll(keptTexIds);
         }
+    }
+
+    /**
+     * Hash a vertex position to a 64-bit value using exact double bits.
+     * Two positions hash equal iff their coordinates are bit-identical.
+     */
+    private static long vertexHash(double[] pos) {
+        long h = Double.doubleToLongBits(pos[0]);
+        h = h * 31L + Double.doubleToLongBits(pos[1]);
+        h = h * 31L + Double.doubleToLongBits(pos[2]);
+        return h;
     }
 
     public double[] computeBoundingBox() {
