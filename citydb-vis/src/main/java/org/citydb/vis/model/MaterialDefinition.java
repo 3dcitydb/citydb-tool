@@ -1,0 +1,37 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright virtualcitysystems GmbH <https://vc.systems>
+ */
+
+package org.citydb.vis.model;
+
+import com.alibaba.fastjson2.annotation.JSONType;
+
+@JSONType(alphabetic = false)
+public class MaterialDefinition {
+    private String cullFace;
+    private PbrMetallicRoughness pbrMetallicRoughness;
+
+    public static MaterialDefinition untextured() {
+        MaterialDefinition material = new MaterialDefinition();
+        material.cullFace = "back";
+        material.pbrMetallicRoughness = new PbrMetallicRoughness(null, 0);
+        return material;
+    }
+
+    public static MaterialDefinition textured() {
+        MaterialDefinition material = new MaterialDefinition();
+        material.cullFace = "back";
+        material.pbrMetallicRoughness = new PbrMetallicRoughness(
+                new BaseColorTexture(0, 0), 0);
+        return material;
+    }
+
+    @JSONType(alphabetic = false)
+    public record PbrMetallicRoughness(BaseColorTexture baseColorTexture, int metallicFactor) {
+    }
+
+    @JSONType(alphabetic = false)
+    public record BaseColorTexture(int textureSetDefinitionId, int texCoord) {
+    }
+}
