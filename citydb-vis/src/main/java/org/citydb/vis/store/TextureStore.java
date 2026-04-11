@@ -115,7 +115,9 @@ public class TextureStore implements Closeable {
             return;
         }
         if (img == null) {
-            copyTo(textureId, target);
+            // Unreadable format — skip rather than re-read via copyTo (which
+            // would attempt the same ImageIO.read again and fail identically).
+            logger.warn("Skipping unsupported texture format for texture {} ({})", textureId, source);
             return;
         }
 

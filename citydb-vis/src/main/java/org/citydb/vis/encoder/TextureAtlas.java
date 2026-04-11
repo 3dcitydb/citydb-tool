@@ -181,7 +181,7 @@ public class TextureAtlas {
             packer.addRegion(String.valueOf(d[0]), w, h);
             texIdToIdx.put(d[0], i);
         }
-        var packed = packer.pack(false);
+        org.citydb.textureAtlas.model.TextureAtlas packed = packer.pack(false);
 
         // If any textures overflow to a second page, scale down and retry
         boolean hasOverflow = false;
@@ -354,5 +354,13 @@ public class TextureAtlas {
 
     public void write(Path target) throws IOException {
         ImageIO.write(image, "jpg", target.toFile());
+    }
+
+    public int getWidth() {
+        return image.getWidth();
+    }
+
+    public int getHeight() {
+        return image.getHeight();
     }
 }
