@@ -49,6 +49,8 @@ public class AddressSerializer {
                     Identifier identifier = new Identifier(houseNumber);
                     thoroughfare.getNameElementOrNumber().add(new ThoroughfareNameOrNumber(identifier));
                 }
+
+                address.setThoroughfare(thoroughfare);
             }
 
             if (poBox != null) {
