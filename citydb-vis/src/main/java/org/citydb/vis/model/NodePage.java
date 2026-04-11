@@ -44,8 +44,7 @@ public class NodePage {
             entry.index = node.getIndex();
 
             if (node.getMbs() != null) {
-                double[] source = node.getMbs().toMbs();
-                entry.mbs = new double[]{source[0], source[1], source[2], source[3]};
+                entry.mbs = node.getMbs().toMbs();
             }
 
             entry.lodThreshold = node.getLodThreshold();
@@ -75,7 +74,9 @@ public class NodePage {
 
         public static NodeMesh of(I3SNode node, boolean hasTextures) {
             boolean nodeHasTexture = hasTextures && node.hasTexture();
-            int definition = nodeHasTexture ? 1 : 0;
+            int definition = nodeHasTexture
+                    ? SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX
+                    : SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX;
             int materialResource = nodeHasTexture ? node.getIndex() : -1;
 
             NodeMesh mesh = new NodeMesh();
