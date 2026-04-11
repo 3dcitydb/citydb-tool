@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -56,6 +57,11 @@ public class I3SAttributeEncoder {
     /**
      * Finalize attribute fields from incrementally tracked types.
      * Must be called after all features have been processed.
+     * <p>
+     * Fields are ordered deterministically: the two fixed header fields
+     * (OBJECTID, featureType) first, then user attributes sorted alphabetically
+     * by name. ConcurrentHashMap iteration order is unspecified, so sorting
+     * here is necessary for reproducible output across runs.
      *
      * @param totalFeatures total number of features processed
      * @return ordered list of attribute fields with final types
@@ -65,7 +71,9 @@ public class I3SAttributeEncoder {
         result.put("OBJECTID", AttrType.STRING);
         result.put("featureType", AttrType.STRING);
 
-        trackedTypes.forEach((name, type) -> {
+        // Copy into a TreeMap so iteration order is stable and alphabetical.
+        Map<String, AttrType> sorted = new TreeMap<>(trackedTypes);
+        sorted.forEach((name, type) -> {
             AttrType finalType = type;
             if (finalType == AttrType.INT) {
                 long count = trackedCounts.getOrDefault(name, new AtomicLong(0)).get();
@@ -114,6 +122,10 @@ public class I3SAttributeEncoder {
 
         int count = features.size();
         Path nodeDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()));
+        Path attributesDir = nodeDir.resolve("attributes");
+        for (int i = 0; i < attrFields.size(); i++) {
+            Files.createDirectories(attributesDir.resolve("f_" + i));
+        }
 
         for (int i = 0; i < attrFields.size(); i++) {
             AttrField field = attrFields.get(i);
@@ -176,7 +188,13 @@ public class I3SAttributeEncoder {
     // ---- Internal helpers ----
 
     private static AttrType classifyType(Object value) {
-        if (value instanceof Long) return AttrType.INT;
+        if (value instanceof Long l) {
+            // I3S INT is Int32. Long values outside that range would be
+            // silently truncated by writeNodeAttributes, so promote to DOUBLE
+            // (Float64 covers all safe-integer longs up to 2^53 exactly).
+            return (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE)
+                    ? AttrType.INT : AttrType.DOUBLE;
+        }
         if (value instanceof Double) return AttrType.DOUBLE;
         return AttrType.STRING;
     }
