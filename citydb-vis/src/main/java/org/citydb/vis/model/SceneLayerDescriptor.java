@@ -14,6 +14,15 @@ import java.util.List;
 
 @JSONType(alphabetic = false)
 public class SceneLayerDescriptor {
+    /**
+     * Indices into {@link #geometryDefinitions} / {@link #materialDefinitions}.
+     * Node pages reference these by index, so the list order in
+     * {@link #buildGeometryDefinitions} and {@link #buildMaterialDefinitions}
+     * must match.
+     */
+    public static final int UNTEXTURED_DEFINITION_INDEX = 0;
+    public static final int TEXTURED_DEFINITION_INDEX = 1;
+
     private int id;
     private String version;
     private String name;

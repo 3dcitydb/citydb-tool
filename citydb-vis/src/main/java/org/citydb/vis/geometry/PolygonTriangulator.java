@@ -13,6 +13,7 @@ import org.citydb.model.geometry.Polygon;
 import org.citydb.model.walker.ModelWalker;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -123,10 +124,10 @@ public class PolygonTriangulator {
         // Track whether the ring was reversed so we can restore the correct face direction.
         boolean reverseWinding = !isCCW(scaledRing, projAxis);
         if (reverseWinding) {
-            reverseList(ring);
-            reverseList(scaledRing);
+            Collections.reverse(ring);
+            Collections.reverse(scaledRing);
             if (uvRing != null) {
-                reverseList(uvRing);
+                Collections.reverse(uvRing);
             }
         }
 
@@ -240,7 +241,12 @@ public class PolygonTriangulator {
                 continue;
             }
 
-            // Look up UV for this hole ring
+            // Look up UV for this hole ring.
+            // Note: holePoints has already had its closing-coordinate duplicate
+            // removed above, so the `>` here is equivalent to the outer ring's
+            // `>= outerPoints.size()` check (which runs before its own removal).
+            // Both require UVs to have N+1 entries (i.e. UV list includes the
+            // closing-coordinate duplication, matching the ring's raw size).
             List<float[]> holeUVs = null;
             if (uvResult != null && texCoordMap != null) {
                 List<TextureCoordinate> holeTexCoords = texCoordMap.get(hole);
@@ -534,16 +540,5 @@ public class PolygonTriangulator {
             result.add(new double[]{c.getX(), c.getY(), c.getZ()});
         }
         return result;
-    }
-
-    private static <T> void reverseList(List<T> list) {
-        int left = 0, right = list.size() - 1;
-        while (left < right) {
-            T temp = list.get(left);
-            list.set(left, list.get(right));
-            list.set(right, temp);
-            left++;
-            right--;
-        }
     }
 }
