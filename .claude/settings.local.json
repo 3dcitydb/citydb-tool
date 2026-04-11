@@ -127,7 +127,24 @@
       "WebFetch(domain:api.github.com)",
       "Bash(./gradlew :citydb-vis:compileJava :citydb-cli:compileJava)",
       "Bash(./gradlew :citydb-vis:compileJava -q)",
-      "Bash(./gradlew :citydb-vis:compileJava --console=plain)"
+      "Bash(./gradlew :citydb-vis:compileJava --console=plain)",
+      "Bash(./gradlew :citydb-vis:runtimeClasspath -q)",
+      "Bash(./gradlew -q :citydb-vis:printClasspath)",
+      "Bash(java -cp \"build/classes/java/main:$\\(./gradlew -q :citydb-vis:printClasspath \\)\" org.citydb.vis.encoder.i3s.I3SPojoDump)",
+      "Bash(./gradlew :citydb-vis:runI3SPojoDump -q)",
+      "Bash(wc:*)",
+      "WebFetch(domain:docs.gradle.org)",
+      "Bash(./gradlew :citydb-vis:compileJava --rerun-tasks)",
+      "Bash(./gradlew :citydb-vis:jar)",
+      "Bash(xargs -I{} sh -c 'unzip -l \"{}\" 2>/dev/null | grep -l \"fastjson2\" && echo \"{}\"')",
+      "Bash(./gradlew :citydb-cli:installDist -q)",
+      "Bash(unzip -l /c/devel/3dcitydb/citydb-tool-vis-export/citydb-cli/build/install/citydb-tool/lib/fastjson2-2.0.61.jar)",
+      "Bash(unzip -o /c/devel/3dcitydb/citydb-tool-vis-export/citydb-cli/build/install/citydb-tool/lib/fastjson2-2.0.61.jar \"META-INF/versions/9/module-info.class\")",
+      "Bash(rm -rf META-INF)",
+      "Bash(unzip -o /c/devel/3dcitydb/citydb-tool-vis-export/citydb-cli/build/install/citydb-tool/lib/fastjson2-2.0.61-module.jar \"META-INF/versions/9/module-info.class\" module-info.class)",
+      "Bash(unzip -l /c/devel/3dcitydb/citydb-tool-vis-export/citydb-cli/build/install/citydb-tool/lib/fastjson2-2.0.61-module.jar)",
+      "Bash(unzip:*)",
+      "Bash(citydb-cli/build/install/citydb-tool/citydb --version)"
     ]
   }
 }
