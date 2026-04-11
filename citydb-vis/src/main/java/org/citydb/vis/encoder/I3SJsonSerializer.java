@@ -62,8 +62,9 @@ public class I3SJsonSerializer {
      * Write per-node shared resource (legacy material/texture definitions).
      * CesiumJS reads this for texture metadata.
      */
-    public void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas) throws IOException {
-        SharedResource resource = SharedResource.atlas(isAtlas);
+    public void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas,
+                                    int imageSize) throws IOException {
+        SharedResource resource = SharedResource.atlas(isAtlas, imageSize);
         Path sharedDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
                 .resolve("shared");
         Files.createDirectories(sharedDir);
@@ -82,9 +83,10 @@ public class I3SJsonSerializer {
             }
         }
 
-        Path file = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
-                .resolve("features").resolve("0").resolve("index.json");
-        writePojo(file, entries);
+        Path featuresDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
+                .resolve("features").resolve("0");
+        Files.createDirectories(featuresDir);
+        writePojo(featuresDir.resolve("index.json"), entries);
     }
 
     private static void writePojo(Path file, Object pojo) throws IOException {
