@@ -42,15 +42,13 @@ public class AddressSerializer {
             if (street != null) {
                 Thoroughfare thoroughfare = new Thoroughfare();
                 thoroughfare.setType("Street");
-                thoroughfare.getNameElementOrNumber()
-                        .add(new ThoroughfareNameOrNumber(new ThoroughfareName(street)));
+                ThoroughfareName name = new ThoroughfareName(street);
+                thoroughfare.getNameElementOrNumber().add(new ThoroughfareNameOrNumber(name));
 
                 if (houseNumber != null) {
-                    thoroughfare.getNameElementOrNumber()
-                            .add(new ThoroughfareNameOrNumber(new Identifier(houseNumber)));
+                    Identifier identifier = new Identifier(houseNumber);
+                    thoroughfare.getNameElementOrNumber().add(new ThoroughfareNameOrNumber(identifier));
                 }
-
-                address.setThoroughfare(thoroughfare);
             }
 
             if (poBox != null) {
