@@ -57,6 +57,14 @@ subprojects {
     extraJavaModuleInfo {
         failOnMissingModuleInfo = false
         deriveAutomaticModuleNamesFromFileNames = true
+        // fastjson2 2.0.61 has a bug: ObjectWriterProvider references
+        // org.w3c.dom.Node but its module-info is missing `requires java.xml`,
+        // causing IllegalAccessError when serializing POJOs on the module path.
+        module('com.alibaba.fastjson2:fastjson2', 'com.alibaba.fastjson2') {
+            patchRealModule()
+            preserveExisting()
+            requires('java.xml')
+        }
     }
 
     idea {

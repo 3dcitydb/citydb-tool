@@ -10,6 +10,9 @@ module org.citydb.vis {
     exports org.citydb.vis.geometry;
     exports org.citydb.vis.scene;
     exports org.citydb.vis.writer;
+    // Internal I3S serialization POJOs — exported so fastjson2's ASM-generated
+    // ObjectWriters (which live in the unnamed module) can load the classes.
+    exports org.citydb.vis.model;
 
     provides org.citydb.io.IOAdapter with org.citydb.vis.I3SAdapter;
 }
