@@ -19,10 +19,10 @@ public class SharedResource {
     private Map<String, Material> materialDefinitions;
     private Map<String, TextureDefinition> textureDefinitions;
 
-    public static SharedResource atlas(boolean isAtlas) {
+    public static SharedResource atlas(boolean isAtlas, int imageSize) {
         SharedResource resource = new SharedResource();
         resource.materialDefinitions = Map.of("Mat0", Material.standard());
-        resource.textureDefinitions = Map.of("0", TextureDefinition.jpeg(isAtlas));
+        resource.textureDefinitions = Map.of("0", TextureDefinition.jpeg(isAtlas, imageSize));
         return resource;
     }
 
@@ -75,22 +75,22 @@ public class SharedResource {
         private String channels;
         private List<Image> images;
 
-        public static TextureDefinition jpeg(boolean isAtlas) {
+        public static TextureDefinition jpeg(boolean isAtlas, int imageSize) {
             TextureDefinition definition = new TextureDefinition();
             definition.encoding = List.of("image/jpeg");
             definition.wrap = List.of("none", "none");
             definition.atlas = isAtlas;
             definition.uvSet = "uv0";
             definition.channels = "rgb";
-            definition.images = List.of(Image.defaults());
+            definition.images = List.of(Image.of(imageSize));
             return definition;
         }
     }
 
     @JSONType(alphabetic = false)
     public record Image(String id, int size, int pixelInWorldUnits, List<String> href) {
-        public static Image defaults() {
-            return new Image("0", 512, 0, List.of("../textures/0"));
+        public static Image of(int size) {
+            return new Image("0", size, 0, List.of("../textures/0"));
         }
     }
 }

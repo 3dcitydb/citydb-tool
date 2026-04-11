@@ -109,9 +109,16 @@ class MeshStore implements Closeable {
 
         int vc = positions.size();
         int tc = triangles.size();
-        int dataSize = 4 + vc * 24 + vc * 12 + 1
-                + (hasTC ? vc * 8 : 0)
-                + 4 + tc * 12 + tc * 8 + tc * 4;
+        // Compute in long space and check for overflow before narrowing. A
+        // single mesh this large is unexpected, but silent truncation would
+        // corrupt the entire store, so fail loudly instead.
+        long dataSizeLong = 4L + (long) vc * 24 + (long) vc * 12 + 1L
+                + (hasTC ? (long) vc * 8 : 0)
+                + 4L + (long) tc * 12 + (long) tc * 8 + (long) tc * 4;
+        if (dataSizeLong > Integer.MAX_VALUE - 4) {
+            throw new IllegalStateException("Mesh serialized size exceeds 2 GB: " + dataSizeLong);
+        }
+        int dataSize = (int) dataSizeLong;
 
         ByteBuffer buf = ByteBuffer.allocate(4 + dataSize).order(ByteOrder.LITTLE_ENDIAN);
         buf.putInt(dataSize);
@@ -165,17 +172,13 @@ class MeshStore implements Closeable {
         boolean hasTC = buf.get() != 0;
         if (hasTC) {
             mesh.setHasTexCoords(true);
-        }
-        List<float[]> texCoords = mesh.getTexCoords();
-        if (hasTC) {
+            List<float[]> texCoords = mesh.getTexCoords();
             for (int i = 0; i < vc; i++) {
                 texCoords.add(new float[]{buf.getFloat(), buf.getFloat()});
             }
-        } else {
-            for (int i = 0; i < vc; i++) {
-                texCoords.add(new float[]{0f, 0f});
-            }
         }
+        // When !hasTC the mesh has no UVs and texCoords stays empty,
+        // matching the invariant enforced by TriangleMesh.addVertex/merge.
         int tc = buf.getInt();
         List<int[]> triangles = mesh.getTriangles();
         List<Long> featureIds = mesh.getFeatureIds();

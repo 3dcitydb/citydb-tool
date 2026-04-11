@@ -46,7 +46,9 @@ public class ShardedMeshStore implements Closeable {
      * Returns an encoded handle (shardId + offset) for later retrieval.
      */
     public long store(TriangleMesh mesh, int shardHint) throws IOException {
-        int shard = Math.abs(shardHint % shardCount);
+        // Math.floorMod handles negative hints and Integer.MIN_VALUE correctly,
+        // unlike Math.abs(x % n) which returns a negative result when x == MIN_VALUE.
+        int shard = Math.floorMod(shardHint, shardCount);
         long offset = shards[shard].store(mesh);
         return encodeHandle(shard, offset);
     }

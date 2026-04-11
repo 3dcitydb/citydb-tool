@@ -97,14 +97,16 @@ public class AttributeStore implements Closeable {
     /**
      * Binary format per entry:
      * <pre>
-     *   uint16 objectIdLen + bytes objectId (UTF-8)
-     *   uint16 featureTypeLen + bytes featureType (UTF-8)
-     *   uint16 attrCount
+     *   int32  objectIdLen + bytes objectId (UTF-8)
+     *   int32  featureTypeLen + bytes featureType (UTF-8)
+     *   int32  attrCount
      *     for each attr:
-     *       uint16 keyLen + bytes key (UTF-8)
+     *       int32  keyLen + bytes key (UTF-8)
      *       int8   type (0=null, 1=Long, 2=Double, 3=String)
      *       [type-specific value]
      * </pre>
+     * All lengths are 32-bit to avoid silent truncation on long free-form
+     * text attributes or on features with more than 65535 attributes.
      */
     private static byte[] serialize(String objectId, String featureType,
                                     Map<String, Object> attributes) {
@@ -113,7 +115,7 @@ public class AttributeStore implements Closeable {
             DataOutputStream dos = new DataOutputStream(baos);
             writeString(dos, objectId);
             writeString(dos, featureType);
-            dos.writeShort(attributes.size());
+            dos.writeInt(attributes.size());
             for (Map.Entry<String, Object> entry : attributes.entrySet()) {
                 writeString(dos, entry.getKey());
                 Object val = entry.getValue();
@@ -143,7 +145,7 @@ public class AttributeStore implements Closeable {
         try (DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data))) {
             String objectId = readString(dis);
             String featureType = readString(dis);
-            int attrCount = dis.readUnsignedShort();
+            int attrCount = dis.readInt();
             Map<String, Object> attrs = new LinkedHashMap<>();
             for (int i = 0; i < attrCount; i++) {
                 String key = readString(dis);
@@ -164,12 +166,12 @@ public class AttributeStore implements Closeable {
     private static void writeString(DataOutputStream dos, String s) throws IOException {
         if (s == null) s = "";
         byte[] bytes = s.getBytes(StandardCharsets.UTF_8);
-        dos.writeShort(bytes.length);
+        dos.writeInt(bytes.length);
         dos.write(bytes);
     }
 
     private static String readString(DataInputStream dis) throws IOException {
-        int len = dis.readUnsignedShort();
+        int len = dis.readInt();
         byte[] bytes = new byte[len];
         dis.readFully(bytes);
         return new String(bytes, StandardCharsets.UTF_8);

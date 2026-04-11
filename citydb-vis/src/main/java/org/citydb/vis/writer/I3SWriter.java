@@ -60,9 +60,11 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -125,6 +127,7 @@ public class I3SWriter implements FeatureWriter {
     private final I3SFormatOptions formatOptions;
     private final Queue<SpatialEntry> spatialEntries;
     private final AtomicLong featureIdCounter;
+    private final int cpuCores;
     private final ExecutorService service;
     private final CountLatch countLatch;
     private final Path tempDir;
@@ -161,7 +164,7 @@ public class I3SWriter implements FeatureWriter {
             throw new WriteException("Failed to get I3S format options from config.", e);
         }
 
-        int cpuCores = Runtime.getRuntime().availableProcessors();
+        this.cpuCores = Runtime.getRuntime().availableProcessors();
         this.service = ExecutorHelper.newFixedAndBlockingThreadPool(cpuCores, 100);
         this.countLatch = new CountLatch();
 
@@ -188,7 +191,7 @@ public class I3SWriter implements FeatureWriter {
 
         // Extract feature metadata on the caller thread (Feature may not be thread-safe)
         long featureId = featureIdCounter.incrementAndGet();
-        String objectId = feature.getObjectId().orElse("feature_" + featureId);
+        String objectId = feature.getObjectId().orElseGet(() -> "feature_" + featureId);
         String featureType = feature.getFeatureType().getLocalName();
         Envelope envelope = feature.getEnvelope().orElse(null);
         Map<String, Object> attributes = attributeEncoder.extractAttributes(feature);
@@ -464,14 +467,19 @@ public class I3SWriter implements FeatureWriter {
 
     /**
      * Shift all vertex Z values so the building's bottom sits at height 0.
+     * Returns 0 when the mesh has no positions (nothing to clamp).
      */
     private static double clampMeshToGround(TriangleMesh mesh) {
+        List<double[]> positions = mesh.getPositions();
+        if (positions.isEmpty()) {
+            return 0;
+        }
         double minZ = Double.MAX_VALUE;
-        for (double[] pos : mesh.getPositions()) {
+        for (double[] pos : positions) {
             if (pos[2] < minZ) minZ = pos[2];
         }
-        if (minZ != 0 && minZ != Double.MAX_VALUE) {
-            for (double[] pos : mesh.getPositions()) {
+        if (minZ != 0) {
+            for (double[] pos : positions) {
                 pos[2] -= minZ;
             }
         }
@@ -495,6 +503,11 @@ public class I3SWriter implements FeatureWriter {
      * reconstruct {@link FeatureData} from {@link AttributeStore}, write
      * features and attributes. This parallelizes the entire node pipeline
      * instead of just the metadata phase.
+     * <p>
+     * A node whose mesh becomes empty after vertex welding / degenerate
+     * triangle removal is dropped from the effective mesh set before the
+     * node pages are written, so the node page will not reference a missing
+     * geometry file.
      */
     private void writeI3SFolder(SceneLayer sceneLayer, List<I3SNode> allNodes,
                                 List<I3SAttributeEncoder.AttrField> attrFields,
@@ -516,89 +529,18 @@ public class I3SWriter implements FeatureWriter {
 
         // Parallel: encode geometry + write features/attributes per node.
         // Each node is fully independent — different file paths, no shared mutable state.
-        int geometryParallelism = Runtime.getRuntime().availableProcessors();
-        ForkJoinPool geometryPool = new ForkJoinPool(geometryParallelism);
+        // Track nodes whose geometry ended up empty so they can be removed from
+        // meshNodeIndices before node pages are written.
+        Set<Integer> emptyNodeIndices = ConcurrentHashMap.newKeySet();
+        ForkJoinPool geometryPool = new ForkJoinPool(cpuCores);
         AtomicInteger nodesProcessed = new AtomicInteger(0);
         int totalMeshNodes = meshNodes.size();
         try {
             geometryPool.submit(() -> meshNodes.parallelStream().forEach(node -> {
                 try {
-                    int nodeIndex = node.getIndex();
-                    List<SpatialEntry> entries = globalEntryMap.get(nodeIndex);
-
-                    // Create output directories for this node
-                    Path nodeDir = layerDir.resolve("nodes").resolve(String.valueOf(nodeIndex));
-                    Files.createDirectories(nodeDir.resolve("geometries"));
-                    Files.createDirectories(nodeDir.resolve("features").resolve("0"));
-                    for (int i = 0; i < attrFields.size(); i++) {
-                        Files.createDirectories(nodeDir.resolve("attributes").resolve("f_" + i));
-                    }
-
-                    // Load meshes from sharded store, merge
-                    TriangleMesh merged = new TriangleMesh();
-                    for (SpatialEntry entry : entries) {
-                        TriangleMesh m = meshStore.load(entry.meshHandle());
-                        merged.merge(m);
-                    }
-
-                    // Collect unique per-polygon texture IDs from merged mesh
-                    Set<Integer> uniqueTexIds = new LinkedHashSet<>();
-                    for (int texId : merged.getTriangleTextureIds()) {
-                        if (texId >= 0) uniqueTexIds.add(texId);
-                    }
-
-                    double texScale = formatOptions.getTextureScale();
-
-                    // Compute UV extents per texture for tiling support
-                    Map<Integer, float[]> uvExtents = computeUVExtents(merged);
-
-                    int nodeTextureId = uniqueTexIds.isEmpty() ? -1 : 0;
-                    node.setTextureId(nodeTextureId);
-
-                    // Build texture atlas and remap UVs before geometry encoding
-                    boolean isAtlas = false;
-                    if (uniqueTexIds.size() > 1) {
-                        TextureAtlas atlas = TextureAtlas.build(
-                                uniqueTexIds, textureStore, texScale,
-                                formatOptions.getMaxAtlasSize(), uvExtents);
-                        if (atlas != null) {
-                            atlas.remapUVs(merged);
-                            Path textureDir = nodeDir.resolve("textures");
-                            Files.createDirectories(textureDir);
-                            atlas.write(textureDir.resolve("0"));
-                            isAtlas = true;
-                        }
-                    } else if (!uniqueTexIds.isEmpty()) {
-                        int singleTexId = uniqueTexIds.iterator().next();
-                        Path textureDir = nodeDir.resolve("textures");
-                        Files.createDirectories(textureDir);
-                        textureStore.copyScaled(singleTexId,
-                                textureDir.resolve("0"), texScale);
-                    }
-
-                    node.setMesh(merged);
-                    geometryEncoder.writeNodeGeometry(layerDir, node);
-
-                    List<FeatureData> featureDataList = new ArrayList<>(entries.size());
-                    for (SpatialEntry entry : entries) {
-                        AttributeStore.FeatureAttrs attrs =
-                                attrStore.load(entry.attrOffset());
-                        featureDataList.add(new FeatureData(
-                                entry.id(), attrs.objectId(), attrs.featureType(),
-                                attrs.attributes()));
-                    }
-
-                    jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
-                    attributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
-                            featureDataList);
-
-                    if (nodeTextureId >= 0) {
-                        jsonSerializer.writeSharedResource(layerDir, node, isAtlas);
-                    }
-
-                    int done = nodesProcessed.incrementAndGet();
-                    if (done % 100 == 0 || done == totalMeshNodes) {
-                        logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
+                    if (!writeNodeOutput(node, layerDir, globalEntryMap, attrFields,
+                            nodesProcessed, totalMeshNodes)) {
+                        emptyNodeIndices.add(node.getIndex());
                     }
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
@@ -606,14 +548,151 @@ public class I3SWriter implements FeatureWriter {
             })).join();
         } finally {
             geometryPool.shutdown();
+            try {
+                geometryPool.awaitTermination(1, TimeUnit.MINUTES);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
 
-        // Close stores to free temp disk space before writing node pages
-        meshStore.close();
-        attrStore.close();
+        // Strip empty nodes from the effective mesh set so the node pages
+        // match what was actually written to disk.
+        Set<Integer> effectiveMeshIndices = meshNodeIndices;
+        if (!emptyNodeIndices.isEmpty()) {
+            effectiveMeshIndices = new java.util.HashSet<>(meshNodeIndices);
+            effectiveMeshIndices.removeAll(emptyNodeIndices);
+            logger.info("Dropped {} empty mesh nodes (all triangles degenerate after welding).",
+                    emptyNodeIndices.size());
+        }
 
         // Node pages AFTER geometry so vertex counts are accurate
-        jsonSerializer.writeNodePages(layerDir, allNodes, meshNodeIndices, hasTextures);
+        jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices, hasTextures);
+    }
+
+    /**
+     * Process a single mesh node end-to-end: merge meshes from the sharded
+     * store, build the texture atlas (if any), encode Draco geometry, and
+     * write per-node feature/attribute JSON files.
+     * <p>
+     * All I/O targets paths that are unique to this node, so the method is
+     * safe to call concurrently from a parallel stream.
+     *
+     * @return {@code true} if the node was written with non-empty geometry,
+     *         {@code false} if welding/degenerate filtering collapsed the
+     *         mesh to zero triangles (caller must drop this node from the
+     *         effective mesh set before writing node pages).
+     */
+    private boolean writeNodeOutput(I3SNode node, Path layerDir,
+                                    Map<Integer, List<SpatialEntry>> globalEntryMap,
+                                    List<I3SAttributeEncoder.AttrField> attrFields,
+                                    AtomicInteger nodesProcessed, int totalMeshNodes)
+            throws IOException {
+        int nodeIndex = node.getIndex();
+        List<SpatialEntry> entries = globalEntryMap.get(nodeIndex);
+        Path nodeDir = layerDir.resolve("nodes").resolve(String.valueOf(nodeIndex));
+
+        // Load meshes from sharded store, merge
+        TriangleMesh merged = new TriangleMesh();
+        for (SpatialEntry entry : entries) {
+            TriangleMesh m = meshStore.load(entry.meshHandle());
+            merged.merge(m);
+        }
+
+        // Collect unique per-polygon texture IDs from merged mesh
+        Set<Integer> uniqueTexIds = new LinkedHashSet<>();
+        for (int texId : merged.getTriangleTextureIds()) {
+            if (texId >= 0) uniqueTexIds.add(texId);
+        }
+
+        // Invariant: the mesh's UV flag must agree with "some triangle is
+        // actually textured". It is possible for PolygonTriangulator to emit
+        // UV-carrying vertices whose triangles have textureId = -1 (e.g. a
+        // ParameterizedTexture with coordinates but no texture image). In
+        // that case we would otherwise encode `uv0` into Draco while the
+        // node page declares the untextured geometry definition, producing
+        // a compressedAttributes / geometryDefinitions mismatch that
+        // CesiumJS cannot decode.
+        if (uniqueTexIds.isEmpty() && merged.hasTexCoords()) {
+            merged.setHasTexCoords(false);
+        }
+
+        double texScale = formatOptions.getTextureScale();
+
+        // Compute UV extents per texture for tiling support
+        Map<Integer, float[]> uvExtents = computeUVExtents(merged);
+
+        // Build texture atlas and remap UVs before geometry encoding.
+        // Unified path: single- and multi-texture nodes both go through
+        // TextureAtlas so that UV tiling / wrapping is normalized consistently.
+        // NOTE: we remap UVs now (encoder reads them), but defer the image
+        // file write until after hasGeometry is confirmed — welding may still
+        // collapse the mesh to empty, in which case we must not leave an
+        // orphan texture file on disk.
+        TextureAtlas atlas = null;
+        boolean isAtlas = false;
+        int atlasSize = 0;
+        boolean textured = false;
+        if (!uniqueTexIds.isEmpty()) {
+            atlas = TextureAtlas.build(
+                    uniqueTexIds, textureStore, texScale,
+                    formatOptions.getMaxAtlasSize(), uvExtents);
+            if (atlas != null) {
+                atlas.remapUVs(merged);
+                isAtlas = uniqueTexIds.size() > 1;
+                atlasSize = Math.max(atlas.getWidth(), atlas.getHeight());
+                textured = true;
+            } else {
+                // All referenced textures failed to load. Downgrade the node
+                // to untextured so the node page, geometryDefinition, and
+                // Draco compressedAttributes all stay consistent. Dropping
+                // the UV flag on the mesh also tells the encoder to emit
+                // `[position, normal, feature-index]` instead of `uv0`.
+                logger.warn("Node {}: all referenced textures failed to load, " +
+                        "falling back to untextured rendering.", nodeIndex);
+                merged.setHasTexCoords(false);
+            }
+        }
+        node.setTextureId(textured ? 0 : -1);
+
+        node.setMesh(merged);
+        boolean hasGeometry = geometryEncoder.writeNodeGeometry(layerDir, node);
+        if (!hasGeometry) {
+            int done = nodesProcessed.incrementAndGet();
+            if (done % 100 == 0 || done == totalMeshNodes) {
+                logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
+            }
+            return false;
+        }
+
+        // Geometry confirmed — now safe to materialize the atlas file.
+        if (atlas != null) {
+            Path textureDir = nodeDir.resolve("textures");
+            Files.createDirectories(textureDir);
+            atlas.write(textureDir.resolve("0"));
+        }
+
+        List<FeatureData> featureDataList = new ArrayList<>(entries.size());
+        for (SpatialEntry entry : entries) {
+            AttributeStore.FeatureAttrs attrs =
+                    attrStore.load(entry.attrOffset());
+            featureDataList.add(new FeatureData(
+                    entry.id(), attrs.objectId(), attrs.featureType(),
+                    attrs.attributes()));
+        }
+
+        jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
+        attributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
+                featureDataList);
+
+        if (node.hasTexture()) {
+            jsonSerializer.writeSharedResource(layerDir, node, isAtlas, atlasSize);
+        }
+
+        int done = nodesProcessed.incrementAndGet();
+        if (done % 100 == 0 || done == totalMeshNodes) {
+            logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
+        }
+        return true;
     }
 
     /**
@@ -657,11 +736,13 @@ public class I3SWriter implements FeatureWriter {
     private void closeStores() {
         try {
             meshStore.close();
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            logger.warn("Failed to close mesh store: {}", e.getMessage());
         }
         try {
             attrStore.close();
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            logger.warn("Failed to close attribute store: {}", e.getMessage());
         }
         textureStore.close();
     }
