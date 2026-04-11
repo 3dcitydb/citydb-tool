@@ -10,20 +10,20 @@ import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.copy.Copier;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ImplicitGeometryResolver {
-    private final CopyBuilder copyBuilder;
+    private final Copier copier;
     private final Map<String, ImplicitGeometry> implicitGeometries = new ConcurrentHashMap<>();
     private final ResolverProcessor processor = new ResolverProcessor();
 
-    ImplicitGeometryResolver(CopyBuilder copyBuilder) {
-        this.copyBuilder = copyBuilder;
+    ImplicitGeometryResolver(Copier copier) {
+        this.copier = copier;
     }
 
     boolean hasImplicitGeometries() {
@@ -70,7 +70,7 @@ public class ImplicitGeometryResolver {
                     if (template != null) {
                         property.setReferencedObjectIfValid(template.getRelativeGeometry().getObject());
                         implicitGeometry.setAppearances(template.getAppearances().stream()
-                                .map(copyBuilder::shallowCopy)
+                                .map(copier::shallowCopy)
                                 .toList());
                     }
                 }

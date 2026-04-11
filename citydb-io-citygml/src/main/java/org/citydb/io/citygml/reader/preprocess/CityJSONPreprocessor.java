@@ -9,8 +9,9 @@ import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.copy.Copier;
+import org.xmlobjects.copy.CopierBuilder;
 import org.xmlobjects.gml.util.reference.ReferenceResolver;
-import org.xmlobjects.util.copy.CopyBuilder;
 
 public class CityJSONPreprocessor {
     private final ImplicitGeometryResolver implicitGeometryResolver;
@@ -18,8 +19,8 @@ public class CityJSONPreprocessor {
     private final ImplicitGeometryCollector collector = new ImplicitGeometryCollector();
 
     public CityJSONPreprocessor() {
-        CopyBuilder copyBuilder = new CopyBuilder();
-        implicitGeometryResolver = new ImplicitGeometryResolver(copyBuilder);
+        Copier copier = CopierBuilder.newCopier();
+        implicitGeometryResolver = new ImplicitGeometryResolver(copier);
     }
 
     public void processGlobalObjects(AbstractFeature abstractFeature) {
