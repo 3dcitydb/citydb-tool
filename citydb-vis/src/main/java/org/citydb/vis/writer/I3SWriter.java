@@ -684,10 +684,6 @@ public class I3SWriter implements FeatureWriter {
         attributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
                 featureDataList);
 
-        if (node.hasTexture()) {
-            jsonSerializer.writeSharedResource(layerDir, node, isAtlas, atlasSize);
-        }
-
         int done = nodesProcessed.incrementAndGet();
         if (done % 100 == 0 || done == totalMeshNodes) {
             logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
