@@ -146,7 +146,14 @@
       "Bash(unzip:*)",
       "Bash(citydb-cli/build/install/citydb-tool/citydb --version)",
       "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep -l \"textureAtlas/packer\" && echo \"{}\"')",
-      "Bash(where gh:*)"
+      "Bash(where gh:*)",
+      "Bash(mvn compile:*)",
+      "Bash(ls mvnw*)",
+      "Bash(ls *.cmd)",
+      "Bash(which mvn.cmd)",
+      "Bash(cmd.exe /c \"where mvn\")",
+      "Bash(cmd.exe:*)",
+      "Bash(./gradlew :citydb-vis:compileJava -Xlint:all)"
     ]
   }
 }
