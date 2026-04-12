@@ -7,6 +7,8 @@ package org.citydb.vis.encoder;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.FeatureEntry;
 import org.citydb.vis.model.I3SConstants;
 import org.citydb.vis.model.NodePage;
@@ -28,7 +30,7 @@ import java.util.Set;
 public class I3SJsonSerializer {
 
     public void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
-                                    List<I3SAttributeEncoder.AttrField> attrFields,
+                                    List<AttrField> attrFields,
                                     boolean hasTextures) throws IOException {
         SceneLayerDescriptor descriptor = SceneLayerDescriptor.of(sceneLayer, attrFields, hasTextures);
         writePojo(layerDir.resolve("index.json"), descriptor);
