@@ -6,7 +6,6 @@
 package org.citydb.vis.model;
 
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.encoder.FeatureData;
 
 /**
  * Single entry of a node's features/0/index.json array — the I3S feature
