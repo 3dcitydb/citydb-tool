@@ -6,7 +6,6 @@
 package org.citydb.vis.model;
 
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.encoder.I3SAttributeEncoder;
 import org.citydb.vis.scene.SceneLayer;
 
 import java.util.ArrayList;
@@ -40,7 +39,7 @@ public class SceneLayerDescriptor {
     private NodePagesInfo nodePages;
 
     public static SceneLayerDescriptor of(SceneLayer sceneLayer,
-                                          List<I3SAttributeEncoder.AttrField> attrFields,
+                                          List<AttrField> attrFields,
                                           boolean hasTextures) {
         SceneLayerDescriptor descriptor = new SceneLayerDescriptor();
         descriptor.id = 0;
@@ -83,16 +82,16 @@ public class SceneLayerDescriptor {
         return materials;
     }
 
-    private static List<Field> buildFields(List<I3SAttributeEncoder.AttrField> attrFields) {
+    private static List<Field> buildFields(List<AttrField> attrFields) {
         List<Field> fields = new ArrayList<>(attrFields.size());
-        for (I3SAttributeEncoder.AttrField field : attrFields) {
+        for (AttrField field : attrFields) {
             fields.add(Field.of(field));
         }
         return fields;
     }
 
     private static List<AttributeStorageInfo> buildAttributeStorageInfo(
-            List<I3SAttributeEncoder.AttrField> attrFields) {
+            List<AttrField> attrFields) {
         List<AttributeStorageInfo> infos = new ArrayList<>(attrFields.size());
         for (int i = 0; i < attrFields.size(); i++) {
             infos.add(AttributeStorageInfo.of(i, attrFields.get(i)));
@@ -127,7 +126,7 @@ public class SceneLayerDescriptor {
 
     @JSONType(alphabetic = false)
     public record Field(String name, String type, String alias) {
-        public static Field of(I3SAttributeEncoder.AttrField field) {
+        public static Field of(AttrField field) {
             String esriType = switch (field.type()) {
                 case INT -> "esriFieldTypeInteger";
                 case DOUBLE -> "esriFieldTypeDouble";
