@@ -8,6 +8,9 @@ package org.citydb.vis.encoder;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.Property;
+import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.AttrType;
+import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.I3SNode;
 
 import java.io.IOException;
@@ -32,9 +35,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * data structures.
  */
 public class I3SAttributeEncoder {
-    public enum AttrType { STRING, INT, DOUBLE }
-
-    public record AttrField(String name, AttrType type) {}
 
     // ---- Incremental type tracking (thread-safe) ----
 

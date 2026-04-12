@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.encoder;
+package org.citydb.vis.model;
 
 import java.util.Map;
 
