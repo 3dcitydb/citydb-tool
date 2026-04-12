@@ -36,7 +36,7 @@ public class Store {
         store.profile = "meshpyramids";
         store.version = SceneLayer.I3S_VERSION;
         store.resourcePattern = List.of(
-                "3dNodeIndexDocument", "SharedResource", "Geometry", "Attributes");
+                "3dNodeIndexDocument", "Geometry", "Attributes");
         store.rootNode = "./nodes/0";
 
         double[] layerExtent = sceneLayer.getExtent();

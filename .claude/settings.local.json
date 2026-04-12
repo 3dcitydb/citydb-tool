@@ -145,7 +145,8 @@
       "Bash(unzip -l /c/devel/3dcitydb/citydb-tool-vis-export/citydb-cli/build/install/citydb-tool/lib/fastjson2-2.0.61-module.jar)",
       "Bash(unzip:*)",
       "Bash(citydb-cli/build/install/citydb-tool/citydb --version)",
-      "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep -l \"textureAtlas/packer\" && echo \"{}\"')"
+      "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep -l \"textureAtlas/packer\" && echo \"{}\"')",
+      "Bash(where gh:*)"
     ]
   }
 }
