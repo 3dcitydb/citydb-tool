@@ -28,7 +28,8 @@ import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.I3SFormatOptions;
-import org.citydb.vis.encoder.FeatureData;
+import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.encoder.I3SAttributeEncoder;
 import org.citydb.vis.encoder.I3SGeometryEncoder;
 import org.citydb.vis.encoder.I3SJsonSerializer;
@@ -355,7 +356,7 @@ public class I3SWriter implements FeatureWriter {
             double[] extent = computeExtentFromStore();
 
             // Finalize attribute fields from incremental tracking
-            List<I3SAttributeEncoder.AttrField> attrFields =
+            List<AttrField> attrFields =
                     attributeEncoder.finalizeFields(totalFeatures);
 
             // --- Phase 2: Disk-based partitioning (two-pass histogram+scatter) ---
@@ -547,7 +548,7 @@ public class I3SWriter implements FeatureWriter {
      * geometry file.
      */
     private void writeI3SFolder(SceneLayer sceneLayer, List<I3SNode> allNodes,
-                                List<I3SAttributeEncoder.AttrField> attrFields,
+                                List<AttrField> attrFields,
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures) throws IOException {
         Path outputDir = stripI3sSuffix(outputFile.getFile());
@@ -619,7 +620,7 @@ public class I3SWriter implements FeatureWriter {
      *         effective mesh set before writing node pages).
      */
     private boolean writeNodeOutput(I3SNode node, Path layerDir,
-                                    List<I3SAttributeEncoder.AttrField> attrFields,
+                                    List<AttrField> attrFields,
                                     AtomicInteger nodesProcessed, int totalMeshNodes)
             throws IOException {
         int nodeIndex = node.getIndex();
