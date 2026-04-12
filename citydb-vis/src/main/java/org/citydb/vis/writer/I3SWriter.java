@@ -38,7 +38,12 @@ import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.scene.I3SNode;
 import org.citydb.vis.scene.SceneLayer;
 import org.citydb.vis.store.AttributeStore;
+import org.citydb.vis.store.NodeEntry;
+import org.citydb.vis.store.NodeEntryStore;
+import org.citydb.vis.store.PartitionedEntryStore;
 import org.citydb.vis.store.ShardedMeshStore;
+import org.citydb.vis.store.SpatialEntry;
+import org.citydb.vis.store.SpatialEntryStore;
 import org.citydb.vis.store.TextureStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,16 +57,16 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
@@ -79,24 +84,27 @@ import java.util.concurrent.atomic.AtomicLong;
  *     <ul>
  *       <li>Triangle meshes → {@link ShardedMeshStore} (lock-free sharded disk storage)</li>
  *       <li>Attributes → {@link AttributeStore} (disk-backed, off-heap)</li>
- *       <li>Spatial metadata → {@link SpatialEntry} queue (~80 bytes/feature in heap)</li>
+ *       <li>Spatial metadata → {@link SpatialEntry} on disk via {@link SpatialEntryStore} (off-heap)</li>
  *       <li>Attribute types tracked incrementally via {@link I3SAttributeEncoder}</li>
  *     </ul>
  *   </li>
- *   <li><b>Close phase</b> (parallel spatial processing):
+ *   <li><b>Close phase</b> (disk-backed spatial processing):
  *     <ul>
- *       <li>Adaptive spatial grid partitioning of all features</li>
- *       <li>Per-cell quadtree construction (parallel via {@link I3SNodeBuilder})</li>
- *       <li>Global tree merge with sequential index assignment</li>
+ *       <li>Disk-based grid partitioning via {@link PartitionedEntryStore}</li>
+ *       <li>Per-cell quadtree construction + flush to {@link NodeEntryStore}</li>
  *       <li>Parallel geometry encoding + metadata writing per node</li>
  *     </ul>
  *   </li>
  * </ol>
  * <p>
- * <b>Memory profile for 10M features:</b>
+ * <b>Memory profile (100M features, default settings):</b>
  * <ul>
- *   <li>Heap: ~800 MB (SpatialEntry queue) vs ~6 GB (old FeatureData queue)</li>
- *   <li>Disk: sharded temp files (N × ~12 GB) vs single temp file (~100 GB)</li>
+ *   <li>Heap: ~0 during write phase; ~500 MB peak during close phase
+ *       (I3SNode tree + index arrays). All entry data is streamed from
+ *       disk per-cell and flushed to {@link NodeEntryStore} immediately
+ *       after quadtree construction.</li>
+ *   <li>Disk: spatial entry shards + partitioned file + node entry file +
+ *       mesh shards + attribute store (total ~20 GB at 100M features).</li>
  * </ul>
  * <p>
  * <b>Coordinate system:</b> the current implementation hard-codes the output
@@ -125,7 +133,7 @@ public class I3SWriter implements FeatureWriter {
 
     private final OutputFile outputFile;
     private final I3SFormatOptions formatOptions;
-    private final Queue<SpatialEntry> spatialEntries;
+    private final SpatialEntryStore spatialEntryStore;
     private final AtomicLong featureIdCounter;
     private final int cpuCores;
     private final ExecutorService service;
@@ -138,6 +146,7 @@ public class I3SWriter implements FeatureWriter {
     private final I3SJsonSerializer jsonSerializer;
     private final I3SAttributeEncoder attributeEncoder;
 
+    private NodeEntryStore nodeEntryStore;
     private volatile boolean shouldRun = true;
 
     public I3SWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
@@ -154,7 +163,6 @@ public class I3SWriter implements FeatureWriter {
         }
 
         this.outputFile = outputFile;
-        this.spatialEntries = new ConcurrentLinkedQueue<>();
         this.featureIdCounter = new AtomicLong(0);
 
         try {
@@ -171,6 +179,7 @@ public class I3SWriter implements FeatureWriter {
         try {
             this.tempDir = outputFile.getFile().getParent().resolve(TEMP_DIR_NAME);
             Files.createDirectories(tempDir);
+            this.spatialEntryStore = new SpatialEntryStore(cpuCores, tempDir);
             this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
             this.attrStore = new AttributeStore(tempDir);
             this.textureStore = new TextureStore(outputFile);
@@ -304,9 +313,11 @@ public class I3SWriter implements FeatureWriter {
                     // Track attribute types incrementally (concurrent)
                     attributeEncoder.trackFieldTypes(attributes);
 
-                    // Only compact spatial metadata stays on heap
-                    spatialEntries.add(new SpatialEntry(featureId, cx, cy, bbox,
-                            meshHandle, attrOffset));
+                    // Spatial metadata stored on disk — zero heap pressure
+                    spatialEntryStore.store(
+                            new SpatialEntry(featureId, cx, cy, bbox,
+                                    meshHandle, attrOffset),
+                            (int) featureId);
                 }
                 result.complete(true);
             } catch (Throwable e) {
@@ -333,52 +344,82 @@ public class I3SWriter implements FeatureWriter {
         }
 
         try {
-            if (!shouldRun || spatialEntries.isEmpty()) {
+            long totalFeatures = spatialEntryStore.entryCount();
+            if (!shouldRun || totalFeatures == 0) {
                 return;
             }
 
             long t0 = System.currentTimeMillis();
 
-            // --- Phase 1: Prepare data ---
-            List<SpatialEntry> entries = new ArrayList<>(spatialEntries);
-            spatialEntries.clear();
-            long totalFeatures = entries.size();
-
-            double[] extent = I3SNodeBuilder.computeExtent(entries);
+            // --- Phase 1: Compute extent by streaming from disk ---
+            double[] extent = computeExtentFromStore();
 
             // Finalize attribute fields from incremental tracking
             List<I3SAttributeEncoder.AttrField> attrFields =
                     attributeEncoder.finalizeFields(totalFeatures);
 
-            // --- Phase 2: Spatial grid partitioning ---
-            Map<Long, List<SpatialEntry>> cellMap = partitionIntoGrid(entries, extent);
-            entries = null; // release for GC
+            // --- Phase 2: Disk-based partitioning (two-pass histogram+scatter) ---
+            int targetPerCell = Math.max(formatOptions.getMaxFeaturesPerNode() * 50, 3000);
+            int targetCells = Math.max(1, (int) (totalFeatures / targetPerCell));
+            int gridDim = Math.max(1, (int) Math.ceil(Math.sqrt(targetCells)));
 
-            // --- Phase 3: Per-cell quadtree construction (parallel) ---
-            List<I3SNodeBuilder.CellTree> cellTrees = cellMap.values().parallelStream()
-                    .map(cellEntries -> {
-                        double[] cellExtent = I3SNodeBuilder.computeExtent(cellEntries);
-                        return I3SNodeBuilder.buildCellTree(cellEntries, cellExtent, formatOptions);
-                    })
-                    .toList();
-            cellMap = null; // release for GC
+            PartitionedEntryStore partitioned = PartitionedEntryStore.create(
+                    spatialEntryStore, extent, gridDim, tempDir);
 
-            // --- Phase 4: Merge into global tree ---
-            I3SNodeBuilder.MergedTree merged = I3SNodeBuilder.mergeIntoGlobalTree(cellTrees);
-            cellTrees = null; // release for GC
+            // --- Phase 3+4: Fused cell tree build + merge + flush ---
+            // Process cells one at a time: load from disk, build quadtree,
+            // remap indices into global tree, flush NodeEntry lists to disk,
+            // release cell data. Peak heap = one cell's SpatialEntry list.
+            int estimatedNodes = (int) Math.min(
+                    (totalFeatures / formatOptions.getMaxFeaturesPerNode()) * 3 + 1,
+                    Integer.MAX_VALUE);
+            nodeEntryStore = new NodeEntryStore(tempDir, estimatedNodes);
 
-            List<I3SNode> allNodes = merged.allNodes();
-            Map<Integer, List<SpatialEntry>> globalEntryMap = merged.nodeEntryMap();
-            Set<Integer> meshNodeIndices = merged.meshNodeIndices();
+            List<I3SNode> allNodes = new ArrayList<>();
+            Set<Integer> meshNodeIndices = new HashSet<>();
+            I3SNode globalRoot = new I3SNode(0, 0);
+            allNodes.add(globalRoot);
+            int nextIndex = 1;
+
+            for (long cellKey : partitioned.cellKeys()) {
+                List<SpatialEntry> cellEntries = partitioned.loadCell(cellKey);
+                double[] cellExtent = I3SNodeBuilder.computeExtent(cellEntries);
+                I3SNodeBuilder.CellTree cellTree =
+                        I3SNodeBuilder.buildCellTree(cellEntries, cellExtent, formatOptions);
+
+                int offset = nextIndex;
+                for (I3SNode node : cellTree.nodes()) {
+                    int oldIndex = node.getIndex();
+                    int newIndex = oldIndex + offset;
+
+                    List<NodeEntry> entries = cellTree.nodeEntryMap().get(oldIndex);
+                    if (entries != null) {
+                        nodeEntryStore.writeNode(newIndex, entries);
+                        meshNodeIndices.add(newIndex);
+                    }
+
+                    node.setIndex(newIndex);
+                    allNodes.add(node);
+                }
+
+                I3SNode cellRoot = cellTree.nodes().get(0);
+                globalRoot.addChild(cellRoot);
+                nextIndex += cellTree.nodes().size();
+            }
+
+            // Partitioned store no longer needed — free disk space
+            partitioned.close();
+
+            I3SNodeBuilder.finalizeGlobalRoot(globalRoot);
 
             long t1 = System.currentTimeMillis();
             logger.info("Spatial indexing: {} ms ({} nodes, {} with mesh).",
                     t1 - t0, allNodes.size(), meshNodeIndices.size());
 
-            // --- Phase 5: Write output ---
+            // --- Phase 5: Write output (reads per-node from NodeEntryStore) ---
             boolean hasTextures = textureStore.hasTextures();
             SceneLayer sceneLayer = buildSceneLayer(extent);
-            writeI3SFolder(sceneLayer, allNodes, attrFields, globalEntryMap,
+            writeI3SFolder(sceneLayer, allNodes, attrFields,
                     meshNodeIndices, hasTextures);
 
             long t2 = System.currentTimeMillis();
@@ -395,33 +436,29 @@ public class I3SWriter implements FeatureWriter {
     }
 
     /**
-     * Partition spatial entries into an adaptive grid. Grid dimensions are
-     * computed to target approximately {@code maxFeaturesPerNode * 50} features
-     * per cell (at least 3000), balancing between too-many-small-cells and
-     * too-few-large-cells for effective parallel quadtree construction.
+     * Compute the global extent by streaming all entries from the disk store.
+     * Only accumulator variables are held on heap — entries are discarded
+     * after each chunk.
      */
-    private Map<Long, List<SpatialEntry>> partitionIntoGrid(List<SpatialEntry> entries,
-                                                            double[] extent) {
-        int totalFeatures = entries.size();
-        int targetPerCell = Math.max(formatOptions.getMaxFeaturesPerNode() * 50, 3000);
-        int targetCells = Math.max(1, totalFeatures / targetPerCell);
-        int gridDim = Math.max(1, (int) Math.ceil(Math.sqrt(targetCells)));
+    private double[] computeExtentFromStore() {
+        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
 
-        double rangeX = extent[3] - extent[0];
-        double rangeY = extent[4] - extent[1];
-        double cellWidth = rangeX > 0 ? rangeX / gridDim : 1;
-        double cellHeight = rangeY > 0 ? rangeY / gridDim : 1;
-
-        Map<Long, List<SpatialEntry>> cellMap = new HashMap<>();
-        for (SpatialEntry entry : entries) {
-            int gx = Math.max(0, Math.min((int) ((entry.centerX() - extent[0]) / cellWidth), gridDim - 1));
-            int gy = Math.max(0, Math.min((int) ((entry.centerY() - extent[1]) / cellHeight), gridDim - 1));
-            long key = (long) gy * gridDim + gx;
-            cellMap.computeIfAbsent(key, k -> new ArrayList<>()).add(entry);
+        Iterator<SpatialEntry> it = spatialEntryStore.iterator();
+        while (it.hasNext()) {
+            SpatialEntry e = it.next();
+            double[] bb = e.bbox();
+            if (bb[0] < minX) minX = bb[0];
+            if (bb[1] < minY) minY = bb[1];
+            if (bb[2] < minZ) minZ = bb[2];
+            if (bb[3] > maxX) maxX = bb[3];
+            if (bb[4] > maxY) maxY = bb[4];
+            if (bb[5] > maxZ) maxZ = bb[5];
         }
 
-        return cellMap;
+        return new double[]{minX, minY, minZ, maxX, maxY, maxZ};
     }
+
 
     /**
      * Triangulate geometry properties into a mesh. Thread-safe — uses its own
@@ -511,7 +548,6 @@ public class I3SWriter implements FeatureWriter {
      */
     private void writeI3SFolder(SceneLayer sceneLayer, List<I3SNode> allNodes,
                                 List<I3SAttributeEncoder.AttrField> attrFields,
-                                Map<Integer, List<SpatialEntry>> globalEntryMap,
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures) throws IOException {
         Path outputDir = stripI3sSuffix(outputFile.getFile());
@@ -538,7 +574,7 @@ public class I3SWriter implements FeatureWriter {
         try {
             geometryPool.submit(() -> meshNodes.parallelStream().forEach(node -> {
                 try {
-                    if (!writeNodeOutput(node, layerDir, globalEntryMap, attrFields,
+                    if (!writeNodeOutput(node, layerDir, attrFields,
                             nodesProcessed, totalMeshNodes)) {
                         emptyNodeIndices.add(node.getIndex());
                     }
@@ -583,17 +619,16 @@ public class I3SWriter implements FeatureWriter {
      *         effective mesh set before writing node pages).
      */
     private boolean writeNodeOutput(I3SNode node, Path layerDir,
-                                    Map<Integer, List<SpatialEntry>> globalEntryMap,
                                     List<I3SAttributeEncoder.AttrField> attrFields,
                                     AtomicInteger nodesProcessed, int totalMeshNodes)
             throws IOException {
         int nodeIndex = node.getIndex();
-        List<SpatialEntry> entries = globalEntryMap.get(nodeIndex);
+        List<NodeEntry> entries = nodeEntryStore.loadNode(nodeIndex);
         Path nodeDir = layerDir.resolve("nodes").resolve(String.valueOf(nodeIndex));
 
         // Load meshes from sharded store, merge
         TriangleMesh merged = new TriangleMesh();
-        for (SpatialEntry entry : entries) {
+        for (NodeEntry entry : entries) {
             TriangleMesh m = meshStore.load(entry.meshHandle());
             merged.merge(m);
         }
@@ -629,8 +664,6 @@ public class I3SWriter implements FeatureWriter {
         // collapse the mesh to empty, in which case we must not leave an
         // orphan texture file on disk.
         TextureAtlas atlas = null;
-        boolean isAtlas = false;
-        int atlasSize = 0;
         boolean textured = false;
         if (!uniqueTexIds.isEmpty()) {
             atlas = TextureAtlas.build(
@@ -638,8 +671,6 @@ public class I3SWriter implements FeatureWriter {
                     formatOptions.getMaxAtlasSize(), uvExtents);
             if (atlas != null) {
                 atlas.remapUVs(merged);
-                isAtlas = uniqueTexIds.size() > 1;
-                atlasSize = Math.max(atlas.getWidth(), atlas.getHeight());
                 textured = true;
             } else {
                 // All referenced textures failed to load. Downgrade the node
@@ -672,7 +703,7 @@ public class I3SWriter implements FeatureWriter {
         }
 
         List<FeatureData> featureDataList = new ArrayList<>(entries.size());
-        for (SpatialEntry entry : entries) {
+        for (NodeEntry entry : entries) {
             AttributeStore.FeatureAttrs attrs =
                     attrStore.load(entry.attrOffset());
             featureDataList.add(new FeatureData(
@@ -730,6 +761,18 @@ public class I3SWriter implements FeatureWriter {
     }
 
     private void closeStores() {
+        if (nodeEntryStore != null) {
+            try {
+                nodeEntryStore.close();
+            } catch (IOException e) {
+                logger.warn("Failed to close node entry store: {}", e.getMessage());
+            }
+        }
+        try {
+            spatialEntryStore.close();
+        } catch (IOException e) {
+            logger.warn("Failed to close spatial entry store: {}", e.getMessage());
+        }
         try {
             meshStore.close();
         } catch (IOException e) {
