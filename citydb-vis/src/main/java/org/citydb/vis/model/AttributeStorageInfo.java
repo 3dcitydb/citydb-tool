@@ -6,7 +6,6 @@
 package org.citydb.vis.model;
 
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.encoder.I3SAttributeEncoder;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ public class AttributeStorageInfo {
     private ValueInfo attributeByteCounts;
     private ValueInfo attributeValues;
 
-    public static AttributeStorageInfo of(int index, I3SAttributeEncoder.AttrField field) {
+    public static AttributeStorageInfo of(int index, AttrField field) {
         AttributeStorageInfo info = new AttributeStorageInfo();
         info.key = "f_" + index;
         info.name = field.name();
