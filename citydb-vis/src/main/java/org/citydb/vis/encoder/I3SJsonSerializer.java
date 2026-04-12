@@ -11,7 +11,6 @@ import org.citydb.vis.model.FeatureEntry;
 import org.citydb.vis.model.I3SConstants;
 import org.citydb.vis.model.NodePage;
 import org.citydb.vis.model.SceneLayerDescriptor;
-import org.citydb.vis.model.SharedResource;
 import org.citydb.vis.scene.I3SNode;
 import org.citydb.vis.scene.SceneLayer;
 
@@ -24,7 +23,7 @@ import java.util.Set;
 
 /**
  * Writes all JSON files for an I3S scene layer: the scene layer descriptor,
- * node pages, per-node feature data, and shared resources.
+ * node pages, and per-node feature data.
  */
 public class I3SJsonSerializer {
 
@@ -56,19 +55,6 @@ public class I3SJsonSerializer {
             Files.createDirectories(nodePageDir);
             writePojo(nodePageDir.resolve("index.json"), nodePage);
         }
-    }
-
-    /**
-     * Write per-node shared resource (legacy material/texture definitions).
-     * CesiumJS reads this for texture metadata.
-     */
-    public void writeSharedResource(Path layerDir, I3SNode node, boolean isAtlas,
-                                    int imageSize) throws IOException {
-        SharedResource resource = SharedResource.atlas(isAtlas, imageSize);
-        Path sharedDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
-                .resolve("shared");
-        Files.createDirectories(sharedDir);
-        writePojo(sharedDir.resolve("index.json"), resource);
     }
 
     /**
