@@ -3,7 +3,9 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.encoder;
+package org.citydb.vis.encoder.i3s;
+
+import org.citydb.vis.encoder.AttributeEncoder;
 
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
