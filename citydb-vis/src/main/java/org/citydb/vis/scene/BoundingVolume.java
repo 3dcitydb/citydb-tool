@@ -60,6 +60,10 @@ public class BoundingVolume {
         return centerZ;
     }
 
+    public double getRadius() {
+        return radius;
+    }
+
     public double[] toMbs() {
         return new double[]{centerX, centerY, centerZ, radius};
     }
