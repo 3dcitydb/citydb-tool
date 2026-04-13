@@ -17,6 +17,7 @@ import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
 import org.citydb.cli.info.InfoCommand;
+import org.citydb.cli.visExporter.VisExportCommand;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
@@ -137,6 +138,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             Command.addSubcommand(new ExportCommand(), cmd, pluginManager);
             Command.addSubcommand(new DeleteCommand(), cmd, pluginManager);
             Command.addSubcommand(new IndexCommand(), cmd, pluginManager);
+            Command.addSubcommand(new VisExportCommand(), cmd, pluginManager);
             for (MainCommand mainCommand : pluginManager.getAllExtensions(MainCommand.class)) {
                 Command.addSubcommand(mainCommand, cmd, pluginManager);
             }
