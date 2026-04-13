@@ -11,24 +11,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents a node in the I3S Bounding Volume Hierarchy.
- * Each node contains geometry data (triangle mesh) and may have child nodes.
+ * Represents a node in a visualization scene hierarchy (bounding volume
+ * hierarchy). Used by all visualization export formats (I3S, 3D Tiles, etc.).
+ * <p>
  * The hierarchy is built using the grid-based tiling strategy from the
- * 3DCityDB VIS plugin, adapted to I3S node pages.
+ * 3DCityDB VIS plugin, with per-cell quadtree subdivision.
  */
-public class I3SNode {
+public class SceneNode {
     private int index;
     private final int level;
-    private BoundingVolume mbs;
-    private I3SNode parent;
-    private final List<I3SNode> children;
+    private BoundingVolume boundingVolume;
+    private SceneNode parent;
+    private final List<SceneNode> children;
     private TriangleMesh mesh;
     private int featureCount;
     private double lodThreshold;
     private int outputVertexCount;
     private int textureId = -1;
 
-    public I3SNode(int index, int level) {
+    public SceneNode(int index, int level) {
         this.index = index;
         this.level = level;
         this.children = new ArrayList<>();
@@ -38,7 +39,7 @@ public class I3SNode {
         return index;
     }
 
-    public I3SNode setIndex(int index) {
+    public SceneNode setIndex(int index) {
         this.index = index;
         return this;
     }
@@ -47,29 +48,29 @@ public class I3SNode {
         return level;
     }
 
-    public BoundingVolume getMbs() {
-        return mbs;
+    public BoundingVolume getBoundingVolume() {
+        return boundingVolume;
     }
 
-    public I3SNode setMbs(BoundingVolume mbs) {
-        this.mbs = mbs;
+    public SceneNode setBoundingVolume(BoundingVolume boundingVolume) {
+        this.boundingVolume = boundingVolume;
         return this;
     }
 
-    public I3SNode getParent() {
+    public SceneNode getParent() {
         return parent;
     }
 
-    public I3SNode setParent(I3SNode parent) {
+    public SceneNode setParent(SceneNode parent) {
         this.parent = parent;
         return this;
     }
 
-    public List<I3SNode> getChildren() {
+    public List<SceneNode> getChildren() {
         return children;
     }
 
-    public I3SNode addChild(I3SNode child) {
+    public SceneNode addChild(SceneNode child) {
         children.add(child);
         child.setParent(this);
         return this;
@@ -79,7 +80,7 @@ public class I3SNode {
         return mesh;
     }
 
-    public I3SNode setMesh(TriangleMesh mesh) {
+    public SceneNode setMesh(TriangleMesh mesh) {
         this.mesh = mesh;
         return this;
     }
@@ -88,7 +89,7 @@ public class I3SNode {
         return featureCount;
     }
 
-    public I3SNode setFeatureCount(int featureCount) {
+    public SceneNode setFeatureCount(int featureCount) {
         this.featureCount = featureCount;
         return this;
     }
@@ -97,7 +98,7 @@ public class I3SNode {
         return lodThreshold;
     }
 
-    public I3SNode setLodThreshold(double lodThreshold) {
+    public SceneNode setLodThreshold(double lodThreshold) {
         this.lodThreshold = lodThreshold;
         return this;
     }
@@ -106,12 +107,12 @@ public class I3SNode {
         return outputVertexCount;
     }
 
-    public I3SNode setOutputVertexCount(int count) {
+    public SceneNode setOutputVertexCount(int count) {
         this.outputVertexCount = count;
         return this;
     }
 
-    public I3SNode setTextureId(int textureId) {
+    public SceneNode setTextureId(int textureId) {
         this.textureId = textureId;
         return this;
     }
@@ -123,14 +124,14 @@ public class I3SNode {
     public void updateBoundingVolume() {
         if (mesh != null && !mesh.isEmpty()) {
             double[] bbox = mesh.computeBoundingBox();
-            mbs = BoundingVolume.ofBoundingBox(bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
+            boundingVolume = BoundingVolume.ofBoundingBox(bbox[0], bbox[1], bbox[2], bbox[3], bbox[4], bbox[5]);
         }
 
-        for (I3SNode child : children) {
-            if (child.mbs != null && mbs != null) {
-                mbs = mbs.merge(child.mbs);
-            } else if (child.mbs != null) {
-                mbs = child.mbs;
+        for (SceneNode child : children) {
+            if (child.boundingVolume != null && boundingVolume != null) {
+                boundingVolume = boundingVolume.merge(child.boundingVolume);
+            } else if (child.boundingVolume != null) {
+                boundingVolume = child.boundingVolume;
             }
         }
     }
