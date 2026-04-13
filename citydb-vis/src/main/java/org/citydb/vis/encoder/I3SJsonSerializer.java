@@ -13,8 +13,8 @@ import org.citydb.vis.model.FeatureEntry;
 import org.citydb.vis.model.I3SConstants;
 import org.citydb.vis.model.NodePage;
 import org.citydb.vis.model.SceneLayerDescriptor;
-import org.citydb.vis.scene.I3SNode;
 import org.citydb.vis.scene.SceneLayer;
+import org.citydb.vis.scene.SceneNode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,7 +40,7 @@ public class I3SJsonSerializer {
      * Write node pages. Uses a {@code Set<Integer>} to determine which nodes
      * have geometry (instead of the full nodeFeatureMap).
      */
-    public void writeNodePages(Path layerDir, List<I3SNode> nodes,
+    public void writeNodePages(Path layerDir, List<SceneNode> nodes,
                                Set<Integer> meshNodeIndices,
                                boolean hasTextures) throws IOException {
         int nodesPerPage = I3SConstants.NODES_PER_PAGE;
@@ -49,7 +49,7 @@ public class I3SJsonSerializer {
         for (int page = 0; page < pageCount; page++) {
             int start = page * nodesPerPage;
             int end = Math.min(start + nodesPerPage, nodes.size());
-            List<I3SNode> pageNodes = nodes.subList(start, end);
+            List<SceneNode> pageNodes = nodes.subList(start, end);
 
             NodePage nodePage = NodePage.of(pageNodes, meshNodeIndices, hasTextures);
 
@@ -62,7 +62,7 @@ public class I3SJsonSerializer {
     /**
      * Write per-node feature metadata to features/0/index.json.
      */
-    public void writeNodeFeatures(Path layerDir, I3SNode node,
+    public void writeNodeFeatures(Path layerDir, SceneNode node,
                                   List<FeatureData> features) throws IOException {
         List<FeatureEntry> entries = new ArrayList<>(features != null ? features.size() : 0);
         if (features != null) {

@@ -5,9 +5,8 @@
 
 package org.citydb.vis.writer;
 
-import org.citydb.vis.I3SFormatOptions;
 import org.citydb.vis.scene.BoundingVolume;
-import org.citydb.vis.scene.I3SNode;
+import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.SpatialEntry;
 
@@ -17,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Builds I3S node hierarchies using a two-level spatial indexing strategy:
+ * Builds scene node hierarchies using a two-level spatial indexing strategy:
  * <ol>
  *   <li><b>Grid partitioning</b> (in the writer): features are classified into
  *       spatial grid cells via {@link org.citydb.vis.store.PartitionedEntryStore}.</li>
@@ -28,26 +27,13 @@ import java.util.Map;
  * After each cell tree is built, the writer remaps its node indices into the
  * global tree and flushes the compact {@link NodeEntry} lists to disk via
  * {@link org.citydb.vis.store.NodeEntryStore}.
+ * <p>
+ * This builder is format-agnostic — it produces a spatial hierarchy of
+ * {@link SceneNode} objects without applying format-specific properties
+ * such as LOD thresholds or geometric errors. The caller is responsible
+ * for setting those after the tree is built.
  */
-class I3SNodeBuilder {
-    /**
-     * LOD threshold used by I3S runtimes (CesiumJS) as a screen-space area
-     * (px²) above which a node should refine to its children.
-     * <p>
-     * A <b>larger</b> value means the node stays visible longer before being
-     * replaced by its children.
-     * <ul>
-     *   <li>Leaf nodes hold the actual geometry and must remain visible across
-     *       a wide range of screen areas — they use the larger value.</li>
-     *   <li>Internal nodes have no geometry (no LOD pyramid yet) and must
-     *       refine to children as soon as meaningful screen area is reached —
-     *       they use the smaller value.</li>
-     * </ul>
-     * These values will need to be revisited when LOD geometry is generated
-     * for intermediate nodes.
-     */
-    private static final double LEAF_NODE_LOD_THRESHOLD = 131_072;
-    private static final double INTERNAL_NODE_LOD_THRESHOLD = 65_536;
+class NodeBuilder {
 
     /**
      * Result of building a quadtree for a single spatial grid cell.
@@ -55,7 +41,7 @@ class I3SNodeBuilder {
      * fields (centerX, centerY, bbox) are consumed during tree construction
      * and not retained.
      */
-    record CellTree(List<I3SNode> nodes, Map<Integer, List<NodeEntry>> nodeEntryMap) {
+    record CellTree(List<SceneNode> nodes, Map<Integer, List<NodeEntry>> nodeEntryMap) {
     }
 
     /**
@@ -65,32 +51,29 @@ class I3SNodeBuilder {
      * for different cells.
      */
     static CellTree buildCellTree(List<SpatialEntry> entries, double[] extent,
-                                  I3SFormatOptions formatOptions) {
+                                  int maxFeaturesPerNode, int maxTreeDepth) {
         Map<Integer, List<NodeEntry>> nodeEntryMap = new HashMap<>();
-        List<I3SNode> nodes = new ArrayList<>();
+        List<SceneNode> nodes = new ArrayList<>();
         int[] counter = {0};
 
-        I3SNode root = new I3SNode(counter[0]++, 0);
+        SceneNode root = new SceneNode(counter[0]++, 0);
         nodes.add(root);
 
         subdivide(root, entries, extent,
-                formatOptions.getMaxFeaturesPerNode(),
-                formatOptions.getMaxTreeDepth(),
+                maxFeaturesPerNode, maxTreeDepth,
                 nodes, counter, nodeEntryMap);
 
         updateBoundingVolumes(root);
-        setLodThresholds(root);
 
         return new CellTree(nodes, nodeEntryMap);
     }
 
     /**
-     * Set the bounding volume and LOD threshold on the global root node
-     * after all cell trees have been attached as children.
+     * Set the bounding volume on the global root node after all cell trees
+     * have been attached as children.
      */
-    static void finalizeGlobalRoot(I3SNode globalRoot) {
+    static void finalizeGlobalRoot(SceneNode globalRoot) {
         globalRoot.updateBoundingVolume();
-        globalRoot.setLodThreshold(INTERNAL_NODE_LOD_THRESHOLD);
     }
 
     /**
@@ -123,9 +106,9 @@ class I3SNodeBuilder {
      * fields that are no longer needed). This allows the caller's
      * {@link SpatialEntry} list to be GC'd as soon as the tree is built.
      */
-    private static void subdivide(I3SNode node, List<SpatialEntry> entries,
+    private static void subdivide(SceneNode node, List<SpatialEntry> entries,
                                   double[] extent, int maxPerNode, int maxDepth,
-                                  List<I3SNode> allNodes, int[] nodeCounter,
+                                  List<SceneNode> allNodes, int[] nodeCounter,
                                   Map<Integer, List<NodeEntry>> nodeEntryMap) {
         if (entries.size() <= maxPerNode || node.getLevel() >= maxDepth) {
             node.setFeatureCount(entries.size());
@@ -144,7 +127,7 @@ class I3SNodeBuilder {
                 if (bb[5] > maxZ) maxZ = bb[5];
                 compact.add(new NodeEntry(e.id(), e.meshHandle(), e.attrOffset()));
             }
-            node.setMbs(BoundingVolume.ofBoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
+            node.setBoundingVolume(BoundingVolume.ofBoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
             nodeEntryMap.put(node.getIndex(), compact);
             return;
         }
@@ -172,7 +155,7 @@ class I3SNodeBuilder {
 
         for (int q = 0; q < 4; q++) {
             if (!buckets[q].isEmpty()) {
-                I3SNode child = new I3SNode(nodeCounter[0]++, node.getLevel() + 1);
+                SceneNode child = new SceneNode(nodeCounter[0]++, node.getLevel() + 1);
                 allNodes.add(child);
                 node.addChild(child);
                 subdivide(child, buckets[q], childExtents[q], maxPerNode, maxDepth,
@@ -181,19 +164,10 @@ class I3SNodeBuilder {
         }
     }
 
-    private static void updateBoundingVolumes(I3SNode node) {
-        for (I3SNode child : node.getChildren()) {
+    private static void updateBoundingVolumes(SceneNode node) {
+        for (SceneNode child : node.getChildren()) {
             updateBoundingVolumes(child);
         }
         node.updateBoundingVolume();
-    }
-
-    private static void setLodThresholds(I3SNode node) {
-        boolean isLeaf = node.getChildren().isEmpty();
-        node.setLodThreshold(isLeaf ? LEAF_NODE_LOD_THRESHOLD : INTERNAL_NODE_LOD_THRESHOLD);
-
-        for (I3SNode child : node.getChildren()) {
-            setLodThresholds(child);
-        }
     }
 }
