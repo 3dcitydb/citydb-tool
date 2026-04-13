@@ -18,7 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Disk-backed mapping from I3S node index to {@link NodeEntry} lists.
+ * Disk-backed mapping from scene node index to {@link NodeEntry} lists.
  * <p>
  * After quadtree construction, each leaf node's compact entries (id,
  * meshHandle, attrOffset) are written here sequentially. During the output
@@ -46,7 +46,7 @@ public class NodeEntryStore implements Closeable {
         this.nodeCounts = new int[initialCapacity];
         Arrays.fill(nodeOffsets, -1L);
 
-        tempFile = Files.createTempFile(tempDir, "i3s-nodeentry-", ".bin");
+        tempFile = Files.createTempFile(tempDir, "vis-nodeentry-", ".bin");
         tempFile.toFile().deleteOnExit();
         channel = FileChannel.open(tempFile,
                 StandardOpenOption.READ, StandardOpenOption.WRITE);
