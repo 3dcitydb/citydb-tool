@@ -8,7 +8,7 @@ package org.citydb.vis.model;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.scene.I3SNode;
+import org.citydb.vis.scene.SceneNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,11 +17,11 @@ import java.util.Set;
 public class NodePage {
     private List<NodeEntry> nodes;
 
-    public static NodePage of(List<I3SNode> pageNodes, Set<Integer> meshNodeIndices,
+    public static NodePage of(List<SceneNode> pageNodes, Set<Integer> meshNodeIndices,
                               boolean hasTextures) {
         NodePage page = new NodePage();
         page.nodes = new ArrayList<>(pageNodes.size());
-        for (I3SNode node : pageNodes) {
+        for (SceneNode node : pageNodes) {
             page.nodes.add(NodeEntry.of(node, meshNodeIndices, hasTextures));
         }
         return page;
@@ -38,19 +38,19 @@ public class NodePage {
         private NodeMesh mesh;
         private int featureCount;
 
-        public static NodeEntry of(I3SNode node, Set<Integer> meshNodeIndices,
+        public static NodeEntry of(SceneNode node, Set<Integer> meshNodeIndices,
                                    boolean hasTextures) {
             NodeEntry entry = new NodeEntry();
             entry.index = node.getIndex();
 
-            if (node.getMbs() != null) {
-                entry.mbs = node.getMbs().toMbs();
+            if (node.getBoundingVolume() != null) {
+                entry.mbs = node.getBoundingVolume().toMbs();
             }
 
             entry.lodThreshold = node.getLodThreshold();
 
             List<Integer> childIndices = new ArrayList<>(node.getChildren().size());
-            for (I3SNode child : node.getChildren()) {
+            for (SceneNode child : node.getChildren()) {
                 childIndices.add(child.getIndex());
             }
             entry.children = childIndices;
@@ -72,7 +72,7 @@ public class NodePage {
         private MeshGeometry geometry;
         private MeshAttribute attribute;
 
-        public static NodeMesh of(I3SNode node, boolean hasTextures) {
+        public static NodeMesh of(SceneNode node, boolean hasTextures) {
             boolean nodeHasTexture = hasTextures && node.hasTexture();
             int definition = nodeHasTexture
                     ? SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX
