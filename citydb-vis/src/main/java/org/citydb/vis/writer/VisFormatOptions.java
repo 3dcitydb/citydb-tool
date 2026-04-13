@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis;
+package org.citydb.vis.writer;
 
 import org.citydb.io.writer.options.OutputFormatOptions;
 
