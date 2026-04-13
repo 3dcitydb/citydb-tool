@@ -20,7 +20,7 @@ import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.vis.I3SAdapter;
-import org.citydb.vis.I3SFormatOptions;
+import org.citydb.vis.writer.i3s.I3SFormatOptions;
 import picocli.CommandLine;
 
 import java.io.IOException;
