@@ -3,16 +3,16 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.encoder;
+package org.citydb.vis.encoder.i3s;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
-import org.citydb.vis.model.FeatureEntry;
-import org.citydb.vis.model.I3SConstants;
-import org.citydb.vis.model.NodePage;
-import org.citydb.vis.model.SceneLayerDescriptor;
+import org.citydb.vis.model.i3s.FeatureEntry;
+import org.citydb.vis.model.i3s.I3SConstants;
+import org.citydb.vis.model.i3s.NodePage;
+import org.citydb.vis.model.i3s.SceneLayerDescriptor;
 import org.citydb.vis.scene.SceneLayer;
 import org.citydb.vis.scene.SceneNode;
 

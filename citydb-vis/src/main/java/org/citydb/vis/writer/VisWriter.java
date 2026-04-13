@@ -24,7 +24,6 @@ import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
-import org.citydb.vis.VisFormatOptions;
 import org.citydb.vis.encoder.AttributeEncoder;
 import org.citydb.vis.geometry.PolygonTriangulator;
 import org.citydb.vis.geometry.TriangleMesh;
