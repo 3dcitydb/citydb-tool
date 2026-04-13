@@ -40,6 +40,10 @@ module org.citydb.cli {
     exports org.citydb.cli.index.options;
     exports org.citydb.cli.index.status;
     exports org.citydb.cli.info;
+    exports org.citydb.cli.visExporter;
+    exports org.citydb.cli.visExporter.i3s;
+    exports org.citydb.cli.visExporter.options;
+    exports org.citydb.cli.logging;
     exports org.citydb.cli.util;
 
     opens org.citydb.cli to info.picocli;
@@ -61,5 +65,8 @@ module org.citydb.cli {
     opens org.citydb.cli.index.drop to info.picocli;
     opens org.citydb.cli.index.options to info.picocli;
     opens org.citydb.cli.index.status to info.picocli;
+    opens org.citydb.cli.visExporter to info.picocli;
+    opens org.citydb.cli.visExporter.i3s to info.picocli;
+    opens org.citydb.cli.visExporter.options to info.picocli;
     opens org.citydb.cli.info to info.picocli;
 }
