@@ -153,7 +153,9 @@
       "Bash(which mvn.cmd)",
       "Bash(cmd.exe /c \"where mvn\")",
       "Bash(cmd.exe:*)",
-      "Bash(./gradlew :citydb-vis:compileJava -Xlint:all)"
+      "Bash(./gradlew :citydb-vis:compileJava -Xlint:all)",
+      "Bash(./gradlew :citydb-vis:build)",
+      "Bash(./gradlew clean:*)"
     ]
   }
 }
