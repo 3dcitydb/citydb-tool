@@ -3,17 +3,18 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.writer.i3s;
+
+import org.citydb.vis.writer.VisWriter;
 
 import org.citydb.config.ConfigException;
 import org.citydb.core.file.FileType;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.vis.I3SFormatOptions;
-import org.citydb.vis.encoder.I3SAttributeEncoder;
-import org.citydb.vis.encoder.I3SGeometryEncoder;
-import org.citydb.vis.encoder.I3SJsonSerializer;
+import org.citydb.vis.encoder.i3s.I3SAttributeEncoder;
+import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
+import org.citydb.vis.encoder.i3s.I3SJsonSerializer;
 import org.citydb.vis.encoder.TextureAtlas;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.AttrField;

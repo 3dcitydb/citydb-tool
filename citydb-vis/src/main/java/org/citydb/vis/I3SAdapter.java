@@ -12,7 +12,7 @@ import org.citydb.io.IOAdapterException;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.vis.writer.I3SWriter;
+import org.citydb.vis.writer.i3s.I3SWriter;
 
 @FileFormat(name = "I3S",
         mediaType = "application/octet-stream",
