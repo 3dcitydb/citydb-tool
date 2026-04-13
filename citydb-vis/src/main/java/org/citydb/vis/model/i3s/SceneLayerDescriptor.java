@@ -3,9 +3,10 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.model;
+package org.citydb.vis.model.i3s;
 
 import com.alibaba.fastjson2.annotation.JSONType;
+import org.citydb.vis.model.AttrField;
 import org.citydb.vis.scene.SceneLayer;
 
 import java.util.ArrayList;
@@ -97,49 +98,5 @@ public class SceneLayerDescriptor {
             infos.add(AttributeStorageInfo.of(i, attrFields.get(i)));
         }
         return infos;
-    }
-
-    @JSONType(alphabetic = false)
-    public record HeightModelInfo(String heightModel, String vertCRS, String heightUnit) {
-        public static HeightModelInfo egm96Meter() {
-            return new HeightModelInfo("gravity_related_height", "EGM96_Geoid", "meter");
-        }
-    }
-
-    @JSONType(alphabetic = false)
-    public record SpatialReference(int wkid, int latestWkid) {
-        public static SpatialReference of(int wkid) {
-            return new SpatialReference(wkid, wkid);
-        }
-    }
-
-    @JSONType(alphabetic = false)
-    public record FullExtent(double xmin, double ymin, double xmax, double ymax,
-                             double zmin, double zmax) {
-        public static FullExtent from(double[] extent) {
-            if (extent == null) {
-                return null;
-            }
-            return new FullExtent(extent[0], extent[1], extent[3], extent[4], extent[2], extent[5]);
-        }
-    }
-
-    @JSONType(alphabetic = false)
-    public record Field(String name, String type, String alias) {
-        public static Field of(AttrField field) {
-            String esriType = switch (field.type()) {
-                case INT -> "esriFieldTypeInteger";
-                case DOUBLE -> "esriFieldTypeDouble";
-                case STRING -> "esriFieldTypeString";
-            };
-            return new Field(field.name(), esriType, field.name());
-        }
-    }
-
-    @JSONType(alphabetic = false)
-    public record NodePagesInfo(int nodesPerPage, String lodSelectionMetricType) {
-        public static NodePagesInfo defaults() {
-            return new NodePagesInfo(I3SConstants.NODES_PER_PAGE, "maxScreenThresholdSQ");
-        }
     }
 }

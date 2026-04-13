@@ -3,7 +3,9 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.model;
+package org.citydb.vis.model.i3s;
+
+import org.citydb.vis.model.AttrField;
 
 import com.alibaba.fastjson2.annotation.JSONType;
 

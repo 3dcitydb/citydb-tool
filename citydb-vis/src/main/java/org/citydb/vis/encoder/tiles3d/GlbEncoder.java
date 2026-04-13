@@ -1,0 +1,655 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright virtualcitysystems GmbH <https://vc.systems>
+ */
+
+package org.citydb.vis.encoder.tiles3d;
+
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.vis.geometry.TriangleMesh;
+import org.citydb.vis.geometry.VertexWelder;
+import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.AttrType;
+import org.citydb.vis.model.FeatureData;
+import org.citydb.vis.scene.BoundingVolume;
+import org.citydb.vis.scene.SceneNode;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Encodes a scene node's geometry, textures, and per-feature metadata into a
+ * glTF 2.0 Binary (GLB) file without external library dependencies.
+ * <p>
+ * Each GLB contains:
+ * <ul>
+ *   <li>Mesh geometry: positions (local ENU), normals, optional UVs, indices</li>
+ *   <li>Texture: JPEG atlas embedded as buffer view (if textured)</li>
+ *   <li>{@code EXT_mesh_features}: per-vertex feature ID attribute</li>
+ *   <li>{@code EXT_structural_metadata}: per-feature property table</li>
+ * </ul>
+ * <p>
+ * Positions are in a local ENU coordinate frame relative to a dataset center.
+ * The root tile's {@code transform} in {@code tileset.json} converts ENU to ECEF.
+ */
+public class GlbEncoder {
+    private static final int GLB_MAGIC = 0x46546C67;  // "glTF"
+    private static final int GLB_VERSION = 2;
+    private static final int CHUNK_JSON = 0x4E4F534A;  // "JSON"
+    private static final int CHUNK_BIN = 0x004E4942;   // "BIN\0"
+
+    private static final double METERS_PER_DEGREE_LAT = 111_320.0;
+
+    /**
+     * Encode a mesh node into a GLB byte array. Returns {@code null} if the
+     * mesh is empty after welding/degenerate filtering.
+     *
+     * @param node          scene node (mesh will be cleared after encoding)
+     * @param textureBytes  JPEG atlas bytes, or {@code null} if untextured
+     * @param features      per-feature attribute data
+     * @param attrFields    finalized attribute field definitions
+     * @param datasetCenter [centerLon, centerLat, centerAlt] of the dataset
+     * @return GLB bytes, or {@code null} if empty
+     */
+    public byte[] encode(SceneNode node, byte[] textureBytes,
+                         List<FeatureData> features, List<AttrField> attrFields,
+                         double[] datasetCenter) throws IOException {
+        TriangleMesh mesh = node.getMesh();
+        boolean hasTexCoords = mesh.hasTexCoords() && textureBytes != null;
+
+        if (!hasTexCoords) {
+            node.setTextureId(-1);
+        }
+
+        BoundingVolume mbs = node.getBoundingVolume();
+        double centerX = mbs != null ? mbs.getCenterX() : 0;
+        double centerY = mbs != null ? mbs.getCenterY() : 0;
+        double centerZ = mbs != null ? mbs.getCenterZ() : 0;
+
+        // Vertex welding
+        float[][] weldedPositions = VertexWelder.weld(mesh, centerX, centerY, centerZ);
+
+        // Filter degenerate triangles
+        List<int[]> allTriangles = mesh.getTriangles();
+        List<Long> triFeatureIds = mesh.getFeatureIds();
+        List<Integer> validTriIndices = new ArrayList<>();
+        int vi = 0;
+        for (int t = 0; t < allTriangles.size(); t++) {
+            float[] p0 = weldedPositions[vi], p1 = weldedPositions[vi + 1], p2 = weldedPositions[vi + 2];
+            if (!VertexWelder.positionsEqual(p0, p1) && !VertexWelder.positionsEqual(p0, p2)
+                    && !VertexWelder.positionsEqual(p1, p2)) {
+                validTriIndices.add(t);
+            }
+            vi += 3;
+        }
+
+        int vertexCount = validTriIndices.size() * 3;
+        node.setOutputVertexCount(vertexCount);
+        if (vertexCount == 0) {
+            node.setMesh(null);
+            return null;
+        }
+
+        // Face ranges for feature indices
+        List<int[]> faceRanges = new ArrayList<>();
+        int start = 0;
+        long currentId = triFeatureIds.get(validTriIndices.get(0));
+        for (int i = 1; i < validTriIndices.size(); i++) {
+            long id = triFeatureIds.get(validTriIndices.get(i));
+            if (id != currentId) {
+                faceRanges.add(new int[]{start, i - 1});
+                start = i;
+                currentId = id;
+            }
+        }
+        faceRanges.add(new int[]{start, validTriIndices.size() - 1});
+
+        int featureCount = faceRanges.size();
+
+        // Convert positions to local ENU meters relative to dataset center
+        double scaleX = METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(datasetCenter[1]));
+        double scaleY = METERS_PER_DEGREE_LAT;
+
+        // Offset from node center to dataset center (in degree-space)
+        // weldedPositions are relative to node center (centerX/Y/Z)
+        // We need them relative to dataset center
+        float offsetX = (float) ((centerX - datasetCenter[0]) * scaleX);
+        float offsetY = (float) ((centerY - datasetCenter[1]) * scaleY);
+        float offsetZ = (float) (centerZ - datasetCenter[2]);
+
+        // Build output arrays.
+        // For textured nodes, omit normals — CesiumJS generates flat normals
+        // from geometry (matching I3S behaviour, better quality for buildings).
+        float[] positions = new float[vertexCount * 3];
+        float[] normals = hasTexCoords ? null : new float[vertexCount * 3];
+        float[] uvs = hasTexCoords ? new float[vertexCount * 2] : null;
+        int[] indices = new int[vertexCount]; // triangle soup: 0,1,2,3,4,5,...
+        int[] featureIds = new int[vertexCount];
+
+        // Position bounds for accessor min/max
+        float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
+        float[] posMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+
+        int idx = 0;
+        for (int ti : validTriIndices) {
+            int base = ti * 3;
+            int[] tri = allTriangles.get(ti);
+            for (int j = 0; j < 3; j++) {
+                // Position: welded position (relative to node center) + offset to dataset center.
+                // ENU → glTF Y-up: glTF_X = East, glTF_Y = Up, glTF_Z = -North.
+                // CesiumJS applies Y-up→Z-up [x,-z,y] yielding [East, North, Up].
+                float[] wp = weldedPositions[base + j];
+                float east = wp[0] * (float) scaleX + offsetX;
+                float north = wp[1] * (float) scaleY + offsetY;
+                float up = wp[2] + offsetZ;
+                positions[idx * 3] = east;
+                positions[idx * 3 + 1] = up;
+                positions[idx * 3 + 2] = -north;
+                posMin[0] = Math.min(posMin[0], east);
+                posMin[1] = Math.min(posMin[1], up);
+                posMin[2] = Math.min(posMin[2], -north);
+                posMax[0] = Math.max(posMax[0], east);
+                posMax[1] = Math.max(posMax[1], up);
+                posMax[2] = Math.max(posMax[2], -north);
+
+                // Normals: only for untextured nodes (same axis swap ENU → glTF Y-up)
+                if (normals != null) {
+                    float[] n = mesh.getNormals().get(tri[j]);
+                    normals[idx * 3] = n[0];
+                    normals[idx * 3 + 1] = n[2];
+                    normals[idx * 3 + 2] = -n[1];
+                }
+
+                if (uvs != null) {
+                    float[] uv = mesh.getTexCoords().get(tri[j]);
+                    uvs[idx * 2] = uv[0];
+                    uvs[idx * 2 + 1] = uv[1];
+                }
+
+                indices[idx] = idx;
+                idx++;
+            }
+        }
+
+        // Per-vertex feature indices
+        for (int f = 0; f < faceRanges.size(); f++) {
+            int[] range = faceRanges.get(f);
+            for (int t = range[0]; t <= range[1]; t++) {
+                featureIds[t * 3] = f;
+                featureIds[t * 3 + 1] = f;
+                featureIds[t * 3 + 2] = f;
+            }
+        }
+
+        // Release source mesh
+        node.setMesh(null);
+
+        // Build the BIN buffer
+        BinBufferBuilder bin = new BinBufferBuilder();
+
+        int bvPositions = bin.addFloat32Array(positions);
+        int bvNormals = normals != null ? bin.addFloat32Array(normals) : -1;
+        int bvUvs = hasTexCoords ? bin.addFloat32Array(uvs) : -1;
+        int bvIndices = bin.addUint32Array(indices);
+        int bvFeatureIds = bin.addUint32Array(featureIds);
+
+        // Texture image
+        int bvTexture = -1;
+        if (textureBytes != null && hasTexCoords) {
+            bvTexture = bin.addRawBytes(textureBytes);
+        }
+
+        // Property table binary data
+        List<PropertyTableBufferViews> propBvs = new ArrayList<>();
+        for (AttrField field : attrFields) {
+            propBvs.add(encodePropertyField(bin, field, features));
+        }
+
+        byte[] binData = bin.toByteArray();
+
+        // Build glTF JSON
+        byte[] jsonData = buildGltfJson(vertexCount, vertexCount / 3, featureCount,
+                hasTexCoords, posMin, posMax, bin.getBufferViews(),
+                bvPositions, bvNormals, bvUvs, bvIndices, bvFeatureIds,
+                bvTexture, attrFields, propBvs, binData.length);
+
+        // Pad JSON to 4-byte alignment with spaces
+        int jsonPadding = (4 - (jsonData.length % 4)) % 4;
+        int jsonChunkLength = jsonData.length + jsonPadding;
+
+        // Pad BIN to 4-byte alignment with zeros
+        int binPadding = (4 - (binData.length % 4)) % 4;
+        int binChunkLength = binData.length + binPadding;
+
+        // GLB = header(12) + JSON chunk header(8) + JSON data + BIN chunk header(8) + BIN data
+        int totalLength = 12 + 8 + jsonChunkLength + 8 + binChunkLength;
+
+        ByteBuffer glb = ByteBuffer.allocate(totalLength).order(ByteOrder.LITTLE_ENDIAN);
+
+        // Header
+        glb.putInt(GLB_MAGIC);
+        glb.putInt(GLB_VERSION);
+        glb.putInt(totalLength);
+
+        // JSON chunk
+        glb.putInt(jsonChunkLength);
+        glb.putInt(CHUNK_JSON);
+        glb.put(jsonData);
+        for (int i = 0; i < jsonPadding; i++) glb.put((byte) ' ');
+
+        // BIN chunk
+        glb.putInt(binChunkLength);
+        glb.putInt(CHUNK_BIN);
+        glb.put(binData);
+        for (int i = 0; i < binPadding; i++) glb.put((byte) 0);
+
+        return glb.array();
+    }
+
+    // ---- glTF JSON construction -----------------------------------------
+
+    private static byte[] buildGltfJson(int vertexCount, int triangleCount, int featureCount,
+                                        boolean hasTexCoords, float[] posMin, float[] posMax,
+                                        List<int[]> bufferViews,
+                                        int bvPositions, int bvNormals, int bvUvs,
+                                        int bvIndices, int bvFeatureIds, int bvTexture,
+                                        List<AttrField> attrFields,
+                                        List<PropertyTableBufferViews> propBvs,
+                                        int binLength) {
+        JSONObject root = new JSONObject();
+
+        // asset
+        JSONObject asset = new JSONObject();
+        asset.put("version", "2.0");
+        asset.put("generator", "3DCityDB citydb-tool");
+        root.put("asset", asset);
+
+        // scene / scenes / nodes
+        root.put("scene", 0);
+        JSONArray scenes = new JSONArray();
+        JSONObject scene = new JSONObject();
+        scene.put("nodes", new JSONArray().fluentAdd(0));
+        scenes.add(scene);
+        root.put("scenes", scenes);
+
+        JSONArray nodes = new JSONArray();
+        JSONObject node = new JSONObject();
+        node.put("mesh", 0);
+        nodes.add(node);
+        root.put("nodes", nodes);
+
+        // accessors
+        JSONArray accessors = new JSONArray();
+        int accIdx = 0;
+
+        // Accessor 0: POSITION
+        accessors.add(makeAccessor(bvPositions, 5126, vertexCount, "VEC3",
+                new float[]{posMin[0], posMin[1], posMin[2]},
+                new float[]{posMax[0], posMax[1], posMax[2]}));
+        int accPosition = accIdx++;
+
+        // Accessor: NORMAL (untextured only)
+        int accNormal = -1;
+        if (bvNormals >= 0) {
+            accessors.add(makeAccessor(bvNormals, 5126, vertexCount, "VEC3", null, null));
+            accNormal = accIdx++;
+        }
+
+        // Accessor: TEXCOORD_0 (optional)
+        int accTexCoord = -1;
+        if (hasTexCoords) {
+            accessors.add(makeAccessor(bvUvs, 5126, vertexCount, "VEC2", null, null));
+            accTexCoord = accIdx++;
+        }
+
+        // Accessor N: indices
+        accessors.add(makeAccessor(bvIndices, 5125, vertexCount, "SCALAR", null, null));
+        int accIndices = accIdx++;
+
+        // Accessor N+1: _FEATURE_ID_0
+        accessors.add(makeAccessor(bvFeatureIds, 5125, vertexCount, "SCALAR", null, null));
+        int accFeatureId = accIdx;
+
+        root.put("accessors", accessors);
+
+        // bufferViews
+        JSONArray bvArray = new JSONArray();
+        for (int[] bv : bufferViews) {
+            JSONObject bvObj = new JSONObject();
+            bvObj.put("buffer", 0);
+            bvObj.put("byteOffset", bv[0]);
+            bvObj.put("byteLength", bv[1]);
+            bvArray.add(bvObj);
+        }
+        root.put("bufferViews", bvArray);
+
+        // buffers
+        JSONArray buffersArr = new JSONArray();
+        JSONObject buffer = new JSONObject();
+        buffer.put("byteLength", binLength);
+        buffersArr.add(buffer);
+        root.put("buffers", buffersArr);
+
+        // materials
+        JSONArray materials = new JSONArray();
+        JSONObject material = new JSONObject();
+        JSONObject pbr = new JSONObject();
+        if (hasTexCoords) {
+            JSONObject baseColorTexture = new JSONObject();
+            baseColorTexture.put("index", 0);
+            baseColorTexture.put("texCoord", 0);
+            pbr.put("baseColorTexture", baseColorTexture);
+        }
+        pbr.put("metallicFactor", 0.0);
+        pbr.put("roughnessFactor", 1.0);
+        material.put("pbrMetallicRoughness", pbr);
+        materials.add(material);
+        root.put("materials", materials);
+
+        // textures, images, samplers (if textured)
+        if (hasTexCoords && bvTexture >= 0) {
+            JSONArray samplers = new JSONArray();
+            JSONObject sampler = new JSONObject();
+            sampler.put("magFilter", 9729); // LINEAR
+            sampler.put("minFilter", 9987); // LINEAR_MIPMAP_LINEAR
+            samplers.add(sampler);
+            root.put("samplers", samplers);
+
+            JSONArray images = new JSONArray();
+            JSONObject image = new JSONObject();
+            image.put("bufferView", bvTexture);
+            image.put("mimeType", "image/jpeg");
+            images.add(image);
+            root.put("images", images);
+
+            JSONArray textures = new JSONArray();
+            JSONObject texture = new JSONObject();
+            texture.put("sampler", 0);
+            texture.put("source", 0);
+            textures.add(texture);
+            root.put("textures", textures);
+        }
+
+        // meshes with EXT_mesh_features
+        JSONArray meshes = new JSONArray();
+        JSONObject mesh = new JSONObject();
+        JSONArray primitives = new JSONArray();
+        JSONObject primitive = new JSONObject();
+
+        JSONObject attributes = new JSONObject();
+        attributes.put("POSITION", accPosition);
+        if (accNormal >= 0) {
+            attributes.put("NORMAL", accNormal);
+        }
+        if (accTexCoord >= 0) {
+            attributes.put("TEXCOORD_0", accTexCoord);
+        }
+        attributes.put("_FEATURE_ID_0", accFeatureId);
+        primitive.put("attributes", attributes);
+        primitive.put("indices", accIndices);
+        primitive.put("material", 0);
+
+        // EXT_mesh_features
+        JSONObject meshFeaturesExt = new JSONObject();
+        JSONArray featureIdsArr = new JSONArray();
+        JSONObject featureIdDef = new JSONObject();
+        featureIdDef.put("featureCount", featureCount);
+        featureIdDef.put("attribute", 0);
+        featureIdDef.put("propertyTable", 0);
+        featureIdsArr.add(featureIdDef);
+        meshFeaturesExt.put("featureIds", featureIdsArr);
+
+        JSONObject primExtensions = new JSONObject();
+        primExtensions.put("EXT_mesh_features", meshFeaturesExt);
+        primitive.put("extensions", primExtensions);
+
+        primitives.add(primitive);
+        mesh.put("primitives", primitives);
+        meshes.add(mesh);
+        root.put("meshes", meshes);
+
+        // EXT_structural_metadata (root-level extension)
+        JSONObject structMeta = buildStructuralMetadata(attrFields, propBvs, featureCount);
+        JSONObject rootExtensions = new JSONObject();
+        rootExtensions.put("EXT_structural_metadata", structMeta);
+        root.put("extensions", rootExtensions);
+
+        // extensionsUsed
+        JSONArray extUsed = new JSONArray();
+        extUsed.add("EXT_mesh_features");
+        extUsed.add("EXT_structural_metadata");
+        root.put("extensionsUsed", extUsed);
+
+        return root.toJSONString(JSONWriter.Feature.PrettyFormatWith2Space)
+                .getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static JSONObject makeAccessor(int bufferView, int componentType,
+                                           int count, String type,
+                                           float[] min, float[] max) {
+        JSONObject acc = new JSONObject();
+        acc.put("bufferView", bufferView);
+        acc.put("componentType", componentType);
+        acc.put("count", count);
+        acc.put("type", type);
+        if (min != null) {
+            JSONArray minArr = new JSONArray();
+            for (float v : min) minArr.add(v);
+            acc.put("min", minArr);
+        }
+        if (max != null) {
+            JSONArray maxArr = new JSONArray();
+            for (float v : max) maxArr.add(v);
+            acc.put("max", maxArr);
+        }
+        return acc;
+    }
+
+    // ---- EXT_structural_metadata ----------------------------------------
+
+    private static JSONObject buildStructuralMetadata(List<AttrField> attrFields,
+                                                      List<PropertyTableBufferViews> propBvs,
+                                                      int featureCount) {
+        JSONObject meta = new JSONObject();
+
+        // Schema
+        JSONObject schema = new JSONObject();
+        JSONObject classes = new JSONObject();
+        JSONObject featureClass = new JSONObject();
+        JSONObject properties = new JSONObject();
+        for (AttrField field : attrFields) {
+            JSONObject prop = new JSONObject();
+            switch (field.type()) {
+                case INT -> prop.put("type", "INT32");
+                case DOUBLE -> prop.put("type", "FLOAT64");
+                case STRING -> prop.put("type", "STRING");
+            }
+            properties.put(field.name(), prop);
+        }
+        featureClass.put("properties", properties);
+        classes.put("feature", featureClass);
+        schema.put("classes", classes);
+        meta.put("schema", schema);
+
+        // Property tables
+        JSONArray propTables = new JSONArray();
+        JSONObject propTable = new JSONObject();
+        propTable.put("class", "feature");
+        propTable.put("count", featureCount);
+
+        JSONObject propTableProps = new JSONObject();
+        for (int i = 0; i < attrFields.size(); i++) {
+            AttrField field = attrFields.get(i);
+            PropertyTableBufferViews pbv = propBvs.get(i);
+            JSONObject propDef = new JSONObject();
+            propDef.put("values", pbv.valuesBv);
+            if (field.type() == AttrType.STRING) {
+                propDef.put("stringOffsets", pbv.offsetsBv);
+            }
+            propTableProps.put(field.name(), propDef);
+        }
+        propTable.put("properties", propTableProps);
+        propTables.add(propTable);
+        meta.put("propertyTables", propTables);
+
+        return meta;
+    }
+
+    // ---- Property table encoding ----------------------------------------
+
+    private static PropertyTableBufferViews encodePropertyField(
+            BinBufferBuilder bin, AttrField field, List<FeatureData> features) {
+        return switch (field.type()) {
+            case INT -> encodeIntProperty(bin, field.name(), features);
+            case DOUBLE -> encodeDoubleProperty(bin, field.name(), features);
+            case STRING -> encodeStringProperty(bin, field.name(), features);
+        };
+    }
+
+    private static PropertyTableBufferViews encodeIntProperty(
+            BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
+        int[] values = new int[features.size()];
+        for (int i = 0; i < features.size(); i++) {
+            Object val = getFieldValue(features.get(i), fieldName);
+            if (val instanceof Number n) {
+                values[i] = n.intValue();
+            }
+        }
+        int bv = bin.addInt32Array(values);
+        return new PropertyTableBufferViews(bv, -1);
+    }
+
+    private static PropertyTableBufferViews encodeDoubleProperty(
+            BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
+        double[] values = new double[features.size()];
+        for (int i = 0; i < features.size(); i++) {
+            Object val = getFieldValue(features.get(i), fieldName);
+            if (val instanceof Number n) {
+                values[i] = n.doubleValue();
+            } else {
+                values[i] = Double.NaN;
+            }
+        }
+        int bv = bin.addFloat64Array(values);
+        return new PropertyTableBufferViews(bv, -1);
+    }
+
+    private static PropertyTableBufferViews encodeStringProperty(
+            BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
+        // Concatenate all string values and build offset array
+        ByteArrayOutputStream valuesStream = new ByteArrayOutputStream();
+        int[] offsets = new int[features.size() + 1];
+        int offset = 0;
+        for (int i = 0; i < features.size(); i++) {
+            offsets[i] = offset;
+            Object val = getFieldValue(features.get(i), fieldName);
+            String str = val != null ? val.toString() : "";
+            byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
+            valuesStream.writeBytes(bytes);
+            offset += bytes.length;
+        }
+        offsets[features.size()] = offset;
+
+        int valuesBv = bin.addRawBytes(valuesStream.toByteArray());
+        int offsetsBv = bin.addUint32Array(offsets);
+        return new PropertyTableBufferViews(valuesBv, offsetsBv);
+    }
+
+    private static Object getFieldValue(FeatureData fd, String fieldName) {
+        return switch (fieldName) {
+            case "OBJECTID" -> fd.objectId();
+            case "featureType" -> fd.featureType();
+            default -> fd.attributes() != null ? fd.attributes().get(fieldName) : null;
+        };
+    }
+
+    // ---- Helper types ---------------------------------------------------
+
+    private record PropertyTableBufferViews(int valuesBv, int offsetsBv) {
+    }
+
+    /**
+     * Builds the BIN chunk data by sequentially appending typed arrays.
+     * Each segment is 4-byte aligned. Tracks buffer view metadata.
+     */
+    static class BinBufferBuilder {
+        private final ByteArrayOutputStream data = new ByteArrayOutputStream();
+        private final List<int[]> bufferViews = new ArrayList<>();
+
+        /** Add a float32 array. Returns the buffer view index. */
+        int addFloat32Array(float[] values) {
+            align4();
+            int offset = data.size();
+            int byteLength = values.length * 4;
+            ByteBuffer buf = ByteBuffer.allocate(byteLength).order(ByteOrder.LITTLE_ENDIAN);
+            for (float v : values) buf.putFloat(v);
+            data.writeBytes(buf.array());
+            bufferViews.add(new int[]{offset, byteLength});
+            return bufferViews.size() - 1;
+        }
+
+        /** Add a uint32/int32 array. Returns the buffer view index. */
+        int addUint32Array(int[] values) {
+            align4();
+            int offset = data.size();
+            int byteLength = values.length * 4;
+            ByteBuffer buf = ByteBuffer.allocate(byteLength).order(ByteOrder.LITTLE_ENDIAN);
+            for (int v : values) buf.putInt(v);
+            data.writeBytes(buf.array());
+            bufferViews.add(new int[]{offset, byteLength});
+            return bufferViews.size() - 1;
+        }
+
+        /** Add an int32 array (same binary layout as uint32). */
+        int addInt32Array(int[] values) {
+            return addUint32Array(values);
+        }
+
+        /** Add a float64 array (8-byte aligned). Returns the buffer view index. */
+        int addFloat64Array(double[] values) {
+            align(8);
+            int offset = data.size();
+            int byteLength = values.length * 8;
+            ByteBuffer buf = ByteBuffer.allocate(byteLength).order(ByteOrder.LITTLE_ENDIAN);
+            for (double v : values) buf.putDouble(v);
+            data.writeBytes(buf.array());
+            bufferViews.add(new int[]{offset, byteLength});
+            return bufferViews.size() - 1;
+        }
+
+        /** Add raw bytes (e.g., JPEG image data). Returns the buffer view index. */
+        int addRawBytes(byte[] bytes) {
+            align4();
+            int offset = data.size();
+            data.writeBytes(bytes);
+            bufferViews.add(new int[]{offset, bytes.length});
+            return bufferViews.size() - 1;
+        }
+
+        List<int[]> getBufferViews() {
+            return bufferViews;
+        }
+
+        byte[] toByteArray() {
+            return data.toByteArray();
+        }
+
+        private void align4() {
+            align(4);
+        }
+
+        private void align(int boundary) {
+            int pad = (boundary - (data.size() % boundary)) % boundary;
+            for (int i = 0; i < pad; i++) {
+                data.write(0);
+            }
+        }
+    }
+}
