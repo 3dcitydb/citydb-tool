@@ -18,7 +18,7 @@ import com.openize.drako.Vector2;
 import com.openize.drako.Vector3;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.scene.BoundingVolume;
-import org.citydb.vis.scene.I3SNode;
+import org.citydb.vis.scene.SceneNode;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -66,7 +66,7 @@ public class I3SGeometryEncoder {
      *         welding/degenerate filtering left the mesh empty (caller should
      *         treat this node as a non-mesh node).
      */
-    public boolean writeNodeGeometry(Path layerDir, I3SNode node) throws IOException {
+    public boolean writeNodeGeometry(Path layerDir, SceneNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
 
@@ -77,7 +77,7 @@ public class I3SGeometryEncoder {
             node.setTextureId(-1);
         }
 
-        BoundingVolume mbs = node.getMbs();
+        BoundingVolume mbs = node.getBoundingVolume();
         double centerX = mbs != null ? mbs.getCenterX() : 0;
         double centerY = mbs != null ? mbs.getCenterY() : 0;
         double centerZ = mbs != null ? mbs.getCenterZ() : 0;
@@ -209,7 +209,7 @@ public class I3SGeometryEncoder {
      *       generated at runtime by CesiumJS from geometry</li>
      * </ul>
      */
-    private static void writeDracoGeometry(Path layerDir, I3SNode node,
+    private static void writeDracoGeometry(Path layerDir, SceneNode node,
                                     double centerLatDeg,
                                     float[][] positions, float[][] normals,
                                     float[][] uvs,
