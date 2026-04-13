@@ -7,6 +7,7 @@ package org.citydb.cli.visExporter;
 
 import org.citydb.cli.common.Command;
 import org.citydb.cli.visExporter.i3s.I3SExportCommand;
+import org.citydb.cli.visExporter.tiles3d.Tiles3DExportCommand;
 import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
@@ -35,5 +36,6 @@ public class VisExportCommand implements Command {
     @Override
     public void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {
         commandLine.addSubcommand(new I3SExportCommand());
+        commandLine.addSubcommand(new Tiles3DExportCommand());
     }
 }

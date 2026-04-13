@@ -356,6 +356,10 @@ public class TextureAtlas {
         ImageIO.write(image, "jpg", target.toFile());
     }
 
+    public void write(java.io.OutputStream out) throws IOException {
+        ImageIO.write(image, "jpg", out);
+    }
+
     public int getWidth() {
         return image.getWidth();
     }

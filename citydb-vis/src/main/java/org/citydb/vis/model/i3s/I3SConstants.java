@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.model;
+package org.citydb.vis.model.i3s;
 
 public final class I3SConstants {
     public static final int NODES_PER_PAGE = 64;
