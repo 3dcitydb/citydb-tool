@@ -16,8 +16,8 @@ import java.nio.file.Path;
  * instances to eliminate synchronized lock contention.
  * <p>
  * Each shard has its own temp file and independent write lock. Using
- * {@code featureId % shardCount} for shard selection ensures that concurrent
- * writer threads rarely contend on the same shard.
+ * {@code Math.floorMod(featureId, shardCount)} for shard selection ensures
+ * that concurrent writer threads rarely contend on the same shard.
  * <p>
  * Handles encode both the shard index and the file offset:
  * upper 16 bits = shardId, lower 48 bits = offset within the shard file.

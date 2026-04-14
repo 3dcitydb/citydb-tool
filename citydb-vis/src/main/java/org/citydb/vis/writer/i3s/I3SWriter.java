@@ -7,40 +7,28 @@ package org.citydb.vis.writer.i3s;
 
 import org.citydb.vis.writer.VisWriter;
 
-import org.citydb.config.ConfigException;
-import org.citydb.core.file.FileType;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.encoder.i3s.I3SAttributeEncoder;
 import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
 import org.citydb.vis.encoder.i3s.I3SJsonSerializer;
-import org.citydb.vis.encoder.TextureAtlas;
-import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneLayer;
+import org.citydb.vis.util.FileHelper;
 import org.citydb.vis.scene.SceneNode;
-import org.citydb.vis.store.AttributeStore;
-import org.citydb.vis.store.NodeEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Writes city model features to the OGC I3S (Indexed 3D Scene Layer) format.
@@ -84,8 +72,9 @@ public class I3SWriter extends VisWriter {
     private final I3SJsonSerializer jsonSerializer;
 
     public I3SWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
-        this(validateOutputFile(outputFile),
-                loadFormatOptions(options), new I3SAttributeEncoder());
+        this(validateOutputFile(outputFile, "I3S"),
+                loadFormatOptions(options, I3SFormatOptions.class, I3SFormatOptions::new, "I3S"),
+                new I3SAttributeEncoder());
     }
 
     private I3SWriter(OutputFile outputFile,
@@ -95,25 +84,6 @@ public class I3SWriter extends VisWriter {
         this.i3sAttributeEncoder = attributeEncoder;
         this.geometryEncoder = new I3SGeometryEncoder();
         this.jsonSerializer = new I3SJsonSerializer();
-    }
-
-    private static OutputFile validateOutputFile(OutputFile file) throws WriteException {
-        Objects.requireNonNull(file, "The output file must not be null.");
-        if (file.getFileType() == FileType.ARCHIVE) {
-            throw new WriteException("I3S export does not support archive output (e.g., .zip, .gz). " +
-                    "Specify a regular file path with the .i3s extension.");
-        }
-        return file;
-    }
-
-    private static I3SFormatOptions loadFormatOptions(WriteOptions options) throws WriteException {
-        Objects.requireNonNull(options, "The write options must not be null.");
-        try {
-            return options.getFormatOptions()
-                    .getOrElse(I3SFormatOptions.class, I3SFormatOptions::new);
-        } catch (ConfigException e) {
-            throw new WriteException("Failed to get I3S format options from config.", e);
-        }
     }
 
     // ---- Format-specific output (Phase 5) -----------------------------------
@@ -154,7 +124,7 @@ public class I3SWriter extends VisWriter {
                                 List<AttrField> attrFields,
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures) throws IOException {
-        Path outputDir = stripI3sSuffix(getOutputFile().getFile());
+        Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
         Files.createDirectories(layerDir);
 
@@ -162,44 +132,9 @@ public class I3SWriter extends VisWriter {
         jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
                 hasTextures);
 
-        // Identify nodes with feature data
-        List<SceneNode> meshNodes = allNodes.stream()
-                .filter(n -> meshNodeIndices.contains(n.getIndex()))
-                .toList();
-
         // Parallel: encode geometry + write features/attributes per node.
-        Set<Integer> emptyNodeIndices = ConcurrentHashMap.newKeySet();
-        ForkJoinPool geometryPool = new ForkJoinPool(getCpuCores());
-        AtomicInteger nodesProcessed = new AtomicInteger(0);
-        int totalMeshNodes = meshNodes.size();
-        try {
-            geometryPool.submit(() -> meshNodes.parallelStream().forEach(node -> {
-                try {
-                    if (!writeNodeOutput(node, layerDir, attrFields,
-                            nodesProcessed, totalMeshNodes)) {
-                        emptyNodeIndices.add(node.getIndex());
-                    }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            })).join();
-        } finally {
-            geometryPool.shutdown();
-            try {
-                geometryPool.awaitTermination(1, TimeUnit.MINUTES);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-
-        // Strip empty nodes from the effective mesh set
-        Set<Integer> effectiveMeshIndices = meshNodeIndices;
-        if (!emptyNodeIndices.isEmpty()) {
-            effectiveMeshIndices = new HashSet<>(meshNodeIndices);
-            effectiveMeshIndices.removeAll(emptyNodeIndices);
-            logger.info("Dropped {} empty mesh nodes (all triangles degenerate after welding).",
-                    emptyNodeIndices.size());
-        }
+        Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
+                node -> writeNodeOutput(node, layerDir, attrFields));
 
         // Node pages AFTER geometry so vertex counts are accurate
         jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices, hasTextures);
@@ -211,98 +146,45 @@ public class I3SWriter extends VisWriter {
      * write per-node feature/attribute JSON files.
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
-                                    List<AttrField> attrFields,
-                                    AtomicInteger nodesProcessed, int totalMeshNodes)
-            throws IOException {
-        int nodeIndex = node.getIndex();
-        List<NodeEntry> entries = getNodeEntryStore().loadNode(nodeIndex);
-        Path nodeDir = layerDir.resolve("nodes").resolve(String.valueOf(nodeIndex));
+                                    List<AttrField> attrFields) throws IOException {
+        PreparedNode prepared = prepareNodeMesh(node);
 
-        // Load meshes from sharded store, merge
-        TriangleMesh merged = new TriangleMesh();
-        for (NodeEntry entry : entries) {
-            TriangleMesh m = getMeshStore().load(entry.meshHandle());
-            merged.merge(m);
-        }
-
-        // Collect unique per-polygon texture IDs from merged mesh
-        Set<Integer> uniqueTexIds = new LinkedHashSet<>();
-        for (int texId : merged.getTriangleTextureIds()) {
-            if (texId >= 0) uniqueTexIds.add(texId);
-        }
-
-        // Invariant: the mesh's UV flag must agree with "some triangle is
-        // actually textured".
-        if (uniqueTexIds.isEmpty() && merged.hasTexCoords()) {
-            merged.setHasTexCoords(false);
-        }
-
-        double texScale = getFormatOptions().getTextureScale();
-
-        // Compute UV extents per texture for tiling support
-        Map<Integer, float[]> uvExtents = computeUVExtents(merged);
-
-        // Build texture atlas and remap UVs before geometry encoding.
-        TextureAtlas atlas = null;
-        boolean textured = false;
-        if (!uniqueTexIds.isEmpty()) {
-            atlas = TextureAtlas.build(
-                    uniqueTexIds, getTextureStore(), texScale,
-                    getFormatOptions().getMaxAtlasSize(), uvExtents);
-            if (atlas != null) {
-                atlas.remapUVs(merged);
-                textured = true;
-            } else {
-                logger.warn("Node {}: all referenced textures failed to load, " +
-                        "falling back to untextured rendering.", nodeIndex);
-                merged.setHasTexCoords(false);
-            }
-        }
-        node.setTextureId(textured ? 0 : -1);
-
-        node.setMesh(merged);
-        boolean hasGeometry = geometryEncoder.writeNodeGeometry(layerDir, node);
-        if (!hasGeometry) {
-            int done = nodesProcessed.incrementAndGet();
-            if (done % 100 == 0 || done == totalMeshNodes) {
-                logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
-            }
+        node.setMesh(prepared.mesh());
+        List<Long> validFeatureIds = geometryEncoder.writeNodeGeometry(layerDir, node);
+        if (validFeatureIds == null) {
             return false;
         }
 
         // Geometry confirmed — now safe to materialize the atlas file.
-        if (atlas != null) {
-            Path textureDir = nodeDir.resolve("textures");
+        if (prepared.atlas() != null) {
+            Path textureDir = layerDir.resolve("nodes")
+                    .resolve(String.valueOf(node.getIndex())).resolve("textures");
             Files.createDirectories(textureDir);
-            atlas.write(textureDir.resolve("0"));
+            prepared.atlas().write(textureDir.resolve("0"));
         }
 
-        List<FeatureData> featureDataList = new ArrayList<>(entries.size());
-        for (NodeEntry entry : entries) {
-            AttributeStore.FeatureAttrs attrs =
-                    getAttrStore().load(entry.attrOffset());
-            featureDataList.add(new FeatureData(
-                    entry.id(), attrs.objectId(), attrs.featureType(),
-                    attrs.attributes()));
+        List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
+
+        // Align features with valid face ranges — degenerate filtering may
+        // have removed all triangles for some features, causing fewer face
+        // ranges than input features. Feature/attribute output must match
+        // the Draco feature-index attribute order.
+        if (validFeatureIds.size() < featureDataList.size()) {
+            Map<Long, FeatureData> featureById = new HashMap<>();
+            for (FeatureData fd : featureDataList) {
+                featureById.put(fd.id(), fd);
+            }
+            featureDataList = new ArrayList<>(validFeatureIds.size());
+            for (long fid : validFeatureIds) {
+                featureDataList.add(featureById.get(fid));
+            }
+            node.setFeatureCount(featureDataList.size());
         }
 
         jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
         i3sAttributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
                 featureDataList);
-
-        int done = nodesProcessed.incrementAndGet();
-        if (done % 100 == 0 || done == totalMeshNodes) {
-            logger.info("Nodes written: {}/{}.", done, totalMeshNodes);
-        }
         return true;
     }
 
-    private static Path stripI3sSuffix(Path path) {
-        String name = path.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        if (dot > 0) {
-            return path.resolveSibling(name.substring(0, dot));
-        }
-        return path;
-    }
 }

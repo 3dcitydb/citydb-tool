@@ -5,11 +5,14 @@
 
 package org.citydb.vis.writer;
 
+import org.citydb.config.ConfigException;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
+import org.citydb.core.file.FileType;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
+import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.appearance.ParameterizedTexture;
 import org.citydb.model.appearance.SurfaceData;
@@ -25,9 +28,11 @@ import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.encoder.AttributeEncoder;
+import org.citydb.vis.encoder.TextureAtlas;
 import org.citydb.vis.geometry.PolygonTriangulator;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.AttributeStore;
 import org.citydb.vis.store.NodeEntry;
@@ -41,6 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,13 +57,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 /**
  * Abstract base for visualization format writers (I3S, 3D Tiles, etc.).
@@ -104,6 +116,28 @@ public abstract class VisWriter implements FeatureWriter {
 
     private NodeEntryStore nodeEntryStore;
     private volatile boolean shouldRun = true;
+
+    protected static OutputFile validateOutputFile(OutputFile file,
+                                                     String formatName) throws WriteException {
+        Objects.requireNonNull(file, "The output file must not be null.");
+        if (file.getFileType() == FileType.ARCHIVE) {
+            throw new WriteException(formatName + " export does not support archive output " +
+                    "(e.g., .zip, .gz). Specify a regular file path.");
+        }
+        return file;
+    }
+
+    protected static <T extends VisFormatOptions> T loadFormatOptions(
+            WriteOptions options, Class<T> type, Supplier<T> defaultFactory,
+            String formatName) throws WriteException {
+        Objects.requireNonNull(options, "The write options must not be null.");
+        try {
+            return options.getFormatOptions().getOrElse(type, defaultFactory);
+        } catch (ConfigException e) {
+            throw new WriteException("Failed to get " + formatName +
+                    " format options from config.", e);
+        }
+    }
 
     protected VisWriter(OutputFile outputFile,
                         VisFormatOptions formatOptions,
@@ -265,15 +299,17 @@ public abstract class VisWriter implements FeatureWriter {
                 if (!mesh.isEmpty()) {
                     Envelope env = envelope;
                     if (formatOptions.isClampToGround()) {
-                        double minZ = clampMeshToGround(mesh);
+                        clampMeshToGround(mesh);
+                        // Recompute Z from the clamped mesh — the Feature's envelope
+                        // Z may not match the mesh when multiple LODs or non-surface
+                        // geometries contribute to the envelope.
                         if (env != null) {
+                            double[] meshBbox = mesh.computeBoundingBox();
                             env = Envelope.of(
                                     Coordinate.of(env.getLowerCorner().getX(),
-                                            env.getLowerCorner().getY(),
-                                            env.getLowerCorner().getZ() - minZ),
+                                            env.getLowerCorner().getY(), meshBbox[2]),
                                     Coordinate.of(env.getUpperCorner().getX(),
-                                            env.getUpperCorner().getY(),
-                                            env.getUpperCorner().getZ() - minZ));
+                                            env.getUpperCorner().getY(), meshBbox[5]));
                         }
                     }
 
@@ -473,12 +509,11 @@ public abstract class VisWriter implements FeatureWriter {
 
     /**
      * Shift all vertex Z values so the building's bottom sits at height 0.
-     * Returns 0 when the mesh has no positions (nothing to clamp).
      */
-    private static double clampMeshToGround(TriangleMesh mesh) {
+    private static void clampMeshToGround(TriangleMesh mesh) {
         List<double[]> positions = mesh.getPositions();
         if (positions.isEmpty()) {
-            return 0;
+            return;
         }
         double minZ = Double.MAX_VALUE;
         for (double[] pos : positions) {
@@ -489,7 +524,6 @@ public abstract class VisWriter implements FeatureWriter {
                 pos[2] -= minZ;
             }
         }
-        return minZ;
     }
 
     /**
@@ -519,6 +553,128 @@ public abstract class VisWriter implements FeatureWriter {
             }
         }
         return extents;
+    }
+
+    // ---- Per-node preparation (shared by format-specific writers) -----------
+
+    /**
+     * Prepared per-node data: merged mesh with atlas-remapped UVs.
+     */
+    protected record PreparedNode(List<NodeEntry> entries, TriangleMesh mesh,
+                                  TextureAtlas atlas) {
+    }
+
+    /**
+     * Prepare a node's mesh data: load and merge meshes from the sharded store,
+     * build a texture atlas (if textured), and remap UV coordinates.
+     */
+    protected PreparedNode prepareNodeMesh(SceneNode node) throws IOException {
+        List<NodeEntry> entries = nodeEntryStore.loadNode(node.getIndex());
+
+        TriangleMesh merged = new TriangleMesh();
+        for (NodeEntry entry : entries) {
+            merged.merge(meshStore.load(entry.meshHandle()));
+        }
+
+        Set<Integer> uniqueTexIds = new LinkedHashSet<>();
+        for (int texId : merged.getTriangleTextureIds()) {
+            if (texId >= 0) uniqueTexIds.add(texId);
+        }
+        if (uniqueTexIds.isEmpty() && merged.hasTexCoords()) {
+            merged.setHasTexCoords(false);
+        }
+
+        TextureAtlas atlas = null;
+        if (!uniqueTexIds.isEmpty()) {
+            Map<Integer, float[]> uvExtents = computeUVExtents(merged);
+            atlas = TextureAtlas.build(
+                    uniqueTexIds, textureStore, formatOptions.getTextureScale(),
+                    formatOptions.getMaxAtlasSize(), uvExtents);
+            if (atlas != null) {
+                atlas.remapUVs(merged);
+            } else {
+                logger.warn("Node {}: all referenced textures failed to load, " +
+                        "falling back to untextured rendering.", node.getIndex());
+                merged.setHasTexCoords(false);
+            }
+        }
+        node.setTextureId(atlas != null ? 0 : -1);
+
+        return new PreparedNode(entries, merged, atlas);
+    }
+
+    /**
+     * Load per-feature attribute data from the disk-backed attribute store.
+     */
+    protected List<FeatureData> loadNodeFeatures(List<NodeEntry> entries) throws IOException {
+        List<FeatureData> features = new ArrayList<>(entries.size());
+        for (NodeEntry entry : entries) {
+            AttributeStore.FeatureAttrs attrs = attrStore.load(entry.attrOffset());
+            features.add(new FeatureData(
+                    entry.id(), attrs.objectId(), attrs.featureType(),
+                    attrs.attributes()));
+        }
+        return features;
+    }
+
+    // ---- Parallel node processing -------------------------------------------
+
+    @FunctionalInterface
+    protected interface NodeProcessor {
+        boolean process(SceneNode node) throws IOException;
+    }
+
+    /**
+     * Process mesh nodes in parallel using a ForkJoinPool, track progress,
+     * and strip nodes whose geometry was empty after welding/degenerate
+     * filtering.
+     *
+     * @return effective mesh node indices (input set minus empty nodes)
+     */
+    protected Set<Integer> processNodesParallel(List<SceneNode> allNodes,
+                                                Set<Integer> meshNodeIndices,
+                                                NodeProcessor processor) throws IOException {
+        List<SceneNode> meshNodes = allNodes.stream()
+                .filter(n -> meshNodeIndices.contains(n.getIndex()))
+                .toList();
+
+        Set<Integer> emptyNodeIndices = ConcurrentHashMap.newKeySet();
+        AtomicInteger nodesProcessed = new AtomicInteger(0);
+        int total = meshNodes.size();
+        ForkJoinPool pool = new ForkJoinPool(cpuCores);
+        try {
+            pool.submit(() -> meshNodes.parallelStream().forEach(node -> {
+                try {
+                    if (!processor.process(node)) {
+                        emptyNodeIndices.add(node.getIndex());
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+                int done = nodesProcessed.incrementAndGet();
+                if (done % 100 == 0 || done == total) {
+                    logger.info("Nodes written: {}/{}.", done, total);
+                }
+            })).join();
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        } finally {
+            pool.shutdown();
+            try {
+                pool.awaitTermination(1, TimeUnit.MINUTES);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        Set<Integer> result = meshNodeIndices;
+        if (!emptyNodeIndices.isEmpty()) {
+            result = new HashSet<>(meshNodeIndices);
+            result.removeAll(emptyNodeIndices);
+            logger.info("Dropped {} empty mesh nodes (all triangles degenerate after welding).",
+                    emptyNodeIndices.size());
+        }
+        return result;
     }
 
     // ---- Private helpers ----------------------------------------------------

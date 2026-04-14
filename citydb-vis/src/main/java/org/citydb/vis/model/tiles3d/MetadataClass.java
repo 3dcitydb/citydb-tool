@@ -11,5 +11,9 @@ import java.util.Map;
 
 @JSONType(alphabetic = false)
 public class MetadataClass {
-    Map<String, MetadataProperty> properties;
+    private final Map<String, MetadataProperty> properties;
+
+    MetadataClass(Map<String, MetadataProperty> properties) {
+        this.properties = properties;
+    }
 }

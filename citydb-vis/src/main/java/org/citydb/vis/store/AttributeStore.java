@@ -5,6 +5,8 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.FileHelper;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -42,7 +44,7 @@ public class AttributeStore implements Closeable {
     }
 
     public AttributeStore(Path tempDir) throws IOException {
-        tempFile = Files.createTempFile(tempDir, "i3s-attr-", ".bin");
+        tempFile = Files.createTempFile(tempDir, "vis-attr-", ".bin");
         tempFile.toFile().deleteOnExit();
         channel = FileChannel.open(tempFile,
                 StandardOpenOption.READ, StandardOpenOption.WRITE);
@@ -73,12 +75,12 @@ public class AttributeStore implements Closeable {
      */
     public FeatureAttrs load(long offset) throws IOException {
         ByteBuffer header = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-        readFully(header, offset);
+        FileHelper.readFully(channel, header, offset);
         header.flip();
         int dataSize = header.getInt();
 
         ByteBuffer buf = ByteBuffer.allocate(dataSize).order(ByteOrder.LITTLE_ENDIAN);
-        readFully(buf, offset + 4);
+        FileHelper.readFully(channel, buf, offset + 4);
         buf.flip();
 
         return deserialize(buf);
@@ -177,15 +179,4 @@ public class AttributeStore implements Closeable {
         return new String(bytes, StandardCharsets.UTF_8);
     }
 
-    private void readFully(ByteBuffer buf, long startPosition) throws IOException {
-        int totalRead = 0;
-        int needed = buf.remaining();
-        while (totalRead < needed) {
-            int read = channel.read(buf, startPosition + totalRead);
-            if (read < 0) {
-                throw new IOException("Unexpected end of attribute store file");
-            }
-            totalRead += read;
-        }
-    }
 }
