@@ -10,7 +10,7 @@ import org.citydb.model.property.Attribute;
 import org.citydb.model.property.Property;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
-import org.citydb.vis.model.FeatureData;
+
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -64,6 +64,13 @@ public class AttributeEncoder {
      */
     public List<AttrField> finalizeFields(long totalFeatures) {
         Map<String, AttrType> result = new LinkedHashMap<>();
+        // OID: Esri integer OID (esriFieldTypeOID / Oid32). Value =
+        // sequential feature counter from VisWriter.featureIdCounter.
+        // Used by ArcGIS Pro for single-feature picking.
+        result.put("OID", AttrType.OID);
+        // OBJECTID: the CityGML gml:id string (e.g., "DEBY_LOD2_4865511").
+        // Matches the identifier users see in Cesium's picking popup, so
+        // ArcGIS and Cesium both surface the same human-readable value.
         result.put("OBJECTID", AttrType.STRING);
         result.put("featureType", AttrType.STRING);
 
@@ -102,19 +109,6 @@ public class AttributeEncoder {
             }
         }
         return result;
-    }
-
-    // ---- Field value access ----
-
-    /**
-     * Retrieve a field value from a {@link FeatureData} record by field name.
-     * Handles the fixed header fields (OBJECTID, featureType) and delegates
-     * to the user attribute map for everything else.
-     */
-    protected static Object getFieldValue(FeatureData fd, String fieldName) {
-        if ("OBJECTID".equals(fieldName)) return fd.objectId();
-        if ("featureType".equals(fieldName)) return fd.featureType();
-        return fd.attributes().get(fieldName);
     }
 
     // ---- Internal helpers ----

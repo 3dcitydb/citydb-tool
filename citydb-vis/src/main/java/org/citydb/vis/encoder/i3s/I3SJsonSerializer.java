@@ -11,8 +11,8 @@ import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.i3s.FeatureEntry;
 import org.citydb.vis.model.i3s.I3SConstants;
 import org.citydb.vis.model.i3s.NodePage;
+import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.model.i3s.SceneLayerDescriptor;
-import org.citydb.vis.scene.SceneLayer;
 import org.citydb.vis.scene.SceneNode;
 
 import java.io.IOException;
