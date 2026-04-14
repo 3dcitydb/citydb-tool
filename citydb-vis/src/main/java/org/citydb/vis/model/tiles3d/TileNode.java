@@ -39,7 +39,7 @@ public class TileNode {
     public static TileNode of(SceneNode node, Set<Integer> meshNodeIndices,
                               double overrideGeo) {
         TileNode tile = new TileNode();
-        tile.boundingVolume = TileBoundingVolume.fromMbs(node.getBoundingVolume());
+        tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = overrideGeo >= 0 ? overrideGeo : computeGeometricError(node);
         tile.refine = "ADD";
 
@@ -59,7 +59,7 @@ public class TileNode {
      */
     public static TileNode ofExternalRef(SceneNode node, String uri) {
         TileNode tile = new TileNode();
-        tile.boundingVolume = TileBoundingVolume.fromMbs(node.getBoundingVolume());
+        tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = computeGeometricError(node);
         tile.content = new TileContent(uri);
         return tile;
