@@ -7,10 +7,11 @@ package org.citydb.vis.model.i3s;
 
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
-import org.citydb.vis.scene.SceneLayer;
+import org.citydb.vis.model.AttrType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @JSONType(alphabetic = false)
 public class SceneLayerDescriptor {
@@ -28,6 +29,7 @@ public class SceneLayerDescriptor {
     private String name;
     private String description;
     private String layerType;
+    private List<String> capabilities;
     private HeightModelInfo heightModelInfo;
     private SpatialReference spatialReference;
     private Store store;
@@ -36,7 +38,9 @@ public class SceneLayerDescriptor {
     private List<MaterialDefinition> materialDefinitions;
     private FullExtent fullExtent;
     private List<Field> fields;
+    private String objectIdField;
     private List<AttributeStorageInfo> attributeStorageInfo;
+    private PopupInfo popupInfo;
     private NodePagesInfo nodePages;
 
     public static SceneLayerDescriptor of(SceneLayer sceneLayer,
@@ -44,10 +48,15 @@ public class SceneLayerDescriptor {
                                           boolean hasTextures) {
         SceneLayerDescriptor descriptor = new SceneLayerDescriptor();
         descriptor.id = 0;
-        descriptor.version = SceneLayer.I3S_VERSION;
+        // I3S scene layer 'version' is a per-layer lifecycle UUID, NOT the
+        // I3S spec version (which lives in store.version). ArcGIS Pro rejects
+        // non-UUID values here and silently drops the fields array on parse,
+        // breaking the identify popup even though the layer renders.
+        descriptor.version = UUID.randomUUID().toString().toUpperCase();
         descriptor.name = sceneLayer.getName();
         descriptor.description = sceneLayer.getDescription();
         descriptor.layerType = SceneLayer.LAYER_TYPE;
+        descriptor.capabilities = List.of("View", "Query");
         descriptor.heightModelInfo = HeightModelInfo.egm96Meter();
         descriptor.spatialReference = SpatialReference.of(sceneLayer.getWkid());
         descriptor.store = Store.of(sceneLayer, hasTextures);
@@ -60,7 +69,12 @@ public class SceneLayerDescriptor {
         descriptor.materialDefinitions = buildMaterialDefinitions(hasTextures);
         descriptor.fullExtent = FullExtent.from(sceneLayer.getExtent());
         descriptor.fields = buildFields(attrFields);
+        // Our OID-typed field is named "OID" (not Esri's default "OBJECTID"),
+        // so declare it explicitly at the layer level; otherwise ArcGIS may
+        // fail to resolve the OID when the name doesn't match convention.
+        descriptor.objectIdField = findOidFieldName(attrFields);
         descriptor.attributeStorageInfo = buildAttributeStorageInfo(attrFields);
+        descriptor.popupInfo = PopupInfo.of(attrFields);
         descriptor.nodePages = NodePagesInfo.defaults();
         return descriptor;
     }
@@ -81,6 +95,15 @@ public class SceneLayerDescriptor {
             materials.add(MaterialDefinition.textured());
         }
         return materials;
+    }
+
+    private static String findOidFieldName(List<AttrField> attrFields) {
+        for (AttrField f : attrFields) {
+            if (f.type() == AttrType.OID) {
+                return f.name();
+            }
+        }
+        return null;
     }
 
     private static List<Field> buildFields(List<AttrField> attrFields) {

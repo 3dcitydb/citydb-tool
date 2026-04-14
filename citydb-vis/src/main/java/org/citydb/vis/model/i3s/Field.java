@@ -12,6 +12,7 @@ import org.citydb.vis.model.AttrField;
 public record Field(String name, String type, String alias) {
     public static Field of(AttrField field) {
         String esriType = switch (field.type()) {
+            case OID -> "esriFieldTypeOID";
             case INT -> "esriFieldTypeInteger";
             case DOUBLE -> "esriFieldTypeDouble";
             case STRING -> "esriFieldTypeString";

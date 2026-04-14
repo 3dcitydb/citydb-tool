@@ -6,23 +6,38 @@
 package org.citydb.vis.scene;
 
 /**
- * Represents a Minimum Bounding Sphere (MBS).
- * Format: [centerX (lon), centerY (lat), centerZ (altitude m), radius (m)]
+ * Axis-aligned bounding volume in EPSG:4326 geographic coordinates.
  * <p>
- * For EPSG:4326 the center is in (longitude, latitude, altitude) but the
- * radius must be in meters. Degree-to-meter conversion uses:
+ * Stores the source AABB (min/max in degrees/meters) and derives both
+ * MBS (Minimum Bounding Sphere) for CesiumJS and OBB (Oriented Bounding
+ * Box) for ArcGIS Pro on demand.
+ * <p>
+ * For EPSG:4326 the center is in (longitude, latitude, altitude) but
+ * sizes and radii are in meters. Degree-to-meter conversion uses:
  * - 1° latitude  ≈ 111,320 m
  * - 1° longitude ≈ 111,320 * cos(latitude) m
  */
 public class BoundingVolume {
     private static final double METERS_PER_DEGREE_LAT = 111_320.0;
 
-    private final double centerX;
-    private final double centerY;
-    private final double centerZ;
+    // Source AABB (degrees for X/Y, meters for Z)
+    private final double minX, minY, minZ;
+    private final double maxX, maxY, maxZ;
+
+    // Derived MBS
+    private final double centerX, centerY, centerZ;
     private final double radius;
 
-    private BoundingVolume(double centerX, double centerY, double centerZ, double radius) {
+    private BoundingVolume(double minX, double minY, double minZ,
+                           double maxX, double maxY, double maxZ,
+                           double centerX, double centerY, double centerZ,
+                           double radius) {
+        this.minX = minX;
+        this.minY = minY;
+        this.minZ = minZ;
+        this.maxX = maxX;
+        this.maxY = maxY;
+        this.maxZ = maxZ;
         this.centerX = centerX;
         this.centerY = centerY;
         this.centerZ = centerZ;
@@ -30,8 +45,8 @@ public class BoundingVolume {
     }
 
     /**
-     * Create MBS from an axis-aligned bounding box in geographic coordinates (EPSG:4326).
-     * Converts degree extents to meters for the radius computation.
+     * Create a bounding volume from an axis-aligned bounding box in
+     * geographic coordinates (EPSG:4326).
      */
     public static BoundingVolume ofBoundingBox(double minX, double minY, double minZ,
                                                double maxX, double maxY, double maxZ) {
@@ -39,61 +54,74 @@ public class BoundingVolume {
         double cy = (minY + maxY) / 2;
         double cz = (minZ + maxZ) / 2;
 
-        // Convert degree differences to meters
         double dxMeters = (maxX - minX) * METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(cy));
         double dyMeters = (maxY - minY) * METERS_PER_DEGREE_LAT;
         double dzMeters = maxZ - minZ;
 
         double radius = Math.sqrt(dxMeters * dxMeters + dyMeters * dyMeters + dzMeters * dzMeters) / 2;
-        return new BoundingVolume(cx, cy, cz, radius);
+        return new BoundingVolume(minX, minY, minZ, maxX, maxY, maxZ,
+                cx, cy, cz, radius);
     }
 
-    public double getCenterX() {
-        return centerX;
-    }
+    // ---- AABB accessors ----------------------------------------------------
 
-    public double getCenterY() {
-        return centerY;
-    }
+    public double getMinX() { return minX; }
+    public double getMinY() { return minY; }
+    public double getMinZ() { return minZ; }
+    public double getMaxX() { return maxX; }
+    public double getMaxY() { return maxY; }
+    public double getMaxZ() { return maxZ; }
 
-    public double getCenterZ() {
-        return centerZ;
-    }
+    // ---- MBS accessors (CesiumJS / I3S) ------------------------------------
 
-    public double getRadius() {
-        return radius;
-    }
+    public double getCenterX() { return centerX; }
+    public double getCenterY() { return centerY; }
+    public double getCenterZ() { return centerZ; }
+    public double getRadius() { return radius; }
 
+    /** MBS array: [centerX (lon), centerY (lat), centerZ (alt m), radius (m)]. */
     public double[] toMbs() {
         return new double[]{centerX, centerY, centerZ, radius};
     }
 
+    // ---- OBB accessors (ArcGIS / I3S) --------------------------------------
+
+    /** OBB center: [lon°, lat°, alt m]. */
+    public double[] toObbCenter() {
+        return new double[]{centerX, centerY, centerZ};
+    }
+
     /**
-     * Merge two bounding spheres. Distance between centers is computed in meters
-     * for geographic coordinates (EPSG:4326).
+     * OBB half-size in meters along each axis.
+     * Since the bounding box is axis-aligned, this is simply the AABB
+     * half-extents converted from degrees to meters.
+     */
+    public double[] toObbHalfSize() {
+        double halfX = (maxX - minX) / 2 * METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(centerY));
+        double halfY = (maxY - minY) / 2 * METERS_PER_DEGREE_LAT;
+        double halfZ = (maxZ - minZ) / 2;
+        return new double[]{halfX, halfY, halfZ};
+    }
+
+    /** OBB quaternion: identity (no rotation) since the box is axis-aligned. */
+    public double[] toObbQuaternion() {
+        return new double[]{0, 0, 0, 1};
+    }
+
+    // ---- Merge -------------------------------------------------------------
+
+    /**
+     * Merge two bounding volumes by merging their AABBs and recomputing
+     * the MBS from the merged AABB.
      */
     public BoundingVolume merge(BoundingVolume other) {
         if (radius == 0) return other;
         if (other.radius == 0) return this;
 
-        // Convert center difference to meters for distance computation
-        double midLat = (centerY + other.centerY) / 2;
-        double dxMeters = (other.centerX - centerX) * METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(midLat));
-        double dyMeters = (other.centerY - centerY) * METERS_PER_DEGREE_LAT;
-        double dzMeters = other.centerZ - centerZ;
-        double dist = Math.sqrt(dxMeters * dxMeters + dyMeters * dyMeters + dzMeters * dzMeters);
-
-        if (dist + other.radius <= radius) return this;
-        if (dist + radius <= other.radius) return other;
-
-        double newRadius = (dist + radius + other.radius) / 2;
-        double ratio = dist > 0 ? (newRadius - radius) / dist : 0;
-
-        // Interpolate center in degree space
-        return new BoundingVolume(
-                centerX + (other.centerX - centerX) * ratio,
-                centerY + (other.centerY - centerY) * ratio,
-                centerZ + dzMeters * ratio,
-                newRadius);
+        return ofBoundingBox(
+                Math.min(minX, other.minX), Math.min(minY, other.minY),
+                Math.min(minZ, other.minZ),
+                Math.max(maxX, other.maxX), Math.max(maxY, other.maxY),
+                Math.max(maxZ, other.maxZ));
     }
 }
