@@ -20,15 +20,15 @@ import java.util.Set;
  */
 @JSONType(alphabetic = false)
 public class TileNode {
-    TileBoundingVolume boundingVolume;
-    double geometricError;
-    String refine;
+    private TileBoundingVolume boundingVolume;
+    private double geometricError;
+    private String refine;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
-    TileContent content;
+    private TileContent content;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
-    double[] transform;
+    private double[] transform;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
-    List<TileNode> children;
+    private List<TileNode> children;
 
     /**
      * Build a tile node from a SceneNode, inlining children in the same
@@ -61,6 +61,32 @@ public class TileNode {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromMbs(node.getBoundingVolume());
         tile.geometricError = computeGeometricError(node);
+        tile.content = new TileContent(uri);
+        return tile;
+    }
+
+    /**
+     * Create a root tile with transform and child slots.
+     */
+    static TileNode ofRoot(TileBoundingVolume boundingVolume, double geometricError,
+                           double[] transform) {
+        TileNode tile = new TileNode();
+        tile.boundingVolume = boundingVolume;
+        tile.geometricError = geometricError;
+        tile.refine = "ADD";
+        tile.transform = transform;
+        tile.children = new ArrayList<>();
+        return tile;
+    }
+
+    /**
+     * Create a content-only tile (no children, no refine).
+     */
+    static TileNode ofContent(TileBoundingVolume boundingVolume, double geometricError,
+                              String uri) {
+        TileNode tile = new TileNode();
+        tile.boundingVolume = boundingVolume;
+        tile.geometricError = geometricError;
         tile.content = new TileContent(uri);
         return tile;
     }

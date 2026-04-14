@@ -117,6 +117,88 @@ public class VertexWelder {
         return result;
     }
 
+    // ---- Post-weld processing ------------------------------------------------
+
+    /**
+     * Result of welding vertices, filtering degenerate triangles, and
+     * computing face ranges. Shared by all format-specific encoders.
+     */
+    public record WeldResult(float[][] weldedPositions,
+                             List<Integer> validTriIndices,
+                             List<int[]> faceRanges,
+                             List<Long> rangeFeatureIds,
+                             int vertexCount) {
+        public boolean isEmpty() {
+            return vertexCount == 0;
+        }
+
+        /**
+         * Compute per-vertex feature indices from face ranges.
+         * Each vertex in a face range gets the range's sequential index.
+         */
+        public int[] computeFeatureIndices() {
+            int[] indices = new int[vertexCount];
+            for (int f = 0; f < faceRanges.size(); f++) {
+                int[] range = faceRanges.get(f);
+                for (int t = range[0]; t <= range[1]; t++) {
+                    indices[t * 3] = f;
+                    indices[t * 3 + 1] = f;
+                    indices[t * 3 + 2] = f;
+                }
+            }
+            return indices;
+        }
+    }
+
+    /**
+     * Weld vertices, filter degenerate triangles, and compute face ranges
+     * with per-range featureId tracking.
+     */
+    public static WeldResult weldAndFilter(TriangleMesh mesh,
+                                           double centerX, double centerY,
+                                           double centerZ) {
+        float[][] weldedPositions = weld(mesh, centerX, centerY, centerZ);
+
+        List<int[]> allTriangles = mesh.getTriangles();
+        List<Long> triFeatureIds = mesh.getFeatureIds();
+        List<Integer> validTriIndices = new ArrayList<>();
+        int vi = 0;
+        for (int t = 0; t < allTriangles.size(); t++) {
+            float[] p0 = weldedPositions[vi], p1 = weldedPositions[vi + 1],
+                    p2 = weldedPositions[vi + 2];
+            if (!positionsEqual(p0, p1) && !positionsEqual(p0, p2)
+                    && !positionsEqual(p1, p2)) {
+                validTriIndices.add(t);
+            }
+            vi += 3;
+        }
+
+        int vertexCount = validTriIndices.size() * 3;
+        if (vertexCount == 0) {
+            return new WeldResult(weldedPositions, validTriIndices,
+                    List.of(), List.of(), 0);
+        }
+
+        List<int[]> faceRanges = new ArrayList<>();
+        List<Long> rangeFeatureIds = new ArrayList<>();
+        int start = 0;
+        long currentId = triFeatureIds.get(validTriIndices.get(0));
+        rangeFeatureIds.add(currentId);
+        for (int i = 1; i < validTriIndices.size(); i++) {
+            long id = triFeatureIds.get(validTriIndices.get(i));
+            if (id != currentId) {
+                faceRanges.add(new int[]{start, i - 1});
+                start = i;
+                currentId = id;
+                rangeFeatureIds.add(currentId);
+            }
+        }
+        faceRanges.add(new int[]{start, validTriIndices.size() - 1});
+
+        return new WeldResult(weldedPositions, validTriIndices,
+                faceRanges, rangeFeatureIds, vertexCount);
+    }
+
     /** Check whether two Float32 position vectors are bitwise identical. */
     public static boolean positionsEqual(float[] a, float[] b) {
         return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
