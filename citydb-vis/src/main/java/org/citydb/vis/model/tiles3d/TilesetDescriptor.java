@@ -10,7 +10,6 @@ import com.alibaba.fastjson2.annotation.JSONField;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -38,19 +37,11 @@ public class TilesetDescriptor {
         d.schema = MetadataSchema.of(attrFields);
         d.geometricError = geometricError;
 
-        TileNode rootTile = new TileNode();
-        rootTile.boundingVolume = TileBoundingVolume.fromExtent(extent);
-        rootTile.geometricError = geometricError;
-        rootTile.refine = "ADD";
-        rootTile.transform = transform;
-
-        rootTile.children = new ArrayList<>(cellRefs.size());
+        TileNode rootTile = TileNode.ofRoot(
+                TileBoundingVolume.fromExtent(extent), geometricError, transform);
         for (CellReference ref : cellRefs) {
-            TileNode child = new TileNode();
-            child.boundingVolume = ref.boundingVolume();
-            child.geometricError = ref.geometricError();
-            child.content = new TileContent(ref.uri());
-            rootTile.children.add(child);
+            rootTile.addChild(TileNode.ofContent(
+                    ref.boundingVolume(), ref.geometricError(), ref.uri()));
         }
 
         d.root = rootTile;
