@@ -13,4 +13,19 @@ import java.util.Map;
  */
 public record FeatureData(long id, String objectId, String featureType,
                           Map<String, Object> attributes) {
+
+    /**
+     * Retrieve a field value by name. Handles the fixed header fields
+     * (OBJECTID, featureType) and delegates to the user attribute map
+     * for everything else.
+     */
+    public Object getFieldValue(String fieldName) {
+        // OID is the Esri integer OID (sequential, for picking).
+        // OBJECTID carries the CityGML gml:id string so that the identifier
+        // shown in the ArcGIS identify popup matches what Cesium displays.
+        if ("OID".equals(fieldName)) return id;
+        if ("OBJECTID".equals(fieldName)) return objectId;
+        if ("featureType".equals(fieldName)) return featureType;
+        return attributes.get(fieldName);
+    }
 }

@@ -19,10 +19,15 @@ public class NodeMesh {
         int definition = nodeHasTexture
                 ? SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX
                 : SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX;
-        int materialResource = nodeHasTexture ? node.getIndex() : -1;
+        // ArcGIS requires non-negative resource index. Use the node's own
+        // resource index (same as geometry) for both textured and untextured.
+        int materialResource = node.getIndex();
 
         NodeMesh mesh = new NodeMesh();
-        mesh.material = new MeshMaterial(definition, materialResource);
+        // texelCountHint: width × height of the texture atlas — required by
+        // ArcGIS for textured materials, omitted for untextured nodes.
+        Integer texelHint = nodeHasTexture ? node.getTexelCountHint() : null;
+        mesh.material = new MeshMaterial(definition, materialResource, texelHint);
         mesh.geometry = new MeshGeometry(definition, node.getIndex(),
                 node.getOutputVertexCount(), node.getFeatureCount());
         mesh.attribute = new MeshAttribute(node.getIndex());

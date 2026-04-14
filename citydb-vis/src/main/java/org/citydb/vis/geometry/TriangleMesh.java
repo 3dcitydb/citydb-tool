@@ -286,8 +286,9 @@ public class TriangleMesh {
     /**
      * Key for duplicate-triangle detection: three position hashes, compared
      * by value. Using a record gives auto-generated equals/hashCode that
-     * compare all three 64-bit fields, so two triangles match only if all
-     * nine coordinate-bit patterns are identical — no 64-bit-hash collisions.
+     * compare all three 64-bit fields. Hash collisions in {@link #vertexHash}
+     * are theoretically possible but vanishingly unlikely for real geographic
+     * coordinate data (birthday-paradox threshold ~4 × 10⁹ distinct vertices).
      */
     private record TriangleKey(long h0, long h1, long h2) {}
 
