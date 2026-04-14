@@ -21,12 +21,8 @@ public class MetadataSchema {
 
         Map<String, MetadataProperty> properties = new LinkedHashMap<>();
         for (AttrField field : attrFields) {
-            String type = switch (field.type()) {
-                case INT -> "INT32";
-                case DOUBLE -> "FLOAT64";
-                case STRING -> "STRING";
-            };
-            properties.put(field.name(), new MetadataProperty(type));
+            properties.put(field.name(),
+                    new MetadataProperty(MetadataProperty.tilesType(field.type())));
         }
 
         schema.classes = new LinkedHashMap<>();

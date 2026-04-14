@@ -8,9 +8,12 @@ package org.citydb.vis.model.tiles3d;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.BoundingVolume;
 
+/**
+ * 3D Tiles bounding volume expressed as a geographic {@code region}:
+ * {@code [west, south, east, north, minHeight, maxHeight]} in radians/meters.
+ */
 @JSONType(alphabetic = false)
 public record TileBoundingVolume(double[] region) {
-    private static final double METERS_PER_DEGREE_LAT = 111_320.0;
 
     public static TileBoundingVolume fromExtent(double[] extent) {
         return new TileBoundingVolume(new double[]{
@@ -20,27 +23,18 @@ public record TileBoundingVolume(double[] region) {
         });
     }
 
-    public static TileBoundingVolume fromMbs(BoundingVolume bv) {
+    /**
+     * Create a region bounding volume from a {@link BoundingVolume}.
+     * Uses the stored AABB directly for accurate bounds.
+     */
+    public static TileBoundingVolume fromBoundingVolume(BoundingVolume bv) {
         if (bv == null) {
             return new TileBoundingVolume(new double[6]);
         }
-        double centerLon = bv.getCenterX();
-        double centerLat = bv.getCenterY();
-        double centerAlt = bv.getCenterZ();
-        double radius = bv.getRadius();
-
-        double radiusDegreesLat = radius / METERS_PER_DEGREE_LAT;
-        double cosLat = Math.cos(Math.toRadians(centerLat));
-        double radiusDegreesLon = cosLat > 0
-                ? radius / (METERS_PER_DEGREE_LAT * cosLat) : radiusDegreesLat;
-
         return new TileBoundingVolume(new double[]{
-                Math.toRadians(centerLon - radiusDegreesLon),
-                Math.toRadians(centerLat - radiusDegreesLat),
-                Math.toRadians(centerLon + radiusDegreesLon),
-                Math.toRadians(centerLat + radiusDegreesLat),
-                centerAlt - radius,
-                centerAlt + radius
+                Math.toRadians(bv.getMinX()), Math.toRadians(bv.getMinY()),
+                Math.toRadians(bv.getMaxX()), Math.toRadians(bv.getMaxY()),
+                bv.getMinZ(), bv.getMaxZ()
         });
     }
 }

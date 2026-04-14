@@ -15,9 +15,9 @@ import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
 import org.citydb.vis.encoder.i3s.I3SJsonSerializer;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
-import org.citydb.vis.scene.SceneLayer;
-import org.citydb.vis.util.FileHelper;
+import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.util.FileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,11 +60,12 @@ public class I3SWriter extends VisWriter {
     private static final int EPSG_4326 = 4326;
 
     /**
-     * LOD threshold used by I3S runtimes (CesiumJS) as a screen-space area
-     * (px²) above which a node should refine to its children.
+     * LOD threshold used by I3S runtimes (CesiumJS, ArcGIS) as a screen-space
+     * area (px²) above which a node should refine to its children. Must be
+     * integer — ArcGIS rejects float values in node pages.
      */
-    private static final double LEAF_NODE_LOD_THRESHOLD = 131_072;
-    private static final double INTERNAL_NODE_LOD_THRESHOLD = 65_536;
+    private static final int LEAF_NODE_LOD_THRESHOLD = 131_072;
+    private static final int INTERNAL_NODE_LOD_THRESHOLD = 65_536;
 
     private final Logger logger = LoggerFactory.getLogger(I3SWriter.class);
     private final I3SAttributeEncoder i3sAttributeEncoder;
@@ -99,6 +100,30 @@ public class I3SWriter extends VisWriter {
 
         SceneLayer sceneLayer = buildSceneLayer(extent);
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures);
+
+        if (((I3SFormatOptions) getFormatOptions()).isSlpk()) {
+            packageAsSlpk();
+        }
+    }
+
+    /**
+     * Package the just-written I3S folder as an SLPK file at the output path
+     * and remove the intermediate folder.
+     */
+    private void packageAsSlpk() throws IOException {
+        Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
+        Path slpkFile = getOutputFile().getFile();
+        // If no extension was given (-o data), the folder and SLPK paths
+        // would collide — append .slpk explicitly in that case.
+        if (slpkFile.equals(outputDir)) {
+            slpkFile = outputDir.resolveSibling(outputDir.getFileName() + ".slpk");
+        }
+
+        logger.info("Packaging I3S output as SLPK: {}", slpkFile);
+        SlpkPackager.pack(outputDir, slpkFile);
+
+        logger.info("Removing intermediate folder: {}", outputDir);
+        deleteDirectoryTree(outputDir);
     }
 
     private static void setLodThresholds(List<SceneNode> nodes) {
@@ -161,6 +186,10 @@ public class I3SWriter extends VisWriter {
                     .resolve(String.valueOf(node.getIndex())).resolve("textures");
             Files.createDirectories(textureDir);
             prepared.atlas().write(textureDir.resolve("0"));
+            // Record the texel count (width × height) so the node page can
+            // emit texelCountHint, which ArcGIS Pro requires for rendering.
+            node.setTexelCountHint(
+                    prepared.atlas().getWidth() * prepared.atlas().getHeight());
         }
 
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());

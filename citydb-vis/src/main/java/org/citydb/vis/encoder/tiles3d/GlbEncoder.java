@@ -13,6 +13,7 @@ import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.FeatureData;
+import org.citydb.vis.model.tiles3d.MetadataProperty;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 
@@ -449,11 +450,7 @@ public class GlbEncoder {
         JSONObject properties = new JSONObject();
         for (AttrField field : attrFields) {
             JSONObject prop = new JSONObject();
-            switch (field.type()) {
-                case INT -> prop.put("type", "INT32");
-                case DOUBLE -> prop.put("type", "FLOAT64");
-                case STRING -> prop.put("type", "STRING");
-            }
+            prop.put("type", MetadataProperty.tilesType(field.type()));
             properties.put(field.name(), prop);
         }
         featureClass.put("properties", properties);
@@ -490,17 +487,28 @@ public class GlbEncoder {
     private static PropertyTableBufferViews encodePropertyField(
             BinBufferBuilder bin, AttrField field, List<FeatureData> features) {
         return switch (field.type()) {
+            case OID -> encodeOidProperty(bin, features);
             case INT -> encodeIntProperty(bin, field.name(), features);
             case DOUBLE -> encodeDoubleProperty(bin, field.name(), features);
             case STRING -> encodeStringProperty(bin, field.name(), features);
         };
     }
 
+    private static PropertyTableBufferViews encodeOidProperty(
+            BinBufferBuilder bin, List<FeatureData> features) {
+        int[] values = new int[features.size()];
+        for (int i = 0; i < features.size(); i++) {
+            values[i] = (int) features.get(i).id();
+        }
+        int bv = bin.addInt32Array(values);
+        return new PropertyTableBufferViews(bv, -1);
+    }
+
     private static PropertyTableBufferViews encodeIntProperty(
             BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
         int[] values = new int[features.size()];
         for (int i = 0; i < features.size(); i++) {
-            Object val = getFieldValue(features.get(i), fieldName);
+            Object val = features.get(i).getFieldValue(fieldName);
             if (val instanceof Number n) {
                 values[i] = n.intValue();
             }
@@ -513,7 +521,7 @@ public class GlbEncoder {
             BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
         double[] values = new double[features.size()];
         for (int i = 0; i < features.size(); i++) {
-            Object val = getFieldValue(features.get(i), fieldName);
+            Object val = features.get(i).getFieldValue(fieldName);
             if (val instanceof Number n) {
                 values[i] = n.doubleValue();
             } else {
@@ -532,7 +540,7 @@ public class GlbEncoder {
         int offset = 0;
         for (int i = 0; i < features.size(); i++) {
             offsets[i] = offset;
-            Object val = getFieldValue(features.get(i), fieldName);
+            Object val = features.get(i).getFieldValue(fieldName);
             String str = val != null ? val.toString() : "";
             byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
             valuesStream.writeBytes(bytes);
@@ -545,13 +553,6 @@ public class GlbEncoder {
         return new PropertyTableBufferViews(valuesBv, offsetsBv);
     }
 
-    private static Object getFieldValue(FeatureData fd, String fieldName) {
-        return switch (fieldName) {
-            case "OBJECTID" -> fd.objectId();
-            case "featureType" -> fd.featureType();
-            default -> fd.attributes() != null ? fd.attributes().get(fieldName) : null;
-        };
-    }
 
     // ---- Helper types ---------------------------------------------------
 
