@@ -5,8 +5,7 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.tiles3d.CellReference;
 import org.citydb.vis.model.tiles3d.TileBoundingVolume;
@@ -16,7 +15,6 @@ import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -28,8 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Writes multi-level 3D Tiles 1.1 tileset JSON files via
- * {@link TilesetDescriptor} POJOs, matching the I3S serialization
- * pattern used by {@link I3SJsonSerializer}.
+ * {@link TilesetDescriptor} POJOs.
  * <p>
  * When a cell's quadtree exceeds {@link #MAX_NODES_PER_SUBTILESET}
  * nodes, deeper subtrees are split into separate external tileset
@@ -74,7 +71,7 @@ public class TilesetSerializer {
         TilesetDescriptor descriptor = TilesetDescriptor.ofRoot(
                 maxGeo, extent, transform, cellRefs, attrFields);
 
-        writePojo(outputDir.resolve("tileset.json"), descriptor);
+        JsonHelper.writePojo(outputDir.resolve("tileset.json"), descriptor);
     }
 
     // ---- Tree-based sub-tilesets ----------------------------------------
@@ -97,7 +94,7 @@ public class TilesetSerializer {
                 rootGeo, rootTile);
 
         Files.createDirectories(subtreesDir);
-        writePojo(subtreeFile, descriptor);
+        JsonHelper.writePojo(subtreeFile, descriptor);
     }
 
     // ---- Tree traversal with spatial splitting --------------------------
@@ -158,18 +155,10 @@ public class TilesetSerializer {
 
         Path file = subtreesDir.resolve(fileIndex + ".json");
         try {
-            writePojo(file, descriptor);
+            JsonHelper.writePojo(file, descriptor);
         } catch (IOException e) {
             throw new RuntimeException("Failed to write external subtileset: " + file, e);
         }
     }
 
-    // ---- Serialization --------------------------------------------------
-
-    private static void writePojo(Path file, Object pojo) throws IOException {
-        Files.writeString(file, JSON.toJSONString(pojo,
-                        JSONWriter.Feature.FieldBased,
-                        JSONWriter.Feature.PrettyFormatWith2Space),
-                StandardCharsets.UTF_8);
-    }
 }

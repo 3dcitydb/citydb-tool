@@ -5,6 +5,8 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.FileHelper;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -97,7 +99,7 @@ public class NodeEntryStore implements Closeable {
 
         ByteBuffer buf = ByteBuffer.allocate(count * NODE_ENTRY_SIZE)
                 .order(ByteOrder.LITTLE_ENDIAN);
-        readFully(buf, offset);
+        FileHelper.readFully(channel, buf, offset);
         buf.flip();
 
         List<NodeEntry> result = new ArrayList<>(count);
@@ -127,15 +129,4 @@ public class NodeEntryStore implements Closeable {
         }
     }
 
-    private void readFully(ByteBuffer buf, long startPosition) throws IOException {
-        int totalRead = 0;
-        int needed = buf.remaining();
-        while (totalRead < needed) {
-            int read = channel.read(buf, startPosition + totalRead);
-            if (read < 0) {
-                throw new IOException("Unexpected end of node entry store file");
-            }
-            totalRead += read;
-        }
-    }
 }
