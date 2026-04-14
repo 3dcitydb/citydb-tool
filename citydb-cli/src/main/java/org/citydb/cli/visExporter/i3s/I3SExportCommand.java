@@ -54,6 +54,12 @@ public class I3SExportCommand extends VisExportController {
                     "Lower values reduce texture size and improve loading speed in the viewer.")
     private double textureScale;
 
+    @CommandLine.Option(names = "--slpk",
+            description = "Package the I3S output as a Scene Layer Package (.slpk) file, " +
+                    "compatible with ArcGIS Pro. By default, I3S is exported as a folder structure. " +
+                    "Recommended output file extension: .slpk")
+    private boolean slpk;
+
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
@@ -113,6 +119,10 @@ public class I3SExportCommand extends VisExportController {
 
         if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
             options.setTextureScale(textureScale);
+        }
+
+        if (Command.hasMatchedOption("--slpk", commandSpec)) {
+            options.setSlpk(slpk);
         }
 
         return options;

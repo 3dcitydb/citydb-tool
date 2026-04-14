@@ -6,7 +6,6 @@
 package org.citydb.vis.model.i3s;
 
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.scene.SceneLayer;
 
 import java.util.List;
 import java.util.UUID;
@@ -37,7 +36,9 @@ public class Store {
         store.version = SceneLayer.I3S_VERSION;
         store.resourcePattern = List.of(
                 "3dNodeIndexDocument", "Geometry", "Attributes");
-        store.rootNode = "./nodes/0";
+        // ArcGIS expects "./nodes/root"; CesiumJS works with either since
+        // it uses node pages to locate nodes rather than this legacy URL.
+        store.rootNode = "./nodes/root";
 
         double[] layerExtent = sceneLayer.getExtent();
         if (layerExtent != null) {
@@ -53,7 +54,7 @@ public class Store {
         }
         store.lodType = "MeshPyramid";
         store.lodModel = "node-switching";
-        store.defaultGeometrySchema = GeometrySchema.of(hasTextures);
+        store.defaultGeometrySchema = GeometrySchema.full();
         store.geometryEncoding = "application/octet-stream";
         return store;
     }
@@ -68,17 +69,19 @@ public class Store {
         private List<String> featureAttributeOrder;
         private FeatureAttributes featureAttributes;
 
-        public static GeometrySchema of(boolean hasTextures) {
+        public static GeometrySchema full() {
             GeometrySchema schema = new GeometrySchema();
             schema.geometryType = "triangles";
             schema.header = List.of(
                     new HeaderEntry("vertexCount", "UInt32"),
                     new HeaderEntry("featureCount", "UInt32"));
             schema.topology = "PerAttributeArray";
-            schema.ordering = hasTextures
-                    ? List.of("position", "normal", "uv0")
-                    : List.of("position", "normal");
-            schema.vertexAttributes = VertexAttributes.of(hasTextures);
+            // Global schema must match what is actually written to buffer 0
+            // for every node, regardless of per-node texture state. The
+            // encoder pads uv0 with zeros and color with opaque-white when
+            // a node is untextured so the binary layout stays constant.
+            schema.ordering = List.of("position", "normal", "uv0", "color");
+            schema.vertexAttributes = VertexAttributes.full();
             schema.featureAttributeOrder = List.of("id", "faceRange");
             schema.featureAttributes = FeatureAttributes.defaults();
             return schema;
@@ -98,14 +101,14 @@ public class Store {
         private AttributeDef position;
         private AttributeDef normal;
         private AttributeDef uv0;
+        private AttributeDef color;
 
-        public static VertexAttributes of(boolean hasTextures) {
+        public static VertexAttributes full() {
             VertexAttributes attrs = new VertexAttributes();
             attrs.position = new AttributeDef("Float32", 3);
             attrs.normal = new AttributeDef("Float32", 3);
-            if (hasTextures) {
-                attrs.uv0 = new AttributeDef("Float32", 2);
-            }
+            attrs.uv0 = new AttributeDef("Float32", 2);
+            attrs.color = new AttributeDef("UInt8", 4);
             return attrs;
         }
     }

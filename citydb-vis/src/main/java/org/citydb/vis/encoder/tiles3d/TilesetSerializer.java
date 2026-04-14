@@ -63,7 +63,7 @@ public class TilesetSerializer {
         for (int i = 0; i < cellRoots.size(); i++) {
             BoundingVolume bv = cellRoots.get(i).getBoundingVolume();
             cellRefs.add(new CellReference(
-                    TileBoundingVolume.fromMbs(bv),
+                    TileBoundingVolume.fromBoundingVolume(bv),
                     TileNode.computeGeometricError(cellRoots.get(i)),
                     "subtrees/" + i + ".json"));
         }

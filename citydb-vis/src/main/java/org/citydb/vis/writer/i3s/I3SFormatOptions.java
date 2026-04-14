@@ -10,11 +10,18 @@ import org.citydb.vis.writer.VisFormatOptions;
 import org.citydb.config.SerializableConfig;
 
 /**
- * I3S-specific format options. Currently all parameters are inherited from
- * {@link VisFormatOptions}; this subclass exists for configuration
- * deserialization ({@code @SerializableConfig}) and as a hook for future
- * I3S-only options.
+ * I3S-specific format options.
  */
 @SerializableConfig(name = "I3S")
 public class I3SFormatOptions extends VisFormatOptions {
+    private boolean slpk;
+
+    public boolean isSlpk() {
+        return slpk;
+    }
+
+    public I3SFormatOptions setSlpk(boolean slpk) {
+        this.slpk = slpk;
+        return this;
+    }
 }
