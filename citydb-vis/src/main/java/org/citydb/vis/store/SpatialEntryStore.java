@@ -108,7 +108,7 @@ public class SpatialEntryStore implements Closeable {
         private long writePosition = 0;
 
         Shard(Path tempDir) throws IOException {
-            tempFile = Files.createTempFile(tempDir, "i3s-spatial-", ".bin");
+            tempFile = Files.createTempFile(tempDir, "vis-spatial-", ".bin");
             tempFile.toFile().deleteOnExit();
             channel = FileChannel.open(tempFile,
                     StandardOpenOption.READ, StandardOpenOption.WRITE);

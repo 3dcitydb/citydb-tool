@@ -158,7 +158,9 @@
       "Bash(./gradlew clean:*)",
       "Bash(xargs basename:*)",
       "Bash(python3:*)",
-      "Bash(xargs head:*)"
+      "Bash(xargs head:*)",
+      "Bash(./gradlew.bat :citydb-vis:compileJava)",
+      "Bash(./gradlew.bat compileJava)"
     ]
   }
 }

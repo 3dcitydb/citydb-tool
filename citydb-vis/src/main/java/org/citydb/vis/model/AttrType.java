@@ -6,8 +6,8 @@
 package org.citydb.vis.model;
 
 /**
- * I3S attribute value type. Drives binary encoding layout and JSON schema
- * generation in the scene layer descriptor.
+ * Attribute value type. Drives binary encoding layout and metadata schema
+ * generation in visualization export formats (I3S, 3D Tiles).
  */
 public enum AttrType {
     STRING, INT, DOUBLE
