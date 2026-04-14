@@ -5,8 +5,7 @@
 
 package org.citydb.vis.encoder.i3s;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.i3s.FeatureEntry;
@@ -33,7 +32,7 @@ public class I3SJsonSerializer {
                                     List<AttrField> attrFields,
                                     boolean hasTextures) throws IOException {
         SceneLayerDescriptor descriptor = SceneLayerDescriptor.of(sceneLayer, attrFields, hasTextures);
-        writePojo(layerDir.resolve("index.json"), descriptor);
+        JsonHelper.writePojo(layerDir.resolve("index.json"), descriptor);
     }
 
     /**
@@ -55,7 +54,7 @@ public class I3SJsonSerializer {
 
             Path nodePageDir = layerDir.resolve("nodepages").resolve(String.valueOf(page));
             Files.createDirectories(nodePageDir);
-            writePojo(nodePageDir.resolve("index.json"), nodePage);
+            JsonHelper.writePojo(nodePageDir.resolve("index.json"), nodePage);
         }
     }
 
@@ -74,12 +73,7 @@ public class I3SJsonSerializer {
         Path featuresDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
                 .resolve("features").resolve("0");
         Files.createDirectories(featuresDir);
-        writePojo(featuresDir.resolve("index.json"), entries);
+        JsonHelper.writePojo(featuresDir.resolve("index.json"), entries);
     }
 
-    private static void writePojo(Path file, Object pojo) throws IOException {
-        Files.writeString(file, JSON.toJSONString(pojo,
-                JSONWriter.Feature.FieldBased,
-                JSONWriter.Feature.PrettyFormatWith2Space));
-    }
 }
