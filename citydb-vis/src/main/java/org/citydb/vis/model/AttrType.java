@@ -10,5 +10,5 @@ package org.citydb.vis.model;
  * generation in visualization export formats (I3S, 3D Tiles).
  */
 public enum AttrType {
-    STRING, INT, DOUBLE
+    STRING, INT, DOUBLE, OID
 }

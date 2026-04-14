@@ -26,6 +26,11 @@ public class AttributeStorageInfo {
         info.name = field.name();
 
         switch (field.type()) {
+            case OID -> {
+                info.header = List.of(new HeaderEntry("count", "UInt32"));
+                info.ordering = List.of("attributeValues");
+                info.attributeValues = ValueInfo.of("Oid32", 1);
+            }
             case INT -> {
                 info.header = List.of(new HeaderEntry("count", "UInt32"));
                 info.ordering = List.of("attributeValues");

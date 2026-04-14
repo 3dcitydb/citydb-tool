@@ -724,7 +724,7 @@ public abstract class VisWriter implements FeatureWriter {
         textureStore.close();
     }
 
-    private static void deleteDirectoryTree(Path root) {
+    protected static void deleteDirectoryTree(Path root) {
         if (!Files.isDirectory(root)) {
             return;
         }

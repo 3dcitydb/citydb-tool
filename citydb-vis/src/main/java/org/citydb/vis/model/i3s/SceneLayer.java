@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.scene;
+package org.citydb.vis.model.i3s;
 
 /**
  * Represents the I3S 3D Scene Layer descriptor (3dSceneLayer.json).
