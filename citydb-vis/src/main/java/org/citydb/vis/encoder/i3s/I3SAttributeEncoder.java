@@ -49,12 +49,23 @@ public class I3SAttributeEncoder extends AttributeEncoder {
             ByteBuffer buffer;
 
             switch (field.type()) {
+                case OID -> {
+                    // Oid32: sequential feature id (from FeatureData.id, 1-based)
+                    // encoded as Int32 LE. ArcGIS requires unique non-null OIDs
+                    // to enable single-feature identify/picking.
+                    buffer = ByteBuffer.allocate(4 + count * 4);
+                    buffer.order(ByteOrder.LITTLE_ENDIAN);
+                    buffer.putInt(count);
+                    for (FeatureData fd : features) {
+                        buffer.putInt((int) fd.id());
+                    }
+                }
                 case INT -> {
                     buffer = ByteBuffer.allocate(4 + count * 4);
                     buffer.order(ByteOrder.LITTLE_ENDIAN);
                     buffer.putInt(count);
                     for (FeatureData fd : features) {
-                        Object val = getFieldValue(fd, field.name());
+                        Object val = fd.getFieldValue(field.name());
                         int intVal = 0;
                         if (val instanceof Long l) intVal = l.intValue();
                         else if (val instanceof Double d) intVal = d.intValue();
@@ -70,7 +81,7 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                     buffer.putInt(count);
                     buffer.putInt(0); // padding for Float64 alignment
                     for (FeatureData fd : features) {
-                        Object val = getFieldValue(fd, field.name());
+                        Object val = fd.getFieldValue(field.name());
                         double dVal;
                         if (val instanceof Double d) dVal = d;
                         else if (val instanceof Long l) dVal = l.doubleValue();
@@ -79,14 +90,23 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                     }
                 }
                 case STRING -> {
+                    // Esri's I3S string attribute format stores each value as
+                    // UTF-8 bytes PLUS a trailing NUL terminator, and the
+                    // per-entry byteCount includes that NUL. ArcGIS Pro's
+                    // String parser fails silently when the terminator is
+                    // missing, suppressing the whole identify popup.
                     List<byte[]> valueBytes = new ArrayList<>();
-                    for (FeatureData fd : features) {
-                        Object val = getFieldValue(fd, field.name());
-                        String str = val != null ? val.toString() : "";
-                        valueBytes.add(str.getBytes(StandardCharsets.UTF_8));
-                    }
                     int totalBytes = 0;
-                    for (byte[] b : valueBytes) totalBytes += b.length;
+                    for (FeatureData fd : features) {
+                        Object val = fd.getFieldValue(field.name());
+                        String str = val != null ? val.toString() : "";
+                        byte[] utf8 = str.getBytes(StandardCharsets.UTF_8);
+                        byte[] nulTerminated = new byte[utf8.length + 1];
+                        System.arraycopy(utf8, 0, nulTerminated, 0, utf8.length);
+                        // last byte already 0 (NUL terminator)
+                        valueBytes.add(nulTerminated);
+                        totalBytes += nulTerminated.length;
+                    }
 
                     buffer = ByteBuffer.allocate(4 + 4 + count * 4 + totalBytes);
                     buffer.order(ByteOrder.LITTLE_ENDIAN);
