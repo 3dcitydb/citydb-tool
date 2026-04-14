@@ -22,7 +22,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encodes a scene node's geometry, textures, and per-feature metadata into a
@@ -73,45 +75,18 @@ public class GlbEncoder {
         double centerY = mbs != null ? mbs.getCenterY() : 0;
         double centerZ = mbs != null ? mbs.getCenterZ() : 0;
 
-        // Vertex welding
-        float[][] weldedPositions = VertexWelder.weld(mesh, centerX, centerY, centerZ);
-
-        // Filter degenerate triangles
-        List<int[]> allTriangles = mesh.getTriangles();
-        List<Long> triFeatureIds = mesh.getFeatureIds();
-        List<Integer> validTriIndices = new ArrayList<>();
-        int vi = 0;
-        for (int t = 0; t < allTriangles.size(); t++) {
-            float[] p0 = weldedPositions[vi], p1 = weldedPositions[vi + 1], p2 = weldedPositions[vi + 2];
-            if (!VertexWelder.positionsEqual(p0, p1) && !VertexWelder.positionsEqual(p0, p2)
-                    && !VertexWelder.positionsEqual(p1, p2)) {
-                validTriIndices.add(t);
-            }
-            vi += 3;
-        }
-
-        int vertexCount = validTriIndices.size() * 3;
-        node.setOutputVertexCount(vertexCount);
-        if (vertexCount == 0) {
+        VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(mesh, centerX, centerY, centerZ);
+        node.setOutputVertexCount(weld.vertexCount());
+        if (weld.isEmpty()) {
             node.setMesh(null);
             return null;
         }
 
-        // Face ranges for feature indices
-        List<int[]> faceRanges = new ArrayList<>();
-        int start = 0;
-        long currentId = triFeatureIds.get(validTriIndices.get(0));
-        for (int i = 1; i < validTriIndices.size(); i++) {
-            long id = triFeatureIds.get(validTriIndices.get(i));
-            if (id != currentId) {
-                faceRanges.add(new int[]{start, i - 1});
-                start = i;
-                currentId = id;
-            }
-        }
-        faceRanges.add(new int[]{start, validTriIndices.size() - 1});
-
-        int featureCount = faceRanges.size();
+        int vertexCount = weld.vertexCount();
+        List<Integer> validTriIndices = weld.validTriIndices();
+        float[][] weldedPositions = weld.weldedPositions();
+        List<int[]> allTriangles = mesh.getTriangles();
+        int featureCount = weld.faceRanges().size();
 
         // Convert positions to local ENU meters relative to dataset center
         double scaleX = METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(datasetCenter[1]));
@@ -178,15 +153,8 @@ public class GlbEncoder {
             }
         }
 
-        // Per-vertex feature indices
-        for (int f = 0; f < faceRanges.size(); f++) {
-            int[] range = faceRanges.get(f);
-            for (int t = range[0]; t <= range[1]; t++) {
-                featureIds[t * 3] = f;
-                featureIds[t * 3 + 1] = f;
-                featureIds[t * 3 + 2] = f;
-            }
-        }
+        int[] featureIdIndices = weld.computeFeatureIndices();
+        System.arraycopy(featureIdIndices, 0, featureIds, 0, vertexCount);
 
         // Release source mesh
         node.setMesh(null);
@@ -206,10 +174,25 @@ public class GlbEncoder {
             bvTexture = bin.addRawBytes(textureBytes);
         }
 
+        // Align features with face ranges — degenerate filtering may have
+        // removed all triangles for some features, causing fewer face ranges
+        // than input features. The property table must match face range order.
+        List<FeatureData> propFeatures = features;
+        if (featureCount < features.size()) {
+            Map<Long, FeatureData> featureById = new HashMap<>();
+            for (FeatureData fd : features) {
+                featureById.put(fd.id(), fd);
+            }
+            propFeatures = new ArrayList<>(featureCount);
+            for (long fid : weld.rangeFeatureIds()) {
+                propFeatures.add(featureById.get(fid));
+            }
+        }
+
         // Property table binary data
         List<PropertyTableBufferViews> propBvs = new ArrayList<>();
         for (AttrField field : attrFields) {
-            propBvs.add(encodePropertyField(bin, field, features));
+            propBvs.add(encodePropertyField(bin, field, propFeatures));
         }
 
         byte[] binData = bin.toByteArray();
