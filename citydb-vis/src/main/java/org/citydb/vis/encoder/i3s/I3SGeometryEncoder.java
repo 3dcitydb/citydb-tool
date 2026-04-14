@@ -27,7 +27,6 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -61,11 +60,13 @@ public class I3SGeometryEncoder {
     /**
      * Encode and write a node's geometry to {@code geometries/0}.
      *
-     * @return {@code true} if a geometry file was written, {@code false} if
-     *         welding/degenerate filtering left the mesh empty (caller should
-     *         treat this node as a non-mesh node).
+     * @return ordered list of featureIds per face range if a geometry file was
+     *         written, {@code null} if welding/degenerate filtering left the
+     *         mesh empty (caller should treat this node as a non-mesh node).
+     *         The caller must use this list to align per-node feature/attribute
+     *         output with the Draco feature-index attribute.
      */
-    public boolean writeNodeGeometry(Path layerDir, SceneNode node) throws IOException {
+    public List<Long> writeNodeGeometry(Path layerDir, SceneNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
 
@@ -81,47 +82,17 @@ public class I3SGeometryEncoder {
         double centerY = mbs != null ? mbs.getCenterY() : 0;
         double centerZ = mbs != null ? mbs.getCenterZ() : 0;
 
-        // Weld vertex positions using spatial hash grid — O(N) instead of O(N²).
-        // UV-aware: vertices with different UVs are NOT welded (texture seam preservation).
-        float[][] weldedPositions = VertexWelder.weld(mesh, centerX, centerY, centerZ);
-
-        // Filter out degenerate triangles (welding may collapse vertices)
-        List<int[]> allTriangles = mesh.getTriangles();
-        List<Long> triFeatureIds = mesh.getFeatureIds();
-        List<Integer> validTriIndices = new ArrayList<>();
-        int vi = 0;
-        for (int t = 0; t < allTriangles.size(); t++) {
-            float[] p0 = weldedPositions[vi], p1 = weldedPositions[vi + 1], p2 = weldedPositions[vi + 2];
-            if (!VertexWelder.positionsEqual(p0, p1) && !VertexWelder.positionsEqual(p0, p2) && !VertexWelder.positionsEqual(p1, p2)) {
-                validTriIndices.add(t);
-            }
-            vi += 3;
-        }
-
-        int vertexCount = validTriIndices.size() * 3;
-        node.setOutputVertexCount(vertexCount);
-
-        // Empty after welding/degenerate filtering — bail out. The Drako encoder
-        // is undefined on zero-point / zero-face meshes, and an empty node must
-        // not appear as a mesh node in the output.
-        if (vertexCount == 0) {
+        VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(mesh, centerX, centerY, centerZ);
+        node.setOutputVertexCount(weld.vertexCount());
+        if (weld.isEmpty()) {
             node.setMesh(null);
-            return false;
+            return null;
         }
 
-        // Compute face ranges from valid triangles
-        List<int[]> faceRanges = new ArrayList<>();
-        int start = 0;
-        long currentId = triFeatureIds.get(validTriIndices.get(0));
-        for (int i = 1; i < validTriIndices.size(); i++) {
-            long id = triFeatureIds.get(validTriIndices.get(i));
-            if (id != currentId) {
-                faceRanges.add(new int[]{start, i - 1});
-                start = i;
-                currentId = id;
-            }
-        }
-        faceRanges.add(new int[]{start, validTriIndices.size() - 1});
+        int vertexCount = weld.vertexCount();
+        List<Integer> validTriIndices = weld.validTriIndices();
+        float[][] weldedPositions = weld.weldedPositions();
+        List<int[]> allTriangles = mesh.getTriangles();
 
         // Collect positions, ECEF normals (untextured only), and UVs (textured
         // only) into arrays for Draco encoding. For textured nodes CesiumJS
@@ -172,23 +143,9 @@ public class I3SGeometryEncoder {
         // Release source mesh — all needed data is now in output arrays
         node.setMesh(null);
 
-        // Compute per-vertex feature index (for Draco)
-        int[] vertexFeatureIndices = new int[vertexCount];
-        for (int f = 0; f < faceRanges.size(); f++) {
-            int[] range = faceRanges.get(f);
-            for (int t = range[0]; t <= range[1]; t++) {
-                vertexFeatureIndices[t * 3] = f;
-                vertexFeatureIndices[t * 3 + 1] = f;
-                vertexFeatureIndices[t * 3 + 2] = f;
-            }
-        }
+        int[] vertexFeatureIndices = weld.computeFeatureIndices();
 
         int numTriangles = validTriIndices.size();
-        // Release intermediate references no longer needed
-        weldedPositions = null;
-        allTriangles = null;
-        triFeatureIds = null;
-        validTriIndices = null;
 
         // Single-buffer layout for both untextured and textured nodes:
         // geometries/0 = Draco. CesiumJS selects it via the no-uv0 fallback path
@@ -196,7 +153,7 @@ public class I3SGeometryEncoder {
         // which finds "uv0" in compressedAttributes).
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
                 outUVs, vertexFeatureIndices, numTriangles);
-        return true;
+        return weld.rangeFeatureIds();
     }
 
     /**
