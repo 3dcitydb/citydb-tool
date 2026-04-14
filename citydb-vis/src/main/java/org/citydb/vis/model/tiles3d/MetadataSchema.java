@@ -14,24 +14,23 @@ import java.util.Map;
 
 @JSONType(alphabetic = false)
 public class MetadataSchema {
-    Map<String, MetadataClass> classes;
+    private Map<String, MetadataClass> classes;
 
     public static MetadataSchema of(List<AttrField> attrFields) {
         MetadataSchema schema = new MetadataSchema();
-        schema.classes = new LinkedHashMap<>();
 
-        MetadataClass featureClass = new MetadataClass();
-        featureClass.properties = new LinkedHashMap<>();
+        Map<String, MetadataProperty> properties = new LinkedHashMap<>();
         for (AttrField field : attrFields) {
             String type = switch (field.type()) {
                 case INT -> "INT32";
                 case DOUBLE -> "FLOAT64";
                 case STRING -> "STRING";
             };
-            featureClass.properties.put(field.name(), new MetadataProperty(type));
+            properties.put(field.name(), new MetadataProperty(type));
         }
 
-        schema.classes.put("feature", featureClass);
+        schema.classes = new LinkedHashMap<>();
+        schema.classes.put("feature", new MetadataClass(properties));
         return schema;
     }
 }

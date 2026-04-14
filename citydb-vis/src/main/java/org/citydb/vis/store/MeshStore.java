@@ -6,6 +6,7 @@
 package org.citydb.vis.store;
 
 import org.citydb.vis.geometry.TriangleMesh;
+import org.citydb.vis.util.FileHelper;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -33,7 +34,7 @@ class MeshStore implements Closeable {
     private long writePosition = 0;
 
     MeshStore(Path tempDir) throws IOException {
-        tempFile = Files.createTempFile(tempDir, "i3s-mesh-", ".bin");
+        tempFile = Files.createTempFile(tempDir, "vis-mesh-", ".bin");
         tempFile.toFile().deleteOnExit();
         channel = FileChannel.open(tempFile,
                 StandardOpenOption.READ,
@@ -63,12 +64,12 @@ class MeshStore implements Closeable {
      */
     TriangleMesh load(long handle) throws IOException {
         ByteBuffer header = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
-        readFully(header, handle);
+        FileHelper.readFully(channel, header, handle);
         header.flip();
         int dataSize = header.getInt();
 
         ByteBuffer buf = ByteBuffer.allocate(dataSize).order(ByteOrder.LITTLE_ENDIAN);
-        readFully(buf, handle + 4);
+        FileHelper.readFully(channel, buf, handle + 4);
         buf.flip();
 
         return deserialize(buf);
@@ -195,15 +196,4 @@ class MeshStore implements Closeable {
         return mesh;
     }
 
-    private void readFully(ByteBuffer buf, long startPosition) throws IOException {
-        int totalRead = 0;
-        int needed = buf.remaining();
-        while (totalRead < needed) {
-            int read = channel.read(buf, startPosition + totalRead);
-            if (read < 0) {
-                throw new IOException("Unexpected end of mesh store file");
-            }
-            totalRead += read;
-        }
-    }
 }

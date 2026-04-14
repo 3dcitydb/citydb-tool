@@ -6,7 +6,7 @@
 package org.citydb.vis.scene;
 
 /**
- * Represents an I3S Minimum Bounding Sphere (MBS).
+ * Represents a Minimum Bounding Sphere (MBS).
  * Format: [centerX (lon), centerY (lat), centerZ (altitude m), radius (m)]
  * <p>
  * For EPSG:4326 the center is in (longitude, latitude, altitude) but the
