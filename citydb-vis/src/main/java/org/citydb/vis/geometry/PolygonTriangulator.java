@@ -311,7 +311,7 @@ public class PolygonTriangulator {
         List<float[]> result = new ArrayList<>(texCoords.size());
         for (TextureCoordinate tc : texCoords) {
             // CityGML: T=0 at bottom (OGC convention).
-            // I3S/glTF: V=0 at top. Flip V axis.
+            // glTF (I3S / 3D Tiles): V=0 at top. Flip V axis.
             result.add(new float[]{tc.getS(), 1.0f - tc.getT()});
         }
         return result;

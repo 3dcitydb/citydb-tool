@@ -5,6 +5,8 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.FileHelper;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -90,40 +92,49 @@ public class PartitionedEntryStore implements Closeable {
         }
 
         // --- Create output file ---
-        Path tempFile = Files.createTempFile(tempDir, "i3s-partitioned-", ".bin");
+        Path tempFile = Files.createTempFile(tempDir, "vis-partitioned-", ".bin");
         tempFile.toFile().deleteOnExit();
         FileChannel channel = FileChannel.open(tempFile,
                 StandardOpenOption.READ, StandardOpenOption.WRITE);
 
         // --- Pass 2: scatter ---
-        ByteBuffer recordBuf = ByteBuffer.allocate(SpatialEntryStore.RECORD_SIZE)
-                .order(ByteOrder.LITTLE_ENDIAN);
-        it = source.iterator();
-        while (it.hasNext()) {
-            SpatialEntry e = it.next();
-            long cellKey = cellKey(e, extent, gridDim, cellWidth, cellHeight);
-            long[] posHolder = writePositions.get(cellKey);
-            long pos = posHolder[0];
+        try {
+            ByteBuffer recordBuf = ByteBuffer.allocate(SpatialEntryStore.RECORD_SIZE)
+                    .order(ByteOrder.LITTLE_ENDIAN);
+            it = source.iterator();
+            while (it.hasNext()) {
+                SpatialEntry e = it.next();
+                long cellKey = cellKey(e, extent, gridDim, cellWidth, cellHeight);
+                long[] posHolder = writePositions.get(cellKey);
+                long pos = posHolder[0];
 
-            recordBuf.clear();
-            recordBuf.putLong(e.id());
-            recordBuf.putDouble(e.centerX());
-            recordBuf.putDouble(e.centerY());
-            double[] bbox = e.bbox();
-            for (int i = 0; i < 6; i++) {
-                recordBuf.putDouble(bbox[i]);
-            }
-            recordBuf.putLong(e.meshHandle());
-            recordBuf.putLong(e.attrOffset());
-            recordBuf.flip();
+                recordBuf.clear();
+                recordBuf.putLong(e.id());
+                recordBuf.putDouble(e.centerX());
+                recordBuf.putDouble(e.centerY());
+                double[] bbox = e.bbox();
+                for (int i = 0; i < 6; i++) {
+                    recordBuf.putDouble(bbox[i]);
+                }
+                recordBuf.putLong(e.meshHandle());
+                recordBuf.putLong(e.attrOffset());
+                recordBuf.flip();
 
-            while (recordBuf.hasRemaining()) {
-                pos += channel.write(recordBuf, pos);
+                while (recordBuf.hasRemaining()) {
+                    pos += channel.write(recordBuf, pos);
+                }
+                posHolder[0] = pos;
             }
-            posHolder[0] = pos;
+
+            return new PartitionedEntryStore(tempFile, channel, cellIndex);
+        } catch (IOException e) {
+            try {
+                channel.close();
+            } catch (IOException suppressed) {
+                e.addSuppressed(suppressed);
+            }
+            throw e;
         }
-
-        return new PartitionedEntryStore(tempFile, channel, cellIndex);
     }
 
     /**
@@ -144,7 +155,7 @@ public class PartitionedEntryStore implements Closeable {
 
         int bytes = seg.count * SpatialEntryStore.RECORD_SIZE;
         ByteBuffer buf = ByteBuffer.allocate(bytes).order(ByteOrder.LITTLE_ENDIAN);
-        readFully(buf, seg.fileOffset);
+        FileHelper.readFully(channel, buf, seg.fileOffset);
         buf.flip();
 
         List<SpatialEntry> result = new ArrayList<>(seg.count);
@@ -180,15 +191,4 @@ public class PartitionedEntryStore implements Closeable {
         return (long) gy * gridDim + gx;
     }
 
-    private void readFully(ByteBuffer buf, long startPosition) throws IOException {
-        int totalRead = 0;
-        int needed = buf.remaining();
-        while (totalRead < needed) {
-            int read = channel.read(buf, startPosition + totalRead);
-            if (read < 0) {
-                throw new IOException("Unexpected end of partitioned entry store file");
-            }
-            totalRead += read;
-        }
-    }
 }
