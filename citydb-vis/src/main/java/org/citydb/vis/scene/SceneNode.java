@@ -25,9 +25,10 @@ public class SceneNode {
     private final List<SceneNode> children;
     private TriangleMesh mesh;
     private int featureCount;
-    private double lodThreshold;
+    private int lodThreshold;
     private int outputVertexCount;
     private int textureId = -1;
+    private int texelCountHint;
 
     public SceneNode(int index, int level) {
         this.index = index;
@@ -94,11 +95,11 @@ public class SceneNode {
         return this;
     }
 
-    public double getLodThreshold() {
+    public int getLodThreshold() {
         return lodThreshold;
     }
 
-    public SceneNode setLodThreshold(double lodThreshold) {
+    public SceneNode setLodThreshold(int lodThreshold) {
         this.lodThreshold = lodThreshold;
         return this;
     }
@@ -119,6 +120,15 @@ public class SceneNode {
 
     public boolean hasTexture() {
         return textureId >= 0;
+    }
+
+    public int getTexelCountHint() {
+        return texelCountHint;
+    }
+
+    public SceneNode setTexelCountHint(int texelCountHint) {
+        this.texelCountHint = texelCountHint;
+        return this;
     }
 
     public void updateBoundingVolume() {
