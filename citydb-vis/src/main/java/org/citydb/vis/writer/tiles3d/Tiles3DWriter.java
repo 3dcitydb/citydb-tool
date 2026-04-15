@@ -16,6 +16,7 @@ import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.util.FileHelper;
+import org.citydb.vis.util.GeoTransform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +47,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * provides sufficient float32 precision for datasets up to ~100 km extent.
  */
 public class Tiles3DWriter extends VisWriter {
-    /** WGS84 semi-major axis (meters). */
-    private static final double WGS84_A = 6_378_137.0;
-    /** WGS84 first eccentricity squared. */
-    private static final double WGS84_E2 = 0.00669437999014;
-
     private final Logger logger = LoggerFactory.getLogger(Tiles3DWriter.class);
     private final GlbEncoder glbEncoder;
     private final TilesetSerializer tilesetSerializer;
@@ -106,8 +102,8 @@ public class Tiles3DWriter extends VisWriter {
         }
 
         // Write root tileset.json
-        double[] transform = computeEnuToEcefTransform(datasetCenter);
-        tilesetSerializer.writeRootTileset(outputDir, globalRoot, effectiveMeshIndices,
+        double[] transform = GeoTransform.enuToEcefMatrix(datasetCenter);
+        tilesetSerializer.writeRootTileset(outputDir, globalRoot,
                 extent, attrFields, transform);
 
         logger.info("3D Tiles output: {} tiles, {} sub-tileset files, tileset.json written.",
@@ -142,39 +138,6 @@ public class Tiles3DWriter extends VisWriter {
 
         Files.write(tilesDir.resolve(node.getIndex() + ".glb"), glb);
         return true;
-    }
-
-    // ---- ENU-to-ECEF transform ------------------------------------------
-
-    /**
-     * Compute the 4x4 ENU-to-ECEF transform matrix at the given geographic
-     * center, in column-major order (as required by 3D Tiles / glTF).
-     */
-    static double[] computeEnuToEcefTransform(double[] center) {
-        double lonRad = Math.toRadians(center[0]);
-        double latRad = Math.toRadians(center[1]);
-        double alt = center[2];
-
-        double sinLon = Math.sin(lonRad);
-        double cosLon = Math.cos(lonRad);
-        double sinLat = Math.sin(latRad);
-        double cosLat = Math.cos(latRad);
-
-        // Prime vertical radius of curvature
-        double N = WGS84_A / Math.sqrt(1 - WGS84_E2 * sinLat * sinLat);
-
-        // ECEF position
-        double X = (N + alt) * cosLat * cosLon;
-        double Y = (N + alt) * cosLat * sinLon;
-        double Z = (N * (1 - WGS84_E2) + alt) * sinLat;
-
-        // Column-major 4x4: columns are East, North, Up, Translation
-        return new double[]{
-                -sinLon, cosLon, 0, 0,
-                -sinLat * cosLon, -sinLat * sinLon, cosLat, 0,
-                cosLat * cosLon, cosLat * sinLon, sinLat, 0,
-                X, Y, Z, 1
-        };
     }
 
 }

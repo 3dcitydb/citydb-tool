@@ -5,6 +5,8 @@
 
 package org.citydb.vis.scene;
 
+import org.citydb.vis.util.GeoTransform;
+
 /**
  * Axis-aligned bounding volume in EPSG:4326 geographic coordinates.
  * <p>
@@ -18,8 +20,6 @@ package org.citydb.vis.scene;
  * - 1° longitude ≈ 111,320 * cos(latitude) m
  */
 public class BoundingVolume {
-    private static final double METERS_PER_DEGREE_LAT = 111_320.0;
-
     // Source AABB (degrees for X/Y, meters for Z)
     private final double minX, minY, minZ;
     private final double maxX, maxY, maxZ;
@@ -54,8 +54,8 @@ public class BoundingVolume {
         double cy = (minY + maxY) / 2;
         double cz = (minZ + maxZ) / 2;
 
-        double dxMeters = (maxX - minX) * METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(cy));
-        double dyMeters = (maxY - minY) * METERS_PER_DEGREE_LAT;
+        double dxMeters = (maxX - minX) * GeoTransform.metersPerDegreeLon(cy);
+        double dyMeters = (maxY - minY) * GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
         double dzMeters = maxZ - minZ;
 
         double radius = Math.sqrt(dxMeters * dxMeters + dyMeters * dyMeters + dzMeters * dzMeters) / 2;
@@ -97,8 +97,8 @@ public class BoundingVolume {
      * half-extents converted from degrees to meters.
      */
     public double[] toObbHalfSize() {
-        double halfX = (maxX - minX) / 2 * METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(centerY));
-        double halfY = (maxY - minY) / 2 * METERS_PER_DEGREE_LAT;
+        double halfX = (maxX - minX) / 2 * GeoTransform.metersPerDegreeLon(centerY);
+        double halfY = (maxY - minY) / 2 * GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
         double halfZ = (maxZ - minZ) / 2;
         return new double[]{halfX, halfY, halfZ};
     }

@@ -11,6 +11,7 @@ import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Polygon;
 import org.citydb.model.walker.ModelWalker;
+import org.citydb.vis.util.GeoTransform;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,7 +25,6 @@ import java.util.Map;
  */
 public class PolygonTriangulator {
     private static final double TOLERANCE = 1e-7;
-    private static final double METERS_PER_DEGREE_LAT = 111_320.0;
 
     private record RingData(List<double[]> positions, List<float[]> uvs) {}
 
@@ -75,8 +75,8 @@ public class PolygonTriangulator {
             centroidLat += c.getY();
         }
         centroidLat /= outerPoints.size();
-        double scaleX = METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(centroidLat));
-        double scaleY = METERS_PER_DEGREE_LAT;
+        double scaleX = GeoTransform.metersPerDegreeLon(centroidLat);
+        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
 
         // Build original coordinate ring and parallel UV ring (degrees/meters)
         List<double[]> ring;
