@@ -5,10 +5,11 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.BufferUtils;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -115,8 +116,7 @@ public class SpatialEntryStore implements Closeable {
         }
 
         synchronized void store(SpatialEntry entry) throws IOException {
-            ByteBuffer buf = ByteBuffer.allocate(RECORD_SIZE)
-                    .order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer buf = BufferUtils.allocateLittleEndian(RECORD_SIZE);
             buf.putLong(entry.id());
             buf.putDouble(entry.centerX());
             buf.putDouble(entry.centerY());
@@ -182,8 +182,7 @@ public class SpatialEntryStore implements Closeable {
         private int bufferIndex = 0;
 
         ShardIterator() {
-            buf = ByteBuffer.allocate(RECORD_SIZE * CHUNK_ENTRIES)
-                    .order(ByteOrder.LITTLE_ENDIAN);
+            buf = BufferUtils.allocateLittleEndian(RECORD_SIZE * CHUNK_ENTRIES);
             loadNextChunk();
         }
 

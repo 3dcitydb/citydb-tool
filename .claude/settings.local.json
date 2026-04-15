@@ -195,7 +195,11 @@
       "Bash(\"C:/Program Files/ArcGIS/Pro/bin/Python/envs/arcgispro-py3/python.exe\" /tmp/describe3.py)",
       "Bash(gunzip -c nodepages/0.json.gz)",
       "Bash(./gradlew :citydb-vis:build -x test)",
-      "Bash(./gradlew :citydb-vis:javadoc)"
+      "Bash(./gradlew :citydb-vis:javadoc)",
+      "Bash(./gradlew :citydb-vis:compileJava :citydb-vis:compileTestJava)",
+      "Bash(cat)",
+      "Bash(chmod +x /tmp/check_imports.py)",
+      "Bash(xargs -I {} bash -c \"git show HEAD:{} | grep -o 'class \\\\|public \\\\|private ' | wc -l > /dev/null && echo {}\")"
     ]
   }
 }
