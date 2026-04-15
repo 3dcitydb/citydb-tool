@@ -5,12 +5,12 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.FileHelper;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -99,8 +99,7 @@ public class PartitionedEntryStore implements Closeable {
 
         // --- Pass 2: scatter ---
         try {
-            ByteBuffer recordBuf = ByteBuffer.allocate(SpatialEntryStore.RECORD_SIZE)
-                    .order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer recordBuf = BufferUtils.allocateLittleEndian(SpatialEntryStore.RECORD_SIZE);
             it = source.iterator();
             while (it.hasNext()) {
                 SpatialEntry e = it.next();
@@ -154,7 +153,7 @@ public class PartitionedEntryStore implements Closeable {
         }
 
         int bytes = seg.count * SpatialEntryStore.RECORD_SIZE;
-        ByteBuffer buf = ByteBuffer.allocate(bytes).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(bytes);
         FileHelper.readFully(channel, buf, seg.fileOffset);
         buf.flip();
 

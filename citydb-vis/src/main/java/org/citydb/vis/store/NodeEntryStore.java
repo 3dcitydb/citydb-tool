@@ -5,12 +5,12 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.FileHelper;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -67,8 +67,7 @@ public class NodeEntryStore implements Closeable {
         long startPos = writePosition;
         int count = entries.size();
 
-        ByteBuffer buf = ByteBuffer.allocate(count * NODE_ENTRY_SIZE)
-                .order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(count * NODE_ENTRY_SIZE);
         for (NodeEntry e : entries) {
             buf.putLong(e.id());
             buf.putLong(e.meshHandle());
@@ -97,8 +96,7 @@ public class NodeEntryStore implements Closeable {
         int count = nodeCounts[nodeIndex];
         long offset = nodeOffsets[nodeIndex];
 
-        ByteBuffer buf = ByteBuffer.allocate(count * NODE_ENTRY_SIZE)
-                .order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(count * NODE_ENTRY_SIZE);
         FileHelper.readFully(channel, buf, offset);
         buf.flip();
 
