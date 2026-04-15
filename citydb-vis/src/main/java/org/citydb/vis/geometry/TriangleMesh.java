@@ -5,7 +5,10 @@
 
 package org.citydb.vis.geometry;
 
+import org.citydb.vis.util.BoundingBoxUtils;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -29,19 +32,19 @@ public class TriangleMesh {
     }
 
     public List<double[]> getPositions() {
-        return positions;
+        return Collections.unmodifiableList(positions);
     }
 
     public List<float[]> getNormals() {
-        return normals;
+        return Collections.unmodifiableList(normals);
     }
 
     public List<int[]> getTriangles() {
-        return triangles;
+        return Collections.unmodifiableList(triangles);
     }
 
     public List<float[]> getTexCoords() {
-        return texCoords;
+        return Collections.unmodifiableList(texCoords);
     }
 
     public boolean hasTexCoords() {
@@ -54,7 +57,7 @@ public class TriangleMesh {
     }
 
     public List<Long> getFeatureIds() {
-        return featureIds;
+        return Collections.unmodifiableList(featureIds);
     }
 
     public int getVertexCount() {
@@ -105,7 +108,7 @@ public class TriangleMesh {
     }
 
     public List<Integer> getTriangleTextureIds() {
-        return triangleTextureIds;
+        return Collections.unmodifiableList(triangleTextureIds);
     }
 
     public void merge(TriangleMesh other) {
@@ -234,6 +237,9 @@ public class TriangleMesh {
 
                 // New vertex at vi's position with the split triangle's normal.
                 // Interpolate UV along the edge at the parametric position t.
+                // Assumes per-face normals (all edge vertices share the same
+                // normal, as emitted by PolygonTriangulator). If upstream ever
+                // produces per-vertex smooth normals, this should interpolate.
                 float[] triNormal = normals.get(ei1);
                 double[] viPos = positions.get(vi);
                 int newVi;
@@ -338,7 +344,9 @@ public class TriangleMesh {
 
     /**
      * Hash a vertex position to a 64-bit value using exact double bits.
-     * Two positions hash equal iff their coordinates are bit-identical.
+     * Bit-identical positions always hash equal; collisions are possible in
+     * principle but statistically irrelevant for realistic coordinate data
+     * (birthday-paradox threshold ~4 × 10⁹ distinct vertices).
      */
     private static long vertexHash(double[] pos) {
         long h = Double.doubleToLongBits(pos[0]);
@@ -352,19 +360,11 @@ public class TriangleMesh {
             return new double[]{0, 0, 0, 0, 0, 0};
         }
 
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
-        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
-
+        double[] acc = BoundingBoxUtils.emptyAabb();
         for (double[] pos : positions) {
-            if (pos[0] < minX) minX = pos[0];
-            if (pos[1] < minY) minY = pos[1];
-            if (pos[2] < minZ) minZ = pos[2];
-            if (pos[0] > maxX) maxX = pos[0];
-            if (pos[1] > maxY) maxY = pos[1];
-            if (pos[2] > maxZ) maxZ = pos[2];
+            BoundingBoxUtils.expandToPoint(acc, pos[0], pos[1], pos[2]);
         }
-
-        return new double[]{minX, minY, minZ, maxX, maxY, maxZ};
+        return acc;
     }
 
     public double[] computeCenter() {
