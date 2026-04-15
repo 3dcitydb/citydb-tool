@@ -95,10 +95,11 @@ public class I3SWriter extends VisWriter {
         // Set I3S LOD thresholds on the tree
         setLodThresholds(allNodes);
 
+        boolean slpk = ((I3SFormatOptions) getFormatOptions()).isSlpk();
         SceneLayer sceneLayer = buildSceneLayer(extent);
-        writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures);
+        writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures, slpk);
 
-        if (((I3SFormatOptions) getFormatOptions()).isSlpk()) {
+        if (slpk) {
             packageAsSlpk();
         }
     }
@@ -145,7 +146,8 @@ public class I3SWriter extends VisWriter {
     private void writeI3SFolder(SceneLayer sceneLayer, List<SceneNode> allNodes,
                                 List<AttrField> attrFields,
                                 Set<Integer> meshNodeIndices,
-                                boolean hasTextures) throws IOException {
+                                boolean hasTextures,
+                                boolean includeObb) throws IOException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
         Files.createDirectories(layerDir);
@@ -159,7 +161,8 @@ public class I3SWriter extends VisWriter {
                 node -> writeNodeOutput(node, layerDir, attrFields));
 
         // Node pages AFTER geometry so vertex counts are accurate
-        jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices, hasTextures);
+        jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices,
+                hasTextures, includeObb);
     }
 
     /**

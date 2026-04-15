@@ -11,8 +11,10 @@ import org.citydb.vis.util.GeoTransform;
  * Axis-aligned bounding volume in EPSG:4326 geographic coordinates.
  * <p>
  * Stores the source AABB (min/max in degrees/meters) and derives both
- * MBS (Minimum Bounding Sphere) for CesiumJS and OBB (Oriented Bounding
- * Box) for ArcGIS Pro on demand.
+ * MBS (Minimum Bounding Sphere) and OBB (Oriented Bounding Box) on demand.
+ * OBB is emitted only for SLPK/ArcGIS output (required by I3S 1.7 schema);
+ * plain folder output for CesiumJS uses MBS only, because CesiumJS's I3S
+ * OBB handling mis-culls buildings at some camera angles.
  * <p>
  * For EPSG:4326 the center is in (longitude, latitude, altitude) but
  * sizes and radii are in meters. Degree-to-meter conversion uses:
@@ -72,7 +74,7 @@ public class BoundingVolume {
     public double getMaxY() { return maxY; }
     public double getMaxZ() { return maxZ; }
 
-    // ---- MBS accessors (CesiumJS / I3S) ------------------------------------
+    // ---- MBS accessors -----------------------------------------------------
 
     public double getCenterX() { return centerX; }
     public double getCenterY() { return centerY; }
@@ -84,7 +86,7 @@ public class BoundingVolume {
         return new double[]{centerX, centerY, centerZ, radius};
     }
 
-    // ---- OBB accessors (ArcGIS / I3S) --------------------------------------
+    // ---- OBB accessors -----------------------------------------------------
 
     /** OBB center: [lon°, lat°, alt m]. */
     public double[] toObbCenter() {
@@ -92,9 +94,9 @@ public class BoundingVolume {
     }
 
     /**
-     * OBB half-size in meters along each axis.
-     * Since the bounding box is axis-aligned, this is simply the AABB
-     * half-extents converted from degrees to meters.
+     * OBB half-size in meters along the OBB's local axes (east, north, up).
+     * Since the box is axis-aligned in geographic coordinates, half-extents
+     * are simply the AABB half-widths converted from degrees to meters.
      */
     public double[] toObbHalfSize() {
         double halfX = (maxX - minX) / 2 * GeoTransform.metersPerDegreeLon(centerY);
@@ -103,7 +105,7 @@ public class BoundingVolume {
         return new double[]{halfX, halfY, halfZ};
     }
 
-    /** OBB quaternion: identity (no rotation) since the box is axis-aligned. */
+    /** OBB quaternion: identity — the box is axis-aligned with local ENU. */
     public double[] toObbQuaternion() {
         return new double[]{0, 0, 0, 1};
     }
