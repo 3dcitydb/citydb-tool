@@ -42,6 +42,7 @@ import org.citydb.vis.store.ShardedMeshStore;
 import org.citydb.vis.store.SpatialEntry;
 import org.citydb.vis.store.SpatialEntryStore;
 import org.citydb.vis.store.TextureStore;
+import org.citydb.vis.util.GeoTransform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,7 +90,8 @@ import java.util.function.Supplier;
  * <p>
  * <b>Memory profile (100M features, default settings):</b>
  * <ul>
- *   <li>Heap: ~0 during write phase; ~500 MB peak during close phase
+ *   <li>Heap: bounded per-feature during write phase (triangulator + mesh
+ *       scoped to each async task); ~500 MB peak during close phase
  *       (SceneNode tree + index arrays). All entry data is streamed from
  *       disk per-cell and flushed to {@link NodeEntryStore} immediately
  *       after quadtree construction.</li>
@@ -498,8 +500,8 @@ public abstract class VisWriter implements FeatureWriter {
         // Post-process: resolve T-junction cracks and remove duplicate triangles
         if (!mesh.isEmpty()) {
             double[] center = mesh.computeCenter();
-            double scaleX = 111_320.0 * Math.cos(Math.toRadians(center[1]));
-            double scaleY = 111_320.0;
+            double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
+            double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
             mesh.resolveTJunctions(scaleX, scaleY, 0.02);
             mesh.removeDuplicateTriangles();
         }
@@ -598,7 +600,7 @@ public abstract class VisWriter implements FeatureWriter {
                 merged.setHasTexCoords(false);
             }
         }
-        node.setTextureId(atlas != null ? 0 : -1);
+        node.setTextured(atlas != null);
 
         return new PreparedNode(entries, merged, atlas);
     }

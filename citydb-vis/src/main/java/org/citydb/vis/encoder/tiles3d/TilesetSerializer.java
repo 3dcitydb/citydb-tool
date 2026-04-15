@@ -45,26 +45,23 @@ public class TilesetSerializer {
     // ---- Root tileset ---------------------------------------------------
 
     public void writeRootTileset(Path outputDir, SceneNode globalRoot,
-                                 Set<Integer> meshNodeIndices,
                                  double[] extent, List<AttrField> attrFields,
                                  double[] transform) throws IOException {
         // With ADD refinement, all tiles use consistent R/16 geometric
         // errors — no need for "always refine" overrides. ADD never causes
         // flickering on content-less nodes, and consistent errors prevent
         // shallow leaf nodes from rendering prematurely at far distances.
+        List<SceneNode> cellRoots = globalRoot.getChildren();
+        List<CellReference> cellRefs = new ArrayList<>(cellRoots.size());
         double maxGeo = 0;
-        for (SceneNode cellRoot : globalRoot.getChildren()) {
+        for (int i = 0; i < cellRoots.size(); i++) {
+            SceneNode cellRoot = cellRoots.get(i);
             double geo = TileNode.computeGeometricError(cellRoot);
             maxGeo = Math.max(maxGeo, geo);
-        }
-
-        List<CellReference> cellRefs = new ArrayList<>();
-        List<SceneNode> cellRoots = globalRoot.getChildren();
-        for (int i = 0; i < cellRoots.size(); i++) {
-            BoundingVolume bv = cellRoots.get(i).getBoundingVolume();
+            BoundingVolume bv = cellRoot.getBoundingVolume();
             cellRefs.add(new CellReference(
                     TileBoundingVolume.fromBoundingVolume(bv),
-                    TileNode.computeGeometricError(cellRoots.get(i)),
+                    geo,
                     "subtrees/" + i + ".json"));
         }
 
@@ -85,7 +82,7 @@ public class TilesetSerializer {
         Path subtreesDir = subtreeFile.getParent();
         double rootGeo = TileNode.computeGeometricError(cellRoot);
 
-        int[] nodeCount = {0};
+        AtomicInteger nodeCount = new AtomicInteger();
         TileNode rootTile = buildTileNode(cellRoot, meshNodeIndices,
                 subtreeSizes, subtreesDir, subtreeCounter, nodeCount,
                 rootGeo);
@@ -113,15 +110,15 @@ public class TilesetSerializer {
                                           Map<Integer, Integer> subtreeSizes,
                                           Path subtreesDir,
                                           AtomicInteger subtreeCounter,
-                                          int[] nodeCount,
-                                          double overrideGeo) {
-        nodeCount[0]++;
+                                          AtomicInteger nodeCount,
+                                          double overrideGeo) throws IOException {
+        nodeCount.incrementAndGet();
         TileNode tile = TileNode.of(node, meshNodeIndices, overrideGeo);
 
         for (SceneNode child : node.getChildren()) {
             int childSize = subtreeSizes.getOrDefault(child.getIndex(), 1);
 
-            if (nodeCount[0] + childSize > MAX_NODES_PER_SUBTILESET) {
+            if (nodeCount.get() + childSize > MAX_NODES_PER_SUBTILESET) {
                 // Split: write child's subtree as a separate external tileset
                 int splitIdx = subtreeCounter.getAndIncrement();
                 tile.addChild(TileNode.ofExternalRef(child, splitIdx + ".json"));
@@ -142,10 +139,10 @@ public class TilesetSerializer {
                                                 Map<Integer, Integer> subtreeSizes,
                                                 Path subtreesDir,
                                                 AtomicInteger subtreeCounter,
-                                                int fileIndex) {
+                                                int fileIndex) throws IOException {
         double rootGeo = TileNode.computeGeometricError(root);
 
-        int[] nodeCount = {0};
+        AtomicInteger nodeCount = new AtomicInteger();
         TileNode rootTile = buildTileNode(root, meshNodeIndices,
                 subtreeSizes, subtreesDir, subtreeCounter, nodeCount,
                 rootGeo);
@@ -153,12 +150,7 @@ public class TilesetSerializer {
         TilesetDescriptor descriptor = TilesetDescriptor.ofSubtileset(
                 rootGeo, rootTile);
 
-        Path file = subtreesDir.resolve(fileIndex + ".json");
-        try {
-            JsonHelper.writePojo(file, descriptor);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to write external subtileset: " + file, e);
-        }
+        JsonHelper.writePojo(subtreesDir.resolve(fileIndex + ".json"), descriptor);
     }
 
 }

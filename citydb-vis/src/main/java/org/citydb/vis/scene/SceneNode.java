@@ -27,7 +27,7 @@ public class SceneNode {
     private int featureCount;
     private int lodThreshold;
     private int outputVertexCount;
-    private int textureId = -1;
+    private boolean textured;
     private int texelCountHint;
 
     public SceneNode(int index, int level) {
@@ -113,13 +113,13 @@ public class SceneNode {
         return this;
     }
 
-    public SceneNode setTextureId(int textureId) {
-        this.textureId = textureId;
+    public SceneNode setTextured(boolean textured) {
+        this.textured = textured;
         return this;
     }
 
     public boolean hasTexture() {
-        return textureId >= 0;
+        return textured;
     }
 
     public int getTexelCountHint() {
