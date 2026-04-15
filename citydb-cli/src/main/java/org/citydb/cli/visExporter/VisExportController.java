@@ -17,6 +17,7 @@ import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.cli.visExporter.options.QueryOptions;
+import org.citydb.cli.visExporter.options.SceneOptions;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
@@ -34,50 +35,63 @@ import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.query.Query;
+import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
+import org.citydb.vis.writer.VisFormatOptions;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class VisExportController implements Command {
     @CommandLine.Option(names = {"-o", "--output"}, required = true, paramLabel = "<file>",
             description = "Name of the output file.")
-    private Path outputFile;
+    protected Path outputFile;
 
     @CommandLine.Option(names = "--fail-fast",
             description = "Fail fast on errors.")
-    private Boolean failFast;
+    protected Boolean failFast;
 
     @CommandLine.Option(names = "--temp-dir", paramLabel = "<dir>",
             description = "Store temporary files in this directory.")
-    private Path tempDirectory;
+    protected Path tempDirectory;
+
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Scene options:%n")
+    protected SceneOptions sceneOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
-    private ThreadsOptions threadsOptions;
+    protected ThreadsOptions threadsOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Query and filter options:%n")
-    private QueryOptions queryOptions;
+    protected QueryOptions queryOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Time-based feature history options:%n")
-    private ValidityOptions validityOptions;
+    protected ValidityOptions validityOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
-    private ConnectionOptions connectionOptions;
+    protected ConnectionOptions connectionOptions;
 
     @ConfigOption
     private Config config;
+
+    @CommandLine.Spec
+    protected CommandLine.Model.CommandSpec commandSpec;
 
     protected final Logger logger = LoggerManager.getInstance().getLogger(VisExportController.class);
     protected final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
+
+    private static final int FEATURES_PER_TEXTURE_BUCKET = 1000;
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
 
@@ -88,6 +102,57 @@ public abstract class VisExportController implements Command {
                               DatabaseManager databaseManager) throws ExecutionException {
     }
 
+    /**
+     * Apply the shared scene CLI options to the given format options.
+     * Only values explicitly matched on the command line override the config.
+     */
+    protected void applySceneOptions(VisFormatOptions options) {
+        if (sceneOptions == null) {
+            return;
+        }
+        if (Command.hasMatchedOption("--max-features-per-node", commandSpec)) {
+            options.setMaxFeaturesPerNode(sceneOptions.getMaxFeaturesPerNode());
+        }
+        if (Command.hasMatchedOption("--max-tree-depth", commandSpec)) {
+            options.setMaxTreeDepth(sceneOptions.getMaxTreeDepth());
+        }
+        if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
+            options.setClampToGround(sceneOptions.isClampToGround());
+        }
+        if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
+            options.setTextureScale(sceneOptions.getTextureScale());
+        }
+    }
+
+    private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,
+                                         IOAdapterManager ioManager, IOAdapter ioAdapter) throws ExecutionException {
+        if (!exportOptions.getAppearanceOptions()
+                .map(AppearanceOptions::isExportAppearances)
+                .orElse(true)) {
+            return;
+        }
+
+        long featureCount;
+        try {
+            featureCount = QueryExecutor.builder(databaseManager.getAdapter())
+                    .build(getQuery(exportOptions))
+                    .countHits();
+        } catch (QueryBuildException | SQLException | IOException e) {
+            throw new ExecutionException("Failed to count features for texture-bucket sizing.", e);
+        }
+
+        int buckets = (int) ((featureCount + FEATURES_PER_TEXTURE_BUCKET - 1)
+                / FEATURES_PER_TEXTURE_BUCKET);
+        logger.debug("Sized texture buckets to {} for {} features.", buckets, featureCount);
+
+        String folder = ".tmp/" + ioManager.getFileFormat(ioAdapter).toLowerCase() + "-textures";
+        AppearanceOptions appearanceOptions = exportOptions.getAppearanceOptions()
+                .orElseGet(AppearanceOptions::new);
+        appearanceOptions.setNumberOfTextureBuckets(buckets);
+        appearanceOptions.setTextureOutputFolder(folder);
+        exportOptions.setAppearanceOptions(appearanceOptions);
+    }
+
     @Override
     public Integer call() throws ExecutionException {
         return doExport() ?
@@ -95,6 +160,18 @@ public abstract class VisExportController implements Command {
                 CommandLine.ExitCode.SOFTWARE;
     }
 
+    /**
+     * Orchestrates the visualization export pipeline:
+     * <ol>
+     *   <li>Resolve the format adapter, output file, and write/export options</li>
+     *   <li>Connect to the database and invoke format-specific {@link #initialize}</li>
+     *   <li>Stream features through the {@link Exporter} into the {@link FeatureWriter}</li>
+     *   <li>Log per-feature statistics and abort on the first fatal error</li>
+     * </ol>
+     * Feature writes run asynchronously; {@link #abort} ensures the loop stops on error.
+     *
+     * @return {@code true} on successful completion, {@code false} if aborted
+     */
     protected boolean doExport() throws ExecutionException {
         IOAdapterManager ioManager = helper.getIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
@@ -110,6 +187,7 @@ public abstract class VisExportController implements Command {
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        configureTextureBuckets(exportOptions, databaseManager, ioManager, ioAdapter);
         initialize(exportOptions, writeOptions, databaseManager);
 
         Query query = getQuery(exportOptions);
