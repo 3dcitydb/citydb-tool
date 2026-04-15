@@ -20,6 +20,8 @@ import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.util.BufferUtils;
+import org.citydb.vis.util.GeoTransform;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -47,11 +49,10 @@ import java.util.List;
  */
 public class I3SGeometryEncoder {
     /**
-     * Unique ID for the feature-index Draco attribute (used for metadata injection).
-     * Must match the attribute's actual index in the Draco file.
-     * - Without UV: POSITION(0), NORMAL(1), GENERIC(2) → uniqueId=2
-     * - With UV:    POSITION(0), TEX_COORD(1), GENERIC(2) → uniqueId=2
-     *   (Normal omitted from Draco when textured — CesiumJS generates normals)
+     * Unique ID for the feature-index Draco attribute. Set explicitly via
+     * {@link PointAttribute#setUniqueId} so the attribute can be referenced
+     * unambiguously in the injected per-attribute metadata section
+     * (independent of the attribute's position in the Draco stream).
      */
     private static final short FEATURE_INDEX_UID = 2;
     /** Draco header size: "DRACO" (5) + major (1) + minor (1) + type (1) + method (1) + flags (2) */
@@ -78,13 +79,13 @@ public class I3SGeometryEncoder {
         // clear the texture flag so node pages reference the correct geometry
         // definition (0=no uv0 vs 1=with uv0).
         if (!hasTexCoords) {
-            node.setTextureId(-1);
+            node.setTextured(false);
         }
 
         BoundingVolume mbs = node.getBoundingVolume();
-        double centerX = mbs != null ? mbs.getCenterX() : 0;
-        double centerY = mbs != null ? mbs.getCenterY() : 0;
-        double centerZ = mbs != null ? mbs.getCenterZ() : 0;
+        double centerX = mbs.getCenterX();
+        double centerY = mbs.getCenterY();
+        double centerZ = mbs.getCenterZ();
 
         VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(mesh, centerX, centerY, centerZ);
         node.setOutputVertexCount(weld.vertexCount());
@@ -204,7 +205,7 @@ public class I3SGeometryEncoder {
         int frBytes = featureCount * 8;
         int total = 8 + posBytes + normBytes + uvBytes + colorBytes + fidBytes + frBytes;
 
-        ByteBuffer buf = ByteBuffer.allocate(total).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(total);
         buf.putInt(vertexCount);
         buf.putInt(featureCount);
         for (float[] p : positions) {
@@ -266,24 +267,22 @@ public class I3SGeometryEncoder {
 
         // Draco uses uniform quantization for POSITION — the largest axis range
         // determines the grid.  Scale X/Y to meters so all axes share a comparable range.
-        double scaleX = 111_320.0 * Math.cos(Math.toRadians(centerLatDeg));
-        double scaleY = 111_320.0;
+        double scaleX = GeoTransform.metersPerDegreeLon(centerLatDeg);
+        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
 
         DracoMesh dracoMesh = new DracoMesh();
         dracoMesh.setNumPoints(numVertices);
         dracoMesh.setNumFaces(numTriangles);
 
-        // Position attribute — scale X/Y to meters, null out source entries
+        // Position attribute — scale X/Y to meters
         Vector3[] posVectors = new Vector3[numVertices];
         for (int i = 0; i < numVertices; i++) {
             posVectors[i] = new Vector3(
                     positions[i][0] * (float) scaleX,
                     positions[i][1] * (float) scaleY,
                     positions[i][2]);
-            positions[i] = null;
         }
         dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.POSITION, posVectors));
-        posVectors = null;
 
         // Include normal in Draco only for untextured nodes.
         // For textured nodes, CesiumJS generates normals from geometry (matching SF reference).
@@ -300,10 +299,8 @@ public class I3SGeometryEncoder {
             Vector2[] uvVectors = new Vector2[numVertices];
             for (int i = 0; i < numVertices; i++) {
                 uvVectors[i] = new Vector2(uvs[i][0], uvs[i][1]);
-                uvs[i] = null;
             }
             dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.TEX_COORD, uvVectors));
-            uvVectors = null;
         }
 
         // Feature-index attribute (GENERIC, INT32, 1 component per vertex).
@@ -427,7 +424,7 @@ public class I3SGeometryEncoder {
         byte[] featureIdsValLen = encodeVarint(featureIdsVal.length);
 
         // Header overhead fixed; feature-ids blob dominates size — allocate tight
-        ByteBuffer buf = ByteBuffer.allocate(256 + featureIdsVal.length + featureIdsValLen.length);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(256 + featureIdsVal.length + featureIdsValLen.length);
 
         // --- 2 attribute metadata entries ---
         buf.put(encodeVarint(2));
@@ -473,8 +470,7 @@ public class I3SGeometryEncoder {
      * resolution stays consistent with the OID field.
      */
     private static byte[] buildFeatureIdsValue(List<Long> rangeFeatureIds) {
-        ByteBuffer out = ByteBuffer.allocate(rangeFeatureIds.size() * 4)
-                .order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer out = BufferUtils.allocateLittleEndian(rangeFeatureIds.size() * 4);
         for (long id : rangeFeatureIds) {
             out.putInt((int) id);
         }

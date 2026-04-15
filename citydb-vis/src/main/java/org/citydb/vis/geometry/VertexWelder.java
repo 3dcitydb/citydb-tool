@@ -5,6 +5,8 @@
 
 package org.citydb.vis.geometry;
 
+import org.citydb.vis.util.GeoTransform;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +24,6 @@ import java.util.Map;
  * seams where adjacent polygons meet with different UVs.
  */
 public class VertexWelder {
-    private static final double METERS_PER_DEGREE_LAT = 111_320.0;
 
     /**
      * Weld vertex positions using a spatial hash grid. Returns a flat array
@@ -37,8 +38,8 @@ public class VertexWelder {
      */
     public static float[][] weld(TriangleMesh mesh, double centerX,
                                  double centerY, double centerZ) {
-        double scaleX = METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(centerY));
-        double scaleY = METERS_PER_DEGREE_LAT;
+        double scaleX = GeoTransform.metersPerDegreeLon(centerY);
+        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
         float weldTolerance = 0.02f; // 2 cm
         float weldTolerance2 = weldTolerance * weldTolerance;
         boolean hasUV = mesh.hasTexCoords();
