@@ -33,19 +33,11 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Encodes I3S node meshes into the two geometryBuffers declared by
- * {@link org.citydb.vis.model.i3s.GeometryDefinition}, mirroring Esri's
- * NYC reference layout. Handles vertex welding, degenerate triangle
- * removal, and ENU-to-ECEF normal transformation.
- * <ul>
- *   <li>{@code geometries/0} — uncompressed SoA buffer (position + normal +
- *       uv0 + color per vertex, featureId + faceRange per feature). Required
- *       by ArcGIS Pro for single-feature identify / picking.</li>
- *   <li>{@code geometries/1} — Draco-compressed buffer. Attributes for
- *       untextured nodes are {@code position, normal, feature-index};
- *       textured nodes use {@code position, uv0, feature-index} with
- *       normals regenerated at render time by CesiumJS.</li>
- * </ul>
+ * Encodes I3S node meshes into a single Draco-compressed geometry buffer
+ * ({@code geometries/0}). Attributes for untextured nodes are
+ * {@code position, normal, feature-index}; textured nodes use
+ * {@code position, uv0, feature-index} with normals regenerated at render
+ * time by the client.
  */
 public class I3SGeometryEncoder {
     /**
@@ -61,9 +53,8 @@ public class I3SGeometryEncoder {
     private static final short DRACO_METADATA_FLAG = (short) 0x8000;
 
     /**
-     * Encode and write a node's geometry to {@code geometries/0} (uncompressed,
-     * used by ArcGIS Pro for per-feature picking) and {@code geometries/1}
-     * (Draco, used for rendering).
+     * Encode and write a node's geometry to {@code geometries/0} as a single
+     * Draco-compressed buffer.
      *
      * @return ordered list of featureIds per face range if a geometry file was
      *         written, {@code null} if welding/degenerate filtering left the
@@ -75,9 +66,6 @@ public class I3SGeometryEncoder {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
 
-        // Sync node texture state with actual mesh data: if mesh has no UVs,
-        // clear the texture flag so node pages reference the correct geometry
-        // definition (0=no uv0 vs 1=with uv0).
         if (!hasTexCoords) {
             node.setTextured(false);
         }
@@ -99,14 +87,11 @@ public class I3SGeometryEncoder {
         float[][] weldedPositions = weld.weldedPositions();
         List<int[]> allTriangles = mesh.getTriangles();
 
-        // Collect positions, ECEF normals, and UVs into arrays for Draco
-        // encoding and the uncompressed buffer. Normals are required by the
-        // I3S defaultGeometrySchema (ordering: position, normal, uv0, color)
-        // that ArcGIS Pro uses to parse buffer 0 — emitting them is not
-        // optional regardless of texture state. For textured nodes we skip
-        // normals only from the Draco stream (CesiumJS generates them there).
+        // Collect positions, ECEF normals (untextured only), and UVs (textured
+        // only) into arrays for Draco encoding. Textured nodes skip normals —
+        // the client regenerates them from geometry.
         float[][] outPositions = new float[vertexCount][];
-        float[][] outNormals = new float[vertexCount][3];
+        float[][] outNormals = hasTexCoords ? null : new float[vertexCount][3];
         float[][] outUVs = hasTexCoords ? new float[vertexCount][] : null;
 
         // ENU-to-ECEF rotation at the node's geographic center.
@@ -117,12 +102,15 @@ public class I3SGeometryEncoder {
         // a few kilometers the basis-rotation error between the two latitudes
         // is below the rendered-normal noise floor (<1e-4 rad). Larger nodes
         // would require per-triangle frame recomputation.
-        double lonRad = Math.toRadians(centerX);
-        double latRad = Math.toRadians(centerY);
-        double sinLon = Math.sin(lonRad);
-        double cosLon = Math.cos(lonRad);
-        double sinLat = Math.sin(latRad);
-        double cosLat = Math.cos(latRad);
+        double sinLon = 0, cosLon = 0, sinLat = 0, cosLat = 0;
+        if (outNormals != null) {
+            double lonRad = Math.toRadians(centerX);
+            double latRad = Math.toRadians(centerY);
+            sinLon = Math.sin(lonRad);
+            cosLon = Math.cos(lonRad);
+            sinLat = Math.sin(latRad);
+            cosLat = Math.cos(latRad);
+        }
 
         int idx = 0;
         for (int ti : validTriIndices) {
@@ -130,11 +118,13 @@ public class I3SGeometryEncoder {
             int[] tri = allTriangles.get(ti);
             for (int j = 0; j < 3; j++) {
                 outPositions[idx] = weldedPositions[base + j];
-                float[] n = mesh.getNormals().get(tri[j]);
-                double ne = n[0], nn = n[1], nu = n[2];
-                outNormals[idx][0] = (float) (-sinLon * ne - sinLat * cosLon * nn + cosLat * cosLon * nu);
-                outNormals[idx][1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
-                outNormals[idx][2] = (float) (cosLat * nn + sinLat * nu);
+                if (outNormals != null) {
+                    float[] n = mesh.getNormals().get(tri[j]);
+                    double ne = n[0], nn = n[1], nu = n[2];
+                    outNormals[idx][0] = (float) (-sinLon * ne - sinLat * cosLon * nn + cosLat * cosLon * nu);
+                    outNormals[idx][1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
+                    outNormals[idx][2] = (float) (cosLat * nn + sinLat * nu);
+                }
                 if (outUVs != null) {
                     outUVs[idx] = mesh.getTexCoords().get(tri[j]);
                 }
@@ -142,109 +132,15 @@ public class I3SGeometryEncoder {
             }
         }
 
-        // Release source mesh — all needed data is now in output arrays
         node.setMesh(null);
 
         int[] vertexFeatureIndices = weld.computeFeatureIndices();
-
         int numTriangles = validTriIndices.size();
-
-        // Dual-buffer layout matching Esri's NYC reference:
-        //   geometries/0 — uncompressed (position + normal + [uv0] + color +
-        //     per-feature featureId/faceRange), required by ArcGIS Pro for
-        //     single-feature identify/picking.
-        //   geometries/1 — Draco-compressed; used by CesiumJS and for
-        //     ArcGIS rendering.
         List<Long> rangeFeatureIds = weld.rangeFeatureIds();
-        List<int[]> faceRanges = weld.faceRanges();
-        writeUncompressedGeometry(layerDir, node, outPositions, outNormals, outUVs,
-                rangeFeatureIds, faceRanges);
-        // Textured nodes skip normals in Draco (CesiumJS regenerates them);
-        // untextured nodes include normals in Draco.
-        float[][] dracoNormals = hasTexCoords ? null : outNormals;
-        writeDracoGeometry(layerDir, node, centerY, outPositions, dracoNormals,
+
+        writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
                 outUVs, vertexFeatureIndices, numTriangles, rangeFeatureIds);
         return rangeFeatureIds;
-    }
-
-    /**
-     * Write the uncompressed geometry buffer ({@code geometries/0}) in the
-     * I3S SoA layout mirroring Esri's NYC reference. All four vertex
-     * attributes are always emitted so the binary matches the global
-     * {@code defaultGeometrySchema} (position + normal + uv0 + color) that
-     * ArcGIS Pro uses to parse buffer 0:
-     * <pre>
-     *   Header (8 bytes): vertexCount UInt32 LE, featureCount UInt32 LE
-     *   Per-vertex:
-     *     position  Float32 × 3 × vertexCount
-     *     normal    Float32 × 3 × vertexCount   (ECEF unit normals)
-     *     uv0       Float32 × 2 × vertexCount   (zero-filled if untextured)
-     *     color     UInt8   × 4 × vertexCount   (opaque white placeholder)
-     *   Per-feature:
-     *     featureId UInt64 × featureCount
-     *     faceRange UInt32 × 2 × featureCount   (inclusive [startTri,endTri])
-     * </pre>
-     * Positions are stored as Float32 offsets from the node center:
-     * {@code (lonDeg, latDeg, meters)} — same local frame as the welded
-     * vertices produced by {@link VertexWelder}.
-     */
-    private static void writeUncompressedGeometry(Path layerDir, SceneNode node,
-                                                  float[][] positions, float[][] normals,
-                                                  float[][] uvs,
-                                                  List<Long> rangeFeatureIds,
-                                                  List<int[]> faceRanges) throws IOException {
-        int vertexCount = positions.length;
-        int featureCount = rangeFeatureIds.size();
-        boolean hasUV = uvs != null;
-
-        int posBytes = vertexCount * 12;
-        int normBytes = vertexCount * 12;
-        int uvBytes = vertexCount * 8;
-        int colorBytes = vertexCount * 4;
-        int fidBytes = featureCount * 8;
-        int frBytes = featureCount * 8;
-        int total = 8 + posBytes + normBytes + uvBytes + colorBytes + fidBytes + frBytes;
-
-        ByteBuffer buf = BufferUtils.allocateLittleEndian(total);
-        buf.putInt(vertexCount);
-        buf.putInt(featureCount);
-        for (float[] p : positions) {
-            buf.putFloat(p[0]);
-            buf.putFloat(p[1]);
-            buf.putFloat(p[2]);
-        }
-        for (float[] n : normals) {
-            buf.putFloat(n[0]);
-            buf.putFloat(n[1]);
-            buf.putFloat(n[2]);
-        }
-        for (int i = 0; i < vertexCount; i++) {
-            if (hasUV) {
-                buf.putFloat(uvs[i][0]);
-                buf.putFloat(uvs[i][1]);
-            } else {
-                buf.putFloat(0f);
-                buf.putFloat(0f);
-            }
-        }
-        for (int i = 0; i < vertexCount; i++) {
-            buf.put((byte) 0xFF);
-            buf.put((byte) 0xFF);
-            buf.put((byte) 0xFF);
-            buf.put((byte) 0xFF);
-        }
-        for (long id : rangeFeatureIds) {
-            buf.putLong(id);
-        }
-        for (int[] range : faceRanges) {
-            buf.putInt(range[0]);
-            buf.putInt(range[1]);
-        }
-
-        Path geometryDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
-                .resolve("geometries");
-        Files.createDirectories(geometryDir);
-        Files.write(geometryDir.resolve("0"), buf.array());
     }
 
     /**
@@ -285,7 +181,7 @@ public class I3SGeometryEncoder {
         dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.POSITION, posVectors));
 
         // Include normal in Draco only for untextured nodes.
-        // For textured nodes, CesiumJS generates normals from geometry (matching SF reference).
+        // For textured nodes, the client regenerates normals from geometry.
         if (!hasUV) {
             Vector3[] normVectors = new Vector3[numVertices];
             for (int i = 0; i < numVertices; i++) {
@@ -304,8 +200,8 @@ public class I3SGeometryEncoder {
         }
 
         // Feature-index attribute (GENERIC, INT32, 1 component per vertex).
-        // Set uniqueId explicitly so we can reference it in injected metadata.
-        // The uniqueId must match the attribute's position in the Draco file.
+        // Set uniqueId explicitly so we can reference it in injected metadata
+        // independently of the attribute's position in the Draco stream.
         DataBuffer intBuffer = new DataBuffer();
         intBuffer.setCapacity(numVertices * 4);
         for (int i = 0; i < numVertices; i++) {
@@ -335,11 +231,11 @@ public class I3SGeometryEncoder {
         try {
             byte[] compressed = Draco.encode(dracoMesh, options);
             compressed = injectDracoMetadata(compressed, 1.0 / scaleX, 1.0 / scaleY,
-                    FEATURE_INDEX_UID, rangeFeatureIds);
+                    rangeFeatureIds);
             Path geometryDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
                     .resolve("geometries");
             Files.createDirectories(geometryDir);
-            Files.write(geometryDir.resolve("1"), compressed);
+            Files.write(geometryDir.resolve("0"), compressed);
         } catch (DrakoException e) {
             throw new IOException("Draco encoding failed for node " + node.getIndex(), e);
         }
@@ -348,33 +244,28 @@ public class I3SGeometryEncoder {
     // ---- Draco metadata injection ----------------------------------------
 
     /**
-     * Inject metadata into an encoded Draco binary.  The Drako Java library
+     * Inject metadata into an encoded Draco binary. The Drako Java library
      * does not support metadata encoding, so we patch the binary directly.
      * <p>
      * Metadata injected (all per-attribute):
      * <ul>
      *   <li><b>POSITION attribute</b>: {@code "i3s-scale_x"} and {@code "i3s-scale_y"}
-     *       so CesiumJS can convert positions back from meters to degrees.</li>
-     *   <li><b>GENERIC attribute</b>:
+     *       so the client can convert positions back from meters to degrees.</li>
+     *   <li><b>GENERIC feature-index attribute</b>:
      *     <ul>
      *       <li>{@code "i3s-feature-ids"}: Int32 LE array of per-feature ids
-     *           (the {@code OID} field values) in node-attribute order.
-     *           Verified necessary for ArcGIS Pro single-feature picking —
-     *           removing it causes picking to fall back to whole-node
-     *           highlight even with the uncompressed buffer 0
-     *           featureId/faceRange table present.</li>
+     *           (OID field values) in node-attribute order — required for
+     *           ArcGIS Pro single-feature picking.</li>
      *       <li>{@code "i3s-attribute-type": "feature-index"} — attribute
-     *           semantic hint used by CesiumJS.</li>
+     *           semantic hint.</li>
      *     </ul>
      *   </li>
      * </ul>
      */
     private static byte[] injectDracoMetadata(byte[] dracoData,
                                               double invScaleX, double invScaleY,
-                                              short featureIndexUniqueId,
                                               List<Long> rangeFeatureIds) {
-        byte[] metadataSection = buildMetadataSection(invScaleX, invScaleY,
-                featureIndexUniqueId, rangeFeatureIds);
+        byte[] metadataSection = buildMetadataSection(invScaleX, invScaleY, rangeFeatureIds);
 
         // Set the metadata flag in the header (flags field is at offset 9-10, LE)
         short flags = (short) (((dracoData[10] & 0xFF) << 8) | (dracoData[9] & 0xFF));
@@ -411,7 +302,6 @@ public class I3SGeometryEncoder {
      * </pre>
      */
     private static byte[] buildMetadataSection(double invScaleX, double invScaleY,
-                                                short featureIndexUniqueId,
                                                 List<Long> rangeFeatureIds) {
         byte[] attrTypeKey = "i3s-attribute-type".getBytes(StandardCharsets.UTF_8);
         byte[] attrTypeVal = "feature-index".getBytes(StandardCharsets.UTF_8);
@@ -443,7 +333,7 @@ public class I3SGeometryEncoder {
         buf.put(encodeVarint(0)); // 0 sub-metadata
 
         // Attribute N (GENERIC): feature-ids table + attribute-type tag
-        buf.put(encodeVarint(featureIndexUniqueId));
+        buf.put(encodeVarint(FEATURE_INDEX_UID));
         buf.put(encodeVarint(2)); // 2 entries
         buf.put(encodeVarint(featureIdsKey.length));
         buf.put(featureIdsKey);
