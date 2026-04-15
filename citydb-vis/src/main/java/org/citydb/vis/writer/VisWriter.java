@@ -22,14 +22,13 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
-import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.encoder.AttributeEncoder;
 import org.citydb.vis.encoder.TextureAtlas;
-import org.citydb.vis.geometry.PolygonTriangulator;
+import org.citydb.vis.geometry.GeometryMeshBuilder;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
@@ -42,19 +41,13 @@ import org.citydb.vis.store.ShardedMeshStore;
 import org.citydb.vis.store.SpatialEntry;
 import org.citydb.vis.store.SpatialEntryStore;
 import org.citydb.vis.store.TextureStore;
-import org.citydb.vis.util.GeoTransform;
+import org.citydb.vis.store.VisExportStores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -100,23 +93,16 @@ import java.util.function.Supplier;
  * </ul>
  */
 public abstract class VisWriter implements FeatureWriter {
-    private static final String TEMP_DIR_NAME = ".tmp";
-
     private final Logger logger = LoggerFactory.getLogger(VisWriter.class);
     private final OutputFile outputFile;
     private final VisFormatOptions formatOptions;
     private final AttributeEncoder attributeEncoder;
-    private final SpatialEntryStore spatialEntryStore;
     private final AtomicLong featureIdCounter;
     private final int cpuCores;
     private final ExecutorService service;
     private final CountLatch countLatch;
-    private final Path tempDir;
-    private final ShardedMeshStore meshStore;
-    private final AttributeStore attrStore;
-    private final TextureStore textureStore;
+    private final VisExportStores stores;
 
-    private NodeEntryStore nodeEntryStore;
     private volatile boolean shouldRun = true;
 
     protected static OutputFile validateOutputFile(OutputFile file,
@@ -157,12 +143,7 @@ public abstract class VisWriter implements FeatureWriter {
         this.countLatch = new CountLatch();
 
         try {
-            this.tempDir = outputFile.getFile().getParent().resolve(TEMP_DIR_NAME);
-            Files.createDirectories(tempDir);
-            this.spatialEntryStore = new SpatialEntryStore(cpuCores, tempDir);
-            this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
-            this.attrStore = new AttributeStore(tempDir);
-            this.textureStore = new TextureStore(outputFile);
+            this.stores = new VisExportStores(outputFile, cpuCores);
         } catch (IOException e) {
             throw new WriteException("Failed to create disk-backed stores.", e);
         }
@@ -179,19 +160,19 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     protected ShardedMeshStore getMeshStore() {
-        return meshStore;
+        return stores.getMeshStore();
     }
 
     protected AttributeStore getAttrStore() {
-        return attrStore;
+        return stores.getAttrStore();
     }
 
     protected TextureStore getTextureStore() {
-        return textureStore;
+        return stores.getTextureStore();
     }
 
     protected NodeEntryStore getNodeEntryStore() {
-        return nodeEntryStore;
+        return stores.getNodeEntryStore();
     }
 
     protected int getCpuCores() {
@@ -266,7 +247,7 @@ public abstract class VisWriter implements FeatureWriter {
                             int ptTextureId = -1;
                             ExternalFile img = pt.getTextureImage().orElse(null);
                             if (img != null) {
-                                ptTextureId = textureStore.register(img.getFileLocation());
+                                ptTextureId = stores.getTextureStore().register(img.getFileLocation());
                             }
                             // Map each ring to its UV coordinates AND texture ID
                             Map<LinearRing, List<TextureCoordinate>> ptCoords =
@@ -295,13 +276,12 @@ public abstract class VisWriter implements FeatureWriter {
         countLatch.increment();
         service.execute(() -> {
             try {
-                PolygonTriangulator triangulator = new PolygonTriangulator();
-                TriangleMesh mesh = triangulateGeometries(geomProps, featureId, triangulator,
+                TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId,
                         finalTexCoordMap, finalRingTextureMap);
                 if (!mesh.isEmpty()) {
                     Envelope env = envelope;
                     if (formatOptions.isClampToGround()) {
-                        clampMeshToGround(mesh);
+                        mesh.clampToGround();
                         // Recompute Z from the clamped mesh — the Feature's envelope
                         // Z may not match the mesh when multiple LODs or non-surface
                         // geometries contribute to the envelope.
@@ -334,16 +314,16 @@ public abstract class VisWriter implements FeatureWriter {
                     }
 
                     // Store mesh to sharded disk store (shard selected by featureId)
-                    long meshHandle = meshStore.store(mesh, (int) featureId);
+                    long meshHandle = stores.getMeshStore().store(mesh, (int) featureId);
 
                     // Store attributes to disk store
-                    long attrOffset = attrStore.store(objectId, featureType, attributes);
+                    long attrOffset = stores.getAttrStore().store(objectId, featureType, attributes);
 
                     // Track attribute types incrementally (concurrent)
                     attributeEncoder.trackFieldTypes(attributes);
 
                     // Spatial metadata stored on disk — zero heap pressure
-                    spatialEntryStore.store(
+                    stores.getSpatialEntryStore().store(
                             new SpatialEntry(featureId, cx, cy, bbox,
                                     meshHandle, attrOffset),
                             (int) featureId);
@@ -373,7 +353,7 @@ public abstract class VisWriter implements FeatureWriter {
         }
 
         try {
-            long totalFeatures = spatialEntryStore.entryCount();
+            long totalFeatures = stores.entryCount();
             if (!shouldRun || totalFeatures == 0) {
                 return;
             }
@@ -393,7 +373,7 @@ public abstract class VisWriter implements FeatureWriter {
             int gridDim = Math.max(1, (int) Math.ceil(Math.sqrt(targetCells)));
 
             PartitionedEntryStore partitioned = PartitionedEntryStore.create(
-                    spatialEntryStore, extent, gridDim, tempDir);
+                    stores.getSpatialEntryStore(), extent, gridDim, stores.getTempDir());
 
             // --- Phase 3+4: Fused cell tree build + merge + flush ---
             // Process cells one at a time: load from disk, build quadtree,
@@ -402,7 +382,7 @@ public abstract class VisWriter implements FeatureWriter {
             int estimatedNodes = (int) Math.min(
                     (totalFeatures / formatOptions.getMaxFeaturesPerNode()) * 3 + 1,
                     Integer.MAX_VALUE);
-            nodeEntryStore = new NodeEntryStore(tempDir, estimatedNodes);
+            NodeEntryStore nodeEntryStore = stores.initNodeEntryStore(estimatedNodes);
 
             List<SceneNode> allNodes = new ArrayList<>();
             Set<Integer> meshNodeIndices = new HashSet<>();
@@ -448,7 +428,7 @@ public abstract class VisWriter implements FeatureWriter {
                     t1 - t0, allNodes.size(), meshNodeIndices.size());
 
             // --- Phase 5: Format-specific output ---
-            boolean hasTextures = textureStore.hasTextures();
+            boolean hasTextures = stores.getTextureStore().hasTextures();
             writeOutput(allNodes, meshNodeIndices, extent, attrFields, hasTextures);
 
             long t2 = System.currentTimeMillis();
@@ -457,104 +437,9 @@ public abstract class VisWriter implements FeatureWriter {
         } catch (Exception e) {
             throw new WriteException("Failed to write scene layer.", e);
         } finally {
-            logger.info("Closing intermediate stores.");
-            closeStores();
-            logger.info("Deleting intermediate temp directory.");
-            deleteDirectoryTree(tempDir);
+            logger.info("Closing intermediate stores and deleting temp directory.");
+            stores.close();
         }
-    }
-
-    // ---- Shared utilities ---------------------------------------------------
-
-    /**
-     * Triangulate geometry properties into a mesh. Thread-safe — uses its own
-     * PolygonTriangulator instance and operates only on the provided data.
-     */
-    private static TriangleMesh triangulateGeometries(
-            List<GeometryProperty> geometryProperties,
-            long featureId,
-            PolygonTriangulator triangulator,
-            Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-            Map<LinearRing, Integer> ringTextureMap) {
-        TriangleMesh mesh = new TriangleMesh();
-
-        for (GeometryProperty property : geometryProperties) {
-            Geometry<?> geometry = property.getObject();
-            if (geometry == null) {
-                continue;
-            }
-
-            switch (geometry.getGeometryType()) {
-                case POLYGON, MULTI_SURFACE, COMPOSITE_SURFACE, SOLID,
-                        MULTI_SOLID, COMPOSITE_SOLID, TRIANGULATED_SURFACE -> {
-                    TriangleMesh geomMesh = triangulator.triangulate(geometry, featureId,
-                            texCoordMap, ringTextureMap);
-                    mesh.merge(geomMesh);
-                }
-                default -> {
-                    // Skip non-surface geometry types (points, lines)
-                }
-            }
-        }
-
-        // Post-process: resolve T-junction cracks and remove duplicate triangles
-        if (!mesh.isEmpty()) {
-            double[] center = mesh.computeCenter();
-            double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
-            double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
-            mesh.resolveTJunctions(scaleX, scaleY, 0.02);
-            mesh.removeDuplicateTriangles();
-        }
-
-        return mesh;
-    }
-
-    /**
-     * Shift all vertex Z values so the building's bottom sits at height 0.
-     */
-    private static void clampMeshToGround(TriangleMesh mesh) {
-        List<double[]> positions = mesh.getPositions();
-        if (positions.isEmpty()) {
-            return;
-        }
-        double minZ = Double.MAX_VALUE;
-        for (double[] pos : positions) {
-            if (pos[2] < minZ) minZ = pos[2];
-        }
-        if (minZ != 0) {
-            for (double[] pos : positions) {
-                pos[2] -= minZ;
-            }
-        }
-    }
-
-    /**
-     * Compute per-texture UV extent from the mesh's triangle texture IDs
-     * and vertex UV coordinates. Returns texId → [minU, minV, maxU, maxV].
-     */
-    protected static Map<Integer, float[]> computeUVExtents(TriangleMesh mesh) {
-        Map<Integer, float[]> extents = new HashMap<>();
-        List<int[]> triangles = mesh.getTriangles();
-        List<Integer> triTexIds = mesh.getTriangleTextureIds();
-        List<float[]> texCoords = mesh.getTexCoords();
-
-        for (int t = 0; t < triangles.size(); t++) {
-            int texId = triTexIds.get(t);
-            if (texId >= 0) {
-                float[] ext = extents.computeIfAbsent(texId,
-                        k -> new float[]{Float.MAX_VALUE, Float.MAX_VALUE,
-                                -Float.MAX_VALUE, -Float.MAX_VALUE});
-                int[] tri = triangles.get(t);
-                for (int vi : tri) {
-                    float[] uv = texCoords.get(vi);
-                    ext[0] = Math.min(ext[0], uv[0]);
-                    ext[1] = Math.min(ext[1], uv[1]);
-                    ext[2] = Math.max(ext[2], uv[0]);
-                    ext[3] = Math.max(ext[3], uv[1]);
-                }
-            }
-        }
-        return extents;
     }
 
     // ---- Per-node preparation (shared by format-specific writers) -----------
@@ -571,11 +456,11 @@ public abstract class VisWriter implements FeatureWriter {
      * build a texture atlas (if textured), and remap UV coordinates.
      */
     protected PreparedNode prepareNodeMesh(SceneNode node) throws IOException {
-        List<NodeEntry> entries = nodeEntryStore.loadNode(node.getIndex());
+        List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(node.getIndex());
 
         TriangleMesh merged = new TriangleMesh();
         for (NodeEntry entry : entries) {
-            merged.merge(meshStore.load(entry.meshHandle()));
+            merged.merge(stores.getMeshStore().load(entry.meshHandle()));
         }
 
         Set<Integer> uniqueTexIds = new LinkedHashSet<>();
@@ -588,9 +473,9 @@ public abstract class VisWriter implements FeatureWriter {
 
         TextureAtlas atlas = null;
         if (!uniqueTexIds.isEmpty()) {
-            Map<Integer, float[]> uvExtents = computeUVExtents(merged);
+            Map<Integer, float[]> uvExtents = merged.computeUVExtents();
             atlas = TextureAtlas.build(
-                    uniqueTexIds, textureStore, formatOptions.getTextureScale(),
+                    uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
                     formatOptions.getMaxAtlasSize(), uvExtents);
             if (atlas != null) {
                 atlas.remapUVs(merged);
@@ -611,7 +496,7 @@ public abstract class VisWriter implements FeatureWriter {
     protected List<FeatureData> loadNodeFeatures(List<NodeEntry> entries) throws IOException {
         List<FeatureData> features = new ArrayList<>(entries.size());
         for (NodeEntry entry : entries) {
-            AttributeStore.FeatureAttrs attrs = attrStore.load(entry.attrOffset());
+            AttributeStore.FeatureAttrs attrs = stores.getAttrStore().load(entry.attrOffset());
             features.add(new FeatureData(
                     entry.id(), attrs.objectId(), attrs.featureType(),
                     attrs.attributes()));
@@ -685,7 +570,7 @@ public abstract class VisWriter implements FeatureWriter {
         double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
         double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
 
-        Iterator<SpatialEntry> it = spatialEntryStore.iterator();
+        Iterator<SpatialEntry> it = stores.getSpatialEntryStore().iterator();
         while (it.hasNext()) {
             SpatialEntry e = it.next();
             double[] bb = e.bbox();
@@ -698,73 +583,5 @@ public abstract class VisWriter implements FeatureWriter {
         }
 
         return new double[]{minX, minY, minZ, maxX, maxY, maxZ};
-    }
-
-    private void closeStores() {
-        if (nodeEntryStore != null) {
-            try {
-                nodeEntryStore.close();
-            } catch (IOException e) {
-                logger.warn("Failed to close node entry store: {}", e.getMessage());
-            }
-        }
-        try {
-            spatialEntryStore.close();
-        } catch (IOException e) {
-            logger.warn("Failed to close spatial entry store: {}", e.getMessage());
-        }
-        try {
-            meshStore.close();
-        } catch (IOException e) {
-            logger.warn("Failed to close mesh store: {}", e.getMessage());
-        }
-        try {
-            attrStore.close();
-        } catch (IOException e) {
-            logger.warn("Failed to close attribute store: {}", e.getMessage());
-        }
-        textureStore.close();
-    }
-
-    protected static void deleteDirectoryTree(Path root) {
-        if (!Files.isDirectory(root)) {
-            return;
-        }
-
-        List<Path> files = new ArrayList<>();
-        List<Path> dirs = new ArrayList<>();
-        try {
-            Files.walkFileTree(root, new SimpleFileVisitor<>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                    files.add(file);
-                    return FileVisitResult.CONTINUE;
-                }
-
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    dirs.add(dir);
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        } catch (IOException ignored) {
-            return;
-        }
-
-        files.parallelStream().forEach(file -> {
-            try {
-                Files.delete(file);
-            } catch (IOException ignored) {
-                //
-            }
-        });
-
-        for (Path dir : dirs) {
-            try {
-                Files.delete(dir);
-            } catch (IOException ignored) {
-                //
-            }
-        }
     }
 }
