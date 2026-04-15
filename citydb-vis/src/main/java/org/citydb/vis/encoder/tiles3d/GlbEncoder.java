@@ -8,6 +8,7 @@ package org.citydb.vis.encoder.tiles3d;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.vis.encoder.AttrValueCoercer;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.model.AttrField;
@@ -16,16 +17,15 @@ import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.tiles3d.MetadataProperty;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.util.BufferUtils;
+import org.citydb.vis.util.GeoTransform;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Encodes a scene node's geometry, textures, and per-feature metadata into a
@@ -48,8 +48,6 @@ public class GlbEncoder {
     private static final int CHUNK_JSON = 0x4E4F534A;  // "JSON"
     private static final int CHUNK_BIN = 0x004E4942;   // "BIN\0"
 
-    private static final double METERS_PER_DEGREE_LAT = 111_320.0;
-
     /**
      * Encode a mesh node into a GLB byte array. Returns {@code null} if the
      * mesh is empty after welding/degenerate filtering.
@@ -68,13 +66,13 @@ public class GlbEncoder {
         boolean hasTexCoords = mesh.hasTexCoords() && textureBytes != null;
 
         if (!hasTexCoords) {
-            node.setTextureId(-1);
+            node.setTextured(false);
         }
 
         BoundingVolume mbs = node.getBoundingVolume();
-        double centerX = mbs != null ? mbs.getCenterX() : 0;
-        double centerY = mbs != null ? mbs.getCenterY() : 0;
-        double centerZ = mbs != null ? mbs.getCenterZ() : 0;
+        double centerX = mbs.getCenterX();
+        double centerY = mbs.getCenterY();
+        double centerZ = mbs.getCenterZ();
 
         VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(mesh, centerX, centerY, centerZ);
         node.setOutputVertexCount(weld.vertexCount());
@@ -89,13 +87,12 @@ public class GlbEncoder {
         List<int[]> allTriangles = mesh.getTriangles();
         int featureCount = weld.faceRanges().size();
 
-        // Convert positions to local ENU meters relative to dataset center
-        double scaleX = METERS_PER_DEGREE_LAT * Math.cos(Math.toRadians(datasetCenter[1]));
-        double scaleY = METERS_PER_DEGREE_LAT;
-
-        // Offset from node center to dataset center (in degree-space)
-        // weldedPositions are relative to node center (centerX/Y/Z)
-        // We need them relative to dataset center
+        // Convert positions to local ENU meters relative to dataset center.
+        // weldedPositions are already relative to the node center (centerX/Y/Z);
+        // adding the (node center - dataset center) offset shifts them into the
+        // dataset-centered frame used by the root tile's ENU-to-ECEF transform.
+        double scaleX = GeoTransform.metersPerDegreeLon(datasetCenter[1]);
+        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
         float offsetX = (float) ((centerX - datasetCenter[0]) * scaleX);
         float offsetY = (float) ((centerY - datasetCenter[1]) * scaleY);
         float offsetZ = (float) (centerZ - datasetCenter[2]);
@@ -178,17 +175,9 @@ public class GlbEncoder {
         // Align features with face ranges — degenerate filtering may have
         // removed all triangles for some features, causing fewer face ranges
         // than input features. The property table must match face range order.
-        List<FeatureData> propFeatures = features;
-        if (featureCount < features.size()) {
-            Map<Long, FeatureData> featureById = new HashMap<>();
-            for (FeatureData fd : features) {
-                featureById.put(fd.id(), fd);
-            }
-            propFeatures = new ArrayList<>(featureCount);
-            for (long fid : weld.rangeFeatureIds()) {
-                propFeatures.add(featureById.get(fid));
-            }
-        }
+        List<FeatureData> propFeatures = featureCount < features.size()
+                ? FeatureData.reorderByIds(features, weld.rangeFeatureIds())
+                : features;
 
         // Property table binary data
         List<PropertyTableBufferViews> propBvs = new ArrayList<>();
@@ -215,7 +204,7 @@ public class GlbEncoder {
         // GLB = header(12) + JSON chunk header(8) + JSON data + BIN chunk header(8) + BIN data
         int totalLength = 12 + 8 + jsonChunkLength + 8 + binChunkLength;
 
-        ByteBuffer glb = ByteBuffer.allocate(totalLength).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer glb = BufferUtils.allocateLittleEndian(totalLength);
 
         // Header
         glb.putInt(GLB_MAGIC);
@@ -508,10 +497,7 @@ public class GlbEncoder {
             BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
         int[] values = new int[features.size()];
         for (int i = 0; i < features.size(); i++) {
-            Object val = features.get(i).getFieldValue(fieldName);
-            if (val instanceof Number n) {
-                values[i] = n.intValue();
-            }
+            values[i] = AttrValueCoercer.toInt(features.get(i).getFieldValue(fieldName));
         }
         int bv = bin.addInt32Array(values);
         return new PropertyTableBufferViews(bv, -1);
@@ -521,12 +507,7 @@ public class GlbEncoder {
             BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
         double[] values = new double[features.size()];
         for (int i = 0; i < features.size(); i++) {
-            Object val = features.get(i).getFieldValue(fieldName);
-            if (val instanceof Number n) {
-                values[i] = n.doubleValue();
-            } else {
-                values[i] = Double.NaN;
-            }
+            values[i] = AttrValueCoercer.toDouble(features.get(i).getFieldValue(fieldName));
         }
         int bv = bin.addFloat64Array(values);
         return new PropertyTableBufferViews(bv, -1);
@@ -540,9 +521,7 @@ public class GlbEncoder {
         int offset = 0;
         for (int i = 0; i < features.size(); i++) {
             offsets[i] = offset;
-            Object val = features.get(i).getFieldValue(fieldName);
-            String str = val != null ? val.toString() : "";
-            byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = AttrValueCoercer.toUtf8(features.get(i).getFieldValue(fieldName));
             valuesStream.writeBytes(bytes);
             offset += bytes.length;
         }
@@ -572,7 +551,7 @@ public class GlbEncoder {
             align4();
             int offset = data.size();
             int byteLength = values.length * 4;
-            ByteBuffer buf = ByteBuffer.allocate(byteLength).order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer buf = BufferUtils.allocateLittleEndian(byteLength);
             for (float v : values) buf.putFloat(v);
             data.writeBytes(buf.array());
             bufferViews.add(new int[]{offset, byteLength});
@@ -584,7 +563,7 @@ public class GlbEncoder {
             align4();
             int offset = data.size();
             int byteLength = values.length * 4;
-            ByteBuffer buf = ByteBuffer.allocate(byteLength).order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer buf = BufferUtils.allocateLittleEndian(byteLength);
             for (int v : values) buf.putInt(v);
             data.writeBytes(buf.array());
             bufferViews.add(new int[]{offset, byteLength});
@@ -601,7 +580,7 @@ public class GlbEncoder {
             align(8);
             int offset = data.size();
             int byteLength = values.length * 8;
-            ByteBuffer buf = ByteBuffer.allocate(byteLength).order(ByteOrder.LITTLE_ENDIAN);
+            ByteBuffer buf = BufferUtils.allocateLittleEndian(byteLength);
             for (double v : values) buf.putDouble(v);
             data.writeBytes(buf.array());
             bufferViews.add(new int[]{offset, byteLength});

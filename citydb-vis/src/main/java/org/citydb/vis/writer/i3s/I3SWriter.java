@@ -24,10 +24,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -199,14 +196,7 @@ public class I3SWriter extends VisWriter {
         // ranges than input features. Feature/attribute output must match
         // the Draco feature-index attribute order.
         if (validFeatureIds.size() < featureDataList.size()) {
-            Map<Long, FeatureData> featureById = new HashMap<>();
-            for (FeatureData fd : featureDataList) {
-                featureById.put(fd.id(), fd);
-            }
-            featureDataList = new ArrayList<>(validFeatureIds.size());
-            for (long fid : validFeatureIds) {
-                featureDataList.add(featureById.get(fid));
-            }
+            featureDataList = FeatureData.reorderByIds(featureDataList, validFeatureIds);
             node.setFeatureCount(featureDataList.size());
         }
 
