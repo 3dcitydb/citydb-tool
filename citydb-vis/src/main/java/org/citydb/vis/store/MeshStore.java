@@ -6,12 +6,12 @@
 package org.citydb.vis.store;
 
 import org.citydb.vis.geometry.TriangleMesh;
+import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.FileHelper;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -63,12 +63,12 @@ class MeshStore implements Closeable {
      * Thread-safe — uses positional reads that do not mutate channel state.
      */
     TriangleMesh load(long handle) throws IOException {
-        ByteBuffer header = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer header = BufferUtils.allocateLittleEndian(4);
         FileHelper.readFully(channel, header, handle);
         header.flip();
         int dataSize = header.getInt();
 
-        ByteBuffer buf = ByteBuffer.allocate(dataSize).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(dataSize);
         FileHelper.readFully(channel, buf, handle + 4);
         buf.flip();
 
@@ -121,7 +121,7 @@ class MeshStore implements Closeable {
         }
         int dataSize = (int) dataSizeLong;
 
-        ByteBuffer buf = ByteBuffer.allocate(4 + dataSize).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(4 + dataSize);
         buf.putInt(dataSize);
         buf.putInt(vc);
         for (double[] p : positions) {
@@ -162,36 +162,53 @@ class MeshStore implements Closeable {
     private static TriangleMesh deserialize(ByteBuffer buf) {
         TriangleMesh mesh = new TriangleMesh();
         int vc = buf.getInt();
-        List<double[]> positions = mesh.getPositions();
+        // Serialized layout keeps positions, normals and uvs in separate
+        // contiguous blocks, so we need three passes to read them — but
+        // stash each vertex's values into tmp arrays and feed mesh.addVertex
+        // to preserve the texCoords/positions invariant.
+        double[][] positions = new double[vc][3];
         for (int i = 0; i < vc; i++) {
-            positions.add(new double[]{buf.getDouble(), buf.getDouble(), buf.getDouble()});
+            positions[i][0] = buf.getDouble();
+            positions[i][1] = buf.getDouble();
+            positions[i][2] = buf.getDouble();
         }
-        List<float[]> normals = mesh.getNormals();
+        float[][] normals = new float[vc][3];
         for (int i = 0; i < vc; i++) {
-            normals.add(new float[]{buf.getFloat(), buf.getFloat(), buf.getFloat()});
+            normals[i][0] = buf.getFloat();
+            normals[i][1] = buf.getFloat();
+            normals[i][2] = buf.getFloat();
         }
         boolean hasTC = buf.get() != 0;
         if (hasTC) {
-            mesh.setHasTexCoords(true);
-            List<float[]> texCoords = mesh.getTexCoords();
             for (int i = 0; i < vc; i++) {
-                texCoords.add(new float[]{buf.getFloat(), buf.getFloat()});
+                float u = buf.getFloat();
+                float v = buf.getFloat();
+                mesh.addVertex(positions[i][0], positions[i][1], positions[i][2],
+                        normals[i][0], normals[i][1], normals[i][2], u, v);
+            }
+        } else {
+            for (int i = 0; i < vc; i++) {
+                mesh.addVertex(positions[i][0], positions[i][1], positions[i][2],
+                        normals[i][0], normals[i][1], normals[i][2]);
             }
         }
-        // When !hasTC the mesh has no UVs and texCoords stays empty,
-        // matching the invariant enforced by TriangleMesh.addVertex/merge.
+
         int tc = buf.getInt();
-        List<int[]> triangles = mesh.getTriangles();
-        List<Long> featureIds = mesh.getFeatureIds();
+        // Triangles, featureIds and triTexIds are stored in three contiguous
+        // blocks; stash first two so mesh.addTriangle can receive all three.
+        int[][] triangles = new int[tc][3];
         for (int i = 0; i < tc; i++) {
-            triangles.add(new int[]{buf.getInt(), buf.getInt(), buf.getInt()});
+            triangles[i][0] = buf.getInt();
+            triangles[i][1] = buf.getInt();
+            triangles[i][2] = buf.getInt();
+        }
+        long[] featureIds = new long[tc];
+        for (int i = 0; i < tc; i++) {
+            featureIds[i] = buf.getLong();
         }
         for (int i = 0; i < tc; i++) {
-            featureIds.add(buf.getLong());
-        }
-        List<Integer> triTexIds = mesh.getTriangleTextureIds();
-        for (int i = 0; i < tc; i++) {
-            triTexIds.add(buf.getInt());
+            mesh.addTriangle(triangles[i][0], triangles[i][1], triangles[i][2],
+                    featureIds[i], buf.getInt());
         }
         return mesh;
     }

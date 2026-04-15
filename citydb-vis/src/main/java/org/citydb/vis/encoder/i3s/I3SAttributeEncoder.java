@@ -5,16 +5,15 @@
 
 package org.citydb.vis.encoder.i3s;
 
+import org.citydb.vis.encoder.AttrValueCoercer;
 import org.citydb.vis.encoder.AttributeEncoder;
-
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.util.BufferUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -53,40 +52,28 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                     // Oid32: sequential feature id (from FeatureData.id, 1-based)
                     // encoded as Int32 LE. ArcGIS requires unique non-null OIDs
                     // to enable single-feature identify/picking.
-                    buffer = ByteBuffer.allocate(4 + count * 4);
-                    buffer.order(ByteOrder.LITTLE_ENDIAN);
+                    buffer = BufferUtils.allocateLittleEndian(4 + count * 4);
                     buffer.putInt(count);
                     for (FeatureData fd : features) {
                         buffer.putInt((int) fd.id());
                     }
                 }
                 case INT -> {
-                    buffer = ByteBuffer.allocate(4 + count * 4);
-                    buffer.order(ByteOrder.LITTLE_ENDIAN);
+                    buffer = BufferUtils.allocateLittleEndian(4 + count * 4);
                     buffer.putInt(count);
                     for (FeatureData fd : features) {
-                        Object val = fd.getFieldValue(field.name());
-                        int intVal = 0;
-                        if (val instanceof Long l) intVal = l.intValue();
-                        else if (val instanceof Double d) intVal = d.intValue();
-                        buffer.putInt(intVal);
+                        buffer.putInt(AttrValueCoercer.toInt(fd.getFieldValue(field.name())));
                     }
                 }
                 case DOUBLE -> {
                     // CesiumJS aligns the body to the value type size:
                     // Math.ceil(headerSize / 8) * 8 = 8, so 4 bytes of padding
                     // are needed after the 4-byte header for Float64 alignment.
-                    buffer = ByteBuffer.allocate(8 + count * 8);
-                    buffer.order(ByteOrder.LITTLE_ENDIAN);
+                    buffer = BufferUtils.allocateLittleEndian(8 + count * 8);
                     buffer.putInt(count);
                     buffer.putInt(0); // padding for Float64 alignment
                     for (FeatureData fd : features) {
-                        Object val = fd.getFieldValue(field.name());
-                        double dVal;
-                        if (val instanceof Double d) dVal = d;
-                        else if (val instanceof Long l) dVal = l.doubleValue();
-                        else dVal = Double.NaN;
-                        buffer.putDouble(dVal);
+                        buffer.putDouble(AttrValueCoercer.toDouble(fd.getFieldValue(field.name())));
                     }
                 }
                 case STRING -> {
@@ -98,9 +85,7 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                     List<byte[]> valueBytes = new ArrayList<>();
                     int totalBytes = 0;
                     for (FeatureData fd : features) {
-                        Object val = fd.getFieldValue(field.name());
-                        String str = val != null ? val.toString() : "";
-                        byte[] utf8 = str.getBytes(StandardCharsets.UTF_8);
+                        byte[] utf8 = AttrValueCoercer.toUtf8(fd.getFieldValue(field.name()));
                         byte[] nulTerminated = new byte[utf8.length + 1];
                         System.arraycopy(utf8, 0, nulTerminated, 0, utf8.length);
                         // last byte already 0 (NUL terminator)
@@ -108,8 +93,7 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                         totalBytes += nulTerminated.length;
                     }
 
-                    buffer = ByteBuffer.allocate(4 + 4 + count * 4 + totalBytes);
-                    buffer.order(ByteOrder.LITTLE_ENDIAN);
+                    buffer = BufferUtils.allocateLittleEndian(4 + 4 + count * 4 + totalBytes);
                     buffer.putInt(count);
                     buffer.putInt(totalBytes);
                     for (byte[] b : valueBytes) buffer.putInt(b.length);
