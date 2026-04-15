@@ -7,9 +7,9 @@ package org.citydb.cli.visExporter.options;
 
 import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.CountLimitOptions;
+import org.citydb.cli.common.FilterOptions;
 import org.citydb.cli.common.Option;
 import org.citydb.cli.common.TypeNameOptions;
-import org.citydb.cli.common.FilterOptions;
 import org.citydb.cli.exporter.options.LodOptions;
 import org.citydb.query.Query;
 import org.citydb.query.filter.encoding.FilterParseException;

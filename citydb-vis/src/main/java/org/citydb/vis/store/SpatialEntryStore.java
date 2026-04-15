@@ -33,6 +33,12 @@ import java.util.NoSuchElementException;
  * entries shard by shard in 4096-entry chunks (~360 KB) for optimal
  * sequential I/O throughput. No entries are held on the Java heap beyond
  * the current chunk.
+ * <p>
+ * <b>Thread-safety contract:</b> writes are safe from multiple threads
+ * (per-shard {@code synchronized} on the file channel). Iteration is
+ * <em>not</em> concurrent-safe and assumes the write phase has ended —
+ * callers must externally quiesce writers before iterating. After
+ * {@link #close()}, no further reads or writes are permitted.
  */
 public class SpatialEntryStore implements Closeable {
     /**

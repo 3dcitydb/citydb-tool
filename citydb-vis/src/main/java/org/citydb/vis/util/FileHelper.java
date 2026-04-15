@@ -8,7 +8,13 @@ package org.citydb.vis.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Shared file path utilities for visualization format writers.
@@ -48,5 +54,52 @@ public class FileHelper {
             return path.resolveSibling(name.substring(0, dot));
         }
         return path;
+    }
+
+    /**
+     * Recursively delete a directory tree. Files are removed in parallel;
+     * directories afterwards in reverse (depth-first) order.
+     * Silently ignores individual delete failures (best-effort cleanup).
+     */
+    public static void deleteDirectoryTree(Path root) {
+        if (!Files.isDirectory(root)) {
+            return;
+        }
+
+        List<Path> files = new ArrayList<>();
+        List<Path> dirs = new ArrayList<>();
+        try {
+            Files.walkFileTree(root, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    files.add(file);
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
+                    dirs.add(dir);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        } catch (IOException ignored) {
+            return;
+        }
+
+        files.parallelStream().forEach(file -> {
+            try {
+                Files.delete(file);
+            } catch (IOException ignored) {
+                //
+            }
+        });
+
+        for (Path dir : dirs) {
+            try {
+                Files.delete(dir);
+            } catch (IOException ignored) {
+                //
+            }
+        }
     }
 }
