@@ -5,6 +5,7 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.FileHelper;
 
 import java.io.ByteArrayInputStream;
@@ -15,7 +16,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -56,7 +56,7 @@ public class AttributeStore implements Closeable {
     public synchronized long store(String objectId, String featureType,
                                    Map<String, Object> attributes) throws IOException {
         byte[] data = serialize(objectId, featureType, attributes);
-        ByteBuffer buf = ByteBuffer.allocate(4 + data.length).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(4 + data.length);
         buf.putInt(data.length);
         buf.put(data);
         buf.flip();
@@ -74,12 +74,12 @@ public class AttributeStore implements Closeable {
      * Load attributes previously stored. Thread-safe — uses positional reads.
      */
     public FeatureAttrs load(long offset) throws IOException {
-        ByteBuffer header = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer header = BufferUtils.allocateLittleEndian(4);
         FileHelper.readFully(channel, header, offset);
         header.flip();
         int dataSize = header.getInt();
 
-        ByteBuffer buf = ByteBuffer.allocate(dataSize).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(dataSize);
         FileHelper.readFully(channel, buf, offset + 4);
         buf.flip();
 

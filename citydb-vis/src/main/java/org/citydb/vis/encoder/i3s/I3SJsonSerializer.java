@@ -63,11 +63,9 @@ public class I3SJsonSerializer {
      */
     public void writeNodeFeatures(Path layerDir, SceneNode node,
                                   List<FeatureData> features) throws IOException {
-        List<FeatureEntry> entries = new ArrayList<>(features != null ? features.size() : 0);
-        if (features != null) {
-            for (FeatureData fd : features) {
-                entries.add(FeatureEntry.from(fd));
-            }
+        List<FeatureEntry> entries = new ArrayList<>(features.size());
+        for (FeatureData fd : features) {
+            entries.add(FeatureEntry.from(fd));
         }
 
         Path featuresDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))

@@ -6,13 +6,13 @@
 package org.citydb.vis.writer.i3s;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.vis.util.BufferUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -290,8 +290,7 @@ public final class SlpkPackager {
     private static byte[] buildHashIndex(List<HashRecord> records) {
         records.sort(Comparator.comparing(HashRecord::md5, Arrays::compareUnsigned));
 
-        ByteBuffer buf = ByteBuffer.allocate(records.size() * HASH_RECORD_SIZE)
-                .order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = BufferUtils.allocateLittleEndian(records.size() * HASH_RECORD_SIZE);
         for (HashRecord r : records) {
             buf.put(r.md5());
             buf.putLong(r.dataOffset());
