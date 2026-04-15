@@ -9,6 +9,7 @@ import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.SpatialEntry;
+import org.citydb.vis.util.BoundingBoxUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -80,20 +81,11 @@ class NodeBuilder {
      * Compute the axis-aligned bounding box of a list of spatial entries.
      */
     static double[] computeExtent(List<SpatialEntry> entries) {
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
-        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
-
+        double[] acc = BoundingBoxUtils.emptyAabb();
         for (SpatialEntry e : entries) {
-            double[] bb = e.bbox();
-            if (bb[0] < minX) minX = bb[0];
-            if (bb[1] < minY) minY = bb[1];
-            if (bb[2] < minZ) minZ = bb[2];
-            if (bb[3] > maxX) maxX = bb[3];
-            if (bb[4] > maxY) maxY = bb[4];
-            if (bb[5] > maxZ) maxZ = bb[5];
+            BoundingBoxUtils.expandToBox(acc, e.bbox());
         }
-
-        return new double[]{minX, minY, minZ, maxX, maxY, maxZ};
+        return acc;
     }
 
     // ---- Quadtree subdivision (operates on SpatialEntry) ----
@@ -114,20 +106,14 @@ class NodeBuilder {
             node.setFeatureCount(entries.size());
 
             // Compute bounding volume + compact to NodeEntry in one pass
-            double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
-            double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
+            double[] acc = BoundingBoxUtils.emptyAabb();
             List<NodeEntry> compact = new ArrayList<>(entries.size());
             for (SpatialEntry e : entries) {
-                double[] bb = e.bbox();
-                if (bb[0] < minX) minX = bb[0];
-                if (bb[1] < minY) minY = bb[1];
-                if (bb[2] < minZ) minZ = bb[2];
-                if (bb[3] > maxX) maxX = bb[3];
-                if (bb[4] > maxY) maxY = bb[4];
-                if (bb[5] > maxZ) maxZ = bb[5];
+                BoundingBoxUtils.expandToBox(acc, e.bbox());
                 compact.add(new NodeEntry(e.id(), e.meshHandle(), e.attrOffset()));
             }
-            node.setBoundingVolume(BoundingVolume.ofBoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
+            node.setBoundingVolume(BoundingVolume.ofBoundingBox(
+                    acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]));
             nodeEntryMap.put(node.getIndex(), compact);
             return;
         }
