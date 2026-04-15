@@ -38,9 +38,20 @@ class NodeBuilder {
 
     /**
      * Result of building a quadtree for a single spatial grid cell.
-     * The {@code nodeEntryMap} holds compact {@link NodeEntry} lists — spatial
-     * fields (centerX, centerY, bbox) are consumed during tree construction
-     * and not retained.
+     * <ul>
+     *   <li>{@code nodes} — scene nodes in local (cell-scoped) index order;
+     *       index 0 is the cell root. Indices are remapped to global scope
+     *       by the caller before flushing.</li>
+     *   <li>{@code nodeEntryMap} — for each leaf node (keyed by its local
+     *       index), the list of features assigned to it. Only leaves carry
+     *       entries; interior nodes are absent from the map. Each
+     *       {@link NodeEntry} holds just the feature id + store handles;
+     *       the {@link SpatialEntry} spatial fields (centerX/Y/bbox) are
+     *       consumed during tree construction and dropped.</li>
+     * </ul>
+     * The map is a separate field (not embedded in {@link SceneNode}) so
+     * entries can be flushed to {@link NodeEntryStore} and released from
+     * heap as soon as each cell is processed.
      */
     record CellTree(List<SceneNode> nodes, Map<Integer, List<NodeEntry>> nodeEntryMap) {
     }
