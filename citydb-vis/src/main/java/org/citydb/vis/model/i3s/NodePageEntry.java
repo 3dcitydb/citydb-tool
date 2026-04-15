@@ -18,11 +18,17 @@ import java.util.Set;
 /**
  * Single entry in an I3S node page, serialized to {@code nodepages/N/index.json}.
  * <p>
- * ArcGIS Pro compatibility requirements:
+ * Bounding volume choice is target-dependent:
  * <ul>
- *   <li>{@code obb} (Oriented Bounding Box) is required — MBS alone is rejected.</li>
+ *   <li>SLPK / ArcGIS Pro: {@code obb} is required (I3S 1.7 schema); {@code mbs}
+ *       also emitted for redundancy.</li>
+ *   <li>Folder / CesiumJS: only {@code mbs} — CesiumJS's I3S OBB handling
+ *       mis-culls buildings at certain camera angles, so OBB is suppressed.</li>
+ * </ul>
+ * Other quirks:
+ * <ul>
  *   <li>{@code parentIndex} must be omitted for the root node (value {@code -1}
- *       triggers "Value is not convertible to Int").</li>
+ *       triggers ArcGIS Pro's "Value is not convertible to Int").</li>
  *   <li>{@code lodThreshold} must serialize as integer, not float.</li>
  *   <li>{@code material.resource} must be non-negative.</li>
  * </ul>
@@ -31,6 +37,7 @@ import java.util.Set;
 public class NodePageEntry {
     private int index;
     private Obb obb;
+    private double[] mbs;
     private int lodThreshold;
     private List<Integer> children;
     private Integer parentIndex;
@@ -39,13 +46,16 @@ public class NodePageEntry {
     private int featureCount;
 
     public static NodePageEntry of(SceneNode node, Set<Integer> meshNodeIndices,
-                                   boolean hasTextures) {
+                                   boolean hasTextures, boolean includeObb) {
         NodePageEntry entry = new NodePageEntry();
         entry.index = node.getIndex();
 
         BoundingVolume bv = node.getBoundingVolume();
         if (bv != null) {
-            entry.obb = new Obb(bv.toObbCenter(), bv.toObbHalfSize(), bv.toObbQuaternion());
+            entry.mbs = bv.toMbs();
+            if (includeObb) {
+                entry.obb = new Obb(bv.toObbCenter(), bv.toObbHalfSize(), bv.toObbQuaternion());
+            }
         }
 
         entry.lodThreshold = node.getLodThreshold();

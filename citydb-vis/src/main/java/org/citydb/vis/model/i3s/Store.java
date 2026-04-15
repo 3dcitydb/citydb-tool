@@ -76,10 +76,10 @@ public class Store {
                     new HeaderEntry("vertexCount", "UInt32"),
                     new HeaderEntry("featureCount", "UInt32"));
             schema.topology = "PerAttributeArray";
-            // Global schema must match what is actually written to buffer 0
-            // for every node, regardless of per-node texture state. The
-            // encoder pads uv0 with zeros and color with opaque-white when
-            // a node is untextured so the binary layout stays constant.
+            // Declared for ArcGIS Pro compatibility — its loader rejects the
+            // scene layer if defaultGeometrySchema is absent. No uncompressed
+            // buffer is actually written; geometry is emitted as a single
+            // Draco-compressed buffer per GeometryDefinition.
             schema.ordering = List.of("position", "normal", "uv0", "color");
             schema.vertexAttributes = VertexAttributes.full();
             schema.featureAttributeOrder = List.of("id", "faceRange");
