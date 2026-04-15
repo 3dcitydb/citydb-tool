@@ -9,8 +9,10 @@ import org.citydb.vis.util.BoundingBoxUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class TriangleMesh {
@@ -294,7 +296,7 @@ public class TriangleMesh {
      * by value. Using a record gives auto-generated equals/hashCode that
      * compare all three 64-bit fields. Hash collisions in {@link #vertexHash}
      * are theoretically possible but vanishingly unlikely for real geographic
-     * coordinate data (birthday-paradox threshold ~4 × 10⁹ distinct vertices).
+     * coordinate data (birthday-paradox threshold ~4 * 10^9 distinct vertices).
      */
     private record TriangleKey(long h0, long h1, long h2) {}
 
@@ -346,7 +348,7 @@ public class TriangleMesh {
      * Hash a vertex position to a 64-bit value using exact double bits.
      * Bit-identical positions always hash equal; collisions are possible in
      * principle but statistically irrelevant for realistic coordinate data
-     * (birthday-paradox threshold ~4 × 10⁹ distinct vertices).
+     * (birthday-paradox threshold ~4 * 10^9 distinct vertices).
      */
     private static long vertexHash(double[] pos) {
         long h = Double.doubleToLongBits(pos[0]);
@@ -374,5 +376,50 @@ public class TriangleMesh {
                 (bbox[1] + bbox[4]) / 2,
                 (bbox[2] + bbox[5]) / 2
         };
+    }
+
+    /**
+     * Shift all vertex Z values so the mesh's bottom sits at height 0.
+     */
+    public void clampToGround() {
+        if (positions.isEmpty()) {
+            return;
+        }
+        double minZ = Double.MAX_VALUE;
+        for (double[] pos : positions) {
+            if (pos[2] < minZ) minZ = pos[2];
+        }
+        if (minZ != 0) {
+            for (double[] pos : positions) {
+                pos[2] -= minZ;
+            }
+        }
+    }
+
+    /**
+     * Compute per-texture UV extent from triangle texture IDs and vertex UVs.
+     * Returns texId → [minU, minV, maxU, maxV]. Triangles with texId &lt; 0
+     * are skipped.
+     */
+    public Map<Integer, float[]> computeUVExtents() {
+        Map<Integer, float[]> extents = new HashMap<>();
+        for (int t = 0; t < triangles.size(); t++) {
+            int texId = triangleTextureIds.get(t);
+            if (texId < 0) {
+                continue;
+            }
+            float[] ext = extents.computeIfAbsent(texId,
+                    k -> new float[]{Float.MAX_VALUE, Float.MAX_VALUE,
+                            -Float.MAX_VALUE, -Float.MAX_VALUE});
+            int[] tri = triangles.get(t);
+            for (int vi : tri) {
+                float[] uv = texCoords.get(vi);
+                ext[0] = Math.min(ext[0], uv[0]);
+                ext[1] = Math.min(ext[1], uv[1]);
+                ext[2] = Math.max(ext[2], uv[0]);
+                ext[3] = Math.max(ext[3], uv[1]);
+            }
+        }
+        return extents;
     }
 }
