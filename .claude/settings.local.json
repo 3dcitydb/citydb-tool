@@ -199,7 +199,9 @@
       "Bash(./gradlew :citydb-vis:compileJava :citydb-vis:compileTestJava)",
       "Bash(cat)",
       "Bash(chmod +x /tmp/check_imports.py)",
-      "Bash(xargs -I {} bash -c \"git show HEAD:{} | grep -o 'class \\\\|public \\\\|private ' | wc -l > /dev/null && echo {}\")"
+      "Bash(xargs -I {} bash -c \"git show HEAD:{} | grep -o 'class \\\\|public \\\\|private ' | wc -l > /dev/null && echo {}\")",
+      "Bash(./gradlew :citydb-vis:compileJava :citydb-vis:javadoc)",
+      "Bash(bash /tmp/analyze_citydb_vis.sh)"
     ]
   }
 }
