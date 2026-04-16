@@ -1,0 +1,84 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright virtualcitysystems GmbH <https://vc.systems>
+ */
+
+package org.citydb.vis.pipeline.stages;
+
+import org.citydb.vis.pipeline.NodeBuilder;
+import org.citydb.vis.pipeline.PipelineContext;
+import org.citydb.vis.pipeline.Stage;
+import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.store.NodeEntry;
+import org.citydb.vis.store.NodeEntryStore;
+import org.citydb.vis.store.SpatialEntry;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Fused per-cell quadtree build + global merge + flush. Cells are processed
+ * one at a time: load spatial entries from the partitioned store, build a
+ * local quadtree, remap indices into the global tree, flush the compact
+ * {@link NodeEntry} lists to {@link NodeEntryStore}, release cell data.
+ * Peak heap is one cell's spatial-entry list.
+ * <p>
+ * Populates {@link PipelineContext#allNodes()} and
+ * {@link PipelineContext#meshNodeIndices()}; closes
+ * {@link PipelineContext#partitioned()} after consumption.
+ */
+public final class TreeBuildingStage implements Stage {
+    @Override
+    public void execute(PipelineContext ctx) throws IOException {
+        int estimatedNodes = (int) Math.min(
+                (ctx.totalFeatures() / ctx.formatOptions().getMaxFeaturesPerNode()) * 3 + 1,
+                Integer.MAX_VALUE);
+        NodeEntryStore nodeEntryStore = ctx.stores().initNodeEntryStore(estimatedNodes);
+
+        List<SceneNode> allNodes = new ArrayList<>();
+        Set<Integer> meshNodeIndices = new HashSet<>();
+        SceneNode globalRoot = new SceneNode(0, 0);
+        allNodes.add(globalRoot);
+        int nextIndex = 1;
+
+        for (long cellKey : ctx.partitioned().cellKeys()) {
+            List<SpatialEntry> cellEntries = ctx.partitioned().loadCell(cellKey);
+            double[] cellExtent = NodeBuilder.computeExtent(cellEntries);
+            NodeBuilder.CellTree cellTree =
+                    NodeBuilder.buildCellTree(cellEntries, cellExtent,
+                            ctx.formatOptions().getMaxFeaturesPerNode(),
+                            ctx.formatOptions().getMaxTreeDepth());
+
+            int offset = nextIndex;
+            for (SceneNode node : cellTree.nodes()) {
+                int oldIndex = node.getIndex();
+                int newIndex = oldIndex + offset;
+
+                List<NodeEntry> entries = cellTree.nodeEntryMap().get(oldIndex);
+                if (entries != null) {
+                    nodeEntryStore.writeNode(newIndex, entries);
+                    meshNodeIndices.add(newIndex);
+                }
+
+                node.setIndex(newIndex);
+                allNodes.add(node);
+            }
+
+            SceneNode cellRoot = cellTree.nodes().get(0);
+            globalRoot.addChild(cellRoot);
+            nextIndex += cellTree.nodes().size();
+        }
+
+        ctx.partitioned().close();
+        ctx.setPartitioned(null);
+
+        NodeBuilder.finalizeGlobalRoot(globalRoot);
+
+        ctx.setAllNodes(allNodes);
+        ctx.setMeshNodeIndices(meshNodeIndices);
+        ctx.setHasTextures(ctx.stores().getTextureStore().hasTextures());
+    }
+}
