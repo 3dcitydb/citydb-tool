@@ -3,11 +3,12 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis.pipeline;
 
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.NodeEntry;
+import org.citydb.vis.store.NodeEntryStore;
 import org.citydb.vis.store.SpatialEntry;
 import org.citydb.vis.util.BoundingBoxUtils;
 
@@ -19,23 +20,24 @@ import java.util.Map;
 /**
  * Builds scene node hierarchies using a two-level spatial indexing strategy:
  * <ol>
- *   <li><b>Grid partitioning</b> (in the writer): features are classified into
- *       spatial grid cells via {@link org.citydb.vis.store.PartitionedEntryStore}.</li>
+ *   <li><b>Grid partitioning</b> (in {@link org.citydb.vis.pipeline.stages.PartitioningStage}):
+ *       features are classified into spatial grid cells via
+ *       {@link org.citydb.vis.store.PartitionedEntryStore}.</li>
  *   <li><b>Per-cell quadtree</b> (here): each grid cell independently builds
  *       a quadtree from its {@link SpatialEntry} metadata. No triangle meshes
  *       are loaded during tree construction.</li>
  * </ol>
- * After each cell tree is built, the writer remaps its node indices into the
- * global tree and flushes the compact {@link NodeEntry} lists to disk via
- * {@link org.citydb.vis.store.NodeEntryStore}.
+ * After each cell tree is built,
+ * {@link org.citydb.vis.pipeline.stages.TreeBuildingStage} remaps its node
+ * indices into the global tree and flushes the compact {@link NodeEntry}
+ * lists to disk via {@link org.citydb.vis.store.NodeEntryStore}.
  * <p>
  * This builder is format-agnostic — it produces a spatial hierarchy of
  * {@link SceneNode} objects without applying format-specific properties
  * such as LOD thresholds or geometric errors. The caller is responsible
  * for setting those after the tree is built.
  */
-class NodeBuilder {
-
+public class NodeBuilder {
     /**
      * Result of building a quadtree for a single spatial grid cell.
      * <ul>
@@ -53,7 +55,7 @@ class NodeBuilder {
      * entries can be flushed to {@link NodeEntryStore} and released from
      * heap as soon as each cell is processed.
      */
-    record CellTree(List<SceneNode> nodes, Map<Integer, List<NodeEntry>> nodeEntryMap) {
+    public record CellTree(List<SceneNode> nodes, Map<Integer, List<NodeEntry>> nodeEntryMap) {
     }
 
     /**
@@ -62,7 +64,7 @@ class NodeBuilder {
      * Thread-safe — no shared mutable state. Can be called concurrently
      * for different cells.
      */
-    static CellTree buildCellTree(List<SpatialEntry> entries, double[] extent,
+    public static CellTree buildCellTree(List<SpatialEntry> entries, double[] extent,
                                   int maxFeaturesPerNode, int maxTreeDepth) {
         Map<Integer, List<NodeEntry>> nodeEntryMap = new HashMap<>();
         List<SceneNode> nodes = new ArrayList<>();
@@ -84,14 +86,14 @@ class NodeBuilder {
      * Set the bounding volume on the global root node after all cell trees
      * have been attached as children.
      */
-    static void finalizeGlobalRoot(SceneNode globalRoot) {
+    public static void finalizeGlobalRoot(SceneNode globalRoot) {
         globalRoot.updateBoundingVolume();
     }
 
     /**
      * Compute the axis-aligned bounding box of a list of spatial entries.
      */
-    static double[] computeExtent(List<SpatialEntry> entries) {
+    public static double[] computeExtent(List<SpatialEntry> entries) {
         double[] acc = BoundingBoxUtils.emptyAabb();
         for (SpatialEntry e : entries) {
             BoundingBoxUtils.expandToBox(acc, e.bbox());
