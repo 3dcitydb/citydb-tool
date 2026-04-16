@@ -99,12 +99,12 @@ public class TileNode {
     }
 
     /**
-     * Compute geometric error for a node: {@code R/16} for intermediate
+     * Compute geometric error for a node: {@code R/8} for intermediate
      * nodes, {@code 0} for leaf nodes.
      */
     public static double computeGeometricError(SceneNode node) {
         if (node.getChildren().isEmpty()) return 0;
         BoundingVolume bv = node.getBoundingVolume();
-        return bv != null ? bv.getRadius() / 16.0 : 0;
+        return bv != null ? bv.getRadius() / 8.0 : 0;
     }
 }
