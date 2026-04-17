@@ -100,8 +100,6 @@ public class GlbEncoder {
     private static VertexArrays buildVertexArrays(TriangleMesh mesh, VertexWelder.WeldResult weld,
                                                   boolean hasTexCoords, DatasetFrame frame) {
         int vertexCount = weld.vertexCount();
-        float[][] weldedPositions = weld.weldedPositions();
-        List<int[]> allTriangles = mesh.getTriangles();
 
         // Untextured nodes carry normals; textured nodes let CesiumJS generate
         // flat normals from geometry (matches I3S behaviour, better for buildings).
@@ -112,41 +110,33 @@ public class GlbEncoder {
         float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] posMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
 
-        int idx = 0;
-        for (int ti : weld.validTriIndices()) {
-            int base = ti * 3;
-            int[] tri = allTriangles.get(ti);
-            for (int j = 0; j < 3; j++) {
-                float[] wp = weldedPositions[base + j];
-                float east = wp[0] * (float) frame.scaleX + frame.offsetX;
-                float north = wp[1] * (float) frame.scaleY + frame.offsetY;
-                float up = wp[2] + frame.offsetZ;
-                positions[idx * 3] = east;
-                positions[idx * 3 + 1] = up;
-                positions[idx * 3 + 2] = -north;
-                posMin[0] = Math.min(posMin[0], east);
-                posMin[1] = Math.min(posMin[1], up);
-                posMin[2] = Math.min(posMin[2], -north);
-                posMax[0] = Math.max(posMax[0], east);
-                posMax[1] = Math.max(posMax[1], up);
-                posMax[2] = Math.max(posMax[2], -north);
+        VertexWelder.iterateOutputVertices(weld, mesh, (idx, wp, srcIdx) -> {
+            float east = wp[0] * (float) frame.scaleX + frame.offsetX;
+            float north = wp[1] * (float) frame.scaleY + frame.offsetY;
+            float up = wp[2] + frame.offsetZ;
+            positions[idx * 3] = east;
+            positions[idx * 3 + 1] = up;
+            positions[idx * 3 + 2] = -north;
+            posMin[0] = Math.min(posMin[0], east);
+            posMin[1] = Math.min(posMin[1], up);
+            posMin[2] = Math.min(posMin[2], -north);
+            posMax[0] = Math.max(posMax[0], east);
+            posMax[1] = Math.max(posMax[1], up);
+            posMax[2] = Math.max(posMax[2], -north);
 
-                if (normals != null) {
-                    float[] n = mesh.getNormals().get(tri[j]);
-                    normals[idx * 3] = n[0];
-                    normals[idx * 3 + 1] = n[2];
-                    normals[idx * 3 + 2] = -n[1];
-                }
-                if (uvs != null) {
-                    float[] uv = mesh.getTexCoords().get(tri[j]);
-                    uvs[idx * 2] = uv[0];
-                    uvs[idx * 2 + 1] = uv[1];
-                }
-
-                indices[idx] = idx;
-                idx++;
+            if (normals != null) {
+                float[] n = mesh.getNormals().get(srcIdx);
+                normals[idx * 3] = n[0];
+                normals[idx * 3 + 1] = n[2];
+                normals[idx * 3 + 2] = -n[1];
             }
-        }
+            if (uvs != null) {
+                float[] uv = mesh.getTexCoords().get(srcIdx);
+                uvs[idx * 2] = uv[0];
+                uvs[idx * 2 + 1] = uv[1];
+            }
+            indices[idx] = idx;
+        });
 
         return new VertexArrays(vertexCount, positions, normals, uvs,
                 indices, weld.computeFeatureIndices(), posMin, posMax);
@@ -193,57 +183,28 @@ public class GlbEncoder {
 
     private static PropertyTableBufferViews encodePropertyField(
             BinBufferBuilder bin, AttrField field, List<FeatureData> features) {
+        String name = field.name();
         return switch (field.type()) {
-            case OID -> encodeOidProperty(bin, features);
-            case INT -> encodeIntProperty(bin, field.name(), features);
-            case DOUBLE -> encodeDoubleProperty(bin, field.name(), features);
-            case STRING -> encodeStringProperty(bin, field.name(), features);
+            case OID, INT -> new PropertyTableBufferViews(
+                    bin.addInt32Array(AttrValueCoercer.extractInts(features, name)), -1);
+            case DOUBLE -> new PropertyTableBufferViews(
+                    bin.addFloat64Array(AttrValueCoercer.extractDoubles(features, name)), -1);
+            case STRING -> encodeStringProperty(bin, name, features);
         };
-    }
-
-    private static PropertyTableBufferViews encodeOidProperty(
-            BinBufferBuilder bin, List<FeatureData> features) {
-        int[] values = new int[features.size()];
-        for (int i = 0; i < features.size(); i++) {
-            values[i] = (int) features.get(i).id();
-        }
-        int bv = bin.addInt32Array(values);
-        return new PropertyTableBufferViews(bv, -1);
-    }
-
-    private static PropertyTableBufferViews encodeIntProperty(
-            BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
-        int[] values = new int[features.size()];
-        for (int i = 0; i < features.size(); i++) {
-            values[i] = AttrValueCoercer.toInt(features.get(i).getFieldValue(fieldName));
-        }
-        int bv = bin.addInt32Array(values);
-        return new PropertyTableBufferViews(bv, -1);
-    }
-
-    private static PropertyTableBufferViews encodeDoubleProperty(
-            BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
-        double[] values = new double[features.size()];
-        for (int i = 0; i < features.size(); i++) {
-            values[i] = AttrValueCoercer.toDouble(features.get(i).getFieldValue(fieldName));
-        }
-        int bv = bin.addFloat64Array(values);
-        return new PropertyTableBufferViews(bv, -1);
     }
 
     private static PropertyTableBufferViews encodeStringProperty(
             BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
-        // Concatenate all string values and build offset array
+        byte[][] utf8 = AttrValueCoercer.extractUtf8(features, fieldName);
         ByteArrayOutputStream valuesStream = new ByteArrayOutputStream();
-        int[] offsets = new int[features.size() + 1];
+        int[] offsets = new int[utf8.length + 1];
         int offset = 0;
-        for (int i = 0; i < features.size(); i++) {
+        for (int i = 0; i < utf8.length; i++) {
             offsets[i] = offset;
-            byte[] bytes = AttrValueCoercer.toUtf8(features.get(i).getFieldValue(fieldName));
-            valuesStream.writeBytes(bytes);
-            offset += bytes.length;
+            valuesStream.writeBytes(utf8[i]);
+            offset += utf8[i].length;
         }
-        offsets[features.size()] = offset;
+        offsets[utf8.length] = offset;
 
         int valuesBv = bin.addRawBytes(valuesStream.toByteArray());
         int offsetsBv = bin.addUint32Array(offsets);
