@@ -20,7 +20,6 @@ import picocli.CommandLine;
         name = "3dtiles",
         description = "Export data in OGC 3D Tiles 1.1 format.")
 public class Tiles3DExportCommand extends VisExportController {
-
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(Tiles3DAdapter.class);
