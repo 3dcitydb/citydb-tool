@@ -26,9 +26,9 @@ public final class GlbContainer {
     }
 
     public static byte[] assemble(byte[] jsonData, byte[] binData) {
-        int jsonPadding = (4 - (jsonData.length % 4)) % 4;
+        int jsonPadding = BufferUtils.paddingFor(jsonData.length, 4);
         int jsonChunkLength = jsonData.length + jsonPadding;
-        int binPadding = (4 - (binData.length % 4)) % 4;
+        int binPadding = BufferUtils.paddingFor(binData.length, 4);
         int binChunkLength = binData.length + binPadding;
 
         int totalLength = 12 + 8 + jsonChunkLength + 8 + binChunkLength;
@@ -41,13 +41,16 @@ public final class GlbContainer {
         glb.putInt(jsonChunkLength);
         glb.putInt(CHUNK_JSON);
         glb.put(jsonData);
-        for (int i = 0; i < jsonPadding; i++) glb.put((byte) ' ');
+        if (jsonPadding > 0) glb.put(JSON_PAD, 0, jsonPadding);
 
         glb.putInt(binChunkLength);
         glb.putInt(CHUNK_BIN);
         glb.put(binData);
-        for (int i = 0; i < binPadding; i++) glb.put((byte) 0);
+        if (binPadding > 0) glb.put(BIN_PAD, 0, binPadding);
 
         return glb.array();
     }
+
+    private static final byte[] JSON_PAD = {' ', ' ', ' '};
+    private static final byte[] BIN_PAD = new byte[3];
 }

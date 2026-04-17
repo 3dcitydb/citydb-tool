@@ -16,11 +16,7 @@ import org.citydb.vis.scene.BoundingVolume;
 public record TileBoundingVolume(double[] region) {
 
     public static TileBoundingVolume fromExtent(double[] extent) {
-        return new TileBoundingVolume(new double[]{
-                Math.toRadians(extent[0]), Math.toRadians(extent[1]),
-                Math.toRadians(extent[3]), Math.toRadians(extent[4]),
-                extent[2], extent[5]
-        });
+        return region(extent[0], extent[1], extent[2], extent[3], extent[4], extent[5]);
     }
 
     /**
@@ -31,10 +27,16 @@ public record TileBoundingVolume(double[] region) {
         if (bv == null) {
             return new TileBoundingVolume(new double[6]);
         }
+        return region(bv.getMinX(), bv.getMinY(), bv.getMinZ(),
+                bv.getMaxX(), bv.getMaxY(), bv.getMaxZ());
+    }
+
+    private static TileBoundingVolume region(double minX, double minY, double minZ,
+                                             double maxX, double maxY, double maxZ) {
         return new TileBoundingVolume(new double[]{
-                Math.toRadians(bv.getMinX()), Math.toRadians(bv.getMinY()),
-                Math.toRadians(bv.getMaxX()), Math.toRadians(bv.getMaxY()),
-                bv.getMinZ(), bv.getMaxZ()
+                Math.toRadians(minX), Math.toRadians(minY),
+                Math.toRadians(maxX), Math.toRadians(maxY),
+                minZ, maxZ
         });
     }
 }
