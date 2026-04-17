@@ -19,7 +19,6 @@ import picocli.CommandLine;
                 CommandLine.HelpCommand.class
         })
 public class VisExportCommand implements Command {
-
     @Override
     public Integer call() {
         return CommandLine.ExitCode.OK;
