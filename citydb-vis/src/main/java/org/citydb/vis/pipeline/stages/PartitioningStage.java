@@ -5,6 +5,7 @@
 
 package org.citydb.vis.pipeline.stages;
 
+import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.store.PartitionedEntryStore;
@@ -22,13 +23,17 @@ import java.io.IOException;
  */
 public final class PartitioningStage implements Stage {
     @Override
-    public void execute(PipelineContext ctx) throws IOException {
+    public void execute(PipelineContext ctx) throws VisExportException {
         int targetPerCell = Math.max(ctx.formatOptions().getMaxFeaturesPerNode() * 50, 3000);
         int targetCells = Math.max(1, (int) (ctx.totalFeatures() / targetPerCell));
         int gridDim = Math.max(1, (int) Math.ceil(Math.sqrt(targetCells)));
 
-        ctx.setPartitioned(PartitionedEntryStore.create(
-                ctx.stores().getSpatialEntryStore(), ctx.extent(), gridDim,
-                ctx.stores().getTempDir()));
+        try {
+            ctx.setPartitioned(PartitionedEntryStore.create(
+                    ctx.stores().getSpatialEntryStore(), ctx.extent(), gridDim,
+                    ctx.stores().getTempDir()));
+        } catch (IOException e) {
+            throw new VisExportException("Failed to partition spatial entries.", e);
+        }
     }
 }

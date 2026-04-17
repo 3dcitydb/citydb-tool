@@ -10,6 +10,7 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
+import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.encoder.AttributeEncoder;
 import org.citydb.vis.geometry.GeometryMeshBuilder;
 import org.citydb.vis.geometry.TriangleMesh;
@@ -44,7 +45,7 @@ public final class FeatureProcessor {
                         Envelope envelope, Map<String, Object> attributes,
                         List<GeometryProperty> geomProps,
                         Map<LinearRing, List<TextureCoordinate>> texCoords,
-                        Map<LinearRing, Integer> ringTextureIds) throws IOException {
+                        Map<LinearRing, Integer> ringTextureIds) throws VisExportException {
         TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId,
                 texCoords, ringTextureIds);
         if (mesh.isEmpty()) {
@@ -84,12 +85,16 @@ public final class FeatureProcessor {
             cy = (bbox[1] + bbox[4]) / 2;
         }
 
-        long meshHandle = stores.getMeshStore().store(mesh, (int) featureId);
-        long attrOffset = stores.getAttrStore().store(objectId, featureType, attributes);
-        attributeEncoder.trackFieldTypes(attributes);
+        try {
+            long meshHandle = stores.getMeshStore().store(mesh, (int) featureId);
+            long attrOffset = stores.getAttrStore().store(objectId, featureType, attributes);
+            attributeEncoder.trackFieldTypes(attributes);
 
-        stores.getSpatialEntryStore().store(
-                new SpatialEntry(featureId, cx, cy, bbox, meshHandle, attrOffset),
-                (int) featureId);
+            stores.getSpatialEntryStore().store(
+                    new SpatialEntry(featureId, cx, cy, bbox, meshHandle, attrOffset),
+                    (int) featureId);
+        } catch (IOException e) {
+            throw new VisExportException("Failed to persist feature " + objectId + ".", e);
+        }
     }
 }
