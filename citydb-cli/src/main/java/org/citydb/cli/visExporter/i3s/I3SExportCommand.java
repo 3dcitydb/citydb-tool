@@ -21,7 +21,6 @@ import picocli.CommandLine;
         name = "i3s",
         description = "Export data in OGC I3S format.")
 public class I3SExportCommand extends VisExportController {
-
     @CommandLine.Option(names = "--slpk",
             description = "Package the I3S output as a Scene Layer Package (.slpk) file, " +
                     "compatible with ArcGIS Pro. By default, I3S is exported as a folder structure. " +
