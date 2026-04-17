@@ -5,7 +5,8 @@
 
 package org.citydb.vis.pipeline;
 
-import java.io.IOException;
+import org.citydb.vis.writer.VisExportException;
+
 import java.util.List;
 
 /**
@@ -20,7 +21,7 @@ public final class ExportPipeline {
         this.stages = List.of(stages);
     }
 
-    public void run(PipelineContext ctx) throws IOException {
+    public void run(PipelineContext ctx) throws VisExportException {
         for (Stage stage : stages) {
             stage.execute(ctx);
         }

@@ -5,6 +5,7 @@
 
 package org.citydb.vis.pipeline.stages;
 
+import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.pipeline.NodeBuilder;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
@@ -32,53 +33,57 @@ import java.util.Set;
  */
 public final class TreeBuildingStage implements Stage {
     @Override
-    public void execute(PipelineContext ctx) throws IOException {
-        int estimatedNodes = (int) Math.min(
-                (ctx.totalFeatures() / ctx.formatOptions().getMaxFeaturesPerNode()) * 3 + 1,
-                Integer.MAX_VALUE);
-        NodeEntryStore nodeEntryStore = ctx.stores().initNodeEntryStore(estimatedNodes);
+    public void execute(PipelineContext ctx) throws VisExportException {
+        try {
+            int estimatedNodes = (int) Math.min(
+                    (ctx.totalFeatures() / ctx.formatOptions().getMaxFeaturesPerNode()) * 3 + 1,
+                    Integer.MAX_VALUE);
+            NodeEntryStore nodeEntryStore = ctx.stores().initNodeEntryStore(estimatedNodes);
 
-        List<SceneNode> allNodes = new ArrayList<>();
-        Set<Integer> meshNodeIndices = new HashSet<>();
-        SceneNode globalRoot = new SceneNode(0, 0);
-        allNodes.add(globalRoot);
-        int nextIndex = 1;
+            List<SceneNode> allNodes = new ArrayList<>();
+            Set<Integer> meshNodeIndices = new HashSet<>();
+            SceneNode globalRoot = new SceneNode(0, 0);
+            allNodes.add(globalRoot);
+            int nextIndex = 1;
 
-        for (long cellKey : ctx.partitioned().cellKeys()) {
-            List<SpatialEntry> cellEntries = ctx.partitioned().loadCell(cellKey);
-            double[] cellExtent = NodeBuilder.computeExtent(cellEntries);
-            NodeBuilder.CellTree cellTree =
-                    NodeBuilder.buildCellTree(cellEntries, cellExtent,
-                            ctx.formatOptions().getMaxFeaturesPerNode(),
-                            ctx.formatOptions().getMaxTreeDepth());
+            for (long cellKey : ctx.partitioned().cellKeys()) {
+                List<SpatialEntry> cellEntries = ctx.partitioned().loadCell(cellKey);
+                double[] cellExtent = NodeBuilder.computeExtent(cellEntries);
+                NodeBuilder.CellTree cellTree =
+                        NodeBuilder.buildCellTree(cellEntries, cellExtent,
+                                ctx.formatOptions().getMaxFeaturesPerNode(),
+                                ctx.formatOptions().getMaxTreeDepth());
 
-            int offset = nextIndex;
-            for (SceneNode node : cellTree.nodes()) {
-                int oldIndex = node.getIndex();
-                int newIndex = oldIndex + offset;
+                int offset = nextIndex;
+                for (SceneNode node : cellTree.nodes()) {
+                    int oldIndex = node.getIndex();
+                    int newIndex = oldIndex + offset;
 
-                List<NodeEntry> entries = cellTree.nodeEntryMap().get(oldIndex);
-                if (entries != null) {
-                    nodeEntryStore.writeNode(newIndex, entries);
-                    meshNodeIndices.add(newIndex);
+                    List<NodeEntry> entries = cellTree.nodeEntryMap().get(oldIndex);
+                    if (entries != null) {
+                        nodeEntryStore.writeNode(newIndex, entries);
+                        meshNodeIndices.add(newIndex);
+                    }
+
+                    node.setIndex(newIndex);
+                    allNodes.add(node);
                 }
 
-                node.setIndex(newIndex);
-                allNodes.add(node);
+                SceneNode cellRoot = cellTree.nodes().get(0);
+                globalRoot.addChild(cellRoot);
+                nextIndex += cellTree.nodes().size();
             }
 
-            SceneNode cellRoot = cellTree.nodes().get(0);
-            globalRoot.addChild(cellRoot);
-            nextIndex += cellTree.nodes().size();
+            ctx.partitioned().close();
+            ctx.setPartitioned(null);
+
+            NodeBuilder.finalizeGlobalRoot(globalRoot);
+
+            ctx.setAllNodes(allNodes);
+            ctx.setMeshNodeIndices(meshNodeIndices);
+            ctx.setHasTextures(ctx.stores().getTextureStore().hasTextures());
+        } catch (IOException e) {
+            throw new VisExportException("Failed to build spatial tree.", e);
         }
-
-        ctx.partitioned().close();
-        ctx.setPartitioned(null);
-
-        NodeBuilder.finalizeGlobalRoot(globalRoot);
-
-        ctx.setAllNodes(allNodes);
-        ctx.setMeshNodeIndices(meshNodeIndices);
-        ctx.setHasTextures(ctx.stores().getTextureStore().hasTextures());
     }
 }
