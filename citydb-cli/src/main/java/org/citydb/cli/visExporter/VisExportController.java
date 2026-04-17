@@ -61,10 +61,6 @@ public abstract class VisExportController implements Command {
             description = "Store temporary files in this directory.")
     protected Path tempDirectory;
 
-    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
-            heading = "Scene options:%n")
-    protected SceneOptions sceneOptions;
-
     @CommandLine.ArgGroup(exclusive = false)
     protected ThreadsOptions threadsOptions;
 
@@ -75,6 +71,10 @@ public abstract class VisExportController implements Command {
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Time-based feature history options:%n")
     protected ValidityOptions validityOptions;
+
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
+            heading = "Scene options:%n")
+    protected SceneOptions sceneOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
             heading = "Database connection options:%n")
@@ -110,15 +110,19 @@ public abstract class VisExportController implements Command {
         if (sceneOptions == null) {
             return;
         }
+
         if (Command.hasMatchedOption("--max-features-per-node", commandSpec)) {
             options.setMaxFeaturesPerNode(sceneOptions.getMaxFeaturesPerNode());
         }
+
         if (Command.hasMatchedOption("--max-tree-depth", commandSpec)) {
             options.setMaxTreeDepth(sceneOptions.getMaxTreeDepth());
         }
+
         if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
             options.setClampToGround(sceneOptions.isClampToGround());
         }
+
         if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
             options.setTextureScale(sceneOptions.getTextureScale());
         }
