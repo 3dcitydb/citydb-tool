@@ -205,6 +205,42 @@ public class VertexWelder {
         return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
     }
 
+    /**
+     * Callback for {@link #iterateOutputVertices}. Invoked once per output
+     * vertex in triangle-soup order.
+     */
+    @FunctionalInterface
+    public interface VertexVisitor {
+        /**
+         * @param outIdx        sequential output vertex index (0..vertexCount-1)
+         * @param weldedPos     welded Float32 position {@code [x, y, z]} in
+         *                      node-local (centered, unscaled) coordinates
+         * @param sourceVertIdx original mesh vertex index for looking up
+         *                      per-vertex attributes (normals, UVs, ...)
+         */
+        void visit(int outIdx, float[] weldedPos, int sourceVertIdx);
+    }
+
+    /**
+     * Iterate over all output vertices (valid triangles only, in triangle-soup
+     * order) and invoke {@code visitor} with the welded position and the
+     * source vertex index. Encapsulates the per-encoder boilerplate of
+     * walking {@code validTriIndices} × 3.
+     */
+    public static void iterateOutputVertices(WeldResult weld, TriangleMesh mesh,
+                                             VertexVisitor visitor) {
+        float[][] weldedPositions = weld.weldedPositions();
+        List<int[]> allTriangles = mesh.getTriangles();
+        int idx = 0;
+        for (int ti : weld.validTriIndices()) {
+            int base = ti * 3;
+            int[] tri = allTriangles.get(ti);
+            for (int j = 0; j < 3; j++) {
+                visitor.visit(idx++, weldedPositions[base + j], tri[j]);
+            }
+        }
+    }
+
     private static long gridKey(int x, int y, int z) {
         return ((long) x * 73856093L) ^ ((long) y * 19349669L) ^ ((long) z * 83492791L);
     }

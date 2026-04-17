@@ -89,9 +89,9 @@ public class BinBufferBuilder {
     }
 
     private void align(int boundary) {
-        int pad = (boundary - (data.size() % boundary)) % boundary;
-        for (int i = 0; i < pad; i++) {
-            data.write(0);
-        }
+        int pad = BufferUtils.paddingFor(data.size(), boundary);
+        if (pad > 0) data.write(PAD_ZEROS, 0, pad);
     }
+
+    private static final byte[] PAD_ZEROS = new byte[8];
 }

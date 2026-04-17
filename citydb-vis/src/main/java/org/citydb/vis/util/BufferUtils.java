@@ -15,4 +15,12 @@ public class BufferUtils {
     public static ByteBuffer allocateLittleEndian(int capacity) {
         return ByteBuffer.allocate(capacity).order(ByteOrder.LITTLE_ENDIAN);
     }
+
+    /**
+     * Return the number of padding bytes needed to advance {@code offset} to
+     * the next multiple of {@code boundary}. Returns 0 when already aligned.
+     */
+    public static int paddingFor(int offset, int boundary) {
+        return (boundary - (offset % boundary)) % boundary;
+    }
 }
