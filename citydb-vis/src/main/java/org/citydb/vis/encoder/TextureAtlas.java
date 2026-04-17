@@ -101,13 +101,12 @@ public class TextureAtlas {
             Map<Integer, int[]> tileInfo, Map<Integer, float[]> tileOffsets) throws IOException {
 
         for (int texId : textureIds) {
-            Path source = textureStore.getSourcePath(texId);
-            if (source == null) continue;
             BufferedImage img;
             try {
-                img = ImageIO.read(source.toFile());
+                img = textureStore.loadImage(texId);
             } catch (IOException e) {
-                logger.warn("Skipping corrupt texture {} ({}): {}", texId, source, e.getMessage());
+                logger.warn("Skipping corrupt texture {} ({}): {}",
+                        texId, textureStore.getSourcePath(texId), e.getMessage());
                 continue;
             }
             if (img == null) continue;

@@ -7,10 +7,13 @@ package org.citydb.vis.store;
 
 import org.citydb.core.file.OutputFile;
 
+import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.Closeable;
+import java.io.IOException;
+import java.lang.ref.SoftReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +36,15 @@ public class TextureStore implements Closeable {
     private final ConcurrentHashMap<String, Integer> uriToId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, String> idToUri = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger(0);
+    /**
+     * Decoded-image cache keyed by texture ID. SoftReference gives the GC
+     * permission to evict under memory pressure; re-reads transparently
+     * repopulate. Typical city datasets reuse a small set of facade textures
+     * across thousands of nodes, so hitting this cache avoids redundant
+     * {@link ImageIO#read} calls without pinning unbounded bitmap memory.
+     */
+    private final ConcurrentHashMap<Integer, SoftReference<BufferedImage>> imageCache =
+            new ConcurrentHashMap<>();
 
     public TextureStore(OutputFile outputFile) {
         this.outputFile = outputFile;
@@ -65,6 +77,26 @@ public class TextureStore implements Closeable {
 
     public boolean hasTextures() {
         return nextId.get() > 0;
+    }
+
+    /**
+     * Load and decode the source image for a registered texture, caching the
+     * result for subsequent calls. Returns {@code null} if the texture ID is
+     * unknown, the source file is missing, or decoding fails — callers must
+     * null-check and skip the texture on failure.
+     */
+    public BufferedImage loadImage(int textureId) throws IOException {
+        SoftReference<BufferedImage> ref = imageCache.get(textureId);
+        BufferedImage cached = ref != null ? ref.get() : null;
+        if (cached != null) return cached;
+
+        Path source = getSourcePath(textureId);
+        if (source == null) return null;
+        BufferedImage img = ImageIO.read(source.toFile());
+        if (img != null) {
+            imageCache.put(textureId, new SoftReference<>(img));
+        }
+        return img;
     }
 
     @Override

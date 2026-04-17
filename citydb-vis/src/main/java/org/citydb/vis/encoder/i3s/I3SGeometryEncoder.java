@@ -83,9 +83,6 @@ public class I3SGeometryEncoder {
         }
 
         int vertexCount = weld.vertexCount();
-        List<Integer> validTriIndices = weld.validTriIndices();
-        float[][] weldedPositions = weld.weldedPositions();
-        List<int[]> allTriangles = mesh.getTriangles();
 
         // Collect positions, ECEF normals (untextured only), and UVs (textured
         // only) into arrays for Draco encoding. Textured nodes skip normals —
@@ -102,40 +99,23 @@ public class I3SGeometryEncoder {
         // a few kilometers the basis-rotation error between the two latitudes
         // is below the rendered-normal noise floor (<1e-4 rad). Larger nodes
         // would require per-triangle frame recomputation.
-        double sinLon = 0, cosLon = 0, sinLat = 0, cosLat = 0;
-        if (outNormals != null) {
-            double lonRad = Math.toRadians(centerX);
-            double latRad = Math.toRadians(centerY);
-            sinLon = Math.sin(lonRad);
-            cosLon = Math.cos(lonRad);
-            sinLat = Math.sin(latRad);
-            cosLat = Math.cos(latRad);
-        }
+        GeoTransform.EnuBasis enu = outNormals != null
+                ? GeoTransform.EnuBasis.at(centerX, centerY) : null;
 
-        int idx = 0;
-        for (int ti : validTriIndices) {
-            int base = ti * 3;
-            int[] tri = allTriangles.get(ti);
-            for (int j = 0; j < 3; j++) {
-                outPositions[idx] = weldedPositions[base + j];
-                if (outNormals != null) {
-                    float[] n = mesh.getNormals().get(tri[j]);
-                    double ne = n[0], nn = n[1], nu = n[2];
-                    outNormals[idx][0] = (float) (-sinLon * ne - sinLat * cosLon * nn + cosLat * cosLon * nu);
-                    outNormals[idx][1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
-                    outNormals[idx][2] = (float) (cosLat * nn + sinLat * nu);
-                }
-                if (outUVs != null) {
-                    outUVs[idx] = mesh.getTexCoords().get(tri[j]);
-                }
-                idx++;
+        VertexWelder.iterateOutputVertices(weld, mesh, (idx, weldedPos, srcIdx) -> {
+            outPositions[idx] = weldedPos;
+            if (outNormals != null) {
+                enu.rotateNormalToEcef(mesh.getNormals().get(srcIdx), outNormals[idx]);
             }
-        }
+            if (outUVs != null) {
+                outUVs[idx] = mesh.getTexCoords().get(srcIdx);
+            }
+        });
 
         node.setMesh(null);
 
         int[] vertexFeatureIndices = weld.computeFeatureIndices();
-        int numTriangles = validTriIndices.size();
+        int numTriangles = weld.validTriIndices().size();
         List<Long> rangeFeatureIds = weld.rangeFeatureIds();
 
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
