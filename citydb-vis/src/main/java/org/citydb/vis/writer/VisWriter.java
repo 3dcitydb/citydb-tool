@@ -36,13 +36,11 @@ import org.citydb.vis.store.AttributeStore;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.NodeEntryStore;
 import org.citydb.vis.store.ShardedMeshStore;
-import org.citydb.vis.store.TextureStore;
 import org.citydb.vis.store.VisExportStores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -156,26 +154,6 @@ public abstract class VisWriter implements FeatureWriter {
         return formatOptions;
     }
 
-    protected ShardedMeshStore getMeshStore() {
-        return stores.getMeshStore();
-    }
-
-    protected AttributeStore getAttrStore() {
-        return stores.getAttrStore();
-    }
-
-    protected TextureStore getTextureStore() {
-        return stores.getTextureStore();
-    }
-
-    protected NodeEntryStore getNodeEntryStore() {
-        return stores.getNodeEntryStore();
-    }
-
-    protected int getCpuCores() {
-        return cpuCores;
-    }
-
     // ---- Format-specific hook -----------------------------------------------
 
     /**
@@ -193,7 +171,7 @@ public abstract class VisWriter implements FeatureWriter {
                                         Set<Integer> meshNodeIndices,
                                         double[] extent,
                                         List<AttrField> attrFields,
-                                        boolean hasTextures) throws IOException;
+                                        boolean hasTextures) throws VisExportException;
 
     // ---- FeatureWriter implementation ---------------------------------------
 
@@ -269,23 +247,16 @@ public abstract class VisWriter implements FeatureWriter {
             PipelineContext ctx = new PipelineContext(
                     stores, formatOptions, attributeEncoder, totalFeatures);
 
-            long t0 = System.currentTimeMillis();
             new ExportPipeline(
                     new ExtentComputationStage(),
                     new PartitioningStage(),
                     new TreeBuildingStage()
             ).run(ctx);
-            long t1 = System.currentTimeMillis();
-            logger.info("Spatial indexing: {} ms ({} nodes, {} with mesh).",
-                    t1 - t0, ctx.allNodes().size(), ctx.meshNodeIndices().size());
 
             // --- Phase 5: Format-specific output ---
             writeOutput(ctx.allNodes(), ctx.meshNodeIndices(), ctx.extent(),
                     ctx.attrFields(), ctx.hasTextures());
-            long t2 = System.currentTimeMillis();
-            logger.info("Node output: {} ms.", t2 - t1);
-
-        } catch (Exception e) {
+        } catch (VisExportException e) {
             throw new WriteException("Failed to write scene layer.", e);
         } finally {
             logger.info("Closing intermediate stores and deleting temp directory.");
@@ -306,60 +277,68 @@ public abstract class VisWriter implements FeatureWriter {
      * Prepare a node's mesh data: load and merge meshes from the sharded store,
      * build a texture atlas (if textured), and remap UV coordinates.
      */
-    protected PreparedNode prepareNodeMesh(SceneNode node) throws IOException {
-        List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(node.getIndex());
+    protected PreparedNode prepareNodeMesh(SceneNode node) throws VisExportException {
+        try {
+            List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(node.getIndex());
 
-        TriangleMesh merged = new TriangleMesh();
-        for (NodeEntry entry : entries) {
-            merged.merge(stores.getMeshStore().load(entry.meshHandle()));
-        }
+            TriangleMesh merged = new TriangleMesh();
+            for (NodeEntry entry : entries) {
+                merged.merge(stores.getMeshStore().load(entry.meshHandle()));
+            }
 
-        Set<Integer> uniqueTexIds = new LinkedHashSet<>();
-        for (int texId : merged.getTriangleTextureIds()) {
-            if (texId >= 0) uniqueTexIds.add(texId);
-        }
-        if (uniqueTexIds.isEmpty() && merged.hasTexCoords()) {
-            merged.setHasTexCoords(false);
-        }
-
-        TextureAtlas atlas = null;
-        if (!uniqueTexIds.isEmpty()) {
-            Map<Integer, float[]> uvExtents = merged.computeUVExtents();
-            atlas = TextureAtlas.build(
-                    uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
-                    formatOptions.getMaxAtlasSize(), uvExtents);
-            if (atlas != null) {
-                atlas.remapUVs(merged);
-            } else {
-                logger.warn("Node {}: all referenced textures failed to load, " +
-                        "falling back to untextured rendering.", node.getIndex());
+            Set<Integer> uniqueTexIds = new LinkedHashSet<>();
+            for (int texId : merged.getTriangleTextureIds()) {
+                if (texId >= 0) uniqueTexIds.add(texId);
+            }
+            if (uniqueTexIds.isEmpty() && merged.hasTexCoords()) {
                 merged.setHasTexCoords(false);
             }
-        }
-        node.setTextured(atlas != null);
 
-        return new PreparedNode(entries, merged, atlas);
+            TextureAtlas atlas = null;
+            if (!uniqueTexIds.isEmpty()) {
+                Map<Integer, float[]> uvExtents = merged.computeUVExtents();
+                atlas = TextureAtlas.build(
+                        uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
+                        formatOptions.getMaxAtlasSize(), uvExtents);
+                if (atlas != null) {
+                    atlas.remapUVs(merged);
+                } else {
+                    logger.warn("Node {}: all referenced textures failed to load, " +
+                            "falling back to untextured rendering.", node.getIndex());
+                    merged.setHasTexCoords(false);
+                }
+            }
+            node.setTextured(atlas != null);
+
+            return new PreparedNode(entries, merged, atlas);
+        } catch (IOException e) {
+            throw new VisExportException("Failed to prepare node " + node.getIndex() + ".", e);
+        }
     }
 
     /**
      * Load per-feature attribute data from the disk-backed attribute store.
      */
-    protected List<FeatureData> loadNodeFeatures(List<NodeEntry> entries) throws IOException {
-        List<FeatureData> features = new ArrayList<>(entries.size());
-        for (NodeEntry entry : entries) {
-            AttributeStore.FeatureAttrs attrs = stores.getAttrStore().load(entry.attrOffset());
-            features.add(new FeatureData(
-                    entry.id(), attrs.objectId(), attrs.featureType(),
-                    attrs.attributes()));
+    protected List<FeatureData> loadNodeFeatures(List<NodeEntry> entries) throws VisExportException {
+        try {
+            List<FeatureData> features = new ArrayList<>(entries.size());
+            for (NodeEntry entry : entries) {
+                AttributeStore.FeatureAttrs attrs = stores.getAttrStore().load(entry.attrOffset());
+                features.add(new FeatureData(
+                        entry.id(), attrs.objectId(), attrs.featureType(),
+                        attrs.attributes()));
+            }
+            return features;
+        } catch (IOException e) {
+            throw new VisExportException("Failed to load node attribute data.", e);
         }
-        return features;
     }
 
     // ---- Parallel node processing -------------------------------------------
 
     @FunctionalInterface
     protected interface NodeProcessor {
-        boolean process(SceneNode node) throws IOException;
+        boolean process(SceneNode node) throws VisExportException;
     }
 
     /**
@@ -371,7 +350,7 @@ public abstract class VisWriter implements FeatureWriter {
      */
     protected Set<Integer> processNodesParallel(List<SceneNode> allNodes,
                                                 Set<Integer> meshNodeIndices,
-                                                NodeProcessor processor) throws IOException {
+                                                NodeProcessor processor) throws VisExportException {
         List<SceneNode> meshNodes = allNodes.stream()
                 .filter(n -> meshNodeIndices.contains(n.getIndex()))
                 .toList();
@@ -386,16 +365,16 @@ public abstract class VisWriter implements FeatureWriter {
                     if (!processor.process(node)) {
                         emptyNodeIndices.add(node.getIndex());
                     }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+                } catch (VisExportException e) {
+                    throw new NodeProcessingException(e);
                 }
                 int done = nodesProcessed.incrementAndGet();
                 if (done % 100 == 0 || done == total) {
                     logger.info("Nodes written: {}/{}.", done, total);
                 }
             })).join();
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
+        } catch (NodeProcessingException e) {
+            throw e.cause;
         } finally {
             pool.shutdown();
             try {
@@ -413,5 +392,15 @@ public abstract class VisWriter implements FeatureWriter {
                     emptyNodeIndices.size());
         }
         return result;
+    }
+
+    /** Unchecked wrapper to tunnel {@link VisExportException} through parallel streams. */
+    private static final class NodeProcessingException extends RuntimeException {
+        private final VisExportException cause;
+
+        NodeProcessingException(VisExportException cause) {
+            super(cause);
+            this.cause = cause;
+        }
     }
 }
