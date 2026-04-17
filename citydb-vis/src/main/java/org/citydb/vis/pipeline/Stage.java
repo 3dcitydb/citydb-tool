@@ -5,7 +5,7 @@
 
 package org.citydb.vis.pipeline;
 
-import java.io.IOException;
+import org.citydb.vis.writer.VisExportException;
 
 /**
  * A single step in the visualization export pipeline. Stages read and mutate
@@ -14,5 +14,5 @@ import java.io.IOException;
  */
 @FunctionalInterface
 public interface Stage {
-    void execute(PipelineContext ctx) throws IOException;
+    void execute(PipelineContext ctx) throws VisExportException;
 }
