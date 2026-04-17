@@ -10,6 +10,7 @@ import org.citydb.vis.writer.VisWriter;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.encoder.i3s.I3SAttributeEncoder;
 import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
 import org.citydb.vis.encoder.i3s.I3SJsonSerializer;
@@ -91,7 +92,7 @@ public class I3SWriter extends VisWriter {
                                Set<Integer> meshNodeIndices,
                                double[] extent,
                                List<AttrField> attrFields,
-                               boolean hasTextures) throws IOException {
+                               boolean hasTextures) throws VisExportException {
         // Set I3S LOD thresholds on the tree
         setLodThresholds(allNodes);
 
@@ -100,7 +101,11 @@ public class I3SWriter extends VisWriter {
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures, slpk);
 
         if (slpk) {
-            packageAsSlpk();
+            try {
+                packageAsSlpk();
+            } catch (IOException e) {
+                throw new VisExportException("Failed to package I3S output as SLPK.", e);
+            }
         }
     }
 
@@ -147,22 +152,30 @@ public class I3SWriter extends VisWriter {
                                 List<AttrField> attrFields,
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures,
-                                boolean includeObb) throws IOException {
+                                boolean includeObb) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
-        Files.createDirectories(layerDir);
 
-        // Scene layer JSON
-        jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
-                hasTextures);
+        try {
+            Files.createDirectories(layerDir);
+            // Scene layer JSON
+            jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
+                    hasTextures);
+        } catch (IOException e) {
+            throw new VisExportException("Failed to write I3S scene layer JSON.", e);
+        }
 
         // Parallel: encode geometry + write features/attributes per node.
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
                 node -> writeNodeOutput(node, layerDir, attrFields));
 
-        // Node pages AFTER geometry so vertex counts are accurate
-        jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices,
-                hasTextures, includeObb);
+        try {
+            // Node pages AFTER geometry so vertex counts are accurate
+            jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices,
+                    hasTextures, includeObb);
+        } catch (IOException e) {
+            throw new VisExportException("Failed to write I3S node pages.", e);
+        }
     }
 
     /**
@@ -171,42 +184,45 @@ public class I3SWriter extends VisWriter {
      * write per-node feature/attribute JSON files.
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
-                                    List<AttrField> attrFields) throws IOException {
+                                    List<AttrField> attrFields) throws VisExportException {
         PreparedNode prepared = prepareNodeMesh(node);
-
-        node.setMesh(prepared.mesh());
-        List<Long> validFeatureIds = geometryEncoder.writeNodeGeometry(layerDir, node);
-        if (validFeatureIds == null) {
-            return false;
-        }
-
-        // Geometry confirmed — now safe to materialize the atlas file.
-        if (prepared.atlas() != null) {
-            Path textureDir = layerDir.resolve("nodes")
-                    .resolve(String.valueOf(node.getIndex())).resolve("textures");
-            Files.createDirectories(textureDir);
-            prepared.atlas().write(textureDir.resolve("0"));
-            // Record the texel count (width × height) so the node page can
-            // emit texelCountHint, which ArcGIS Pro requires for rendering.
-            node.setTexelCountHint(
-                    prepared.atlas().getWidth() * prepared.atlas().getHeight());
-        }
-
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
 
-        // Align features with valid face ranges — degenerate filtering may
-        // have removed all triangles for some features, causing fewer face
-        // ranges than input features. Feature/attribute output must match
-        // the Draco feature-index attribute order.
-        if (validFeatureIds.size() < featureDataList.size()) {
-            featureDataList = FeatureData.reorderByIds(featureDataList, validFeatureIds);
-            node.setFeatureCount(featureDataList.size());
-        }
+        try {
+            node.setMesh(prepared.mesh());
+            List<Long> validFeatureIds = geometryEncoder.writeNodeGeometry(layerDir, node);
+            if (validFeatureIds == null) {
+                return false;
+            }
 
-        jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
-        i3sAttributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
-                featureDataList);
-        return true;
+            // Geometry confirmed — now safe to materialize the atlas file.
+            if (prepared.atlas() != null) {
+                Path textureDir = layerDir.resolve("nodes")
+                        .resolve(String.valueOf(node.getIndex())).resolve("textures");
+                Files.createDirectories(textureDir);
+                prepared.atlas().write(textureDir.resolve("0"));
+                // Record the texel count (width × height) so the node page can
+                // emit texelCountHint, which ArcGIS Pro requires for rendering.
+                node.setTexelCountHint(
+                        prepared.atlas().getWidth() * prepared.atlas().getHeight());
+            }
+
+            // Align features with valid face ranges — degenerate filtering may
+            // have removed all triangles for some features, causing fewer face
+            // ranges than input features. Feature/attribute output must match
+            // the Draco feature-index attribute order.
+            if (validFeatureIds.size() < featureDataList.size()) {
+                featureDataList = FeatureData.reorderByIds(featureDataList, validFeatureIds);
+                node.setFeatureCount(featureDataList.size());
+            }
+
+            jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
+            i3sAttributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
+                    featureDataList);
+            return true;
+        } catch (IOException e) {
+            throw new VisExportException("Failed to write I3S node " + node.getIndex() + ".", e);
+        }
     }
 
 }

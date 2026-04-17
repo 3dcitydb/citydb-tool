@@ -10,6 +10,7 @@ import org.citydb.vis.writer.VisWriter;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
 import org.citydb.vis.model.AttrField;
@@ -73,12 +74,16 @@ public class Tiles3DWriter extends VisWriter {
                                Set<Integer> meshNodeIndices,
                                double[] extent,
                                List<AttrField> attrFields,
-                               boolean hasTextures) throws IOException {
+                               boolean hasTextures) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path tilesDir = outputDir.resolve("tiles");
         Path subtreesDir = outputDir.resolve("subtrees");
-        Files.createDirectories(tilesDir);
-        Files.createDirectories(subtreesDir);
+        try {
+            Files.createDirectories(tilesDir);
+            Files.createDirectories(subtreesDir);
+        } catch (IOException e) {
+            throw new VisExportException("Failed to create 3D Tiles output directories.", e);
+        }
 
         // Dataset center for ENU transform
         double[] datasetCenter = {
@@ -91,23 +96,27 @@ public class Tiles3DWriter extends VisWriter {
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
                 node -> writeNodeGlb(node, tilesDir, attrFields, datasetCenter));
 
-        // Write sub-tilesets (tree-based spatial split)
-        SceneNode globalRoot = allNodes.get(0);
-        List<SceneNode> cellRoots = globalRoot.getChildren();
-        AtomicInteger subtreeCounter = new AtomicInteger(cellRoots.size());
-        for (int i = 0; i < cellRoots.size(); i++) {
-            Path subtreeFile = subtreesDir.resolve(i + ".json");
-            tilesetSerializer.writeSubTileset(subtreeFile, cellRoots.get(i),
-                    effectiveMeshIndices, subtreeCounter);
+        try {
+            // Write sub-tilesets (tree-based spatial split)
+            SceneNode globalRoot = allNodes.get(0);
+            List<SceneNode> cellRoots = globalRoot.getChildren();
+            AtomicInteger subtreeCounter = new AtomicInteger(cellRoots.size());
+            for (int i = 0; i < cellRoots.size(); i++) {
+                Path subtreeFile = subtreesDir.resolve(i + ".json");
+                tilesetSerializer.writeSubTileset(subtreeFile, cellRoots.get(i),
+                        effectiveMeshIndices, subtreeCounter);
+            }
+
+            // Write root tileset.json
+            double[] transform = GeoTransform.enuToEcefMatrix(datasetCenter);
+            tilesetSerializer.writeRootTileset(outputDir, globalRoot,
+                    extent, attrFields, transform);
+
+            logger.info("3D Tiles output: {} tiles, {} sub-tileset files, tileset.json written.",
+                    effectiveMeshIndices.size(), subtreeCounter.get());
+        } catch (IOException e) {
+            throw new VisExportException("Failed to write 3D Tiles tileset.", e);
         }
-
-        // Write root tileset.json
-        double[] transform = GeoTransform.enuToEcefMatrix(datasetCenter);
-        tilesetSerializer.writeRootTileset(outputDir, globalRoot,
-                extent, attrFields, transform);
-
-        logger.info("3D Tiles output: {} tiles, {} sub-tileset files, tileset.json written.",
-                effectiveMeshIndices.size(), subtreeCounter.get());
     }
 
     /**
@@ -115,29 +124,32 @@ public class Tiles3DWriter extends VisWriter {
      */
     private boolean writeNodeGlb(SceneNode node, Path tilesDir,
                                  List<AttrField> attrFields, double[] datasetCenter)
-            throws IOException {
+            throws VisExportException {
         PreparedNode prepared = prepareNodeMesh(node);
-
-        // Serialize atlas to JPEG bytes for GLB embedding
-        byte[] textureBytes = null;
-        if (prepared.atlas() != null) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            prepared.atlas().write(baos);
-            textureBytes = baos.toByteArray();
-        }
-
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
 
-        // Encode GLB
-        node.setMesh(prepared.mesh());
-        byte[] glb = glbEncoder.encode(node, textureBytes, featureDataList, attrFields,
-                datasetCenter);
-        if (glb == null) {
-            return false;
-        }
+        try {
+            // Serialize atlas to JPEG bytes for GLB embedding
+            byte[] textureBytes = null;
+            if (prepared.atlas() != null) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                prepared.atlas().write(baos);
+                textureBytes = baos.toByteArray();
+            }
 
-        Files.write(tilesDir.resolve(node.getIndex() + ".glb"), glb);
-        return true;
+            // Encode GLB
+            node.setMesh(prepared.mesh());
+            byte[] glb = glbEncoder.encode(node, textureBytes, featureDataList, attrFields,
+                    datasetCenter);
+            if (glb == null) {
+                return false;
+            }
+
+            Files.write(tilesDir.resolve(node.getIndex() + ".glb"), glb);
+            return true;
+        } catch (IOException e) {
+            throw new VisExportException("Failed to write 3D Tiles node " + node.getIndex() + ".", e);
+        }
     }
 
 }
