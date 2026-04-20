@@ -10,8 +10,10 @@ import org.citydb.vis.writer.VisWriter;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
+import org.citydb.vis.encoder.tiles3d.TilePaths;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
@@ -25,7 +27,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -70,11 +76,12 @@ public class Tiles3DWriter extends VisWriter {
     // ---- Format-specific output (Phase 5) -----------------------------------
 
     @Override
-    protected void writeOutput(List<SceneNode> allNodes,
-                               Set<Integer> meshNodeIndices,
-                               double[] extent,
-                               List<AttrField> attrFields,
-                               boolean hasTextures) throws VisExportException {
+    protected void writeOutput(PipelineContext ctx) throws VisExportException {
+        List<SceneNode> allNodes = ctx.allNodes();
+        Set<Integer> meshNodeIndices = ctx.meshNodeIndices();
+        Map<Integer, int[]> cellRootGridCoords = ctx.cellRootGridCoords();
+        double[] extent = ctx.extent();
+        List<AttrField> attrFields = ctx.attrFields();
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path tilesDir = outputDir.resolve("tiles");
         Path subtreesDir = outputDir.resolve("subtrees");
@@ -92,28 +99,41 @@ public class Tiles3DWriter extends VisWriter {
                 (extent[2] + extent[5]) / 2
         };
 
+        // Precompute nested tile paths mirroring the scene tree, so neither
+        // tiles/ nor subtrees/ accumulates one flat file per node. Cell roots
+        // start at their grid coordinates [gy, gx] to also bound the top-level
+        // fanout by O(gridDim) rather than O(cellCount).
+        SceneNode globalRoot = allNodes.get(0);
+        Map<Integer, int[]> tilePaths = TilePaths.buildPathIndex(globalRoot, cellRootGridCoords);
+
+        // Pre-create parent directories serially so the parallel GLB
+        // writer below doesn't contend on filesystem stat syscalls.
+        try {
+            createTileParentDirs(tilesDir, tilePaths, meshNodeIndices);
+        } catch (IOException e) {
+            throw new VisExportException("Failed to create tile output directories.", e);
+        }
+
         // Parallel: encode GLB per node
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
-                node -> writeNodeGlb(node, tilesDir, attrFields, datasetCenter));
+                node -> writeNodeGlb(node, tilesDir, tilePaths, attrFields, datasetCenter));
 
         try {
             // Write sub-tilesets (tree-based spatial split)
-            SceneNode globalRoot = allNodes.get(0);
             List<SceneNode> cellRoots = globalRoot.getChildren();
-            AtomicInteger subtreeCounter = new AtomicInteger(cellRoots.size());
-            for (int i = 0; i < cellRoots.size(); i++) {
-                Path subtreeFile = subtreesDir.resolve(i + ".json");
-                tilesetSerializer.writeSubTileset(subtreeFile, cellRoots.get(i),
-                        effectiveMeshIndices, subtreeCounter);
+            AtomicInteger subtreeFileCount = new AtomicInteger();
+            for (SceneNode cellRoot : cellRoots) {
+                tilesetSerializer.writeSubTileset(subtreesDir, cellRoot,
+                        effectiveMeshIndices, tilePaths, subtreeFileCount);
             }
 
             // Write root tileset.json
             double[] transform = GeoTransform.enuToEcefMatrix(datasetCenter);
             tilesetSerializer.writeRootTileset(outputDir, globalRoot,
-                    extent, attrFields, transform);
+                    extent, attrFields, transform, tilePaths);
 
             logger.info("3D Tiles output: {} tiles, {} sub-tileset files, tileset.json written.",
-                    effectiveMeshIndices.size(), subtreeCounter.get());
+                    effectiveMeshIndices.size(), subtreeFileCount.get());
         } catch (IOException e) {
             throw new VisExportException("Failed to write 3D Tiles tileset.", e);
         }
@@ -123,6 +143,7 @@ public class Tiles3DWriter extends VisWriter {
      * Process a single mesh node: merge meshes, build texture atlas, encode GLB.
      */
     private boolean writeNodeGlb(SceneNode node, Path tilesDir,
+                                 Map<Integer, int[]> tilePaths,
                                  List<AttrField> attrFields, double[] datasetCenter)
             throws VisExportException {
         PreparedNode prepared = prepareNodeMesh(node);
@@ -145,10 +166,29 @@ public class Tiles3DWriter extends VisWriter {
                 return false;
             }
 
-            Files.write(tilesDir.resolve(node.getIndex() + ".glb"), glb);
+            Files.write(tilesDir.resolve(TilePaths.tileFile(tilePaths.get(node.getIndex()))), glb);
             return true;
         } catch (IOException e) {
             throw new VisExportException("Failed to write 3D Tiles node " + node.getIndex() + ".", e);
+        }
+    }
+
+    private static void createTileParentDirs(Path tilesDir,
+                                             Map<Integer, int[]> tilePaths,
+                                             Set<Integer> meshNodeIndices) throws IOException {
+        Set<String> dirs = new HashSet<>();
+        for (int idx : meshNodeIndices) {
+            int[] path = tilePaths.get(idx);
+            if (path.length >= 2) {
+                dirs.add(TilePaths.parentDir(path));
+            }
+        }
+        // Create shallow directories first so each deeper createDirectories
+        // call finds its ancestors already present (fewer redundant stats).
+        List<String> sorted = new ArrayList<>(dirs);
+        sorted.sort(Comparator.comparingInt(String::length));
+        for (String rel : sorted) {
+            Files.createDirectories(tilesDir.resolve(rel));
         }
     }
 
