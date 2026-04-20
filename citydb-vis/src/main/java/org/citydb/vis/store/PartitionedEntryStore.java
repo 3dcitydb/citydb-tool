@@ -45,12 +45,18 @@ public class PartitionedEntryStore implements Closeable {
     private final Path tempFile;
     private final FileChannel channel;
     private final Map<Long, CellSegment> cellIndex;
+    private final int gridDim;
 
     private PartitionedEntryStore(Path tempFile, FileChannel channel,
-                                  Map<Long, CellSegment> cellIndex) {
+                                  Map<Long, CellSegment> cellIndex, int gridDim) {
         this.tempFile = tempFile;
         this.channel = channel;
         this.cellIndex = cellIndex;
+        this.gridDim = gridDim;
+    }
+
+    public int gridDim() {
+        return gridDim;
     }
 
     /**
@@ -125,7 +131,7 @@ public class PartitionedEntryStore implements Closeable {
                 posHolder[0] = pos;
             }
 
-            return new PartitionedEntryStore(tempFile, channel, cellIndex);
+            return new PartitionedEntryStore(tempFile, channel, cellIndex, gridDim);
         } catch (IOException e) {
             try {
                 channel.close();
@@ -188,6 +194,14 @@ public class PartitionedEntryStore implements Closeable {
         int gy = Math.max(0, Math.min(
                 (int) ((entry.centerY() - extent[1]) / cellHeight), gridDim - 1));
         return (long) gy * gridDim + gx;
+    }
+
+    /**
+     * Decode a cell key produced by the internal encoder into
+     * {@code [gy, gx]} grid coordinates.
+     */
+    public static int[] decodeKey(long cellKey, int gridDim) {
+        return new int[]{(int) (cellKey / gridDim), (int) (cellKey % gridDim)};
     }
 
 }

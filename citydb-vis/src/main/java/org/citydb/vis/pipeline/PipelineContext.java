@@ -13,6 +13,7 @@ import org.citydb.vis.store.VisExportStores;
 import org.citydb.vis.writer.VisFormatOptions;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -34,6 +35,9 @@ import java.util.Set;
  *       {@link org.citydb.vis.pipeline.stages.TreeBuildingStage})</li>
  *   <li>{@link #allNodes()} — flat list of scene nodes (index 0 = global root)</li>
  *   <li>{@link #meshNodeIndices()} — indices of nodes carrying geometry</li>
+ *   <li>{@link #cellRootGridCoords()} — grid coordinates {@code [gy, gx]} of
+ *       each cell-root scene node (used by 3D Tiles to nest output folders;
+ *       unused by I3S)</li>
  *   <li>{@link #hasTextures()} — whether any feature registered a texture</li>
  * </ul>
  */
@@ -48,6 +52,7 @@ public final class PipelineContext {
     private PartitionedEntryStore partitioned;
     private List<SceneNode> allNodes;
     private Set<Integer> meshNodeIndices;
+    private Map<Integer, int[]> cellRootGridCoords;
     private boolean hasTextures;
 
     public PipelineContext(VisExportStores stores,
@@ -122,6 +127,15 @@ public final class PipelineContext {
 
     public PipelineContext setMeshNodeIndices(Set<Integer> meshNodeIndices) {
         this.meshNodeIndices = meshNodeIndices;
+        return this;
+    }
+
+    public Map<Integer, int[]> cellRootGridCoords() {
+        return cellRootGridCoords;
+    }
+
+    public PipelineContext setCellRootGridCoords(Map<Integer, int[]> cellRootGridCoords) {
+        this.cellRootGridCoords = cellRootGridCoords;
         return this;
     }
 
