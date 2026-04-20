@@ -31,7 +31,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * When a cell's quadtree exceeds {@link #MAX_NODES_PER_SUBTILESET}
  * nodes, deeper subtrees are split into separate external tileset
  * files at natural tree boundaries, ensuring each file is spatially
- * coherent.
+ * coherent. Split subtree files live at a path derived from the scene
+ * node's position in the tree, mirroring the {@code tiles/} layout.
  */
 public class TilesetSerializer {
 
@@ -42,11 +43,24 @@ public class TilesetSerializer {
      */
     static final int MAX_NODES_PER_SUBTILESET = 64;
 
+    /**
+     * Traversal-invariant state threaded through the recursive subtree
+     * writers. A single {@code Ctx} is reused across all subtree files
+     * produced from one cell root.
+     */
+    private record Ctx(Set<Integer> meshNodeIndices,
+                       Map<Integer, int[]> tilePaths,
+                       Map<Integer, Integer> subtreeSizes,
+                       Path subtreesDir,
+                       AtomicInteger subtreeFileCount) {
+    }
+
     // ---- Root tileset ---------------------------------------------------
 
     public void writeRootTileset(Path outputDir, SceneNode globalRoot,
                                  double[] extent, List<AttrField> attrFields,
-                                 double[] transform) throws IOException {
+                                 double[] transform,
+                                 Map<Integer, int[]> tilePaths) throws IOException {
         // With ADD refinement, all tiles use consistent R/16 geometric
         // errors — no need for "always refine" overrides. ADD never causes
         // flickering on content-less nodes, and consistent errors prevent
@@ -54,15 +68,15 @@ public class TilesetSerializer {
         List<SceneNode> cellRoots = globalRoot.getChildren();
         List<CellReference> cellRefs = new ArrayList<>(cellRoots.size());
         double maxGeo = 0;
-        for (int i = 0; i < cellRoots.size(); i++) {
-            SceneNode cellRoot = cellRoots.get(i);
+        for (SceneNode cellRoot : cellRoots) {
             double geo = TileNode.computeGeometricError(cellRoot);
             maxGeo = Math.max(maxGeo, geo);
             BoundingVolume bv = cellRoot.getBoundingVolume();
+            int[] rootPath = tilePaths.get(cellRoot.getIndex());
             cellRefs.add(new CellReference(
                     TileBoundingVolume.fromBoundingVolume(bv),
                     geo,
-                    "subtrees/" + i + ".json"));
+                    "subtrees/" + TilePaths.subtreeFile(rootPath)));
         }
 
         TilesetDescriptor descriptor = TilesetDescriptor.ofRoot(
@@ -73,25 +87,17 @@ public class TilesetSerializer {
 
     // ---- Tree-based sub-tilesets ----------------------------------------
 
-    public void writeSubTileset(Path subtreeFile, SceneNode cellRoot,
+    public void writeSubTileset(Path subtreesDir, SceneNode cellRoot,
                                 Set<Integer> meshNodeIndices,
-                                AtomicInteger subtreeCounter) throws IOException {
+                                Map<Integer, int[]> tilePaths,
+                                AtomicInteger subtreeFileCount) throws IOException {
         Map<Integer, Integer> subtreeSizes = new HashMap<>();
         computeSubtreeSize(cellRoot, subtreeSizes);
 
-        Path subtreesDir = subtreeFile.getParent();
-        double rootGeo = TileNode.computeGeometricError(cellRoot);
-
-        AtomicInteger nodeCount = new AtomicInteger();
-        TileNode rootTile = buildTileNode(cellRoot, meshNodeIndices,
-                subtreeSizes, subtreesDir, subtreeCounter, nodeCount,
-                rootGeo);
-
-        TilesetDescriptor descriptor = TilesetDescriptor.ofSubtileset(
-                rootGeo, rootTile);
-
-        Files.createDirectories(subtreesDir);
-        JsonHelper.writePojo(subtreeFile, descriptor);
+        int[] rootPath = tilePaths.get(cellRoot.getIndex());
+        Ctx ctx = new Ctx(meshNodeIndices, tilePaths, subtreeSizes,
+                subtreesDir, subtreeFileCount);
+        writeSubtreeFile(ctx, cellRoot, rootPath);
     }
 
     // ---- Tree traversal with spatial splitting --------------------------
@@ -106,51 +112,49 @@ public class TilesetSerializer {
         return size;
     }
 
-    private static TileNode buildTileNode(SceneNode node, Set<Integer> meshNodeIndices,
-                                          Map<Integer, Integer> subtreeSizes,
-                                          Path subtreesDir,
-                                          AtomicInteger subtreeCounter,
+    private static void writeSubtreeFile(Ctx ctx, SceneNode root,
+                                         int[] rootPath) throws IOException {
+        // The subtree file lives at subtreesDir/<rootPath>.json; tile content
+        // URIs must navigate up rootPath.length levels to reach the output
+        // root, then back down into tiles/. Hoist the prefix here so
+        // buildTileNode doesn't rebuild the same string for every mesh node.
+        String tilePrefix = "../".repeat(rootPath.length) + "tiles/";
+        double rootGeo = TileNode.computeGeometricError(root);
+        TileNode rootTile = buildTileNode(ctx, root, rootPath, tilePrefix,
+                new AtomicInteger(), rootGeo);
+
+        Path out = ctx.subtreesDir().resolve(TilePaths.subtreeFile(rootPath));
+        Files.createDirectories(out.getParent());
+        JsonHelper.writePojo(out, TilesetDescriptor.ofSubtileset(rootGeo, rootTile));
+        ctx.subtreeFileCount().incrementAndGet();
+    }
+
+    private static TileNode buildTileNode(Ctx ctx, SceneNode node,
+                                          int[] currentSubtreeRootPath,
+                                          String tilePrefix,
                                           AtomicInteger nodeCount,
                                           double overrideGeo) throws IOException {
         nodeCount.incrementAndGet();
-        TileNode tile = TileNode.of(node, meshNodeIndices, overrideGeo);
+        String contentUri = ctx.meshNodeIndices().contains(node.getIndex())
+                ? tilePrefix + TilePaths.tileFile(ctx.tilePaths().get(node.getIndex()))
+                : null;
+        TileNode tile = TileNode.of(node, overrideGeo, contentUri);
 
         for (SceneNode child : node.getChildren()) {
-            int childSize = subtreeSizes.getOrDefault(child.getIndex(), 1);
+            int childSize = ctx.subtreeSizes().getOrDefault(child.getIndex(), 1);
 
             if (nodeCount.get() + childSize > MAX_NODES_PER_SUBTILESET) {
-                // Split: write child's subtree as a separate external tileset
-                int splitIdx = subtreeCounter.getAndIncrement();
-                tile.addChild(TileNode.ofExternalRef(child, splitIdx + ".json"));
-                writeExternalSubtileset(child, meshNodeIndices, subtreeSizes,
-                        subtreesDir, subtreeCounter, splitIdx);
+                int[] childPath = ctx.tilePaths().get(child.getIndex());
+                String uri = TilePaths.relativeSubtreeUri(currentSubtreeRootPath, childPath);
+                tile.addChild(TileNode.ofExternalRef(child, uri));
+                writeSubtreeFile(ctx, child, childPath);
             } else {
-                tile.addChild(buildTileNode(child, meshNodeIndices,
-                        subtreeSizes, subtreesDir, subtreeCounter,
-                        nodeCount, -1));
+                tile.addChild(buildTileNode(ctx, child, currentSubtreeRootPath,
+                        tilePrefix, nodeCount, -1));
             }
         }
 
         return tile;
-    }
-
-    private static void writeExternalSubtileset(SceneNode root,
-                                                Set<Integer> meshNodeIndices,
-                                                Map<Integer, Integer> subtreeSizes,
-                                                Path subtreesDir,
-                                                AtomicInteger subtreeCounter,
-                                                int fileIndex) throws IOException {
-        double rootGeo = TileNode.computeGeometricError(root);
-
-        AtomicInteger nodeCount = new AtomicInteger();
-        TileNode rootTile = buildTileNode(root, meshNodeIndices,
-                subtreeSizes, subtreesDir, subtreeCounter, nodeCount,
-                rootGeo);
-
-        TilesetDescriptor descriptor = TilesetDescriptor.ofSubtileset(
-                rootGeo, rootTile);
-
-        JsonHelper.writePojo(subtreesDir.resolve(fileIndex + ".json"), descriptor);
     }
 
 }

@@ -159,19 +159,11 @@ public abstract class VisWriter implements FeatureWriter {
     /**
      * Write the output in the target format. Called after spatial indexing is
      * complete — the full node tree, mesh/attribute stores, and texture
-     * registry are ready for consumption.
-     *
-     * @param allNodes         flat list of all scene nodes (index 0 = global root)
-     * @param meshNodeIndices  indices of nodes that carry geometry
-     * @param extent           global bounding box [minX, minY, minZ, maxX, maxY, maxZ]
-     * @param attrFields       finalized attribute field definitions
-     * @param hasTextures      whether any feature registered a texture
+     * registry are ready for consumption. The {@link PipelineContext} carries
+     * all intermediate state produced by the pipeline stages; each writer
+     * picks what it needs.
      */
-    protected abstract void writeOutput(List<SceneNode> allNodes,
-                                        Set<Integer> meshNodeIndices,
-                                        double[] extent,
-                                        List<AttrField> attrFields,
-                                        boolean hasTextures) throws VisExportException;
+    protected abstract void writeOutput(PipelineContext ctx) throws VisExportException;
 
     // ---- FeatureWriter implementation ---------------------------------------
 
@@ -254,8 +246,7 @@ public abstract class VisWriter implements FeatureWriter {
             ).run(ctx);
 
             // --- Phase 5: Format-specific output ---
-            writeOutput(ctx.allNodes(), ctx.meshNodeIndices(), ctx.extent(),
-                    ctx.attrFields(), ctx.hasTextures());
+            writeOutput(ctx);
         } catch (VisExportException e) {
             throw new WriteException("Failed to write scene layer.", e);
         } finally {
