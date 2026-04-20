@@ -13,7 +13,6 @@ import org.citydb.vis.scene.SceneNode;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * A tile node in the tileset hierarchy.
@@ -31,20 +30,19 @@ public class TileNode {
     private List<TileNode> children;
 
     /**
-     * Build a tile node from a SceneNode, inlining children in the same
-     * page and emitting external references for split subtrees.
+     * Build a tile node from a SceneNode with an optional content URI
+     * (null for nodes without their own geometry).
      *
      * @param overrideGeo if &ge; 0, override computed geometric error
      */
-    public static TileNode of(SceneNode node, Set<Integer> meshNodeIndices,
-                              double overrideGeo) {
+    public static TileNode of(SceneNode node, double overrideGeo, String contentUri) {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = overrideGeo >= 0 ? overrideGeo : computeGeometricError(node);
         tile.refine = "ADD";
 
-        if (meshNodeIndices.contains(node.getIndex())) {
-            tile.content = new TileContent("../tiles/" + node.getIndex() + ".glb");
+        if (contentUri != null) {
+            tile.content = new TileContent(contentUri);
         }
 
         if (!node.getChildren().isEmpty()) {
