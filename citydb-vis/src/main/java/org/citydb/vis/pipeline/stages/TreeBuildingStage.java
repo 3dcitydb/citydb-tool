@@ -12,12 +12,15 @@ import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.NodeEntryStore;
+import org.citydb.vis.store.PartitionedEntryStore;
 import org.citydb.vis.store.SpatialEntry;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,9 +45,11 @@ public final class TreeBuildingStage implements Stage {
 
             List<SceneNode> allNodes = new ArrayList<>();
             Set<Integer> meshNodeIndices = new HashSet<>();
+            Map<Integer, int[]> cellRootGridCoords = new HashMap<>();
             SceneNode globalRoot = new SceneNode(0, 0);
             allNodes.add(globalRoot);
             int nextIndex = 1;
+            int gridDim = ctx.partitioned().gridDim();
 
             for (long cellKey : ctx.partitioned().cellKeys()) {
                 List<SpatialEntry> cellEntries = ctx.partitioned().loadCell(cellKey);
@@ -71,6 +76,8 @@ public final class TreeBuildingStage implements Stage {
 
                 SceneNode cellRoot = cellTree.nodes().get(0);
                 globalRoot.addChild(cellRoot);
+                cellRootGridCoords.put(cellRoot.getIndex(),
+                        PartitionedEntryStore.decodeKey(cellKey, gridDim));
                 nextIndex += cellTree.nodes().size();
             }
 
@@ -81,6 +88,7 @@ public final class TreeBuildingStage implements Stage {
 
             ctx.setAllNodes(allNodes);
             ctx.setMeshNodeIndices(meshNodeIndices);
+            ctx.setCellRootGridCoords(cellRootGridCoords);
             ctx.setHasTextures(ctx.stores().getTextureStore().hasTextures());
         } catch (IOException e) {
             throw new VisExportException("Failed to build spatial tree.", e);

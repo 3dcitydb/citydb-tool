@@ -10,6 +10,7 @@ import org.citydb.vis.writer.VisWriter;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.writer.VisExportException;
 import org.citydb.vis.encoder.i3s.I3SAttributeEncoder;
 import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
@@ -88,11 +89,12 @@ public class I3SWriter extends VisWriter {
     // ---- Format-specific output (Phase 5) -----------------------------------
 
     @Override
-    protected void writeOutput(List<SceneNode> allNodes,
-                               Set<Integer> meshNodeIndices,
-                               double[] extent,
-                               List<AttrField> attrFields,
-                               boolean hasTextures) throws VisExportException {
+    protected void writeOutput(PipelineContext ctx) throws VisExportException {
+        List<SceneNode> allNodes = ctx.allNodes();
+        Set<Integer> meshNodeIndices = ctx.meshNodeIndices();
+        double[] extent = ctx.extent();
+        List<AttrField> attrFields = ctx.attrFields();
+        boolean hasTextures = ctx.hasTextures();
         // Set I3S LOD thresholds on the tree
         setLodThresholds(allNodes);
 
