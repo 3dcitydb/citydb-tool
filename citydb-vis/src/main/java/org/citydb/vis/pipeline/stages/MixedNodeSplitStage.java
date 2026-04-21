@@ -11,7 +11,7 @@ import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.NodeEntryStore;
 import org.citydb.vis.store.VisExportStores;
-import org.citydb.vis.writer.VisExportException;
+import org.citydb.vis.VisExportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

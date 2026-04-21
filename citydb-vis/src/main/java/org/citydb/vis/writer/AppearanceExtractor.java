@@ -3,7 +3,7 @@
  * Copyright Stuttgart University of Applied Sciences (HFT Stuttgart) <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.pipeline;
+package org.citydb.vis.writer;
 
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.appearance.ParameterizedTexture;
