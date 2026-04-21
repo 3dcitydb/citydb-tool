@@ -11,7 +11,7 @@ import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.pipeline.PipelineContext;
-import org.citydb.vis.writer.VisExportException;
+import org.citydb.vis.VisExportException;
 import org.citydb.vis.encoder.i3s.I3SAttributeEncoder;
 import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
 import org.citydb.vis.encoder.i3s.I3SJsonSerializer;

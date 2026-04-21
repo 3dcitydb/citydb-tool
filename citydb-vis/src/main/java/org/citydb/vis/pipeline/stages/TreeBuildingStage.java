@@ -5,8 +5,8 @@
 
 package org.citydb.vis.pipeline.stages;
 
-import org.citydb.vis.writer.VisExportException;
-import org.citydb.vis.pipeline.NodeBuilder;
+import org.citydb.vis.VisExportException;
+import org.citydb.vis.scene.NodeBuilder;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.scene.SceneNode;
