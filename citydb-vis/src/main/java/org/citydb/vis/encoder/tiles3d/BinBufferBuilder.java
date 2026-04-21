@@ -76,10 +76,6 @@ public class BinBufferBuilder {
         return bufferViews;
     }
 
-    public int size() {
-        return data.size();
-    }
-
     public byte[] toByteArray() {
         return data.toByteArray();
     }
