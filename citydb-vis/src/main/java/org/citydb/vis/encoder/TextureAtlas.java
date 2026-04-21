@@ -79,14 +79,11 @@ public class TextureAtlas {
     }
 
     /**
-     * Build a single texture atlas from the given texture IDs.
-     *
-     * @param uvExtents       per-texture UV extent: texId → [minU, minV, maxU, maxV].
-     *                        Used to compute tiling for wrapping textures.
-     * @param needsWhitePixel reserve a small solid-white region so untextured
-     *                        triangles in a mixed node can sample a
-     *                        known-white color while sharing the textured
-     *                        material.
+     * Build a single texture atlas. {@code uvExtents} drives wrap/tile
+     * computation for textures whose UVs fall outside {@code [0,1]}. When
+     * {@code needsWhitePixel} is true, reserves a small solid-white region
+     * so untextured triangles in a mixed node can sample a known-white color
+     * while sharing the textured material.
      */
     public static TextureAtlas build(Collection<Integer> textureIds, TextureStore textureStore,
                                      double textureScale, int maxAtlasSize,
@@ -193,10 +190,6 @@ public class TextureAtlas {
      * This keeps the resident BufferedImage footprint to one source at a
      * time — independent of how many textures the node references or how
      * large each source happens to be.
-     *
-     * @param metas       per-texture metadata (source dims + tiling)
-     * @param scale       user-requested texture scale
-     * @param tileOffsets texId → [offsetU, offsetV, rangeU, rangeV]
      */
     private static TextureAtlas buildSingleAtlas(List<TextureMeta> metas,
                                                   double scale, int maxAtlasSize,
@@ -249,7 +242,12 @@ public class TextureAtlas {
                         * Math.max(1, (int) (m.effectiveHeight() * scale));
             }
             double areaRatio = (double) ((long) maxAtlasSize * maxAtlasSize) / totalArea;
-            double factor = Math.min(1.0, areaRatio * 0.9) * Math.pow(0.85, attempt);
+            // Use attempt+1 so the very first retry applies a real tightening:
+            // with attempt=0 the 0.85^0=1 multiplier collapses to the area
+            // ratio alone, which is ≥1 on pure fragmentation overflow
+            // (area fits but BSP can't place) and the loop would break at
+            // `nextScale >= scale` without making any progress.
+            double factor = Math.min(1.0, areaRatio * 0.9) * Math.pow(0.85, attempt + 1);
             double nextScale = Math.max(minScale, scale * Math.sqrt(factor));
             if (nextScale >= scale) break;
             scale = nextScale;
@@ -518,11 +516,6 @@ public class TextureAtlas {
                 }
             }
         }
-    }
-
-    /** Atlas-space UV center of the reserved white pixel, or {@code null}. */
-    public float[] getWhitePixelUV() {
-        return whitePixelUV;
     }
 
     public void write(Path target) throws IOException {
