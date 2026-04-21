@@ -30,6 +30,7 @@ import org.citydb.vis.pipeline.ExportPipeline;
 import org.citydb.vis.pipeline.FeatureProcessor;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.stages.ExtentComputationStage;
+import org.citydb.vis.pipeline.stages.MixedNodeSplitStage;
 import org.citydb.vis.pipeline.stages.PartitioningStage;
 import org.citydb.vis.pipeline.stages.TreeBuildingStage;
 import org.citydb.vis.store.AttributeStore;
@@ -199,6 +200,9 @@ public abstract class VisWriter implements FeatureWriter {
         List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
         Map<LinearRing, List<TextureCoordinate>> texCoords = appearance.texCoords();
         Map<LinearRing, Integer> ringTextureIds = appearance.ringTextureIds();
+        if (ringTextureIds != null && !ringTextureIds.isEmpty()) {
+            stores.setFeatureTextured(featureId);
+        }
 
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
@@ -242,7 +246,8 @@ public abstract class VisWriter implements FeatureWriter {
             new ExportPipeline(
                     new ExtentComputationStage(),
                     new PartitioningStage(),
-                    new TreeBuildingStage()
+                    new TreeBuildingStage(),
+                    new MixedNodeSplitStage()
             ).run(ctx);
 
             // --- Phase 5: Format-specific output ---
@@ -278,8 +283,10 @@ public abstract class VisWriter implements FeatureWriter {
             }
 
             Set<Integer> uniqueTexIds = new LinkedHashSet<>();
+            boolean hasUntexturedTriangle = false;
             for (int texId : merged.getTriangleTextureIds()) {
                 if (texId >= 0) uniqueTexIds.add(texId);
+                else hasUntexturedTriangle = true;
             }
             if (uniqueTexIds.isEmpty() && merged.hasTexCoords()) {
                 merged.setHasTexCoords(false);
@@ -290,7 +297,7 @@ public abstract class VisWriter implements FeatureWriter {
                 Map<Integer, float[]> uvExtents = merged.computeUVExtents();
                 atlas = TextureAtlas.build(
                         uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
-                        formatOptions.getMaxAtlasSize(), uvExtents);
+                        formatOptions.getMaxAtlasSize(), uvExtents, hasUntexturedTriangle);
                 if (atlas != null) {
                     atlas.remapUVs(merged);
                 } else {
