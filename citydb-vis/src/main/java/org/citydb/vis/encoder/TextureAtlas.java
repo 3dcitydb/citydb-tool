@@ -198,19 +198,36 @@ public class TextureAtlas {
         }
         org.citydb.textureAtlas.model.TextureAtlas packed = packer.pack(false);
 
-        // If any textures overflow to a second page, scale down and retry
-        boolean hasOverflow = false;
-        for (AtlasRegion r : packed.getRegions()) {
-            if (r.level > 0) { hasOverflow = true; break; }
-        }
-        if (hasOverflow) {
+        // When the BASIC packer cannot fit everything on a single page it
+        // spills the rest onto additional "roots" whose coordinates all
+        // restart at (0,0) and are only distinguished by AtlasRegion.level.
+        // Since we composite every region into one BufferedImage, a level>0
+        // region would overwrite a level 0 region at the same (x,y) and the
+        // affected texId's UV remap would then sample whichever texture was
+        // drawn last — visible as unrelated buildings stealing each other's
+        // facade textures. Scale down and repack iteratively until every
+        // region lands on level 0. One rescale pass is insufficient because
+        // BSP fragmentation plus rotation can still overflow at the 0.9
+        // safety factor; tighten by an extra 0.85× each attempt to converge.
+        final double minScale = 0.01;
+        final int maxRetries = 10;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            boolean hasOverflow = false;
+            for (AtlasRegion r : packed.getRegions()) {
+                if (r.level > 0) { hasOverflow = true; break; }
+            }
+            if (!hasOverflow) break;
+
             long totalArea = 0;
             for (TextureMeta m : metas) {
                 totalArea += (long) Math.max(1, (int) (m.effectiveWidth() * scale))
                         * Math.max(1, (int) (m.effectiveHeight() * scale));
             }
             double areaRatio = (double) ((long) maxAtlasSize * maxAtlasSize) / totalArea;
-            scale *= Math.sqrt(Math.min(1.0, areaRatio * 0.9));
+            double factor = Math.min(1.0, areaRatio * 0.9) * Math.pow(0.85, attempt);
+            double nextScale = Math.max(minScale, scale * Math.sqrt(factor));
+            if (nextScale >= scale) break;
+            scale = nextScale;
 
             packer = new Packer(maxAtlasSize, maxAtlasSize,
                     TextureAtlasCreator.BASIC, false);
@@ -220,13 +237,24 @@ public class TextureAtlas {
                 packer.addRegion(String.valueOf(m.texId), w, h);
             }
             packed = packer.pack(false);
+            if (scale <= minScale) break;
         }
 
-        // Collect placement results and track rotated textures
+        // Collect placement results and track rotated textures. Skip any
+        // region still at level > 0 after the retry loop — compositing it
+        // into the single atlas image would corrupt overlapping level 0
+        // regions. Their textures won't render correctly, but this is
+        // preferable to silently painting the wrong facade on other
+        // buildings.
         int atlasWidth = 0, atlasHeight = 0;
         Map<Integer, int[]> pixelRegions = new LinkedHashMap<>();
         Set<Integer> rotated = new HashSet<>();
+        int dropped = 0;
         for (AtlasRegion r : packed.getRegions()) {
+            if (r.level > 0) {
+                dropped++;
+                continue;
+            }
             int texId = Integer.parseInt(r.texImageName);
             pixelRegions.put(texId, new int[]{r.x, r.y, r.width, r.height});
             atlasWidth = Math.max(atlasWidth, r.x + r.width);
@@ -234,6 +262,12 @@ public class TextureAtlas {
             if (r.isRotated) {
                 rotated.add(texId);
             }
+        }
+        if (dropped > 0) {
+            logger.warn("Atlas overflow could not be resolved by rescaling; " +
+                    "dropped {} of {} textures (scale={}). Consider lowering " +
+                    "texture scale or reducing node feature count.",
+                    dropped, metas.size(), scale);
         }
 
         // Compose atlas image — decode each source JIT with subsampling
