@@ -3,7 +3,7 @@
  * Copyright Stuttgart University of Applied Sciences (HFT Stuttgart) <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.writer;
+package org.citydb.vis;
 
 public class VisExportException extends Exception {
 
