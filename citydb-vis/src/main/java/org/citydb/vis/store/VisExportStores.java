@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.BitSet;
 
 /**
  * Owns the lifecycle of the disk-backed stores used during visualization export.
@@ -36,6 +37,16 @@ public class VisExportStores implements AutoCloseable {
     private final AttributeStore attrStore;
     private final TextureStore textureStore;
     private NodeEntryStore nodeEntryStore;
+
+    /**
+     * Per-feature bit: 1 if the feature contributed any texture to the atlas.
+     * Read by the mixed-node split stage to partition each node's features
+     * into textured and untextured subsets (one I3S / 3D Tiles node per
+     * subset). Access is synchronized because {@link BitSet} is not
+     * concurrency-safe and writes happen from parallel feature-processing
+     * threads during the write phase.
+     */
+    private final BitSet featureTextureFlags = new BitSet();
 
     public VisExportStores(OutputFile outputFile, int cpuCores) throws IOException {
         this.tempDir = outputFile.getFile().getParent().resolve(TEMP_DIR_NAME);
@@ -77,6 +88,16 @@ public class VisExportStores implements AutoCloseable {
 
     public long entryCount() {
         return spatialEntryStore.entryCount();
+    }
+
+    /** Mark the feature as carrying at least one textured polygon. */
+    public synchronized void setFeatureTextured(long featureId) {
+        featureTextureFlags.set((int) featureId);
+    }
+
+    /** Query whether the feature was recorded as textured during the write phase. */
+    public synchronized boolean isFeatureTextured(long featureId) {
+        return featureTextureFlags.get((int) featureId);
     }
 
     @Override
