@@ -17,6 +17,7 @@ import org.citydb.vis.util.GeoTransform;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,12 +26,23 @@ import java.util.List;
  * <p>
  * Each GLB contains:
  * <ul>
- *   <li>Mesh geometry: positions (local ENU), normals, optional UVs, indices</li>
+ *   <li>Mesh geometry: positions (local ENU), normals or UVs, indices</li>
  *   <li>Texture: JPEG atlas embedded as buffer view (if textured)</li>
  *   <li>{@code EXT_mesh_features}: per-vertex feature ID attribute</li>
  *   <li>{@code EXT_structural_metadata}: per-feature property table</li>
  * </ul>
  * <p>
+ * A node that mixes textured and untextured features is split into two
+ * primitives sharing the same mesh/property table:
+ * <ul>
+ *   <li>Textured primitive: {@code POSITION + TEXCOORD_0 + _FEATURE_ID_0}, uses
+ *       a textured PBR material. Normals are omitted so CesiumJS generates flat
+ *       per-face normals at render time — matches the I3S behaviour and looks
+ *       best on faceted building geometry.</li>
+ *   <li>Untextured primitive: {@code POSITION + NORMAL + _FEATURE_ID_0}, uses
+ *       a default PBR material. Encoded per-face normals give proper lighting
+ *       with the plain white base color.</li>
+ * </ul>
  * Positions are in a local ENU coordinate frame relative to a dataset center.
  * The root tile's {@code transform} in {@code tileset.json} converts ENU to ECEF.
  */
@@ -50,8 +62,8 @@ public class GlbEncoder {
                          List<FeatureData> features, List<AttrField> attrFields,
                          double[] datasetCenter) throws IOException {
         TriangleMesh mesh = node.getMesh();
-        boolean hasTexCoords = mesh.hasTexCoords() && textureBytes != null;
-        if (!hasTexCoords) {
+        boolean hasTexture = mesh.hasTexCoords() && textureBytes != null;
+        if (!hasTexture) {
             node.setTextured(false);
         }
 
@@ -65,13 +77,49 @@ public class GlbEncoder {
         }
 
         DatasetFrame frame = DatasetFrame.from(mbs, datasetCenter);
-        VertexArrays arrays = buildVertexArrays(mesh, weld, hasTexCoords, frame);
+
+        // Partition valid triangles into textured and untextured subsets while
+        // tagging each with its face-range index (the row that the per-vertex
+        // _FEATURE_ID_0 attribute will reference in the shared property table).
+        // Tracking the face-range index per triangle — rather than re-deriving
+        // it from the triangle's featureId — preserves the original encoder's
+        // semantics, where two non-contiguous runs of the same feature become
+        // two distinct property table rows.
+        List<TriEntry> texturedTris;
+        List<TriEntry> untexturedTris;
+        if (hasTexture) {
+            texturedTris = new ArrayList<>();
+            untexturedTris = new ArrayList<>();
+            partitionByTexture(mesh, weld, texturedTris, untexturedTris);
+        } else {
+            texturedTris = Collections.emptyList();
+            untexturedTris = collectAllEntries(weld);
+        }
+
+        int featureCount = weld.faceRanges().size();
+
+        List<PrimitiveArrays> primitives = new ArrayList<>(2);
+        if (!texturedTris.isEmpty()) {
+            primitives.add(buildPrimitiveArrays(mesh, weld, texturedTris,
+                    PrimitiveKind.TEXTURED, frame));
+        }
+        if (!untexturedTris.isEmpty()) {
+            primitives.add(buildPrimitiveArrays(mesh, weld, untexturedTris,
+                    PrimitiveKind.UNTEXTURED, frame));
+        }
         node.setMesh(null); // release source mesh; no longer needed
 
         BinBufferBuilder bin = new BinBufferBuilder();
-        BufferViewIds bvIds = writeGeometryBuffers(bin, arrays, hasTexCoords, textureBytes);
+        List<PrimitiveBufferIds> primitiveBvs = new ArrayList<>(primitives.size());
+        for (PrimitiveArrays p : primitives) {
+            primitiveBvs.add(writePrimitiveBuffers(bin, p));
+        }
+        // Embed the shared atlas only if some primitive is textured. Without a
+        // textured primitive, the JPEG bytes would be dead weight in the BIN
+        // chunk and their accessor unused.
+        boolean embedTexture = !texturedTris.isEmpty() && textureBytes != null;
+        int bvTexture = embedTexture ? bin.addRawBytes(textureBytes) : -1;
 
-        int featureCount = weld.faceRanges().size();
         List<FeatureData> propFeatures = featureCount < features.size()
                 ? FeatureData.reorderByIds(features, weld.rangeFeatureIds())
                 : features;
@@ -82,10 +130,9 @@ public class GlbEncoder {
 
         byte[] binData = bin.toByteArray();
         byte[] jsonData = new GltfJsonBuilder()
-                .geometry(arrays.vertexCount, arrays.posMin, arrays.posMax, hasTexCoords)
                 .bufferViews(bin.getBufferViews(), binData.length)
-                .geometryAccessors(bvIds.positions, bvIds.normals, bvIds.uvs,
-                        bvIds.indices, bvIds.featureIds, bvIds.texture)
+                .texture(bvTexture)
+                .primitives(toJsonPrimitives(primitives, primitiveBvs))
                 .metadata(featureCount, attrFields, propBvs)
                 .build();
 
@@ -93,65 +140,142 @@ public class GlbEncoder {
     }
 
     /**
-     * Rewrites welded vertex data from ENU (meters, East/North/Up) into glTF Y-up
-     * (X=East, Y=Up, Z=-North), collects per-axis min/max for the POSITION
-     * accessor, and selects normals/UVs per the texturing mode.
+     * Write a primitive's geometry arrays into the BIN buffer and record the
+     * resulting buffer view ids. Ordering within the BIN is unobservable to
+     * the glTF client — accessors reference buffer views by index.
      */
-    private static VertexArrays buildVertexArrays(TriangleMesh mesh, VertexWelder.WeldResult weld,
-                                                  boolean hasTexCoords, DatasetFrame frame) {
-        int vertexCount = weld.vertexCount();
+    private static PrimitiveBufferIds writePrimitiveBuffers(BinBufferBuilder bin, PrimitiveArrays p) {
+        int bvPositions = bin.addFloat32Array(p.positions);
+        int bvNormals = p.normals != null ? bin.addFloat32Array(p.normals) : -1;
+        int bvUvs = p.uvs != null ? bin.addFloat32Array(p.uvs) : -1;
+        int bvIndices = bin.addUint32Array(p.indices);
+        int bvFeatureIds = bin.addUint32Array(p.featureIds);
+        return new PrimitiveBufferIds(bvPositions, bvNormals, bvUvs, bvIndices, bvFeatureIds);
+    }
 
-        // Untextured nodes carry normals; textured nodes let CesiumJS generate
-        // flat normals from geometry (matches I3S behaviour, better for buildings).
+    private static List<GltfJsonBuilder.Primitive> toJsonPrimitives(
+            List<PrimitiveArrays> primitives, List<PrimitiveBufferIds> bvs) {
+        List<GltfJsonBuilder.Primitive> out = new ArrayList<>(primitives.size());
+        for (int i = 0; i < primitives.size(); i++) {
+            PrimitiveArrays p = primitives.get(i);
+            PrimitiveBufferIds b = bvs.get(i);
+            out.add(new GltfJsonBuilder.Primitive(
+                    p.kind == PrimitiveKind.TEXTURED,
+                    p.vertexCount, p.posMin, p.posMax,
+                    b.positions, b.normals, b.uvs, b.indices, b.featureIds));
+        }
+        return out;
+    }
+
+    /**
+     * Walk valid triangles in face-range order and split them into textured
+     * and untextured entries. The face-range index is tracked alongside the
+     * original triangle index so the per-vertex {@code _FEATURE_ID_0} can
+     * reference the shared property table regardless of which primitive the
+     * triangle ends up in.
+     */
+    private static void partitionByTexture(TriangleMesh mesh, VertexWelder.WeldResult weld,
+                                           List<TriEntry> textured, List<TriEntry> untextured) {
+        List<Integer> validTriIndices = weld.validTriIndices();
+        List<int[]> faceRanges = weld.faceRanges();
+        List<Integer> triTexIds = mesh.getTriangleTextureIds();
+
+        int rangeIdx = 0;
+        int[] currentRange = faceRanges.get(0);
+        for (int i = 0; i < validTriIndices.size(); i++) {
+            while (i > currentRange[1]) {
+                currentRange = faceRanges.get(++rangeIdx);
+            }
+            int ti = validTriIndices.get(i);
+            TriEntry entry = new TriEntry(ti, rangeIdx);
+            if (triTexIds.get(ti) >= 0) {
+                textured.add(entry);
+            } else {
+                untextured.add(entry);
+            }
+        }
+    }
+
+    /** Untextured-only node: every valid triangle goes straight to the untextured primitive. */
+    private static List<TriEntry> collectAllEntries(VertexWelder.WeldResult weld) {
+        List<Integer> validTriIndices = weld.validTriIndices();
+        List<int[]> faceRanges = weld.faceRanges();
+        List<TriEntry> entries = new ArrayList<>(validTriIndices.size());
+        int rangeIdx = 0;
+        int[] currentRange = faceRanges.get(0);
+        for (int i = 0; i < validTriIndices.size(); i++) {
+            while (i > currentRange[1]) {
+                currentRange = faceRanges.get(++rangeIdx);
+            }
+            entries.add(new TriEntry(validTriIndices.get(i), rangeIdx));
+        }
+        return entries;
+    }
+
+    /**
+     * Build per-primitive welded vertex arrays from the chosen triangle subset.
+     * Rewrites welded positions from ENU (meters, East/North/Up) into glTF
+     * Y-up (X=East, Y=Up, Z=-North), collects per-axis min/max for the
+     * POSITION accessor, and emits {@code NORMAL} or {@code TEXCOORD_0}
+     * according to the primitive kind.
+     */
+    private static PrimitiveArrays buildPrimitiveArrays(TriangleMesh mesh,
+                                                        VertexWelder.WeldResult weld,
+                                                        List<TriEntry> triEntries,
+                                                        PrimitiveKind kind, DatasetFrame frame) {
+        int vertexCount = triEntries.size() * 3;
         float[] positions = new float[vertexCount * 3];
-        float[] normals = hasTexCoords ? null : new float[vertexCount * 3];
-        float[] uvs = hasTexCoords ? new float[vertexCount * 2] : null;
+        float[] normals = kind == PrimitiveKind.UNTEXTURED ? new float[vertexCount * 3] : null;
+        float[] uvs = kind == PrimitiveKind.TEXTURED ? new float[vertexCount * 2] : null;
         int[] indices = new int[vertexCount]; // triangle soup: 0,1,2,3,...
+        int[] featureIds = new int[vertexCount];
         float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] posMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
 
-        VertexWelder.iterateOutputVertices(weld, mesh, (idx, wp, srcIdx) -> {
-            float east = wp[0] * (float) frame.scaleX + frame.offsetX;
-            float north = wp[1] * (float) frame.scaleY + frame.offsetY;
-            float up = wp[2] + frame.offsetZ;
-            positions[idx * 3] = east;
-            positions[idx * 3 + 1] = up;
-            positions[idx * 3 + 2] = -north;
-            posMin[0] = Math.min(posMin[0], east);
-            posMin[1] = Math.min(posMin[1], up);
-            posMin[2] = Math.min(posMin[2], -north);
-            posMax[0] = Math.max(posMax[0], east);
-            posMax[1] = Math.max(posMax[1], up);
-            posMax[2] = Math.max(posMax[2], -north);
+        float[][] weldedPositions = weld.weldedPositions();
+        List<int[]> triangles = mesh.getTriangles();
 
-            if (normals != null) {
-                float[] n = mesh.getNormals().get(srcIdx);
-                normals[idx * 3] = n[0];
-                normals[idx * 3 + 1] = n[2];
-                normals[idx * 3 + 2] = -n[1];
+        int idx = 0;
+        for (TriEntry entry : triEntries) {
+            int ti = entry.ti;
+            int base = ti * 3;
+            int[] tri = triangles.get(ti);
+            int fIdx = entry.faceIdx;
+            for (int j = 0; j < 3; j++) {
+                float[] wp = weldedPositions[base + j];
+                int srcIdx = tri[j];
+                float east = wp[0] * (float) frame.scaleX + frame.offsetX;
+                float north = wp[1] * (float) frame.scaleY + frame.offsetY;
+                float up = wp[2] + frame.offsetZ;
+                positions[idx * 3] = east;
+                positions[idx * 3 + 1] = up;
+                positions[idx * 3 + 2] = -north;
+                posMin[0] = Math.min(posMin[0], east);
+                posMin[1] = Math.min(posMin[1], up);
+                posMin[2] = Math.min(posMin[2], -north);
+                posMax[0] = Math.max(posMax[0], east);
+                posMax[1] = Math.max(posMax[1], up);
+                posMax[2] = Math.max(posMax[2], -north);
+
+                if (normals != null) {
+                    float[] n = mesh.getNormals().get(srcIdx);
+                    normals[idx * 3] = n[0];
+                    normals[idx * 3 + 1] = n[2];
+                    normals[idx * 3 + 2] = -n[1];
+                }
+                if (uvs != null) {
+                    float[] uv = mesh.getTexCoords().get(srcIdx);
+                    uvs[idx * 2] = uv[0];
+                    uvs[idx * 2 + 1] = uv[1];
+                }
+                indices[idx] = idx;
+                featureIds[idx] = fIdx;
+                idx++;
             }
-            if (uvs != null) {
-                float[] uv = mesh.getTexCoords().get(srcIdx);
-                uvs[idx * 2] = uv[0];
-                uvs[idx * 2 + 1] = uv[1];
-            }
-            indices[idx] = idx;
-        });
+        }
 
-        return new VertexArrays(vertexCount, positions, normals, uvs,
-                indices, weld.computeFeatureIndices(), posMin, posMax);
-    }
-
-    /** Writes geometry arrays into the BIN buffer and returns their buffer view ids. */
-    private static BufferViewIds writeGeometryBuffers(BinBufferBuilder bin, VertexArrays a,
-                                                      boolean hasTexCoords, byte[] textureBytes) {
-        int bvPositions = bin.addFloat32Array(a.positions);
-        int bvNormals = a.normals != null ? bin.addFloat32Array(a.normals) : -1;
-        int bvUvs = hasTexCoords ? bin.addFloat32Array(a.uvs) : -1;
-        int bvIndices = bin.addUint32Array(a.indices);
-        int bvFeatureIds = bin.addUint32Array(a.featureIds);
-        int bvTexture = (textureBytes != null && hasTexCoords) ? bin.addRawBytes(textureBytes) : -1;
-        return new BufferViewIds(bvPositions, bvNormals, bvUvs, bvIndices, bvFeatureIds, bvTexture);
+        return new PrimitiveArrays(kind, vertexCount, positions, normals, uvs,
+                indices, featureIds, posMin, posMax);
     }
 
     /**
@@ -171,12 +295,23 @@ public class GlbEncoder {
         }
     }
 
-    private record VertexArrays(int vertexCount, float[] positions, float[] normals, float[] uvs,
-                                int[] indices, int[] featureIds, float[] posMin, float[] posMax) {
+    private enum PrimitiveKind { TEXTURED, UNTEXTURED }
+
+    /**
+     * One valid triangle earmarked for a specific primitive, paired with the
+     * face-range (property table row) it belongs to.
+     */
+    private record TriEntry(int ti, int faceIdx) {
     }
 
-    private record BufferViewIds(int positions, int normals, int uvs,
-                                 int indices, int featureIds, int texture) {
+    private record PrimitiveArrays(PrimitiveKind kind, int vertexCount,
+                                   float[] positions, float[] normals, float[] uvs,
+                                   int[] indices, int[] featureIds,
+                                   float[] posMin, float[] posMax) {
+    }
+
+    private record PrimitiveBufferIds(int positions, int normals, int uvs,
+                                      int indices, int featureIds) {
     }
 
     // ---- Property table encoding ----------------------------------------
