@@ -61,16 +61,18 @@ public class TilesetSerializer {
                                  double[] extent, List<AttrField> attrFields,
                                  double[] transform,
                                  Map<Integer, int[]> tilePaths) throws IOException {
-        // With ADD refinement, all tiles use consistent R/16 geometric
-        // errors — no need for "always refine" overrides. ADD never causes
-        // flickering on content-less nodes, and consistent errors prevent
-        // shallow leaf nodes from rendering prematurely at far distances.
+        // Root's geometricError must be > 0 so Cesium's SSE check triggers
+        // refinement into the cellRef children. Taking max of cellRoot errors
+        // breaks for small/shallow datasets (single cell whose root is a leaf
+        // mesh), where every cellRoot error is 0 — the root then never refines
+        // and renders its own null content (blank screen). Use the globalRoot's
+        // own R/8 instead: its radius covers the full dataset, and it has
+        // cellRoots as children, so computeGeometricError() returns > 0 as
+        // long as any geometry exists.
         List<SceneNode> cellRoots = globalRoot.getChildren();
         List<CellReference> cellRefs = new ArrayList<>(cellRoots.size());
-        double maxGeo = 0;
         for (SceneNode cellRoot : cellRoots) {
             double geo = TileNode.computeGeometricError(cellRoot);
-            maxGeo = Math.max(maxGeo, geo);
             BoundingVolume bv = cellRoot.getBoundingVolume();
             int[] rootPath = tilePaths.get(cellRoot.getIndex());
             cellRefs.add(new CellReference(
@@ -79,8 +81,9 @@ public class TilesetSerializer {
                     "subtrees/" + TilePaths.subtreeFile(rootPath)));
         }
 
+        double rootGeo = TileNode.computeGeometricError(globalRoot);
         TilesetDescriptor descriptor = TilesetDescriptor.ofRoot(
-                maxGeo, extent, transform, cellRefs, attrFields);
+                rootGeo, extent, transform, cellRefs, attrFields);
 
         JsonHelper.writePojo(outputDir.resolve("tileset.json"), descriptor);
     }
