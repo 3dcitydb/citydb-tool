@@ -3,10 +3,8 @@
  * Copyright Stuttgart University of Applied Sciences (HFT Stuttgart) <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.pipeline;
+package org.citydb.vis.scene;
 
-import org.citydb.vis.scene.BoundingVolume;
-import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.NodeEntryStore;
 import org.citydb.vis.store.SpatialEntry;

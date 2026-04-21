@@ -1,5 +1,8 @@
 dependencies {
-    implementation project(':citydb-io')
+    api project(':citydb-io')
+    implementation project(':citydb-config')
+    implementation project(':citydb-core')
+    implementation project(':citydb-model')
     implementation 'com.openize:drako:26.3.0'
     implementation 'org.citydb:texture-atlas-creator:1.5.0'
 }
