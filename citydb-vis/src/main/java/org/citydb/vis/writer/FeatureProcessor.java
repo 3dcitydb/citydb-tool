@@ -3,20 +3,19 @@
  * Copyright Stuttgart University of Applied Sciences (HFT Stuttgart) <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.pipeline;
+package org.citydb.vis.writer;
 
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
-import org.citydb.vis.writer.VisExportException;
+import org.citydb.vis.VisExportException;
 import org.citydb.vis.encoder.AttributeEncoder;
 import org.citydb.vis.geometry.GeometryMeshBuilder;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.SpatialEntry;
 import org.citydb.vis.store.VisExportStores;
-import org.citydb.vis.writer.VisFormatOptions;
 
 import java.io.IOException;
 import java.util.List;
