@@ -84,12 +84,12 @@ public class TextureStore implements Closeable {
     }
 
     /**
-     * Load and decode the source image for a registered texture, caching the
-     * result for subsequent calls. Returns {@code null} if the texture ID is
-     * unknown, the source file is missing, or decoding fails — callers must
-     * null-check and skip the texture on failure.
+     * Full-resolution decode with soft-reference caching. Reached via
+     * {@link #loadImage(int, int)} when the caller asks for no subsampling.
+     * Returns {@code null} if the texture ID is unknown, the source file is
+     * missing, or decoding fails — callers must null-check and skip.
      */
-    public BufferedImage loadImage(int textureId) throws IOException {
+    private BufferedImage loadImage(int textureId) throws IOException {
         SoftReference<BufferedImage> ref = imageCache.get(textureId);
         BufferedImage cached = ref != null ? ref.get() : null;
         if (cached != null) return cached;
@@ -137,8 +137,9 @@ public class TextureStore implements Closeable {
      * a 16K source at subsample=8 costs ~1/64 the CPU and memory of a full
      * decode and never allocates the full-resolution bitmap.
      * <p>
-     * The returned image is not cached — callers should use it immediately
-     * and let it fall out of scope.
+     * Subsampled decodes are not cached — callers should use them immediately
+     * and let them fall out of scope. The {@code subsample <= 1} fall-through
+     * hits the soft-reference cache.
      */
     public BufferedImage loadImage(int textureId, int subsample) throws IOException {
         if (subsample <= 1) {
