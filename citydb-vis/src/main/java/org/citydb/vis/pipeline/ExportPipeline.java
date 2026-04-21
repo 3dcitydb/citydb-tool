@@ -5,7 +5,7 @@
 
 package org.citydb.vis.pipeline;
 
-import org.citydb.vis.writer.VisExportException;
+import org.citydb.vis.VisExportException;
 
 import java.util.List;
 
