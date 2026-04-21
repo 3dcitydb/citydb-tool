@@ -40,8 +40,8 @@ import java.util.Set;
  * <p>
  * Run after {@link TreeBuildingStage}: the tree structure and per-node
  * entries must exist, and the per-feature texture flags populated by
- * {@link org.citydb.vis.pipeline.FeatureProcessor} during the write phase
- * are consumed here to classify each {@link NodeEntry}.
+ * {@link org.citydb.vis.writer.VisWriter} on the caller thread during the
+ * write phase are consumed here to classify each {@link NodeEntry}.
  */
 public final class MixedNodeSplitStage implements Stage {
     private final Logger logger = LoggerFactory.getLogger(MixedNodeSplitStage.class);
@@ -121,14 +121,15 @@ public final class MixedNodeSplitStage implements Stage {
             throw new VisExportException("Failed to split mixed-texture nodes.", e);
         }
 
-        if (splitCount > 0 || cellRootSkipCount > 0) {
-            logger.info("Split {} mixed-texture nodes into per-texture sibling pairs" +
-                            "{}.",
-                    splitCount,
-                    cellRootSkipCount > 0
-                            ? " (" + cellRootSkipCount + " leaf cell root(s) left mixed)"
-                            : "");
+        if (splitCount > 0) {
+            logger.info("Split {} mixed-texture nodes into per-texture sibling pairs.",
+                    splitCount);
             ctx.setMeshNodeIndices(updatedMeshIndices);
+        }
+        if (cellRootSkipCount > 0) {
+            logger.info("Left {} mixed-texture leaf cell root(s) unsplit; " +
+                    "untextured triangles will sample the atlas white pixel.",
+                    cellRootSkipCount);
         }
     }
 }
