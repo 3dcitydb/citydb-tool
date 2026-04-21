@@ -48,36 +48,61 @@ import java.util.Set;
 public class TextureAtlas {
     private static final Logger logger = LoggerFactory.getLogger(TextureAtlas.class);
 
+    /**
+     * Sentinel texture id for the reserved solid-white region appended to the
+     * atlas for mixed nodes (some features textured, some not). The I3S path
+     * keeps a single node-level textured material, so untextured triangles
+     * need UVs that sample a guaranteed-white pixel to render as the default
+     * PBR color.
+     */
+    static final int WHITE_PIXEL_TEX_ID = Integer.MIN_VALUE;
+    private static final int WHITE_PIXEL_SIZE = 4;
+
     private final Map<Integer, float[]> uvRegions;
     private final BufferedImage image;
     /** Per-texture tile mapping: texId → [offsetU, offsetV, rangeU, rangeV]. */
     private final Map<Integer, float[]> tileOffsets;
     /** Texture IDs that were rotated 90° CCW by the packer. */
     private final Set<Integer> rotatedTextureIds;
+    /** Atlas-space UV of the reserved white pixel center, or {@code null}. */
+    private final float[] whitePixelUV;
 
     private TextureAtlas(Map<Integer, float[]> uvRegions, BufferedImage image,
                          Map<Integer, float[]> tileOffsets,
-                         Set<Integer> rotatedTextureIds) {
+                         Set<Integer> rotatedTextureIds,
+                         float[] whitePixelUV) {
         this.uvRegions = uvRegions;
         this.image = image;
         this.tileOffsets = tileOffsets;
         this.rotatedTextureIds = rotatedTextureIds;
+        this.whitePixelUV = whitePixelUV;
     }
 
     /**
      * Build a single texture atlas from the given texture IDs.
      *
-     * @param uvExtents per-texture UV extent: texId → [minU, minV, maxU, maxV].
-     *                  Used to compute tiling for wrapping textures.
+     * @param uvExtents       per-texture UV extent: texId → [minU, minV, maxU, maxV].
+     *                        Used to compute tiling for wrapping textures.
+     * @param needsWhitePixel reserve a small solid-white region so untextured
+     *                        triangles in a mixed node can sample a
+     *                        known-white color while sharing the textured
+     *                        material.
      */
     public static TextureAtlas build(Collection<Integer> textureIds, TextureStore textureStore,
                                      double textureScale, int maxAtlasSize,
-                                     Map<Integer, float[]> uvExtents) throws IOException {
+                                     Map<Integer, float[]> uvExtents,
+                                     boolean needsWhitePixel) throws IOException {
         List<TextureMeta> metas = new ArrayList<>();
         Map<Integer, float[]> tileOffsets = new HashMap<>();
 
         gatherMetaTiled(textureIds, textureStore, uvExtents, metas, tileOffsets);
         if (metas.isEmpty()) return null;
+
+        if (needsWhitePixel) {
+            metas.add(new TextureMeta(WHITE_PIXEL_TEX_ID,
+                    WHITE_PIXEL_SIZE, WHITE_PIXEL_SIZE, 1, 1));
+            tileOffsets.put(WHITE_PIXEL_TEX_ID, new float[]{0f, 0f, 1f, 1f});
+        }
 
         double scale = Math.min(1.0, Math.max(0.01, textureScale));
         return buildSingleAtlas(metas, scale, maxAtlasSize, tileOffsets, textureStore);
@@ -282,6 +307,10 @@ public class TextureAtlas {
         for (Map.Entry<Integer, int[]> entry : pixelRegions.entrySet()) {
             int texId = entry.getKey();
             int[] pr = entry.getValue();
+            if (texId == WHITE_PIXEL_TEX_ID) {
+                // Atlas is already cleared to white; nothing to composite.
+                continue;
+            }
             TextureMeta m = metas.get(texIdToIdx.get(texId));
             boolean isRotated = rotated.contains(texId);
 
@@ -329,16 +358,21 @@ public class TextureAtlas {
 
         // Compute UV regions
         Map<Integer, float[]> uvRegions = new HashMap<>();
+        float[] whitePixelUV = null;
         for (Map.Entry<Integer, int[]> e : pixelRegions.entrySet()) {
             int[] pr = e.getValue();
             float uOff = (float) pr[0] / atlasWidth;
             float vOff = (float) pr[1] / atlasHeight;
             float uScale = (float) pr[2] / atlasWidth;
             float vScale = (float) pr[3] / atlasHeight;
-            uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
+            if (e.getKey() == WHITE_PIXEL_TEX_ID) {
+                whitePixelUV = new float[]{uOff + uScale * 0.5f, vOff + vScale * 0.5f};
+            } else {
+                uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
+            }
         }
 
-        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated);
+        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, whitePixelUV);
     }
 
     /**
@@ -379,7 +413,7 @@ public class TextureAtlas {
             g.dispose();
         }
         Map<Integer, float[]> regions = Map.of(m.texId, new float[]{0f, 0f, 1f, 1f});
-        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of());
+        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of(), null);
     }
 
     /**
@@ -471,6 +505,24 @@ public class TextureAtlas {
                 }
             }
         }
+
+        // Mixed node: point every vertex reached only from untextured triangles
+        // at the reserved white pixel so the single textured material renders
+        // those features as solid white, matching the untextured-node PBR default.
+        if (whitePixelUV != null) {
+            for (int v = 0; v < vertexCount; v++) {
+                if (vertexTexId[v] < 0) {
+                    float[] uv = texCoords.get(v);
+                    uv[0] = whitePixelUV[0];
+                    uv[1] = whitePixelUV[1];
+                }
+            }
+        }
+    }
+
+    /** Atlas-space UV center of the reserved white pixel, or {@code null}. */
+    public float[] getWhitePixelUV() {
+        return whitePixelUV;
     }
 
     public void write(Path target) throws IOException {
