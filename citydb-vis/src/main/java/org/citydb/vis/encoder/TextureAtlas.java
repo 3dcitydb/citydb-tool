@@ -73,46 +73,52 @@ public class TextureAtlas {
     public static TextureAtlas build(Collection<Integer> textureIds, TextureStore textureStore,
                                      double textureScale, int maxAtlasSize,
                                      Map<Integer, float[]> uvExtents) throws IOException {
-        List<int[]> dims = new ArrayList<>();
-        List<BufferedImage> images = new ArrayList<>();
-        Map<Integer, int[]> tileInfo = new HashMap<>();
+        List<TextureMeta> metas = new ArrayList<>();
         Map<Integer, float[]> tileOffsets = new HashMap<>();
 
-        loadAndPrepareTiled(textureIds, textureStore, uvExtents, dims, images,
-                tileInfo, tileOffsets);
-        if (dims.isEmpty()) return null;
+        gatherMetaTiled(textureIds, textureStore, uvExtents, metas, tileOffsets);
+        if (metas.isEmpty()) return null;
 
         double scale = Math.min(1.0, Math.max(0.01, textureScale));
-        return buildSingleAtlas(dims, images, scale, maxAtlasSize, tileInfo, tileOffsets);
+        return buildSingleAtlas(metas, scale, maxAtlasSize, tileOffsets, textureStore);
     }
 
-    // ---- Image loading and tiling preparation --------------------------------
+    // ---- Metadata gathering (no pixel decode) -------------------------------
 
     /**
-     * Load texture images and compute tiling information from UV extents.
-     * <p>
-     * Populates {@code dims} with <b>effective</b> (tiled) dimensions so that
-     * packing allocates enough space for all tiles.
+     * Per-texture metadata used during packing. Holds the source dimensions
+     * read from file headers plus any tiling derived from UV extents.
+     * Source pixels are <b>not</b> decoded here — decoding happens JIT during
+     * compositing with an appropriate subsampling factor.
      */
-    private static void loadAndPrepareTiled(
+    private record TextureMeta(int texId, int srcWidth, int srcHeight,
+                               int tilesU, int tilesV) {
+        int effectiveWidth() { return srcWidth * tilesU; }
+        int effectiveHeight() { return srcHeight * tilesV; }
+    }
+
+    /**
+     * Read per-texture dimensions (no pixel decode) and compute tiling from
+     * UV extents. Decoupling this from the pixel decode phase means we never
+     * hold more than one source bitmap resident at a time during compositing.
+     */
+    private static void gatherMetaTiled(
             Collection<Integer> textureIds, TextureStore textureStore,
             Map<Integer, float[]> uvExtents,
-            List<int[]> dims, List<BufferedImage> images,
-            Map<Integer, int[]> tileInfo, Map<Integer, float[]> tileOffsets) throws IOException {
+            List<TextureMeta> metas, Map<Integer, float[]> tileOffsets) throws IOException {
 
         for (int texId : textureIds) {
-            BufferedImage img;
+            int[] size;
             try {
-                img = textureStore.loadImage(texId);
+                size = textureStore.readDimensions(texId);
             } catch (IOException e) {
                 logger.warn("Skipping corrupt texture {} ({}): {}",
                         texId, textureStore.getSourcePath(texId), e.getMessage());
                 continue;
             }
-            if (img == null) continue;
-
-            int origW = img.getWidth();
-            int origH = img.getHeight();
+            if (size == null) continue;
+            int origW = size[0];
+            int origH = size[1];
 
             float[] extent = uvExtents != null ? uvExtents.get(texId) : null;
             int tilesU, tilesV;
@@ -134,10 +140,7 @@ public class TextureAtlas {
                 rangeV = 1f;
             }
 
-            // Use effective (tiled) dimensions for packing
-            dims.add(new int[]{texId, origW * tilesU, origH * tilesV});
-            images.add(img);
-            tileInfo.put(texId, new int[]{tilesU, tilesV});
+            metas.add(new TextureMeta(texId, origW, origH, tilesU, tilesV));
             tileOffsets.put(texId, new float[]{offsetU, offsetV, rangeU, rangeV});
         }
     }
@@ -145,26 +148,39 @@ public class TextureAtlas {
     // ---- Core atlas builder --------------------------------------------------
 
     /**
-     * Core atlas builder that works on pre-loaded images with tiling support.
+     * Maximum subsampling factor passed to the decoder. JPEG's libjpeg fast
+     * path supports 1, 2, 4, 8 via DCT-level downscaling; larger values fall
+     * back to generic pixel skipping and are rarely needed (source > 8 ×
+     * {@code maxAtlasSize}). Anything beyond is handled by {@code drawImage}.
+     */
+    private static final int MAX_DECODE_SUBSAMPLE = 8;
+
+    /**
+     * Core atlas builder. Works in two phases:
+     * <ol>
+     *   <li>Run the packer on metadata only (no pixel decode) to determine
+     *       each texture's target region in the atlas.</li>
+     *   <li>Iterate the packed regions; for each, decode the source with an
+     *       appropriate subsampling factor (so a 16K source destined for a
+     *       512-pixel atlas region decodes at ≤ 2K), draw into the atlas,
+     *       and let the bitmap fall out of scope before the next texture.</li>
+     * </ol>
+     * This keeps the resident BufferedImage footprint to one source at a
+     * time — independent of how many textures the node references or how
+     * large each source happens to be.
      *
-     * @param dims        [texId, effectiveWidth, effectiveHeight] per texture
-     * @param images      source (untiled) images
+     * @param metas       per-texture metadata (source dims + tiling)
      * @param scale       user-requested texture scale
-     * @param tileInfo    texId → [tilesU, tilesV]
      * @param tileOffsets texId → [offsetU, offsetV, rangeU, rangeV]
      */
-    private static TextureAtlas buildSingleAtlas(List<int[]> dims, List<BufferedImage> images,
+    private static TextureAtlas buildSingleAtlas(List<TextureMeta> metas,
                                                   double scale, int maxAtlasSize,
-                                                  Map<Integer, int[]> tileInfo,
-                                                  Map<Integer, float[]> tileOffsets) {
-        if (dims.size() == 1) {
-            int texId = dims.get(0)[0];
-            int[] ti = tileInfo.getOrDefault(texId, new int[]{1, 1});
-            if (ti[0] == 1 && ti[1] == 1) {
-                // No tiling — return single image as-is
-                Map<Integer, float[]> regions = Map.of(texId, new float[]{0f, 0f, 1f, 1f});
-                return new TextureAtlas(regions, TextureStore.toOpaqueRgb(images.get(0)),
-                        tileOffsets, Set.of());
+                                                  Map<Integer, float[]> tileOffsets,
+                                                  TextureStore textureStore) throws IOException {
+        if (metas.size() == 1) {
+            TextureMeta m = metas.get(0);
+            if (m.tilesU == 1 && m.tilesV == 1) {
+                return buildSingleTextureAtlas(m, maxAtlasSize, tileOffsets, textureStore);
             }
             // Single texture with tiling — fall through to atlas compositing
         }
@@ -173,12 +189,12 @@ public class TextureAtlas {
         Map<Integer, Integer> texIdToIdx = new HashMap<>();
         Packer packer = new Packer(maxAtlasSize, maxAtlasSize,
                 TextureAtlasCreator.BASIC, false);
-        for (int i = 0; i < dims.size(); i++) {
-            int[] d = dims.get(i);
-            int w = Math.max(1, (int) (d[1] * scale));
-            int h = Math.max(1, (int) (d[2] * scale));
-            packer.addRegion(String.valueOf(d[0]), w, h);
-            texIdToIdx.put(d[0], i);
+        for (int i = 0; i < metas.size(); i++) {
+            TextureMeta m = metas.get(i);
+            int w = Math.max(1, (int) (m.effectiveWidth() * scale));
+            int h = Math.max(1, (int) (m.effectiveHeight() * scale));
+            packer.addRegion(String.valueOf(m.texId), w, h);
+            texIdToIdx.put(m.texId, i);
         }
         org.citydb.textureAtlas.model.TextureAtlas packed = packer.pack(false);
 
@@ -189,19 +205,19 @@ public class TextureAtlas {
         }
         if (hasOverflow) {
             long totalArea = 0;
-            for (int[] d : dims) {
-                totalArea += (long) Math.max(1, (int) (d[1] * scale))
-                        * Math.max(1, (int) (d[2] * scale));
+            for (TextureMeta m : metas) {
+                totalArea += (long) Math.max(1, (int) (m.effectiveWidth() * scale))
+                        * Math.max(1, (int) (m.effectiveHeight() * scale));
             }
             double areaRatio = (double) ((long) maxAtlasSize * maxAtlasSize) / totalArea;
             scale *= Math.sqrt(Math.min(1.0, areaRatio * 0.9));
 
             packer = new Packer(maxAtlasSize, maxAtlasSize,
                     TextureAtlasCreator.BASIC, false);
-            for (int[] d : dims) {
-                int w = Math.max(1, (int) (d[1] * scale));
-                int h = Math.max(1, (int) (d[2] * scale));
-                packer.addRegion(String.valueOf(d[0]), w, h);
+            for (TextureMeta m : metas) {
+                int w = Math.max(1, (int) (m.effectiveWidth() * scale));
+                int h = Math.max(1, (int) (m.effectiveHeight() * scale));
+                packer.addRegion(String.valueOf(m.texId), w, h);
             }
             packed = packer.pack(false);
         }
@@ -220,7 +236,7 @@ public class TextureAtlas {
             }
         }
 
-        // Compose atlas image — draw each texture into its allocated region
+        // Compose atlas image — decode each source JIT with subsampling
         BufferedImage atlas = new BufferedImage(atlasWidth, atlasHeight,
                 BufferedImage.TYPE_INT_RGB);
         Graphics2D g = atlas.createGraphics();
@@ -232,15 +248,31 @@ public class TextureAtlas {
         for (Map.Entry<Integer, int[]> entry : pixelRegions.entrySet()) {
             int texId = entry.getKey();
             int[] pr = entry.getValue();
-            int idx = texIdToIdx.get(texId);
-            BufferedImage srcImg = images.get(idx);
-            int[] ti = tileInfo.getOrDefault(texId, new int[]{1, 1});
-            int tU = ti[0], tV = ti[1];
+            TextureMeta m = metas.get(texIdToIdx.get(texId));
             boolean isRotated = rotated.contains(texId);
 
+            int tU = m.tilesU, tV = m.tilesV;
+            if (isRotated) { int tmp = tU; tU = tV; tV = tmp; }
+
+            // Per-tile target pixel dimensions in atlas; in rotated layout,
+            // source width maps to atlas height and vice versa.
+            int targetTileW = Math.max(1, pr[2] / Math.max(1, tU));
+            int targetTileH = Math.max(1, pr[3] / Math.max(1, tV));
+            int matchSrcW = isRotated ? targetTileH : targetTileW;
+            int matchSrcH = isRotated ? targetTileW : targetTileH;
+            int subsample = pickSubsample(m.srcWidth, m.srcHeight, matchSrcW, matchSrcH);
+
+            BufferedImage srcImg;
+            try {
+                srcImg = textureStore.loadImage(texId, subsample);
+            } catch (IOException e) {
+                logger.warn("Skipping corrupt texture {} ({}): {}",
+                        texId, textureStore.getSourcePath(texId), e.getMessage());
+                continue;
+            }
+            if (srcImg == null) continue;
+
             if (isRotated) {
-                // Rotated 90° CCW: swap tile counts, rotate source image
-                int tmp = tU; tU = tV; tV = tmp;
                 srcImg = rotateImage90CCW(srcImg);
             }
 
@@ -257,9 +289,9 @@ public class TextureAtlas {
                     }
                 }
             }
+            // srcImg leaves scope here; atlas has its pixels, source is GC-eligible
         }
         g.dispose();
-        images.clear();
 
         // Compute UV regions
         Map<Integer, float[]> uvRegions = new HashMap<>();
@@ -273,6 +305,62 @@ public class TextureAtlas {
         }
 
         return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated);
+    }
+
+    /**
+     * Fast path for a single untiled texture: decode subsampled to at most
+     * {@code maxAtlasSize}, further downscale via {@code drawImage} if the
+     * decoder can't subsample enough (rare; only for 8×maxAtlasSize+ sources).
+     * Never allocates the full-resolution bitmap.
+     */
+    private static TextureAtlas buildSingleTextureAtlas(TextureMeta m, int maxAtlasSize,
+                                                        Map<Integer, float[]> tileOffsets,
+                                                        TextureStore textureStore) throws IOException {
+        int subsample = pickSubsample(m.srcWidth, m.srcHeight, maxAtlasSize, maxAtlasSize);
+        BufferedImage src;
+        try {
+            src = textureStore.loadImage(m.texId, subsample);
+        } catch (IOException e) {
+            logger.warn("Skipping corrupt texture {} ({}): {}",
+                    m.texId, textureStore.getSourcePath(m.texId), e.getMessage());
+            return null;
+        }
+        if (src == null) return null;
+
+        BufferedImage finalImg;
+        if (src.getWidth() <= maxAtlasSize && src.getHeight() <= maxAtlasSize) {
+            finalImg = TextureStore.toOpaqueRgb(src);
+        } else {
+            double s = (double) maxAtlasSize
+                    / Math.max(src.getWidth(), src.getHeight());
+            int tw = Math.max(1, (int) (src.getWidth() * s));
+            int th = Math.max(1, (int) (src.getHeight() * s));
+            finalImg = new BufferedImage(tw, th, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = finalImg.createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                    RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, tw, th);
+            g.drawImage(src, 0, 0, tw, th, null);
+            g.dispose();
+        }
+        Map<Integer, float[]> regions = Map.of(m.texId, new float[]{0f, 0f, 1f, 1f});
+        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of());
+    }
+
+    /**
+     * Pick a decoder subsampling factor so that a source of size
+     * {@code srcW × srcH} decodes at roughly {@code targetW × targetH} or the
+     * next size up (never below target — the final {@code drawImage} still
+     * fills any remaining gap). Clamped to a power of two ≤ 8 so JPEG uses
+     * its DCT-level fast path.
+     */
+    private static int pickSubsample(int srcW, int srcH, int targetW, int targetH) {
+        int rx = srcW / Math.max(1, targetW);
+        int ry = srcH / Math.max(1, targetH);
+        int ratio = Math.max(1, Math.min(rx, ry));
+        int sub = Integer.highestOneBit(ratio);
+        return Math.max(1, Math.min(sub, MAX_DECODE_SUBSAMPLE));
     }
 
     /**
