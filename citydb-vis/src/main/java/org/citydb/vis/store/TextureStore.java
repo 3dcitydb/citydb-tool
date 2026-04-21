@@ -8,6 +8,9 @@ package org.citydb.vis.store;
 import org.citydb.core.file.OutputFile;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -16,6 +19,7 @@ import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -97,6 +101,65 @@ public class TextureStore implements Closeable {
             imageCache.put(textureId, new SoftReference<>(img));
         }
         return img;
+    }
+
+    /**
+     * Read only the image dimensions without decoding pixel data. Returns
+     * {@code int[]{width, height}} or {@code null} if the texture is unknown
+     * or the file cannot be parsed.
+     * <p>
+     * Used by the atlas builder to plan packing before committing to full
+     * decode — avoids holding every source {@link BufferedImage} in memory
+     * during the dimension-gathering phase.
+     */
+    public int[] readDimensions(int textureId) throws IOException {
+        Path source = getSourcePath(textureId);
+        if (source == null) return null;
+        try (ImageInputStream iis = ImageIO.createImageInputStream(source.toFile())) {
+            if (iis == null) return null;
+            Iterator<ImageReader> it = ImageIO.getImageReaders(iis);
+            if (!it.hasNext()) return null;
+            ImageReader reader = it.next();
+            try {
+                reader.setInput(iis, true, true);
+                return new int[]{reader.getWidth(0), reader.getHeight(0)};
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
+    /**
+     * Load the source image at a reduced resolution using decoder-level
+     * subsampling. {@code subsample} is the period (every Nth pixel / row);
+     * 1 = full resolution, 2 = half, 4 = quarter, 8 = eighth. For JPEG,
+     * powers of two up to 8 engage the libjpeg DCT fast path, so decoding
+     * a 16K source at subsample=8 costs ~1/64 the CPU and memory of a full
+     * decode and never allocates the full-resolution bitmap.
+     * <p>
+     * The returned image is not cached — callers should use it immediately
+     * and let it fall out of scope.
+     */
+    public BufferedImage loadImage(int textureId, int subsample) throws IOException {
+        if (subsample <= 1) {
+            return loadImage(textureId);
+        }
+        Path source = getSourcePath(textureId);
+        if (source == null) return null;
+        try (ImageInputStream iis = ImageIO.createImageInputStream(source.toFile())) {
+            if (iis == null) return null;
+            Iterator<ImageReader> it = ImageIO.getImageReaders(iis);
+            if (!it.hasNext()) return null;
+            ImageReader reader = it.next();
+            try {
+                reader.setInput(iis, true, true);
+                ImageReadParam param = reader.getDefaultReadParam();
+                param.setSourceSubsampling(subsample, subsample, 0, 0);
+                return reader.read(0, param);
+            } finally {
+                reader.dispose();
+            }
+        }
     }
 
     @Override
