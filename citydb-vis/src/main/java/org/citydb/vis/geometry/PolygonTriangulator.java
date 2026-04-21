@@ -15,18 +15,41 @@ import org.citydb.vis.util.GeoTransform;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Triangulates polygon surfaces using an ear-clipping algorithm.
  * Handles EPSG:4326 coordinates (lon/lat in degrees, height in meters)
  * by converting to local meters for triangulation math.
+ * <p>
+ * Instances carry per-feature polygon-deduplication state: CityGML
+ * {@code xlink:href} references to shared surfaces (e.g., a wall polygon
+ * reachable from both a LoD2 Solid and its BoundarySurface child) produce
+ * multiple {@link Polygon} objects that share the same {@code gml:id}. Without
+ * dedup the same polygon is triangulated multiple times and emitted as
+ * coincident faces, causing Z-fighting / flicker in the viewer. Reuse a single
+ * triangulator across all {@link #triangulate} calls for one feature so the
+ * dedup spans every geometry property of that feature.
  */
 public class PolygonTriangulator {
     private static final double TOLERANCE = 1e-7;
 
     private record RingData(List<double[]> positions, List<float[]> uvs) {}
+
+    // Per-feature dedup state. State persists across triangulate() calls on
+    // the same instance so dedup covers a feature's full geometry (each
+    // feature owns a fresh PolygonTriangulator; see GeometryMeshBuilder).
+    // The identity set catches the shared-instance case (same Java object
+    // reachable via two parents); the id/reversed key catches the xlink-copy
+    // case, where the CityGML reader rebuilds a fresh Polygon instance per
+    // reference and all instances carry the source gml:id.
+    private final Set<Polygon> seenInstances =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<String> seenIds = new HashSet<>();
 
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
@@ -41,11 +64,26 @@ public class PolygonTriangulator {
         return mesh;
     }
 
-    private static List<Polygon> collectPolygons(Geometry<?> geometry) {
+    private List<Polygon> collectPolygons(Geometry<?> geometry) {
         List<Polygon> polygons = new ArrayList<>();
         geometry.accept(new ModelWalker() {
             @Override
             public void visit(Polygon polygon) {
+                if (!seenInstances.add(polygon)) {
+                    return;
+                }
+                // Dedup key is (gml:id, reversed): xlink-shared polygons carry
+                // the same gml:id and same orientation — drop them. A polygon
+                // wrapped in gml:OrientableSurface with opposite sign has the
+                // same gml:id but inverted `reversed`, representing a distinct
+                // face (e.g., the back side of a shared wall); keep it.
+                String id = polygon.getObjectId().orElse(null);
+                if (id != null) {
+                    String key = polygon.isReversed() ? id + "!r" : id;
+                    if (!seenIds.add(key)) {
+                        return;
+                    }
+                }
                 polygons.add(polygon);
             }
         });
