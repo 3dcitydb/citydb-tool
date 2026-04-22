@@ -18,13 +18,18 @@ import java.util.Set;
 /**
  * Single entry in an I3S node page, serialized to {@code nodepages/N/index.json}.
  * <p>
- * Bounding volume choice is target-dependent:
+ * Bounding volume choice is target-dependent and mutually exclusive between
+ * the two I3S 1.7 runtime families:
  * <ul>
- *   <li>SLPK / ArcGIS Pro: {@code obb} is required (I3S 1.7 schema); {@code mbs}
- *       also emitted for redundancy.</li>
- *   <li>Folder / CesiumJS: only {@code mbs} — CesiumJS's I3S OBB handling
- *       mis-culls buildings at certain camera angles, so OBB is suppressed.</li>
+ *   <li>ArcGIS (Pro via SLPK, Maps SDK for JavaScript and Online Scene Viewer
+ *       via folder with {@code --obb}): {@code obb} is required — without it
+ *       the layer loads but renders nothing in the web SDKs, and ArcGIS Pro
+ *       rejects the SLPK outright (I3S 1.7 schema requirement).</li>
+ *   <li>CesiumJS (folder, default): only {@code mbs} — CesiumJS's I3S OBB
+ *       handling mis-culls buildings at certain camera angles, so OBB is
+ *       suppressed unless the user opts in via {@code --obb}.</li>
  * </ul>
+ * Gating lives in {@code I3SWriter.writeOutput()} as {@code slpk || --obb}.
  * Other quirks:
  * <ul>
  *   <li>{@code parentIndex} must be omitted for the root node (value {@code -1}
