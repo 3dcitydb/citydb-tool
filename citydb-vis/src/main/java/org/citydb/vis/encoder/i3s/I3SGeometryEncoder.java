@@ -29,6 +29,7 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -53,16 +54,28 @@ public class I3SGeometryEncoder {
     private static final short DRACO_METADATA_FLAG = (short) 0x8000;
 
     /**
+     * Result of encoding a node's geometry. {@code featureAabbs} is aligned
+     * with {@code rangeFeatureIds} and contains the absolute-coordinate AABB
+     * {@code [minX, minY, minZ, maxX, maxY, maxZ]} for each feature — the
+     * ArcGIS Maps SDK for JavaScript needs distinct per-feature mbb values
+     * to build the per-node pick BVH; a shared node-level bbox collapses
+     * the BVH and makes picks intermittently miss under oblique views.
+     */
+    public record NodeGeometryResult(List<Long> rangeFeatureIds,
+                                     List<double[]> featureAabbs) {
+    }
+
+    /**
      * Encode and write a node's geometry to {@code geometries/0} as a single
      * Draco-compressed buffer.
      *
-     * @return ordered list of featureIds per face range if a geometry file was
-     *         written, {@code null} if welding/degenerate filtering left the
-     *         mesh empty (caller should treat this node as a non-mesh node).
-     *         The caller must use this list to align per-node feature/attribute
-     *         output with the Draco feature-index attribute.
+     * @return ordered feature ids and per-feature AABBs if a geometry file
+     *         was written, {@code null} if welding/degenerate filtering left
+     *         the mesh empty (caller should treat this node as a non-mesh
+     *         node). The caller must use this list to align per-node
+     *         feature/attribute output with the Draco feature-index attribute.
      */
-    public List<Long> writeNodeGeometry(Path layerDir, SceneNode node) throws IOException {
+    public NodeGeometryResult writeNodeGeometry(Path layerDir, SceneNode node) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
 
@@ -112,6 +125,8 @@ public class I3SGeometryEncoder {
             }
         });
 
+        List<double[]> featureAabbs = computeFeatureAabbs(weld, centerX, centerY, centerZ);
+
         node.setMesh(null);
 
         int[] vertexFeatureIndices = weld.computeFeatureIndices();
@@ -120,7 +135,40 @@ public class I3SGeometryEncoder {
 
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
                 outUVs, vertexFeatureIndices, numTriangles, rangeFeatureIds);
-        return rangeFeatureIds;
+        return new NodeGeometryResult(rangeFeatureIds, featureAabbs);
+    }
+
+    /**
+     * Compute per-feature AABBs from welded (center-relative) positions,
+     * converted back to absolute geographic coordinates. Returns a list
+     * aligned with {@link VertexWelder.WeldResult#rangeFeatureIds()}.
+     */
+    private static List<double[]> computeFeatureAabbs(VertexWelder.WeldResult weld,
+                                                       double centerX, double centerY,
+                                                       double centerZ) {
+        float[][] welded = weld.weldedPositions();
+        List<Integer> validTri = weld.validTriIndices();
+        List<int[]> faceRanges = weld.faceRanges();
+        List<double[]> aabbs = new ArrayList<>(faceRanges.size());
+        for (int[] range : faceRanges) {
+            double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY,
+                    minZ = Double.POSITIVE_INFINITY;
+            double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY,
+                    maxZ = Double.NEGATIVE_INFINITY;
+            for (int i = range[0]; i <= range[1]; i++) {
+                int base = validTri.get(i) * 3;
+                for (int j = 0; j < 3; j++) {
+                    float[] p = welded[base + j];
+                    if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+                    if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+                    if (p[2] < minZ) minZ = p[2]; if (p[2] > maxZ) maxZ = p[2];
+                }
+            }
+            aabbs.add(new double[]{
+                    minX + centerX, minY + centerY, minZ + centerZ,
+                    maxX + centerX, maxY + centerY, maxZ + centerZ});
+        }
+        return aabbs;
     }
 
     /**
