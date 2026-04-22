@@ -12,9 +12,11 @@ import org.citydb.vis.util.GeoTransform;
  * <p>
  * Stores the source AABB (min/max in degrees/meters) and derives both
  * MBS (Minimum Bounding Sphere) and OBB (Oriented Bounding Box) on demand.
- * OBB is emitted only for SLPK/ArcGIS output (required by I3S 1.7 schema);
- * plain folder output for CesiumJS uses MBS only, because CesiumJS's I3S
- * OBB handling mis-culls buildings at some camera angles.
+ * OBB emission is gated by the caller (see {@code I3SWriter.writeOutput}
+ * and {@code NodePageEntry}): required by every ArcGIS consumer (Pro via
+ * SLPK, Maps SDK for JavaScript and Online Scene Viewer via folder with
+ * {@code --obb}), and suppressed for CesiumJS because its I3S OBB handling
+ * mis-culls buildings at some camera angles.
  * <p>
  * For EPSG:4326 the center is in (longitude, latitude, altitude) but
  * sizes and radii are in meters. Degree-to-meter conversion uses:
