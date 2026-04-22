@@ -27,6 +27,14 @@ public class I3SExportCommand extends VisExportController<I3SFormatOptions> {
                     "Recommended output file extension: .slpk")
     private boolean slpk;
 
+    @CommandLine.Option(names = "--obb",
+            description = "Emit oriented bounding boxes (OBB) in node pages alongside MBS. " +
+                    "Required by the ArcGIS Maps SDK for JavaScript and the ArcGIS Online Scene Viewer " +
+                    "when loading a folder export; without it the layer loads but renders nothing. " +
+                    "Suppressed by default in folder mode because CesiumJS mis-culls buildings when OBB " +
+                    "is present. SLPK output always includes OBB regardless of this flag (ArcGIS Pro requires it).")
+    private boolean obb;
+
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(I3SAdapter.class);
@@ -46,6 +54,9 @@ public class I3SExportCommand extends VisExportController<I3SFormatOptions> {
     protected void applyAdditionalFormatOptions(I3SFormatOptions options) {
         if (Command.hasMatchedOption("--slpk", commandSpec)) {
             options.setSlpk(slpk);
+        }
+        if (Command.hasMatchedOption("--obb", commandSpec)) {
+            options.setObb(obb);
         }
     }
 }
