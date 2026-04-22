@@ -26,13 +26,16 @@ public class TilesetDescriptor {
     private TileNode root;
 
     /**
-     * Create a root tileset descriptor with schema, transform, and cell references.
+     * Create a root tileset descriptor with schema, transform, and a single
+     * external-ref child pointing to the aggregation root's subtree file.
      */
     public static TilesetDescriptor ofRoot(double geometricError,
                                            double[] extent,
                                            double[] transform,
-                                           List<CellReference> cellRefs,
-                                           List<AttrField> attrFields) {
+                                           List<AttrField> attrFields,
+                                           TileBoundingVolume childBoundingVolume,
+                                           double childGeometricError,
+                                           String childUri) {
         TilesetDescriptor d = new TilesetDescriptor();
         d.asset = TilesetAsset.TILES_3D;
         d.schema = MetadataSchema.of(attrFields);
@@ -40,17 +43,16 @@ public class TilesetDescriptor {
 
         TileNode rootTile = TileNode.ofRoot(
                 TileBoundingVolume.fromExtent(extent), geometricError, transform);
-        for (CellReference ref : cellRefs) {
-            rootTile.addChild(TileNode.ofContent(
-                    ref.boundingVolume(), ref.geometricError(), ref.uri()));
-        }
+        rootTile.addChild(TileNode.ofContent(
+                childBoundingVolume, childGeometricError, childUri));
 
         d.root = rootTile;
         return d;
     }
 
     /**
-     * Create a sub-tileset descriptor for a cell's quadtree.
+     * Create a sub-tileset descriptor for an aggregation or per-cell subtree
+     * split off from a parent tileset file.
      */
     public static TilesetDescriptor ofSubtileset(double geometricError,
                                                  TileNode rootTile) {
