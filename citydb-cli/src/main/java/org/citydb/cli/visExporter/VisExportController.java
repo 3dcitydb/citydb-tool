@@ -44,6 +44,7 @@ import org.citydb.vis.writer.VisFormatOptions;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -129,7 +130,8 @@ public abstract class VisExportController implements Command {
     }
 
     private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,
-                                         IOAdapterManager ioManager, IOAdapter ioAdapter) throws ExecutionException {
+                                         IOAdapterManager ioManager, IOAdapter ioAdapter,
+                                         Path outputFileParent, Path tempDir) throws ExecutionException {
         if (!exportOptions.getAppearanceOptions()
                 .map(AppearanceOptions::isExportAppearances)
                 .orElse(true)) {
@@ -149,11 +151,15 @@ public abstract class VisExportController implements Command {
                 / FEATURES_PER_TEXTURE_BUCKET);
         logger.debug("Sized texture buckets to {} for {} features.", buckets, featureCount);
 
-        String folder = ".tmp/" + ioManager.getFileFormat(ioAdapter).toLowerCase() + "-textures";
         AppearanceOptions appearanceOptions = exportOptions.getAppearanceOptions()
                 .orElseGet(AppearanceOptions::new);
         appearanceOptions.setNumberOfTextureBuckets(buckets);
+
+        Path texturesInTemp = tempDir.resolve(
+                ioManager.getFileFormat(ioAdapter).toLowerCase() + "-textures");
+        String folder = outputFileParent.relativize(texturesInTemp).toString();
         appearanceOptions.setTextureOutputFolder(folder);
+
         exportOptions.setAppearanceOptions(appearanceOptions);
     }
 
@@ -191,14 +197,36 @@ public abstract class VisExportController implements Command {
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
-        configureTextureBuckets(exportOptions, databaseManager, ioManager, ioAdapter);
+
+        // Pre-create a unique temp directory shared by the DB texture exporter
+        // (AppearanceOptions.textureOutputFolder) and the VisWriter stores.
+        // Having both write into one directory keeps all intermediate files
+        // together so --temp-dir redirects everything, and lets close-time
+        // deletion clean the whole tree in one shot without racing concurrent
+        // exports (each run gets its own .citydb-vis-tmp-* subdirectory).
+        Path file = helper.resolveAgainstWorkingDir(outputFile);
+        Path outputFileParent = file.toAbsolutePath().normalize().getParent();
+        Path tempDir;
+        try {
+            Path tempRoot = helper.resolveAgainstWorkingDir(tempDirectory);
+            if (tempRoot == null) {
+                tempRoot = outputFileParent;
+            }
+            Files.createDirectories(tempRoot);
+            tempDir = Files.createTempDirectory(tempRoot, ".citydb-vis-tmp-");
+        } catch (IOException e) {
+            throw new ExecutionException("Failed to create temp directory for vis export.", e);
+        }
+        writeOptions.setTempDirectory(tempDir);
+
+        configureTextureBuckets(exportOptions, databaseManager, ioManager, ioAdapter,
+                outputFileParent, tempDir);
         initialize(exportOptions, writeOptions, databaseManager);
 
         Query query = getQuery(exportOptions);
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         AtomicLong counter = new AtomicLong();
 
-        Path file = helper.resolveAgainstWorkingDir(outputFile);
         try (OutputFile output = builder.newOutputFile(file);
              FeatureWriter writer = ioAdapter.createWriter(output, writeOptions)) {
             Exporter exporter = Exporter.newInstance();
@@ -327,9 +355,8 @@ public abstract class VisExportController implements Command {
             writeOptions.setFailFast(failFast);
         }
 
-        if (tempDirectory != null) {
-            writeOptions.setTempDirectory(helper.resolveAgainstWorkingDir(tempDirectory));
-        }
+        // tempDirectory is deliberately NOT set here — doExport overrides it
+        // with the unique .citydb-vis-tmp-* directory it allocates for this run.
 
         if (threadsOptions != null && threadsOptions.getNumberOfThreads() != null) {
             writeOptions.setNumberOfThreads(threadsOptions.getNumberOfThreads());
