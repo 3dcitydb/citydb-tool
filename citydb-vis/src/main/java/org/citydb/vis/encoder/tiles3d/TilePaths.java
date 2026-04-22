@@ -15,28 +15,32 @@ import java.util.Map;
 /**
  * Computes and formats tree-shaped file paths for 3D Tiles output.
  * <p>
- * Each cell-root scene node starts at a caller-supplied path (typically its
- * grid coordinates {@code [gy, gx]}); descendants extend it with their
- * child index. This drives both the nested {@code tiles/} and
- * {@code subtrees/} directory structures, so neither folder accumulates a
- * pathological number of files per directory for massive datasets.
+ * Paths mirror the scene tree structure so neither the {@code tiles/} nor
+ * the {@code subtrees/} directory accumulates a pathological number of
+ * files per directory for massive datasets.
  * <p>
- * Example: cell root at grid (gy=2, gx=1) &rarr; child 3 maps to
- * path {@code [2, 1, 3]}, tile file {@code "2/1/3.glb"}, subtree file
- * {@code "2/1/3.json"}.
+ * The path index is built from a single effective root (typically the
+ * aggregation root produced by {@link CellAggregator}). The root's path
+ * is {@code [0]} and every descendant extends its parent's path with its
+ * child index: a grandchild of the root's second child is {@code [0, 1, i]}.
+ * <p>
+ * Example: aggregation root at {@code [0]} &rarr; its third child at
+ * {@code [0, 2]} &rarr; that child's first child at {@code [0, 2, 0]}
+ * maps to tile file {@code "0/2/0.glb"} and subtree file {@code "0/2/0.json"}.
  */
 public final class TilePaths {
 
     private TilePaths() {
     }
 
-    public static Map<Integer, int[]> buildPathIndex(SceneNode globalRoot,
-                                                     Map<Integer, int[]> cellRootStartPaths) {
+    /**
+     * Assign a path to every node reachable from the given root. The root
+     * itself gets path {@code [0]}; children extend the parent's path with
+     * their child index.
+     */
+    public static Map<Integer, int[]> buildPathIndex(SceneNode root) {
         Map<Integer, int[]> paths = new HashMap<>();
-        for (SceneNode cellRoot : globalRoot.getChildren()) {
-            int[] startPath = cellRootStartPaths.get(cellRoot.getIndex());
-            walk(cellRoot, startPath, paths);
-        }
+        walk(root, new int[]{0}, paths);
         return paths;
     }
 
@@ -61,7 +65,7 @@ public final class TilePaths {
 
     /**
      * Relative sub-path of a node's parent directory (or {@code ""} for
-     * cell-root nodes, whose files sit directly under the output root).
+     * top-level nodes whose files sit directly under the output root).
      */
     public static String parentDir(int[] path) {
         return format(path, 0, path.length - 1, "");

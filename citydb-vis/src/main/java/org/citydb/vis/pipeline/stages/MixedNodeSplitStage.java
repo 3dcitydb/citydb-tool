@@ -89,12 +89,13 @@ public final class MixedNodeSplitStage implements Stage {
                     continue;
                 }
 
-                // Cell roots sit directly under the global root and their 3D Tiles
-                // file path is fixed to their [gy, gx] grid coords. A sibling with
-                // the same startPath would collide on "gy/gx.glb", so leave these
-                // rare leaf cell roots to the intra-node white-pixel fallback in
-                // the atlas. Expected to be uncommon: cell roots are leaves only
-                // when the cell holds fewer than maxFeaturesPerNode features.
+                // Cell roots are direct children of the global root. Adding a
+                // sibling here would put a node under globalRoot without grid
+                // coords, which the 3D Tiles CellAggregator indexes by cell —
+                // so leave these rare leaf cell roots to the intra-node
+                // white-pixel fallback in the atlas. Expected to be uncommon:
+                // cell roots are leaves only when the cell holds fewer than
+                // maxFeaturesPerNode features.
                 if (cellRootIndices.contains(nodeIndex)) {
                     cellRootSkipCount++;
                     continue;
