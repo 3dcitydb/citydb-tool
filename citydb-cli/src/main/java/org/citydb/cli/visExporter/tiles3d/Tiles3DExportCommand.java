@@ -19,23 +19,19 @@ import picocli.CommandLine;
 @CommandLine.Command(
         name = "3dtiles",
         description = "Export data in OGC 3D Tiles 1.1 format.")
-public class Tiles3DExportCommand extends VisExportController {
+public class Tiles3DExportCommand extends VisExportController<Tiles3DFormatOptions> {
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(Tiles3DAdapter.class);
     }
 
     @Override
-    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
+    protected Tiles3DFormatOptions newFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
             throws ExecutionException {
-        Tiles3DFormatOptions options;
         try {
-            options = formatOptions.getOrElse(Tiles3DFormatOptions.class, Tiles3DFormatOptions::new);
+            return formatOptions.getOrElse(Tiles3DFormatOptions.class, Tiles3DFormatOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get 3D Tiles format options from config.", e);
         }
-
-        applySceneOptions(options);
-        return options;
     }
 }
