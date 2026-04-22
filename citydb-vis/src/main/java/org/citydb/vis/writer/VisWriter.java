@@ -40,6 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -108,6 +110,12 @@ public abstract class VisWriter implements FeatureWriter {
         return file;
     }
 
+    private static Path createFallbackTempDir(OutputFile outputFile) throws IOException {
+        Path outputParent = outputFile.getFile().toAbsolutePath().normalize().getParent();
+        Files.createDirectories(outputParent);
+        return Files.createTempDirectory(outputParent, ".citydb-vis-tmp-");
+    }
+
     protected static <T extends VisFormatOptions> T loadFormatOptions(
             WriteOptions options, Class<T> type, Supplier<T> defaultFactory,
             String formatName) throws WriteException {
@@ -122,21 +130,37 @@ public abstract class VisWriter implements FeatureWriter {
 
     protected VisWriter(OutputFile outputFile,
                         VisFormatOptions formatOptions,
-                        AttributeEncoder attributeEncoder) throws WriteException {
+                        AttributeEncoder attributeEncoder,
+                        WriteOptions writeOptions) throws WriteException {
         Objects.requireNonNull(outputFile, "The output file must not be null.");
         Objects.requireNonNull(formatOptions, "The format options must not be null.");
         Objects.requireNonNull(attributeEncoder, "The attribute encoder must not be null.");
+        Objects.requireNonNull(writeOptions, "The write options must not be null.");
 
         this.outputFile = outputFile;
         this.formatOptions = formatOptions;
         this.attributeEncoder = attributeEncoder;
         this.featureIdCounter = new AtomicLong(0);
-        this.cpuCores = Runtime.getRuntime().availableProcessors();
+        // Matches the project-wide default used by Exporter and CityGML/CityJSON
+        // readers: fall back to all available cores with a floor of 2 so
+        // containers pinned to a single vCPU still get some parallelism.
+        int requestedThreads = writeOptions.getNumberOfThreads();
+        this.cpuCores = requestedThreads > 0
+                ? requestedThreads
+                : Math.max(2, Runtime.getRuntime().availableProcessors());
         this.service = ExecutorHelper.newFixedAndBlockingThreadPool(cpuCores, 100);
         this.countLatch = new CountLatch();
 
+        // The CLI controller pre-creates a unique .citydb-vis-tmp-* directory
+        // and sets it as tempDirectory so the DB texture exporter and the
+        // VisWriter stores share one location (redirect via --temp-dir, atomic
+        // wipe on close). Non-CLI callers that don't provide a temp directory
+        // get a unique one rooted at the output file's parent as a fallback.
         try {
-            this.stores = new VisExportStores(outputFile, cpuCores);
+            Path tempDir = writeOptions.getTempDirectory().isPresent()
+                    ? writeOptions.getTempDirectory().get()
+                    : createFallbackTempDir(outputFile);
+            this.stores = new VisExportStores(outputFile, cpuCores, tempDir);
         } catch (IOException e) {
             throw new WriteException("Failed to create disk-backed stores.", e);
         }
