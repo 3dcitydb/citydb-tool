@@ -18,8 +18,10 @@ import java.util.BitSet;
 /**
  * Owns the lifecycle of the disk-backed stores used during visualization export.
  * <p>
- * Consolidates temp-directory creation, store construction, close-time cleanup,
- * and temp-tree deletion so the main writer can focus on the processing pipeline.
+ * Given a pre-allocated temp directory (the caller is responsible for making it
+ * unique per run — the CLI controller does so with a {@code .citydb-vis-tmp-*}
+ * suffix), this class consolidates store construction, close-time cleanup, and
+ * temp-tree deletion so the main writer can focus on the processing pipeline.
  * <p>
  * Stores created eagerly:
  * {@link SpatialEntryStore}, {@link ShardedMeshStore}, {@link AttributeStore}, {@link TextureStore}.
@@ -28,8 +30,6 @@ import java.util.BitSet;
  * close phase once the estimated node count is known.
  */
 public class VisExportStores implements AutoCloseable {
-    private static final String TEMP_DIR_NAME = ".tmp";
-
     private final Logger logger = LoggerFactory.getLogger(VisExportStores.class);
     private final Path tempDir;
     private final SpatialEntryStore spatialEntryStore;
@@ -48,9 +48,15 @@ public class VisExportStores implements AutoCloseable {
      */
     private final BitSet featureTextureFlags = new BitSet();
 
-    public VisExportStores(OutputFile outputFile, int cpuCores) throws IOException {
-        this.tempDir = outputFile.getFile().getParent().resolve(TEMP_DIR_NAME);
+    /**
+     * Create the disk-backed stores inside {@code tempDir}. The directory is
+     * expected to already be unique per export run (the CLI controller
+     * pre-creates one with a {@code .citydb-vis-tmp-*} suffix so close-time
+     * {@code deleteDirectoryTree} can't wipe a sibling export's files).
+     */
+    public VisExportStores(OutputFile outputFile, int cpuCores, Path tempDir) throws IOException {
         Files.createDirectories(tempDir);
+        this.tempDir = tempDir;
         this.spatialEntryStore = new SpatialEntryStore(cpuCores, tempDir);
         this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
         this.attrStore = new AttributeStore(tempDir);
