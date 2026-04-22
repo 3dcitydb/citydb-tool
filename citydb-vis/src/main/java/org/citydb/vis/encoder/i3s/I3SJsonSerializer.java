@@ -40,7 +40,9 @@ public class I3SJsonSerializer {
      * have geometry (instead of the full nodeFeatureMap).
      *
      * @param includeObb emit {@code obb} alongside {@code mbs}; required for
-     *                   ArcGIS Pro, suppressed for CesiumJS (OBB mis-culls).
+     *                   ArcGIS consumers (Pro / Maps SDK JS / Online Scene
+     *                   Viewer), suppressed for CesiumJS (mis-culls when OBB
+     *                   is present). Gated upstream via {@code --slpk || --obb}.
      */
     public void writeNodePages(Path layerDir, List<SceneNode> nodes,
                                Set<Integer> meshNodeIndices,

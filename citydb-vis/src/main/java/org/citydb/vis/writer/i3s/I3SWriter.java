@@ -100,9 +100,16 @@ public class I3SWriter extends VisWriter {
         // Set I3S LOD thresholds on the tree
         setLodThresholds(allNodes);
 
-        boolean slpk = ((I3SFormatOptions) getFormatOptions()).isSlpk();
+        I3SFormatOptions options = (I3SFormatOptions) getFormatOptions();
+        boolean slpk = options.isSlpk();
+        // OBB policy is target-dependent and the two consumers are mutually
+        // incompatible: ArcGIS (Pro, Maps SDK JS, Online Scene Viewer) needs
+        // OBB to render anything, while CesiumJS mis-culls buildings at some
+        // camera angles when OBB is present. SLPK always emits it (ArcGIS
+        // Pro requirement); folder mode emits it only when --obb is passed.
+        boolean includeObb = slpk || options.isObb();
         SceneLayer sceneLayer = buildSceneLayer(extent);
-        writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures, slpk);
+        writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures, includeObb);
 
         if (slpk) {
             try {
