@@ -49,7 +49,7 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicLong;
 
-public abstract class VisExportController implements Command {
+public abstract class VisExportController<T extends VisFormatOptions> implements Command {
     @CommandLine.Option(names = {"-o", "--output"}, required = true, paramLabel = "<file>",
             description = "Name of the output file.")
     protected Path outputFile;
@@ -96,18 +96,55 @@ public abstract class VisExportController implements Command {
 
     protected abstract IOAdapter getIOAdapter(IOAdapterManager ioManager) throws ExecutionException;
 
-    protected abstract OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
+    /**
+     * Return the config-loaded format options for this writer. Implementations
+     * should resolve their concrete {@link VisFormatOptions} subtype via
+     * {@link ConfigObject#getOrElse(Class, java.util.function.Supplier)} and
+     * wrap any {@link ConfigException} as an {@link ExecutionException}.
+     * <p>
+     * Called once by the {@link #getFormatOptions} template method; do not
+     * apply shared {@link SceneOptions} here — the template runs that step next.
+     */
+    protected abstract T newFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
             throws ExecutionException;
+
+    /**
+     * Hook for subclasses to apply format-specific CLI options that go beyond
+     * the shared {@link SceneOptions}. Invoked by {@link #getFormatOptions}
+     * after the shared scene options have been applied, so values set here
+     * take precedence over both the config and the scene options.
+     */
+    protected void applyAdditionalFormatOptions(T options) {
+    }
 
     protected void initialize(VisExportOptions exportOptions, WriteOptions writeOptions,
                               DatabaseManager databaseManager) throws ExecutionException {
     }
 
     /**
+     * Template method assembling the final format options in a fixed order:
+     * <ol>
+     *   <li>{@link #newFormatOptions} loads the format-specific options from config</li>
+     *   <li>Shared {@link SceneOptions} CLI values override matching config entries</li>
+     *   <li>{@link #applyAdditionalFormatOptions} applies any format-specific CLI overrides</li>
+     * </ol>
+     * Declared {@code final} to preserve this ordering. Subclasses customize
+     * behavior by implementing {@link #newFormatOptions} and optionally
+     * overriding {@link #applyAdditionalFormatOptions}.
+     */
+    protected final OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
+            throws ExecutionException {
+        T options = newFormatOptions(formatOptions);
+        applySceneOptions(options);
+        applyAdditionalFormatOptions(options);
+        return options;
+    }
+
+    /**
      * Apply the shared scene CLI options to the given format options.
      * Only values explicitly matched on the command line override the config.
      */
-    protected void applySceneOptions(VisFormatOptions options) {
+    private void applySceneOptions(VisFormatOptions options) {
         if (sceneOptions == null) {
             return;
         }
