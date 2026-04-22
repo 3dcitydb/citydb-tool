@@ -74,13 +74,15 @@ public class I3SWriter extends VisWriter {
     public I3SWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
         this(validateOutputFile(outputFile, "I3S"),
                 loadFormatOptions(options, I3SFormatOptions.class, I3SFormatOptions::new, "I3S"),
-                new I3SAttributeEncoder());
+                new I3SAttributeEncoder(),
+                options);
     }
 
     private I3SWriter(OutputFile outputFile,
                       I3SFormatOptions formatOptions,
-                      I3SAttributeEncoder attributeEncoder) throws WriteException {
-        super(outputFile, formatOptions, attributeEncoder);
+                      I3SAttributeEncoder attributeEncoder,
+                      WriteOptions writeOptions) throws WriteException {
+        super(outputFile, formatOptions, attributeEncoder, writeOptions);
         this.i3sAttributeEncoder = attributeEncoder;
         this.geometryEncoder = new I3SGeometryEncoder();
         this.jsonSerializer = new I3SJsonSerializer();

@@ -66,13 +66,15 @@ public class Tiles3DWriter extends VisWriter {
         this(validateOutputFile(outputFile, "3D Tiles"),
                 loadFormatOptions(options, Tiles3DFormatOptions.class,
                         Tiles3DFormatOptions::new, "3D Tiles"),
-                new org.citydb.vis.encoder.AttributeEncoder());
+                new org.citydb.vis.encoder.AttributeEncoder(),
+                options);
     }
 
     private Tiles3DWriter(OutputFile outputFile,
                           Tiles3DFormatOptions formatOptions,
-                          org.citydb.vis.encoder.AttributeEncoder attributeEncoder) throws WriteException {
-        super(outputFile, formatOptions, attributeEncoder);
+                          org.citydb.vis.encoder.AttributeEncoder attributeEncoder,
+                          WriteOptions writeOptions) throws WriteException {
+        super(outputFile, formatOptions, attributeEncoder, writeOptions);
         this.glbEncoder = new GlbEncoder();
         this.tilesetSerializer = new TilesetSerializer();
     }
