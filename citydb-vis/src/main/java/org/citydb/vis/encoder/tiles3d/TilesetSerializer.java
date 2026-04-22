@@ -7,17 +7,14 @@ package org.citydb.vis.encoder.tiles3d;
 
 import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
-import org.citydb.vis.model.tiles3d.CellReference;
 import org.citydb.vis.model.tiles3d.TileBoundingVolume;
 import org.citydb.vis.model.tiles3d.TileNode;
 import org.citydb.vis.model.tiles3d.TilesetDescriptor;
-import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,11 +25,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Writes multi-level 3D Tiles 1.1 tileset JSON files via
  * {@link TilesetDescriptor} POJOs.
  * <p>
- * When a cell's quadtree exceeds {@link #MAX_NODES_PER_SUBTILESET}
- * nodes, deeper subtrees are split into separate external tileset
- * files at natural tree boundaries, ensuring each file is spatially
- * coherent. Split subtree files live at a path derived from the scene
- * node's position in the tree, mirroring the {@code tiles/} layout.
+ * The writer traverses a combined tree (aggregation layer from
+ * {@link CellAggregator} wrapping per-cell quadtrees). Whenever a subtree
+ * would exceed {@link #MAX_NODES_PER_SUBTILESET}, the child is externalized
+ * at that natural tree boundary into its own subtree file, ensuring each
+ * file is spatially coherent. Split subtree files live at a path derived
+ * from the scene node's position in the tree, mirroring the {@code tiles/}
+ * layout.
  */
 public class TilesetSerializer {
 
@@ -45,8 +44,8 @@ public class TilesetSerializer {
 
     /**
      * Traversal-invariant state threaded through the recursive subtree
-     * writers. A single {@code Ctx} is reused across all subtree files
-     * produced from one cell root.
+     * writers. A single {@code Ctx} is reused across every subtree file
+     * produced from one aggregation root.
      */
     private record Ctx(Set<Integer> meshNodeIndices,
                        Map<Integer, int[]> tilePaths,
@@ -57,50 +56,49 @@ public class TilesetSerializer {
 
     // ---- Root tileset ---------------------------------------------------
 
+    /**
+     * Write the top-level {@code tileset.json}. Carries the metadata schema
+     * and the ENU-to-ECEF transform, and contains a single external ref to
+     * the aggregation root's subtree file — regardless of cell count, so the
+     * root stays small for city-scale datasets.
+     */
     public void writeRootTileset(Path outputDir, SceneNode globalRoot,
+                                 SceneNode aggRoot,
                                  double[] extent, List<AttrField> attrFields,
                                  double[] transform,
                                  Map<Integer, int[]> tilePaths) throws IOException {
         // Root's geometricError must be > 0 so Cesium's SSE check triggers
-        // refinement into the cellRef children. Taking max of cellRoot errors
-        // breaks for small/shallow datasets (single cell whose root is a leaf
-        // mesh), where every cellRoot error is 0 — the root then never refines
-        // and renders its own null content (blank screen). Use the globalRoot's
-        // own R/8 instead: its radius covers the full dataset, and it has
-        // cellRoots as children, so computeGeometricError() returns > 0 as
-        // long as any geometry exists.
-        List<SceneNode> cellRoots = globalRoot.getChildren();
-        List<CellReference> cellRefs = new ArrayList<>(cellRoots.size());
-        for (SceneNode cellRoot : cellRoots) {
-            double geo = TileNode.computeGeometricError(cellRoot);
-            BoundingVolume bv = cellRoot.getBoundingVolume();
-            int[] rootPath = tilePaths.get(cellRoot.getIndex());
-            cellRefs.add(new CellReference(
-                    TileBoundingVolume.fromBoundingVolume(bv),
-                    geo,
-                    "subtrees/" + TilePaths.subtreeFile(rootPath)));
-        }
-
+        // refinement into the subtree child. Using globalRoot's R/8 covers
+        // the full dataset and stays > 0 as long as any geometry exists,
+        // which also works for small/shallow datasets where leaf-derived
+        // errors would be 0 (Cesium would then render the root's null
+        // content instead of loading children).
         double rootGeo = TileNode.computeGeometricError(globalRoot);
+        int[] aggPath = tilePaths.get(aggRoot.getIndex());
+        double aggGeo = TileNode.computeGeometricError(aggRoot);
+        String aggUri = "subtrees/" + TilePaths.subtreeFile(aggPath);
+
         TilesetDescriptor descriptor = TilesetDescriptor.ofRoot(
-                rootGeo, extent, transform, cellRefs, attrFields);
+                rootGeo, extent, transform, attrFields,
+                TileBoundingVolume.fromBoundingVolume(aggRoot.getBoundingVolume()),
+                aggGeo, aggUri);
 
         JsonHelper.writePojo(outputDir.resolve("tileset.json"), descriptor);
     }
 
     // ---- Tree-based sub-tilesets ----------------------------------------
 
-    public void writeSubTileset(Path subtreesDir, SceneNode cellRoot,
+    public void writeSubTileset(Path subtreesDir, SceneNode subtreeRoot,
                                 Set<Integer> meshNodeIndices,
                                 Map<Integer, int[]> tilePaths,
                                 AtomicInteger subtreeFileCount) throws IOException {
         Map<Integer, Integer> subtreeSizes = new HashMap<>();
-        computeSubtreeSize(cellRoot, subtreeSizes);
+        computeSubtreeSize(subtreeRoot, subtreeSizes);
 
-        int[] rootPath = tilePaths.get(cellRoot.getIndex());
+        int[] rootPath = tilePaths.get(subtreeRoot.getIndex());
         Ctx ctx = new Ctx(meshNodeIndices, tilePaths, subtreeSizes,
                 subtreesDir, subtreeFileCount);
-        writeSubtreeFile(ctx, cellRoot, rootPath);
+        writeSubtreeFile(ctx, subtreeRoot, rootPath);
     }
 
     // ---- Tree traversal with spatial splitting --------------------------
