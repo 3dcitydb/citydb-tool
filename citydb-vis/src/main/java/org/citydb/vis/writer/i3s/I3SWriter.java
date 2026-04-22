@@ -201,10 +201,12 @@ public class I3SWriter extends VisWriter {
 
         try {
             node.setMesh(prepared.mesh());
-            List<Long> validFeatureIds = geometryEncoder.writeNodeGeometry(layerDir, node);
-            if (validFeatureIds == null) {
+            I3SGeometryEncoder.NodeGeometryResult geomResult = geometryEncoder.writeNodeGeometry(layerDir, node);
+            if (geomResult == null) {
                 return false;
             }
+            List<Long> validFeatureIds = geomResult.rangeFeatureIds();
+            List<double[]> featureAabbs = geomResult.featureAabbs();
 
             // Geometry confirmed — now safe to materialize the atlas file.
             if (prepared.atlas() != null) {
@@ -227,7 +229,7 @@ public class I3SWriter extends VisWriter {
                 node.setFeatureCount(featureDataList.size());
             }
 
-            jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList);
+            jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList, featureAabbs);
             i3sAttributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
                     featureDataList);
             return true;
