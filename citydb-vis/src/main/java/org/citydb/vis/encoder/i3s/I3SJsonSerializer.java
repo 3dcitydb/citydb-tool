@@ -10,6 +10,7 @@ import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.i3s.FeatureEntry;
 import org.citydb.vis.model.i3s.I3SConstants;
+import org.citydb.vis.model.i3s.NodeFeatureDocument;
 import org.citydb.vis.model.i3s.NodePage;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.model.i3s.SceneLayerDescriptor;
@@ -39,10 +40,11 @@ public class I3SJsonSerializer {
      * Write node pages. Uses a {@code Set<Integer>} to determine which nodes
      * have geometry (instead of the full nodeFeatureMap).
      *
-     * @param includeObb emit {@code obb} alongside {@code mbs}; required for
-     *                   ArcGIS consumers (Pro / Maps SDK JS / Online Scene
-     *                   Viewer), suppressed for CesiumJS (mis-culls when OBB
-     *                   is present). Gated upstream via {@code --slpk || --obb}.
+     * @param includeObb emit {@code obb} (and suppress {@code mbs}); required
+     *                   for ArcGIS consumers (Pro / Maps SDK JS / Online
+     *                   Scene Viewer). When {@code false}, only {@code mbs}
+     *                   is emitted (CesiumJS default — mis-culls when OBB is
+     *                   present). Gated upstream via {@code --slpk || --obb}.
      */
     public void writeNodePages(Path layerDir, List<SceneNode> nodes,
                                Set<Integer> meshNodeIndices,
@@ -65,19 +67,32 @@ public class I3SJsonSerializer {
     }
 
     /**
-     * Write per-node feature metadata to features/0/index.json.
+     * Write per-node feature metadata to {@code features/0/index.json} in the
+     * I3S 1.7 {@code NodeFeatureData} schema. Per-feature {@code mbb} is the
+     * exact AABB of the feature's triangles (from
+     * {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder.NodeGeometryResult})
+     * and {@code position} is its centroid. The ArcGIS Maps SDK for JavaScript
+     * uses these to build the per-node pick BVH; collapsing them to a shared
+     * node bbox makes picks intermittently miss under oblique camera angles.
      */
     public void writeNodeFeatures(Path layerDir, SceneNode node,
-                                  List<FeatureData> features) throws IOException {
+                                  List<FeatureData> features,
+                                  List<double[]> featureAabbs) throws IOException {
         List<FeatureEntry> entries = new ArrayList<>(features.size());
-        for (FeatureData fd : features) {
-            entries.add(FeatureEntry.from(fd));
+        for (int i = 0; i < features.size(); i++) {
+            double[] aabb = featureAabbs.get(i);
+            double[] position = {
+                    (aabb[0] + aabb[3]) / 2.0,
+                    (aabb[1] + aabb[4]) / 2.0,
+                    (aabb[2] + aabb[5]) / 2.0};
+            entries.add(new FeatureEntry(features.get(i).id(), position, aabb));
         }
 
         Path featuresDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
                 .resolve("features").resolve("0");
         Files.createDirectories(featuresDir);
-        JsonHelper.writePojo(featuresDir.resolve("index.json"), entries);
+        JsonHelper.writePojo(featuresDir.resolve("index.json"),
+                NodeFeatureDocument.of(entries));
     }
 
 }
