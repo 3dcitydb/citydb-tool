@@ -57,9 +57,15 @@ public class NodePageEntry {
 
         BoundingVolume bv = node.getBoundingVolume();
         if (bv != null) {
-            entry.mbs = bv.toMbs();
+            // MBS and OBB are mutually exclusive: emitting both makes the
+            // ArcGIS Maps SDK for JavaScript use MBS for broad-phase culling
+            // but OBB for LOD selection, and the slight disagreement between
+            // the two volumes causes feature pick rays to miss at oblique
+            // camera angles even though rendering is fine.
             if (includeObb) {
                 entry.obb = new Obb(bv.toObbCenter(), bv.toObbHalfSize(), bv.toObbQuaternion());
+            } else {
+                entry.mbs = bv.toMbs();
             }
         }
 
