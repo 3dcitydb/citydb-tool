@@ -20,7 +20,7 @@ import picocli.CommandLine;
 @CommandLine.Command(
         name = "i3s",
         description = "Export data in OGC I3S format.")
-public class I3SExportCommand extends VisExportController {
+public class I3SExportCommand extends VisExportController<I3SFormatOptions> {
     @CommandLine.Option(names = "--slpk",
             description = "Package the I3S output as a Scene Layer Package (.slpk) file, " +
                     "compatible with ArcGIS Pro. By default, I3S is exported as a folder structure. " +
@@ -33,21 +33,19 @@ public class I3SExportCommand extends VisExportController {
     }
 
     @Override
-    protected OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
+    protected I3SFormatOptions newFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
             throws ExecutionException {
-        I3SFormatOptions options;
         try {
-            options = formatOptions.getOrElse(I3SFormatOptions.class, I3SFormatOptions::new);
+            return formatOptions.getOrElse(I3SFormatOptions.class, I3SFormatOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get I3S format options from config.", e);
         }
+    }
 
-        applySceneOptions(options);
-
+    @Override
+    protected void applyAdditionalFormatOptions(I3SFormatOptions options) {
         if (Command.hasMatchedOption("--slpk", commandSpec)) {
             options.setSlpk(slpk);
         }
-
-        return options;
     }
 }
