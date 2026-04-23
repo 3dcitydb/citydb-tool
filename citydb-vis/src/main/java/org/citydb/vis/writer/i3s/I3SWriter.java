@@ -12,6 +12,7 @@ import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.VisExportException;
+import org.citydb.vis.encoder.TextureAtlas;
 import org.citydb.vis.encoder.i3s.I3SAttributeEncoder;
 import org.citydb.vis.encoder.i3s.I3SGeometryEncoder;
 import org.citydb.vis.encoder.i3s.I3SJsonSerializer;
@@ -196,7 +197,7 @@ public class I3SWriter extends VisWriter {
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
                                     List<AttrField> attrFields) throws VisExportException {
-        PreparedNode prepared = prepareNodeMesh(node);
+        PreparedNode prepared = prepareNodeMesh(node, false);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
 
         try {
@@ -209,15 +210,17 @@ public class I3SWriter extends VisWriter {
             List<double[]> featureAabbs = geomResult.featureAabbs();
 
             // Geometry confirmed — now safe to materialize the atlas file.
-            if (prepared.atlas() != null) {
+            // I3S is guaranteed single-page (prepareNodeMesh called with
+            // allowMultiAtlas=false), so atlases.get(0) is the only page.
+            if (!prepared.atlases().isEmpty()) {
+                TextureAtlas atlas = prepared.atlases().get(0);
                 Path textureDir = layerDir.resolve("nodes")
                         .resolve(String.valueOf(node.getIndex())).resolve("textures");
                 Files.createDirectories(textureDir);
-                prepared.atlas().write(textureDir.resolve("0"));
+                atlas.write(textureDir.resolve("0"));
                 // Record the texel count (width × height) so the node page can
                 // emit texelCountHint, which ArcGIS Pro requires for rendering.
-                node.setTexelCountHint(
-                        prepared.atlas().getWidth() * prepared.atlas().getHeight());
+                node.setTexelCountHint(atlas.getWidth() * atlas.getHeight());
             }
 
             // Align features with valid face ranges — degenerate filtering may
