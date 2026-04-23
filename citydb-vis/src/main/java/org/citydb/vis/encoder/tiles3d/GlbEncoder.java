@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encodes a scene node's geometry, textures, and per-feature metadata into a
@@ -27,18 +28,19 @@ import java.util.List;
  * Each GLB contains:
  * <ul>
  *   <li>Mesh geometry: positions (local ENU), normals or UVs, indices</li>
- *   <li>Texture: JPEG atlas embedded as buffer view (if textured)</li>
+ *   <li>Textures: one JPEG atlas per page embedded as buffer views</li>
  *   <li>{@code EXT_mesh_features}: per-vertex feature ID attribute</li>
  *   <li>{@code EXT_structural_metadata}: per-feature property table</li>
  * </ul>
  * <p>
- * A node that mixes textured and untextured features is split into two
- * primitives sharing the same mesh/property table:
+ * A node emits one textured primitive per atlas page plus an optional
+ * untextured primitive, all sharing the same mesh / property table:
  * <ul>
- *   <li>Textured primitive: {@code POSITION + TEXCOORD_0 + _FEATURE_ID_0}, uses
- *       a textured PBR material. Normals are omitted so CesiumJS generates flat
- *       per-face normals at render time — matches the I3S behaviour and looks
- *       best on faceted building geometry.</li>
+ *   <li>Textured primitive (per atlas page): {@code POSITION + TEXCOORD_0 +
+ *       _FEATURE_ID_0}, uses a textured PBR material backed by that page.
+ *       Normals are omitted so CesiumJS generates flat per-face normals at
+ *       render time — matches the I3S behaviour and looks best on faceted
+ *       building geometry.</li>
  *   <li>Untextured primitive: {@code POSITION + NORMAL + _FEATURE_ID_0}, uses
  *       a default PBR material. Encoded per-face normals give proper lighting
  *       with the plain white base color.</li>
@@ -51,18 +53,21 @@ public class GlbEncoder {
      * Encode a mesh node into a GLB byte array. Returns {@code null} if the
      * mesh is empty after welding/degenerate filtering.
      *
-     * @param node          scene node (mesh will be cleared after encoding)
-     * @param textureBytes  JPEG atlas bytes, or {@code null} if untextured
-     * @param features      per-feature attribute data
-     * @param attrFields    finalized attribute field definitions
-     * @param datasetCenter [centerLon, centerLat, centerAlt] of the dataset
+     * @param node           scene node (mesh will be cleared after encoding)
+     * @param atlasBytesList JPEG bytes per atlas page (index matches
+     *                       {@code texIdToPage} values), empty if untextured
+     * @param texIdToPage    texture id → atlas page index; empty if untextured
+     * @param features       per-feature attribute data
+     * @param attrFields     finalized attribute field definitions
+     * @param datasetCenter  [centerLon, centerLat, centerAlt] of the dataset
      * @return GLB bytes, or {@code null} if empty
      */
-    public byte[] encode(SceneNode node, byte[] textureBytes,
+    public byte[] encode(SceneNode node, List<byte[]> atlasBytesList,
+                         Map<Integer, Integer> texIdToPage,
                          List<FeatureData> features, List<AttrField> attrFields,
                          double[] datasetCenter) throws IOException {
         TriangleMesh mesh = node.getMesh();
-        boolean hasTexture = mesh.hasTexCoords() && textureBytes != null;
+        boolean hasTexture = mesh.hasTexCoords() && !atlasBytesList.isEmpty();
         if (!hasTexture) {
             node.setTextured(false);
         }
@@ -78,34 +83,46 @@ public class GlbEncoder {
 
         DatasetFrame frame = DatasetFrame.from(mbs, datasetCenter);
 
-        // Partition valid triangles into textured and untextured subsets while
-        // tagging each with its face-range index (the row that the per-vertex
-        // _FEATURE_ID_0 attribute will reference in the shared property table).
-        // Tracking the face-range index per triangle — rather than re-deriving
-        // it from the triangle's featureId — preserves the original encoder's
-        // semantics, where two non-contiguous runs of the same feature become
-        // two distinct property table rows.
-        List<TriEntry> texturedTris;
+        // Partition valid triangles by atlas page (textured) plus a single
+        // untextured bucket. Face-range index is tracked per entry so the
+        // per-vertex _FEATURE_ID_0 can reference the shared property table
+        // regardless of which primitive the triangle lands in — this
+        // preserves the original encoder's semantics, where two
+        // non-contiguous runs of the same feature become two distinct
+        // property table rows.
+        int pageCount = atlasBytesList.size();
+        List<List<TriEntry>> texturedTrisByPage;
         List<TriEntry> untexturedTris;
         if (hasTexture) {
-            texturedTris = new ArrayList<>();
+            texturedTrisByPage = new ArrayList<>(pageCount);
+            for (int i = 0; i < pageCount; i++) {
+                texturedTrisByPage.add(new ArrayList<>());
+            }
             untexturedTris = new ArrayList<>();
-            partitionByTexture(mesh, weld, texturedTris, untexturedTris);
+            partitionByAtlasPage(mesh, weld, texIdToPage, texturedTrisByPage, untexturedTris);
         } else {
-            texturedTris = Collections.emptyList();
+            texturedTrisByPage = Collections.emptyList();
             untexturedTris = collectAllEntries(weld);
         }
 
         int featureCount = weld.faceRanges().size();
 
-        List<PrimitiveArrays> primitives = new ArrayList<>(2);
-        if (!texturedTris.isEmpty()) {
-            primitives.add(buildPrimitiveArrays(mesh, weld, texturedTris,
-                    PrimitiveKind.TEXTURED, frame));
+        // One primitive per non-empty atlas page + optional untextured
+        // primitive. An empty page can arise when every triangle routed to it
+        // was dropped by the weld/degenerate filter; its material + texture
+        // would still be referenced in the glTF JSON, but no primitive would
+        // draw it, so we simply skip it below and the JSON builder sees a
+        // compact set of primitives.
+        List<PrimitiveArrays> primitives = new ArrayList<>(pageCount + 1);
+        for (int p = 0; p < pageCount; p++) {
+            List<TriEntry> tris = texturedTrisByPage.get(p);
+            if (!tris.isEmpty()) {
+                primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, frame));
+            }
         }
         if (!untexturedTris.isEmpty()) {
             primitives.add(buildPrimitiveArrays(mesh, weld, untexturedTris,
-                    PrimitiveKind.UNTEXTURED, frame));
+                    UNTEXTURED_PAGE, frame));
         }
         node.setMesh(null); // release source mesh; no longer needed
 
@@ -114,11 +131,16 @@ public class GlbEncoder {
         for (PrimitiveArrays p : primitives) {
             primitiveBvs.add(writePrimitiveBuffers(bin, p));
         }
-        // Embed the shared atlas only if some primitive is textured. Without a
-        // textured primitive, the JPEG bytes would be dead weight in the BIN
-        // chunk and their accessor unused.
-        boolean embedTexture = !texturedTris.isEmpty() && textureBytes != null;
-        int bvTexture = embedTexture ? bin.addRawBytes(textureBytes) : -1;
+        // Embed each atlas page that is actually referenced by a primitive.
+        // Pages whose triangles were all filtered out contribute nothing.
+        List<Integer> bvTextures = new ArrayList<>(pageCount);
+        boolean[] pageInUse = new boolean[pageCount];
+        for (PrimitiveArrays p : primitives) {
+            if (p.atlasPage >= 0) pageInUse[p.atlasPage] = true;
+        }
+        for (int p = 0; p < pageCount; p++) {
+            bvTextures.add(pageInUse[p] ? bin.addRawBytes(atlasBytesList.get(p)) : -1);
+        }
 
         List<FeatureData> propFeatures = featureCount < features.size()
                 ? FeatureData.reorderByIds(features, weld.rangeFeatureIds())
@@ -131,7 +153,7 @@ public class GlbEncoder {
         byte[] binData = bin.toByteArray();
         byte[] jsonData = new GltfJsonBuilder()
                 .bufferViews(bin.getBufferViews(), binData.length)
-                .texture(bvTexture)
+                .textures(bvTextures)
                 .primitives(toJsonPrimitives(primitives, primitiveBvs))
                 .metadata(featureCount, attrFields, propBvs)
                 .build();
@@ -160,7 +182,7 @@ public class GlbEncoder {
             PrimitiveArrays p = primitives.get(i);
             PrimitiveBufferIds b = bvs.get(i);
             out.add(new GltfJsonBuilder.Primitive(
-                    p.kind == PrimitiveKind.TEXTURED,
+                    p.atlasPage,
                     p.vertexCount, p.posMin, p.posMax,
                     b.positions, b.normals, b.uvs, b.indices, b.featureIds));
         }
@@ -168,14 +190,16 @@ public class GlbEncoder {
     }
 
     /**
-     * Walk valid triangles in face-range order and split them into textured
-     * and untextured entries. The face-range index is tracked alongside the
-     * original triangle index so the per-vertex {@code _FEATURE_ID_0} can
-     * reference the shared property table regardless of which primitive the
-     * triangle ends up in.
+     * Walk valid triangles in face-range order and bucket them by atlas page
+     * (for textured triangles) or into the untextured list. The face-range
+     * index is tracked alongside the original triangle index so the per-vertex
+     * {@code _FEATURE_ID_0} can reference the shared property table regardless
+     * of which primitive the triangle ends up in.
      */
-    private static void partitionByTexture(TriangleMesh mesh, VertexWelder.WeldResult weld,
-                                           List<TriEntry> textured, List<TriEntry> untextured) {
+    private static void partitionByAtlasPage(TriangleMesh mesh, VertexWelder.WeldResult weld,
+                                             Map<Integer, Integer> texIdToPage,
+                                             List<List<TriEntry>> texturedByPage,
+                                             List<TriEntry> untextured) {
         List<Integer> validTriIndices = weld.validTriIndices();
         List<int[]> faceRanges = weld.faceRanges();
         List<Integer> triTexIds = mesh.getTriangleTextureIds();
@@ -188,8 +212,17 @@ public class GlbEncoder {
             }
             int ti = validTriIndices.get(i);
             TriEntry entry = new TriEntry(ti, rangeIdx);
-            if (triTexIds.get(ti) >= 0) {
-                textured.add(entry);
+            int texId = triTexIds.get(ti);
+            if (texId >= 0) {
+                Integer page = texIdToPage.get(texId);
+                // A texId missing from the map means the atlas builder dropped
+                // this texture (e.g. corrupt source). Route the triangle to
+                // the untextured bucket so the feature still renders.
+                if (page != null) {
+                    texturedByPage.get(page).add(entry);
+                } else {
+                    untextured.add(entry);
+                }
             } else {
                 untextured.add(entry);
             }
@@ -216,17 +249,19 @@ public class GlbEncoder {
      * Build per-primitive welded vertex arrays from the chosen triangle subset.
      * Rewrites welded positions from ENU (meters, East/North/Up) into glTF
      * Y-up (X=East, Y=Up, Z=-North), collects per-axis min/max for the
-     * POSITION accessor, and emits {@code NORMAL} or {@code TEXCOORD_0}
-     * according to the primitive kind.
+     * POSITION accessor, and emits {@code NORMAL} (when untextured) or
+     * {@code TEXCOORD_0} (when textured) accordingly. {@code atlasPage >= 0}
+     * selects the textured path; {@link #UNTEXTURED_PAGE} selects untextured.
      */
     private static PrimitiveArrays buildPrimitiveArrays(TriangleMesh mesh,
                                                         VertexWelder.WeldResult weld,
                                                         List<TriEntry> triEntries,
-                                                        PrimitiveKind kind, DatasetFrame frame) {
+                                                        int atlasPage, DatasetFrame frame) {
+        boolean textured = atlasPage >= 0;
         int vertexCount = triEntries.size() * 3;
         float[] positions = new float[vertexCount * 3];
-        float[] normals = kind == PrimitiveKind.UNTEXTURED ? new float[vertexCount * 3] : null;
-        float[] uvs = kind == PrimitiveKind.TEXTURED ? new float[vertexCount * 2] : null;
+        float[] normals = textured ? null : new float[vertexCount * 3];
+        float[] uvs = textured ? new float[vertexCount * 2] : null;
         int[] indices = new int[vertexCount]; // triangle soup: 0,1,2,3,...
         int[] featureIds = new int[vertexCount];
         float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
@@ -274,7 +309,7 @@ public class GlbEncoder {
             }
         }
 
-        return new PrimitiveArrays(kind, vertexCount, positions, normals, uvs,
+        return new PrimitiveArrays(atlasPage, vertexCount, positions, normals, uvs,
                 indices, featureIds, posMin, posMax);
     }
 
@@ -295,7 +330,8 @@ public class GlbEncoder {
         }
     }
 
-    private enum PrimitiveKind { TEXTURED, UNTEXTURED }
+    /** Sentinel for {@link PrimitiveArrays#atlasPage} meaning "no texture". */
+    private static final int UNTEXTURED_PAGE = -1;
 
     /**
      * One valid triangle earmarked for a specific primitive, paired with the
@@ -304,7 +340,7 @@ public class GlbEncoder {
     private record TriEntry(int ti, int faceIdx) {
     }
 
-    private record PrimitiveArrays(PrimitiveKind kind, int vertexCount,
+    private record PrimitiveArrays(int atlasPage, int vertexCount,
                                    float[] positions, float[] normals, float[] uvs,
                                    int[] indices, int[] featureIds,
                                    float[] posMin, float[] posMax) {

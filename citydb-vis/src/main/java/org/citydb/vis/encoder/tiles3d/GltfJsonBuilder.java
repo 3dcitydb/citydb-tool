@@ -14,20 +14,21 @@ import org.citydb.vis.model.tiles3d.MetadataProperty;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * Fluent builder for the glTF 2.0 JSON chunk of a GLB file. Inputs are
- * supplied in four groups — buffer layout, texture, primitives, metadata —
+ * supplied in four groups — buffer layout, textures, primitives, metadata —
  * and {@link #build()} produces the UTF-8-encoded JSON bytes.
  * <p>
  * The document has a single scene containing a single node that references a
- * single mesh. The mesh carries one primitive per vertex group (a textured
- * and/or untextured group) so that a node mixing textured and untextured
- * features still renders each group with the correct material. Materials
- * emitted on demand: a textured PBR material when any textured primitive is
- * present, a default PBR material when any untextured primitive is present.
- * Both primitives share the {@code EXT_structural_metadata} property table.
+ * single mesh. The mesh carries one primitive per atlas page (each backed by
+ * its own textured PBR material) plus an optional untextured primitive, so
+ * that a node whose texture footprint would exceed {@code --max-atlas-size}
+ * in a single page is split across multiple pages — each rendered with its
+ * own material — instead of being globally downscaled. All primitives share
+ * the {@code EXT_structural_metadata} property table.
  */
 final class GltfJsonBuilder {
     private static final int COMPONENT_TYPE_FLOAT = 5126;
@@ -37,8 +38,9 @@ final class GltfJsonBuilder {
     private List<GltfBufferView> bufferViews;
     private int binLength;
 
-    // Shared texture (single atlas reused by all textured primitives)
-    private int bvTexture = -1;
+    // Per-page atlas bufferView indices; value {@code -1} means the page
+    // exists in the input but was dropped because no primitive referenced it.
+    private List<Integer> bvTextures = List.of();
 
     // Primitives
     private List<Primitive> primitives = List.of();
@@ -54,8 +56,8 @@ final class GltfJsonBuilder {
         return this;
     }
 
-    GltfJsonBuilder texture(int bvTexture) {
-        this.bvTexture = bvTexture;
+    GltfJsonBuilder textures(List<Integer> bvTextures) {
+        this.bvTextures = bvTextures;
         return this;
     }
 
@@ -172,29 +174,39 @@ final class GltfJsonBuilder {
     }
 
     /**
-     * Emit at most two PBR materials — a textured one (with a baseColorTexture
-     * pointing at the shared atlas) and a default untextured one — only when
-     * a primitive of that kind is actually present. Returns the indices for
-     * each so {@link #writeMeshes} can reference them.
+     * Emit one textured PBR material per referenced atlas page (each with a
+     * baseColorTexture pointing at its own atlas) plus a single default
+     * untextured PBR material when any untextured primitive is present.
+     * Returns the resolved material indices keyed by atlas page so
+     * {@link #writeMeshes} can reference them.
      */
     private MaterialIndices writeMaterials(JSONObject root) {
         JSONArray materials = new JSONArray();
-        int texturedIdx = -1;
+        int pageCount = bvTextures.size();
+        int[] texturedIdx = new int[pageCount];
+        Arrays.fill(texturedIdx, -1);
         int untexturedIdx = -1;
-        boolean needTextured = primitives.stream().anyMatch(p -> p.textured);
-        boolean needUntextured = primitives.stream().anyMatch(p -> !p.textured);
 
-        if (needTextured) {
+        boolean[] pageUsed = new boolean[pageCount];
+        boolean needUntextured = false;
+        for (Primitive p : primitives) {
+            if (p.atlasPage >= 0) pageUsed[p.atlasPage] = true;
+            else needUntextured = true;
+        }
+
+        int textureSlot = 0;
+        for (int p = 0; p < pageCount; p++) {
+            if (!pageUsed[p]) continue;
             JSONObject material = new JSONObject();
             JSONObject pbr = new JSONObject();
             JSONObject baseColorTexture = new JSONObject();
-            baseColorTexture.put("index", 0);
+            baseColorTexture.put("index", textureSlot++);
             baseColorTexture.put("texCoord", 0);
             pbr.put("baseColorTexture", baseColorTexture);
             pbr.put("metallicFactor", 0.0);
             pbr.put("roughnessFactor", 1.0);
             material.put("pbrMetallicRoughness", pbr);
-            texturedIdx = materials.size();
+            texturedIdx[p] = materials.size();
             materials.add(material);
         }
 
@@ -212,10 +224,31 @@ final class GltfJsonBuilder {
         return new MaterialIndices(texturedIdx, untexturedIdx);
     }
 
+    /**
+     * Emit one {@code images}/{@code textures} entry per referenced atlas
+     * page, all sharing a single sampler. Texture indices are assigned
+     * densely in page order so they line up with the {@code textureSlot}
+     * counter used by {@link #writeMaterials}.
+     */
     private void writeTextures(JSONObject root) {
-        if (bvTexture < 0) {
+        JSONArray images = new JSONArray();
+        JSONArray textures = new JSONArray();
+        for (int bv : bvTextures) {
+            if (bv < 0) continue;
+            JSONObject image = new JSONObject();
+            image.put("bufferView", bv);
+            image.put("mimeType", "image/jpeg");
+            images.add(image);
+
+            JSONObject texture = new JSONObject();
+            texture.put("sampler", 0);
+            texture.put("source", images.size() - 1);
+            textures.add(texture);
+        }
+        if (textures.isEmpty()) {
             return;
         }
+
         JSONArray samplers = new JSONArray();
         JSONObject sampler = new JSONObject();
         sampler.put("magFilter", 9729); // LINEAR
@@ -223,18 +256,7 @@ final class GltfJsonBuilder {
         samplers.add(sampler);
         root.put("samplers", samplers);
 
-        JSONArray images = new JSONArray();
-        JSONObject image = new JSONObject();
-        image.put("bufferView", bvTexture);
-        image.put("mimeType", "image/jpeg");
-        images.add(image);
         root.put("images", images);
-
-        JSONArray textures = new JSONArray();
-        JSONObject texture = new JSONObject();
-        texture.put("sampler", 0);
-        texture.put("source", 0);
-        textures.add(texture);
         root.put("textures", textures);
     }
 
@@ -260,7 +282,9 @@ final class GltfJsonBuilder {
             attributes.put("_FEATURE_ID_0", acc.featureId);
             primitive.put("attributes", attributes);
             primitive.put("indices", acc.indices);
-            primitive.put("material", p.textured ? materials.textured : materials.untextured);
+            primitive.put("material", p.atlasPage >= 0
+                    ? materials.textured[p.atlasPage]
+                    : materials.untextured);
 
             JSONObject meshFeaturesExt = new JSONObject();
             JSONArray featureIdsArr = new JSONArray();
@@ -357,11 +381,13 @@ final class GltfJsonBuilder {
     }
 
     /**
-     * Per-primitive geometry inputs. {@code bvNormals} and {@code bvUvs} may
-     * be {@code -1} when the primitive doesn't carry that attribute —
+     * Per-primitive geometry inputs. {@code atlasPage >= 0} selects the
+     * textured path (material indexed by atlas page); {@code -1} selects the
+     * default untextured PBR material. {@code bvNormals} and {@code bvUvs}
+     * may be {@code -1} when the primitive doesn't carry that attribute —
      * textured primitives skip normals, untextured primitives skip UVs.
      */
-    record Primitive(boolean textured, int vertexCount, float[] posMin, float[] posMax,
+    record Primitive(int atlasPage, int vertexCount, float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvIndices, int bvFeatureIds) {
     }
 
@@ -369,6 +395,12 @@ final class GltfJsonBuilder {
                                       int indices, int featureId) {
     }
 
-    private record MaterialIndices(int textured, int untextured) {
+    /**
+     * Resolved glTF material indices. {@code textured[p]} is the material
+     * index for atlas page {@code p}, or {@code -1} if that page wasn't
+     * referenced. {@code untextured} is {@code -1} when no untextured
+     * primitive is present.
+     */
+    private record MaterialIndices(int[] textured, int untextured) {
     }
 }
