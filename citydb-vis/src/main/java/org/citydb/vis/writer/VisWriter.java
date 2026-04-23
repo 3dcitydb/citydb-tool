@@ -286,16 +286,28 @@ public abstract class VisWriter implements FeatureWriter {
 
     /**
      * Prepared per-node data: merged mesh with atlas-remapped UVs.
+     * <p>
+     * {@code atlases} holds one entry in the single-atlas case (I3S — required
+     * by the spec's one-material-per-node rule) and one-or-more in the
+     * multi-atlas case (3D Tiles, where GLB supports multiple materials per
+     * mesh). Empty when the node carries no textured triangles or every
+     * referenced texture failed to load.
      */
     protected record PreparedNode(List<NodeEntry> entries, TriangleMesh mesh,
-                                  TextureAtlas atlas) {
+                                  List<TextureAtlas> atlases) {
     }
 
     /**
-     * Prepare a node's mesh data: load and merge meshes from the sharded store,
-     * build a texture atlas (if textured), and remap UV coordinates.
+     * Prepare a node's mesh data: load and merge meshes from the sharded
+     * store, build texture atlas(es), and remap UV coordinates.
+     *
+     * @param allowMultiAtlas when {@code true}, spill overflow regions onto
+     *                        additional atlas pages instead of rescaling all
+     *                        textures down to fit a single page. Used by the
+     *                        3D Tiles writer; I3S must pass {@code false}
+     *                        since the spec requires one material per node.
      */
-    protected PreparedNode prepareNodeMesh(SceneNode node) throws VisExportException {
+    protected PreparedNode prepareNodeMesh(SceneNode node, boolean allowMultiAtlas) throws VisExportException {
         try {
             List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(node.getIndex());
 
@@ -314,23 +326,32 @@ public abstract class VisWriter implements FeatureWriter {
                 merged.setHasTexCoords(false);
             }
 
-            TextureAtlas atlas = null;
+            List<TextureAtlas> atlases = List.of();
             if (!uniqueTexIds.isEmpty()) {
                 Map<Integer, float[]> uvExtents = merged.computeUVExtents();
-                atlas = TextureAtlas.build(
-                        uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
-                        formatOptions.getMaxAtlasSize(), uvExtents, hasUntexturedTriangle);
-                if (atlas != null) {
-                    atlas.remapUVs(merged);
+                if (allowMultiAtlas) {
+                    atlases = TextureAtlas.buildMulti(
+                            uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
+                            formatOptions.getMaxAtlasSize(), uvExtents);
+                } else {
+                    TextureAtlas single = TextureAtlas.build(
+                            uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
+                            formatOptions.getMaxAtlasSize(), uvExtents, hasUntexturedTriangle);
+                    atlases = single != null ? List.of(single) : List.of();
+                }
+                if (!atlases.isEmpty()) {
+                    for (TextureAtlas atlas : atlases) {
+                        atlas.remapUVs(merged);
+                    }
                 } else {
                     logger.warn("Node {}: all referenced textures failed to load, " +
                             "falling back to untextured rendering.", node.getIndex());
                     merged.setHasTexCoords(false);
                 }
             }
-            node.setTextured(atlas != null);
+            node.setTextured(!atlases.isEmpty());
 
-            return new PreparedNode(entries, merged, atlas);
+            return new PreparedNode(entries, merged, atlases);
         } catch (IOException e) {
             throw new VisExportException("Failed to prepare node " + node.getIndex() + ".", e);
         }
