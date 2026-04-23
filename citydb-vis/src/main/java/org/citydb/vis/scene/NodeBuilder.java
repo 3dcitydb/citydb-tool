@@ -36,6 +36,13 @@ import java.util.Map;
  * for setting those after the tree is built.
  */
 public class NodeBuilder {
+    // Hard cap on quadtree recursion depth. Acts purely as a bail-out for
+    // pathological inputs where many features share near-identical XY
+    // coordinates (e.g., stacked features on a single facade); for any
+    // realistic distribution, maxPerNode terminates recursion long before
+    // this is reached.
+    private static final int MAX_TREE_DEPTH = 16;
+
     /**
      * Result of building a quadtree for a single spatial grid cell.
      * <ul>
@@ -63,7 +70,7 @@ public class NodeBuilder {
      * for different cells.
      */
     public static CellTree buildCellTree(List<SpatialEntry> entries, double[] extent,
-                                  int maxFeaturesPerNode, int maxTreeDepth) {
+                                  int maxFeaturesPerNode) {
         Map<Integer, List<NodeEntry>> nodeEntryMap = new HashMap<>();
         List<SceneNode> nodes = new ArrayList<>();
         int[] counter = {0};
@@ -71,8 +78,7 @@ public class NodeBuilder {
         SceneNode root = new SceneNode(counter[0]++, 0);
         nodes.add(root);
 
-        subdivide(root, entries, extent,
-                maxFeaturesPerNode, maxTreeDepth,
+        subdivide(root, entries, extent, maxFeaturesPerNode,
                 nodes, counter, nodeEntryMap);
 
         updateBoundingVolumes(root);
@@ -110,10 +116,10 @@ public class NodeBuilder {
      * {@link SpatialEntry} list to be GC'd as soon as the tree is built.
      */
     private static void subdivide(SceneNode node, List<SpatialEntry> entries,
-                                  double[] extent, int maxPerNode, int maxDepth,
+                                  double[] extent, int maxPerNode,
                                   List<SceneNode> allNodes, int[] nodeCounter,
                                   Map<Integer, List<NodeEntry>> nodeEntryMap) {
-        if (entries.size() <= maxPerNode || node.getLevel() >= maxDepth) {
+        if (entries.size() <= maxPerNode || node.getLevel() >= MAX_TREE_DEPTH) {
             node.setFeatureCount(entries.size());
 
             // Compute bounding volume + compact to NodeEntry in one pass
@@ -155,7 +161,7 @@ public class NodeBuilder {
                 SceneNode child = new SceneNode(nodeCounter[0]++, node.getLevel() + 1);
                 allNodes.add(child);
                 node.addChild(child);
-                subdivide(child, buckets[q], childExtents[q], maxPerNode, maxDepth,
+                subdivide(child, buckets[q], childExtents[q], maxPerNode,
                         allNodes, nodeCounter, nodeEntryMap);
             }
         }
