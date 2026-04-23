@@ -56,8 +56,7 @@ public final class TreeBuildingStage implements Stage {
                 double[] cellExtent = NodeBuilder.computeExtent(cellEntries);
                 NodeBuilder.CellTree cellTree =
                         NodeBuilder.buildCellTree(cellEntries, cellExtent,
-                                ctx.formatOptions().getMaxFeaturesPerNode(),
-                                ctx.formatOptions().getMaxTreeDepth());
+                                ctx.formatOptions().getMaxFeaturesPerNode());
 
                 int offset = nextIndex;
                 for (SceneNode node : cellTree.nodes()) {
