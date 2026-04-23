@@ -16,7 +16,6 @@ import org.citydb.io.writer.options.OutputFormatOptions;
  */
 public abstract class VisFormatOptions implements OutputFormatOptions {
     private int maxFeaturesPerNode = 64;
-    private int maxTreeDepth = 16;
     private boolean clampToGround;
     private double textureScale = 1.0;
     private int maxAtlasSize = 2048;
@@ -27,15 +26,6 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
 
     public VisFormatOptions setMaxFeaturesPerNode(int maxFeaturesPerNode) {
         this.maxFeaturesPerNode = maxFeaturesPerNode;
-        return this;
-    }
-
-    public int getMaxTreeDepth() {
-        return maxTreeDepth;
-    }
-
-    public VisFormatOptions setMaxTreeDepth(int maxTreeDepth) {
-        this.maxTreeDepth = maxTreeDepth;
         return this;
     }
 
