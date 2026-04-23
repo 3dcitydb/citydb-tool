@@ -12,6 +12,7 @@ import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.VisExportException;
+import org.citydb.vis.encoder.TextureAtlas;
 import org.citydb.vis.encoder.tiles3d.CellAggregator;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
@@ -30,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -156,22 +158,29 @@ public class Tiles3DWriter extends VisWriter {
                                  Map<Integer, int[]> tilePaths,
                                  List<AttrField> attrFields, double[] datasetCenter)
             throws VisExportException {
-        PreparedNode prepared = prepareNodeMesh(node);
+        PreparedNode prepared = prepareNodeMesh(node, true);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
 
         try {
-            // Serialize atlas to JPEG bytes for GLB embedding
-            byte[] textureBytes = null;
-            if (prepared.atlas() != null) {
+            // Serialize each atlas page to JPEG bytes and index texture ids by
+            // page so the GLB encoder can route textured triangles to the
+            // primitive backed by the correct atlas.
+            List<byte[]> atlasBytesList = new ArrayList<>(prepared.atlases().size());
+            Map<Integer, Integer> texIdToPage = new HashMap<>();
+            for (int p = 0; p < prepared.atlases().size(); p++) {
+                TextureAtlas atlas = prepared.atlases().get(p);
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                prepared.atlas().write(baos);
-                textureBytes = baos.toByteArray();
+                atlas.write(baos);
+                atlasBytesList.add(baos.toByteArray());
+                for (int texId : atlas.getTextureIds()) {
+                    texIdToPage.put(texId, p);
+                }
             }
 
             // Encode GLB
             node.setMesh(prepared.mesh());
-            byte[] glb = glbEncoder.encode(node, textureBytes, featureDataList, attrFields,
-                    datasetCenter);
+            byte[] glb = glbEncoder.encode(node, atlasBytesList, texIdToPage,
+                    featureDataList, attrFields, datasetCenter);
             if (glb == null) {
                 return false;
             }
