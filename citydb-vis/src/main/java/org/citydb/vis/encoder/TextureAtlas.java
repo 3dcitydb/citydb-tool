@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Packs multiple texture images into a single atlas and remaps UV coordinates.
@@ -103,6 +104,154 @@ public class TextureAtlas {
 
         double scale = Math.min(1.0, Math.max(0.01, textureScale));
         return buildSingleAtlas(metas, scale, maxAtlasSize, tileOffsets, textureStore);
+    }
+
+    /**
+     * Build one or more texture atlas pages. Unlike {@link #build}, this does
+     * <i>not</i> globally rescale all textures to fit a single page — instead,
+     * regions that the BSP packer spills onto additional levels become their
+     * own atlas pages. The only per-texture scaling happens when a single
+     * source (after {@code textureScale}) exceeds {@code maxAtlasSize} on its
+     * own, which would make it unplaceable on any page.
+     * <p>
+     * Callers (currently the 3D Tiles GLB encoder) emit one textured primitive
+     * per page, each referencing a distinct material + texture. Untextured
+     * triangles are handled outside this path, so no white pixel is reserved.
+     */
+    public static List<TextureAtlas> buildMulti(Collection<Integer> textureIds, TextureStore textureStore,
+                                                double textureScale, int maxAtlasSize,
+                                                Map<Integer, float[]> uvExtents) throws IOException {
+        List<TextureMeta> metas = new ArrayList<>();
+        Map<Integer, float[]> tileOffsets = new HashMap<>();
+
+        gatherMetaTiled(textureIds, textureStore, uvExtents, metas, tileOffsets);
+        if (metas.isEmpty()) return List.of();
+
+        double baseScale = Math.min(1.0, Math.max(0.01, textureScale));
+
+        // Shrink only individual textures that, at baseScale, would exceed
+        // maxAtlasSize on their own — they could not land on any page
+        // otherwise. The aggregate area is free to exceed one page.
+        Map<Integer, Integer> texIdToIdx = new HashMap<>();
+        Packer packer = new Packer(maxAtlasSize, maxAtlasSize,
+                TextureAtlasCreator.BASIC, false);
+        for (int i = 0; i < metas.size(); i++) {
+            TextureMeta m = metas.get(i);
+            double s = baseScale;
+            int w = Math.max(1, (int) (m.effectiveWidth() * s));
+            int h = Math.max(1, (int) (m.effectiveHeight() * s));
+            if (w > maxAtlasSize || h > maxAtlasSize) {
+                s *= (double) maxAtlasSize / Math.max(w, h);
+                w = Math.max(1, (int) (m.effectiveWidth() * s));
+                h = Math.max(1, (int) (m.effectiveHeight() * s));
+            }
+            packer.addRegion(String.valueOf(m.texId), w, h);
+            texIdToIdx.put(m.texId, i);
+        }
+        org.citydb.textureAtlas.model.TextureAtlas packed = packer.pack(false);
+
+        // Each BSP level becomes its own atlas page. TreeMap keeps level 0
+        // first so downstream code can treat pages[0] as the primary page.
+        Map<Integer, List<AtlasRegion>> byLevel = new TreeMap<>();
+        for (AtlasRegion r : packed.getRegions()) {
+            byLevel.computeIfAbsent(r.level, k -> new ArrayList<>()).add(r);
+        }
+
+        List<TextureAtlas> pages = new ArrayList<>(byLevel.size());
+        for (List<AtlasRegion> regions : byLevel.values()) {
+            pages.add(composePage(regions, metas, texIdToIdx, tileOffsets, textureStore));
+        }
+        return pages;
+    }
+
+    /**
+     * Compose a single atlas page from its packed regions. Mirrors the second
+     * half of {@link #buildSingleAtlas} (compositing + UV region computation)
+     * but without the rescale loop or white-pixel reservation, since those
+     * only apply to the single-page I3S path.
+     */
+    private static TextureAtlas composePage(List<AtlasRegion> regions,
+                                            List<TextureMeta> metas,
+                                            Map<Integer, Integer> texIdToIdx,
+                                            Map<Integer, float[]> tileOffsets,
+                                            TextureStore textureStore) throws IOException {
+        int atlasWidth = 0, atlasHeight = 0;
+        Map<Integer, int[]> pixelRegions = new LinkedHashMap<>();
+        Set<Integer> rotated = new HashSet<>();
+        for (AtlasRegion r : regions) {
+            int texId = Integer.parseInt(r.texImageName);
+            pixelRegions.put(texId, new int[]{r.x, r.y, r.width, r.height});
+            atlasWidth = Math.max(atlasWidth, r.x + r.width);
+            atlasHeight = Math.max(atlasHeight, r.y + r.height);
+            if (r.isRotated) {
+                rotated.add(texId);
+            }
+        }
+
+        BufferedImage atlas = new BufferedImage(atlasWidth, atlasHeight,
+                BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = atlas.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, atlasWidth, atlasHeight);
+
+        for (Map.Entry<Integer, int[]> entry : pixelRegions.entrySet()) {
+            int texId = entry.getKey();
+            int[] pr = entry.getValue();
+            TextureMeta m = metas.get(texIdToIdx.get(texId));
+            boolean isRotated = rotated.contains(texId);
+
+            int tU = m.tilesU, tV = m.tilesV;
+            if (isRotated) { int tmp = tU; tU = tV; tV = tmp; }
+
+            int targetTileW = Math.max(1, pr[2] / Math.max(1, tU));
+            int targetTileH = Math.max(1, pr[3] / Math.max(1, tV));
+            int matchSrcW = isRotated ? targetTileH : targetTileW;
+            int matchSrcH = isRotated ? targetTileW : targetTileH;
+            int subsample = pickSubsample(m.srcWidth, m.srcHeight, matchSrcW, matchSrcH);
+
+            BufferedImage srcImg;
+            try {
+                srcImg = textureStore.loadImage(texId, subsample);
+            } catch (IOException e) {
+                logger.warn("Skipping corrupt texture {} ({}): {}",
+                        texId, textureStore.getSourcePath(texId), e.getMessage());
+                continue;
+            }
+            if (srcImg == null) continue;
+
+            if (isRotated) {
+                srcImg = rotateImage90CCW(srcImg);
+            }
+
+            if (tU == 1 && tV == 1) {
+                g.drawImage(srcImg, pr[0], pr[1], pr[2], pr[3], null);
+            } else {
+                for (int ty = 0; ty < tV; ty++) {
+                    for (int tx = 0; tx < tU; tx++) {
+                        int x1 = pr[0] + (pr[2] * tx) / tU;
+                        int y1 = pr[1] + (pr[3] * ty) / tV;
+                        int x2 = pr[0] + (pr[2] * (tx + 1)) / tU;
+                        int y2 = pr[1] + (pr[3] * (ty + 1)) / tV;
+                        g.drawImage(srcImg, x1, y1, x2 - x1, y2 - y1, null);
+                    }
+                }
+            }
+        }
+        g.dispose();
+
+        Map<Integer, float[]> uvRegions = new HashMap<>();
+        for (Map.Entry<Integer, int[]> e : pixelRegions.entrySet()) {
+            int[] pr = e.getValue();
+            float uOff = (float) pr[0] / atlasWidth;
+            float vOff = (float) pr[1] / atlasHeight;
+            float uScale = (float) pr[2] / atlasWidth;
+            float vScale = (float) pr[3] / atlasHeight;
+            uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
+        }
+
+        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, null);
     }
 
     // ---- Metadata gathering (no pixel decode) -------------------------------
@@ -532,5 +681,14 @@ public class TextureAtlas {
 
     public int getHeight() {
         return image.getHeight();
+    }
+
+    /**
+     * Texture IDs packed into this atlas (excluding the reserved white-pixel
+     * sentinel). Used by the multi-atlas 3D Tiles path to route each textured
+     * triangle to the GLB primitive backed by the correct atlas page.
+     */
+    public Set<Integer> getTextureIds() {
+        return uvRegions.keySet();
     }
 }
