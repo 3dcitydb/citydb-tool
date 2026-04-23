@@ -117,10 +117,6 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
     protected void applyAdditionalFormatOptions(T options) {
     }
 
-    protected void initialize(VisExportOptions exportOptions, WriteOptions writeOptions,
-                              DatabaseManager databaseManager) throws ExecutionException {
-    }
-
     /**
      * Template method assembling the final format options in a fixed order:
      * <ol>
@@ -153,16 +149,16 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             options.setMaxFeaturesPerNode(sceneOptions.getMaxFeaturesPerNode());
         }
 
-        if (Command.hasMatchedOption("--max-tree-depth", commandSpec)) {
-            options.setMaxTreeDepth(sceneOptions.getMaxTreeDepth());
-        }
-
         if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
             options.setClampToGround(sceneOptions.isClampToGround());
         }
 
         if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
             options.setTextureScale(sceneOptions.getTextureScale());
+        }
+
+        if (Command.hasMatchedOption("--max-atlas-size", commandSpec)) {
+            options.setMaxAtlasSize(sceneOptions.getMaxAtlasSize());
         }
     }
 
@@ -211,7 +207,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
      * Orchestrates the visualization export pipeline:
      * <ol>
      *   <li>Resolve the format adapter, output file, and write/export options</li>
-     *   <li>Connect to the database and invoke format-specific {@link #initialize}</li>
+     *   <li>Connect to the database and allocate the per-run temp directory</li>
      *   <li>Stream features through the {@link Exporter} into the {@link FeatureWriter}</li>
      *   <li>Log per-feature statistics and abort on the first fatal error</li>
      * </ol>
@@ -230,7 +226,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
 
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         VisExportOptions exportOptions = getExportOptions();
-        WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
+        WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
@@ -258,7 +254,6 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
 
         configureTextureBuckets(exportOptions, databaseManager, ioManager, ioAdapter,
                 outputFileParent, tempDir);
-        initialize(exportOptions, writeOptions, databaseManager);
 
         Query query = getQuery(exportOptions);
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
@@ -379,8 +374,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         }
     }
 
-    protected WriteOptions getWriteOptions(VisExportOptions exportOptions,
-                                           DatabaseAdapter adapter) throws ExecutionException {
+    protected WriteOptions getWriteOptions(DatabaseAdapter adapter) throws ExecutionException {
         WriteOptions writeOptions;
         try {
             writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
