@@ -24,11 +24,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Fused per-cell quadtree build + global merge + flush. Cells are processed
- * one at a time: load spatial entries from the partitioned store, build a
- * local quadtree, remap indices into the global tree, flush the compact
- * {@link NodeEntry} lists to {@link NodeEntryStore}, release cell data.
- * Peak heap is one cell's spatial-entry list.
+ * Per-cell leaf build + global merge + flush. Cells are processed one at
+ * a time: load spatial entries from the partitioned store, compact them
+ * into a single leaf {@link SceneNode}, remap its index into the global
+ * tree, flush the compact {@link NodeEntry} list to {@link NodeEntryStore},
+ * release cell data. Peak heap is one cell's spatial-entry list.
  * <p>
  * Populates {@link PipelineContext#allNodes()} and
  * {@link PipelineContext#meshNodeIndices()}; closes
@@ -38,9 +38,14 @@ public final class TreeBuildingStage implements Stage {
     @Override
     public void execute(PipelineContext ctx) throws VisExportException {
         try {
-            int estimatedNodes = (int) Math.min(
-                    (ctx.totalFeatures() / ctx.formatOptions().getMaxFeaturesPerNode()) * 3 + 1,
-                    Integer.MAX_VALUE);
+            int gridDim = ctx.partitioned().gridDim();
+            // Each populated cell contributes one leaf plus the global root.
+            // totalFeatures is a tight upper bound on populated cells (every
+            // cell has ≥1 feature); gridDim² would overflow int for very
+            // small edge lengths on country-scale extents, and overallocates
+            // for sparse datasets.
+            long gridCells = (long) gridDim * gridDim;
+            int estimatedNodes = (int) Math.min(ctx.totalFeatures(), gridCells) + 1;
             NodeEntryStore nodeEntryStore = ctx.stores().initNodeEntryStore(estimatedNodes);
 
             List<SceneNode> allNodes = new ArrayList<>();
@@ -49,35 +54,20 @@ public final class TreeBuildingStage implements Stage {
             SceneNode globalRoot = new SceneNode(0, 0);
             allNodes.add(globalRoot);
             int nextIndex = 1;
-            int gridDim = ctx.partitioned().gridDim();
 
             for (long cellKey : ctx.partitioned().cellKeys()) {
                 List<SpatialEntry> cellEntries = ctx.partitioned().loadCell(cellKey);
-                double[] cellExtent = NodeBuilder.computeExtent(cellEntries);
-                NodeBuilder.CellTree cellTree =
-                        NodeBuilder.buildCellTree(cellEntries, cellExtent,
-                                ctx.formatOptions().getMaxFeaturesPerNode());
+                NodeBuilder.CellLeaf leaf = NodeBuilder.buildCellLeaf(cellEntries);
 
-                int offset = nextIndex;
-                for (SceneNode node : cellTree.nodes()) {
-                    int oldIndex = node.getIndex();
-                    int newIndex = oldIndex + offset;
-
-                    List<NodeEntry> entries = cellTree.nodeEntryMap().get(oldIndex);
-                    if (entries != null) {
-                        nodeEntryStore.writeNode(newIndex, entries);
-                        meshNodeIndices.add(newIndex);
-                    }
-
-                    node.setIndex(newIndex);
-                    allNodes.add(node);
-                }
-
-                SceneNode cellRoot = cellTree.nodes().get(0);
-                globalRoot.addChild(cellRoot);
-                cellRootGridCoords.put(cellRoot.getIndex(),
+                SceneNode node = leaf.node();
+                node.setIndex(nextIndex);
+                nodeEntryStore.writeNode(nextIndex, leaf.entries());
+                meshNodeIndices.add(nextIndex);
+                allNodes.add(node);
+                globalRoot.addChild(node);
+                cellRootGridCoords.put(nextIndex,
                         PartitionedEntryStore.decodeKey(cellKey, gridDim));
-                nextIndex += cellTree.nodes().size();
+                nextIndex++;
             }
 
             ctx.partitioned().close();

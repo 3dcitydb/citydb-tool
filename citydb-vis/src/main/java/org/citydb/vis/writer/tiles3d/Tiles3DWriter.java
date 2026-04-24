@@ -13,7 +13,6 @@ import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.encoder.TextureAtlas;
-import org.citydb.vis.encoder.tiles3d.CellAggregator;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
@@ -46,12 +45,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * and {@code EXT_structural_metadata}), and a multi-level tileset hierarchy
  * ({@code tileset.json} + {@code subtrees/*.json}).
  * <p>
- * The tileset hierarchy lazy-loads the scene via three nested layers: a
- * spatial aggregation tree grouping populated grid cells (see
- * {@link CellAggregator}), per-cell quadtrees under each aggregation leaf,
- * and tree-based sub-tileset splitting so no single JSON exceeds
- * {@link TilesetSerializer#MAX_NODES_PER_SUBTILESET} nodes. This keeps the
- * root tileset small even for city-scale datasets with thousands of cells.
+ * The tileset hierarchy lazy-loads the scene via two nested layers: a
+ * spatial aggregation tree grouping populated grid cells (built once by
+ * the shared {@link org.citydb.vis.pipeline.stages.AggregationStage}),
+ * and a per-level subtree split emitted by {@link TilesetSerializer}
+ * that gives every aggregation node its own {@code subtree.json} and
+ * keeps each file uniformly shaped (root + direct children). The root
+ * {@code tileset.json} stays at a single external ref regardless of
+ * cell count.
  * <p>
  * <b>Coordinate system:</b> all GLB vertex positions are in a local ENU
  * (East-North-Up) frame relative to the dataset center. A single
@@ -87,7 +88,6 @@ public class Tiles3DWriter extends VisWriter {
     protected void writeOutput(PipelineContext ctx) throws VisExportException {
         List<SceneNode> allNodes = ctx.allNodes();
         Set<Integer> meshNodeIndices = ctx.meshNodeIndices();
-        Map<Integer, int[]> cellRootGridCoords = ctx.cellRootGridCoords();
         double[] extent = ctx.extent();
         List<AttrField> attrFields = ctx.attrFields();
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
@@ -107,15 +107,12 @@ public class Tiles3DWriter extends VisWriter {
                 (extent[2] + extent[5]) / 2
         };
 
-        // Wrap cell roots in a spatial aggregation tree before path assignment.
-        // Without this, the root tileset would carry one child per populated
-        // grid cell (up to gridDim^2 entries for city-scale datasets); with
-        // it, the root is a single external ref and deeper layers split via
-        // TilesetSerializer.MAX_NODES_PER_SUBTILESET regardless of cell count.
+        // The shared AggregationStage has already wrapped the cell roots
+        // under a single aggregation root attached as globalRoot's only
+        // child. TilePaths walks that aggregation subtree to assign each
+        // tile its position under tiles/ and subtrees/.
         SceneNode globalRoot = allNodes.get(0);
-        AtomicInteger aggIndexer = new AtomicInteger(allNodes.size());
-        SceneNode aggRoot = CellAggregator.build(globalRoot.getChildren(),
-                cellRootGridCoords, aggIndexer);
+        SceneNode aggRoot = globalRoot.getChildren().get(0);
         Map<Integer, int[]> tilePaths = TilePaths.buildPathIndex(aggRoot);
 
         // Pre-create parent directories serially so the parallel GLB
@@ -132,17 +129,22 @@ public class Tiles3DWriter extends VisWriter {
 
         try {
             // Write sub-tilesets (tree-based spatial split) starting at the
-            // aggregation root; the writer recurses through aggregation nodes
-            // and per-cell quadtrees uniformly.
+            // aggregation root; the writer recurses through the aggregation
+            // layer and cell leaves uniformly.
+            // geRatio = 16/R_refine ties the 3D Tiles refine decision to the
+            // same projected MBS radius as I3S: both formats refine when the
+            // on-screen MBS radius exceeds lodRefineRadius pixels (assuming
+            // Cesium's default runtime maximumScreenSpaceError = 16).
+            double geRatio = 16.0 / getFormatOptions().getLodRefineRadius();
             AtomicInteger subtreeFileCount = new AtomicInteger();
             tilesetSerializer.writeSubTileset(subtreesDir, aggRoot,
-                    effectiveMeshIndices, tilePaths, subtreeFileCount);
+                    effectiveMeshIndices, tilePaths, subtreeFileCount, geRatio);
 
             // Write root tileset.json: a single external ref to the aggregation
             // root's subtree file keeps the root bounded independent of cell count.
             double[] transform = GeoTransform.enuToEcefMatrix(datasetCenter);
             tilesetSerializer.writeRootTileset(outputDir, globalRoot, aggRoot,
-                    extent, attrFields, transform, tilePaths);
+                    extent, attrFields, transform, tilePaths, geRatio);
 
             logger.info("3D Tiles output: {} tiles, {} sub-tileset files, tileset.json written.",
                     effectiveMeshIndices.size(), subtreeFileCount.get());
