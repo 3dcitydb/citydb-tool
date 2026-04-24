@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
@@ -15,30 +13,30 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A tile node in the tileset hierarchy.
+ * A tile node in the tileset hierarchy. Optional properties are left null
+ * and omitted from the output by fastjson2's default null-skipping — this
+ * keeps tileset JSON compliant with the 3D Tiles spec (which treats
+ * unspecified fields as absent, not as JSON {@code null}) and avoids
+ * emitting {@code "content":null} / {@code "children":null} /
+ * {@code "transform":null} clutter on every tile.
  */
 @JSONType(alphabetic = false)
 public class TileNode {
     private TileBoundingVolume boundingVolume;
     private double geometricError;
     private String refine;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
     private TileContent content;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
     private double[] transform;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
     private List<TileNode> children;
 
     /**
      * Build a tile node from a SceneNode with an optional content URI
      * (null for nodes without their own geometry).
-     *
-     * @param overrideGeo if &ge; 0, override computed geometric error
      */
-    public static TileNode of(SceneNode node, double overrideGeo, String contentUri) {
+    public static TileNode of(SceneNode node, double geometricError, String contentUri) {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
-        tile.geometricError = overrideGeo >= 0 ? overrideGeo : computeGeometricError(node);
+        tile.geometricError = geometricError;
         tile.refine = "ADD";
 
         if (contentUri != null) {
@@ -55,10 +53,10 @@ public class TileNode {
     /**
      * Create a tile node that references an external subtileset.
      */
-    public static TileNode ofExternalRef(SceneNode node, String uri) {
+    public static TileNode ofExternalRef(SceneNode node, double geometricError, String uri) {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
-        tile.geometricError = computeGeometricError(node);
+        tile.geometricError = geometricError;
         tile.content = new TileContent(uri);
         return tile;
     }
@@ -97,12 +95,19 @@ public class TileNode {
     }
 
     /**
-     * Compute geometric error for a node: {@code R/8} for intermediate
-     * nodes, {@code 0} for leaf nodes.
+     * Compute geometric error for a node: {@code R × geRatio} for
+     * intermediate nodes, {@code 0} for leaf nodes.
+     * <p>
+     * {@code geRatio} ties the geometric error to the unified
+     * {@code --lod-refine-radius} target via
+     * {@code geRatio = 16 / lodRefineRadius}. At Cesium's default runtime
+     * {@code maximumScreenSpaceError = 16}, this makes a tile refine when
+     * its projected MBS radius exceeds {@code lodRefineRadius} pixels —
+     * identical to the I3S refine point at the same parameter.
      */
-    public static double computeGeometricError(SceneNode node) {
+    public static double computeGeometricError(SceneNode node, double geRatio) {
         if (node.getChildren().isEmpty()) return 0;
         BoundingVolume bv = node.getBoundingVolume();
-        return bv != null ? bv.getRadius() / 8.0 : 0;
+        return bv != null ? bv.getRadius() * geRatio : 0;
     }
 }

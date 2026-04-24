@@ -6,7 +6,7 @@
 package org.citydb.vis.store;
 
 /**
- * Compact post-quadtree entry holding only the fields needed by the output
+ * Compact per-cell leaf entry holding only the fields needed by the output
  * phase: feature ID, mesh handle, and attribute offset. At 24 bytes on disk
  * (vs 88 for {@link SpatialEntry}), this reduces heap and disk pressure by
  * ~3x once spatial fields are no longer needed.
