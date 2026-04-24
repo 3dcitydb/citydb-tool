@@ -36,8 +36,9 @@ import java.util.Set;
  *   <li>{@link #allNodes()} — flat list of scene nodes (index 0 = global root)</li>
  *   <li>{@link #meshNodeIndices()} — indices of nodes carrying geometry</li>
  *   <li>{@link #cellRootGridCoords()} — grid coordinates {@code [gy, gx]} of
- *       each cell-root scene node (used by 3D Tiles to nest output folders;
- *       unused by I3S)</li>
+ *       each cell-root scene node, consumed by
+ *       {@link org.citydb.vis.pipeline.stages.AggregationStage} to place
+ *       cells in the 2×2 aggregation tree</li>
  *   <li>{@link #hasTextures()} — whether any feature registered a texture</li>
  * </ul>
  */

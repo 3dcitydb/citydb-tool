@@ -59,13 +59,11 @@ import java.util.Set;
 public class I3SWriter extends VisWriter {
     private static final int EPSG_4326 = 4326;
 
-    /**
-     * LOD threshold used by I3S runtimes (CesiumJS, ArcGIS) as a screen-space
-     * area (px²) above which a node should refine to its children. Must be
-     * integer — ArcGIS rejects float values in node pages.
-     */
-    private static final int LEAF_NODE_LOD_THRESHOLD = 131_072;
-    private static final int INTERNAL_NODE_LOD_THRESHOLD = 65_536;
+    // LOD threshold derives from VisFormatOptions.lodRefineRadius via
+    // lodThresholdFor(r) to align the I3S refine boundary with the 3D Tiles
+    // one — both refine at projected MBS radius > lodRefineRadius pixels.
+    // See lodThresholdFor below. Must be an integer — ArcGIS rejects float
+    // values in node pages.
 
     private final Logger logger = LoggerFactory.getLogger(I3SWriter.class);
     private final I3SAttributeEncoder i3sAttributeEncoder;
@@ -99,7 +97,8 @@ public class I3SWriter extends VisWriter {
         List<AttrField> attrFields = ctx.attrFields();
         boolean hasTextures = ctx.hasTextures();
         // Set I3S LOD thresholds on the tree
-        setLodThresholds(allNodes);
+        int lodThreshold = lodThresholdFor(getFormatOptions().getLodRefineRadius());
+        setLodThresholds(allNodes, lodThreshold);
 
         I3SFormatOptions options = (I3SFormatOptions) getFormatOptions();
         boolean slpk = options.isSlpk();
@@ -141,11 +140,23 @@ public class I3SWriter extends VisWriter {
         FileHelper.deleteDirectoryTree(outputDir);
     }
 
-    private static void setLodThresholds(List<SceneNode> nodes) {
+    private static void setLodThresholds(List<SceneNode> nodes, int lodThreshold) {
         for (SceneNode node : nodes) {
-            boolean isLeaf = node.getChildren().isEmpty();
-            node.setLodThreshold(isLeaf ? LEAF_NODE_LOD_THRESHOLD : INTERNAL_NODE_LOD_THRESHOLD);
+            node.setLodThreshold(lodThreshold);
         }
+    }
+
+    /**
+     * Derive the I3S {@code lodThreshold} (pixels²) from the unified
+     * {@code lodRefineRadius} parameter so I3S refines at the same
+     * projected MBS radius as 3D Tiles.
+     * <p>
+     * Both formats refine when the projected MBS radius exceeds
+     * {@code lodRefineRadius} pixels. The projected disk's area is
+     * {@code π × r²}, which is what I3S compares against.
+     */
+    private static int lodThresholdFor(double refineRadiusPx) {
+        return (int) Math.round(Math.PI * refineRadiusPx * refineRadiusPx);
     }
 
     private static SceneLayer buildSceneLayer(double[] extent) {

@@ -22,10 +22,10 @@ import java.util.List;
 /**
  * Disk-backed mapping from scene node index to {@link NodeEntry} lists.
  * <p>
- * After quadtree construction, each leaf node's compact entries (id,
- * meshHandle, attrOffset) are written here sequentially. During the output
- * phase, entries are loaded per-node on demand via positional reads —
- * thread-safe for parallel node processing.
+ * Once each grid cell has been built into a leaf scene node, its compact
+ * entries (id, meshHandle, attrOffset) are written here sequentially.
+ * During the output phase, entries are loaded per-node on demand via
+ * positional reads — thread-safe for parallel node processing.
  * <p>
  * Index structure: parallel {@code long[]} and {@code int[]} arrays mapping
  * nodeIndex → (fileOffset, entryCount). At 2M nodes this costs ~24 MB,
