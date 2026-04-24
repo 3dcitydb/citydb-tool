@@ -3,9 +3,7 @@
  * Copyright Stuttgart University of Applied Sciences (HFT Stuttgart) <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.encoder.tiles3d;
-
-import org.citydb.vis.scene.SceneNode;
+package org.citydb.vis.scene;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,28 +11,34 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Groups per-cell quadtree roots under a spatial aggregation tree.
+ * Groups per-cell leaves under a spatial aggregation tree.
  * <p>
- * Without aggregation, {@code tileset.json} would list every populated grid
- * cell as a direct child of the root tile — a flat fanout that scales with
- * {@code gridDim^2} (thousands of entries for city-scale datasets). The
- * aggregation tree inserts synthetic quadtree nodes grouping cells by their
- * grid coordinates; combined with
- * {@link TilesetSerializer#MAX_NODES_PER_SUBTILESET}, this keeps every
- * subtree file bounded regardless of cell count, and reduces the root
- * tileset to a single external reference.
+ * Without aggregation, every populated grid cell would sit as a direct
+ * child of {@code globalRoot} — a flat fanout that scales with
+ * {@code gridDim^2} (thousands of entries for city-scale datasets).
+ * Downstream consumers that rely on hierarchical LOD (3D Tiles tileset
+ * refinement, I3S node-page refinement) would have no intermediate layers
+ * between the root and the cells and would therefore ask the runtime to
+ * load every cell as soon as the root refines.
+ * <p>
+ * The aggregation tree inserts synthetic 2×2 parent nodes grouping cells
+ * by their grid coordinates, giving each level a well-defined spatial
+ * extent and geometric error. For 3D Tiles this, combined with the
+ * subtree-size split, keeps every {@code tileset.json}/{@code subtree.json}
+ * bounded regardless of cell count. For I3S it provides the progressive
+ * refinement cascade in the node pages.
  * <p>
  * Synthetic aggregation {@link SceneNode}s get indices above the scene
  * tree's existing node range. They carry bounding volumes merged from
- * their children but no mesh, feature entries, or GLB output.
+ * their children but no mesh, feature entries, or output content.
  */
 public final class CellAggregator {
 
     /**
      * Maximum number of cell roots (or sub-aggregations) collapsed directly
      * under a single aggregation node. Smaller values produce a deeper
-     * aggregation tree; 4 matches the quadtree fanout and minimizes extra
-     * depth for typical cell layouts.
+     * aggregation tree; 4 matches the 2×2 grid-coord split and minimizes
+     * extra depth for typical cell layouts.
      */
     static final int MAX_CHILDREN_PER_AGG_NODE = 4;
 
@@ -43,8 +47,10 @@ public final class CellAggregator {
 
     /**
      * Build an aggregation tree wrapping the given cell roots. The returned
-     * node has all cell roots (with their per-cell quadtrees intact) as
-     * descendants; bounding volumes propagate bottom-up.
+     * node has all cell roots (and any descendants attached by earlier
+     * stages such as {@link
+     * org.citydb.vis.pipeline.stages.MixedNodeSplitStage}) as descendants;
+     * bounding volumes propagate bottom-up.
      *
      * @param cellRoots  direct children of {@code globalRoot}
      * @param gridCoords grid {@code [gy, gx]} for each cell root

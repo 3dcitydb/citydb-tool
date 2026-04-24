@@ -145,8 +145,12 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             return;
         }
 
-        if (Command.hasMatchedOption("--max-features-per-node", commandSpec)) {
-            options.setMaxFeaturesPerNode(sceneOptions.getMaxFeaturesPerNode());
+        if (Command.hasMatchedOption("--grid-edge-length", commandSpec)) {
+            options.setGridEdgeLength(sceneOptions.getGridEdgeLength());
+        }
+
+        if (Command.hasMatchedOption("--lod-refine-radius", commandSpec)) {
+            options.setLodRefineRadius(sceneOptions.getLodRefineRadius());
         }
 
         if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
