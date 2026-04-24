@@ -14,8 +14,10 @@ import java.util.List;
  * Represents a node in a visualization scene hierarchy (bounding volume
  * hierarchy). Used by all visualization export formats (I3S, 3D Tiles, etc.).
  * <p>
- * The hierarchy is built using the grid-based tiling strategy from the
- * 3DCityDB VIS plugin, with per-cell quadtree subdivision.
+ * The hierarchy is built with an edge-length-driven grid: each populated
+ * grid cell becomes a single leaf scene node. Format-specific layers (e.g.,
+ * the 3D Tiles {@link org.citydb.vis.scene.CellAggregator}) may
+ * wrap the cell roots in additional structure above the global root.
  */
 public class SceneNode {
     private int index;

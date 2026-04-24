@@ -14,7 +14,7 @@ package org.citydb.vis.store;
  * heap usage to near zero, enabling 10M+ features without heap pressure.
  * <p>
  * During the close phase, entries are streamed back from disk for spatial
- * indexing (extent computation, grid partitioning, quadtree construction).
+ * indexing (extent computation, grid partitioning, per-cell leaf build).
  */
 public record SpatialEntry(long id, double centerX, double centerY, double[] bbox,
                            long meshHandle, long attrOffset) {
