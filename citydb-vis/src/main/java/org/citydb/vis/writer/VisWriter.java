@@ -27,6 +27,7 @@ import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.pipeline.ExportPipeline;
 import org.citydb.vis.pipeline.PipelineContext;
+import org.citydb.vis.pipeline.stages.AggregationStage;
 import org.citydb.vis.pipeline.stages.ExtentComputationStage;
 import org.citydb.vis.pipeline.stages.MixedNodeSplitStage;
 import org.citydb.vis.pipeline.stages.PartitioningStage;
@@ -67,9 +68,9 @@ import java.util.function.Supplier;
  *       Feature extraction → triangulation → disk-backed stores
  *       ({@link ShardedMeshStore}, {@link AttributeStore},
  *       {@link org.citydb.vis.store.SpatialEntryStore}).</li>
- *   <li><b>Close phase 1–4</b>: extent computation → grid partitioning →
- *       per-cell quadtree construction → global tree merge. Driven by the
- *       {@link ExportPipeline}.</li>
+ *   <li><b>Close phase 1–5</b>: extent computation → grid partitioning →
+ *       per-cell leaf build → optional mixed-texture push-down split →
+ *       spatial aggregation wrap. Driven by the {@link ExportPipeline}.</li>
  *   <li><b>Close phase 5</b> (format-specific): delegated to
  *       {@link #writeOutput} for geometry encoding, metadata serialization,
  *       and texture output in the target format.</li>
@@ -81,7 +82,7 @@ import java.util.function.Supplier;
  *       scoped to each async task); ~500 MB peak during close phase
  *       (SceneNode tree + index arrays). All entry data is streamed from
  *       disk per-cell and flushed to {@link NodeEntryStore} immediately
- *       after quadtree construction.</li>
+ *       after the cell leaf is built.</li>
  *   <li>Disk: spatial entry shards + partitioned file + node entry file +
  *       mesh shards + attribute store (total ~20 GB at 100M features).</li>
  * </ul>
@@ -269,7 +270,8 @@ public abstract class VisWriter implements FeatureWriter {
                     new ExtentComputationStage(),
                     new PartitioningStage(),
                     new TreeBuildingStage(),
-                    new MixedNodeSplitStage()
+                    new MixedNodeSplitStage(),
+                    new AggregationStage()
             ).run(ctx);
 
             // --- Phase 5: Format-specific output ---
