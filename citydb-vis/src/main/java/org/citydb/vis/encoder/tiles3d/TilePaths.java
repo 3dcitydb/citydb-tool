@@ -20,7 +20,7 @@ import java.util.Map;
  * files per directory for massive datasets.
  * <p>
  * The path index is built from a single effective root (typically the
- * aggregation root produced by {@link CellAggregator}). The root's path
+ * aggregation root produced by {@link org.citydb.vis.scene.CellAggregator}). The root's path
  * is {@code [0]} and every descendant extends its parent's path with its
  * child index: a grandchild of the root's second child is {@code [0, 1, i]}.
  * <p>

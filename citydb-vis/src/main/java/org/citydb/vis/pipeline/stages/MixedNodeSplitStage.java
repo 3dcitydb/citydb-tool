@@ -22,21 +22,26 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Split every scene node that carries both textured and untextured features
- * into two sibling nodes, one holding the textured features and one holding
- * the untextured features. Each resulting node is therefore homogeneous:
- * downstream encoders see either a fully-textured or a fully-untextured
- * mesh and can pick the matching geometry definition and material without
- * per-feature compromises (which is the only way to give untextured
- * features real PBR lighting in I3S, where every node has exactly one
- * material).
+ * Split every mesh node that carries both textured and untextured features
+ * into two child nodes — one holding the textured features, one holding the
+ * untextured features. The original node becomes an intermediate node with
+ * no mesh content; its bbox and position in the tree are preserved. Both
+ * children inherit the original's bounding volume (the split is a per-feature
+ * reclassification, not a spatial subdivision).
  * <p>
- * The textured partition stays under the original node index; the
- * untextured partition is appended as a new child of the same parent with
- * a fresh index. Both share the original bounding volume — the split is a
- * per-feature reclassification, not a spatial subdivision, and splitting
- * the bbox by feature membership would push ArcGIS Pro's obb validation
- * over the edge on slender facade geometry.
+ * Each resulting mesh node is therefore homogeneous: downstream encoders
+ * see either a fully-textured or a fully-untextured mesh and can pick the
+ * matching geometry definition and material without per-feature
+ * compromises. This is the only way to give untextured features a real
+ * non-textured material in I3S, where every node has exactly one material.
+ * 3D Tiles also benefits: the two children emit separate GLBs each with
+ * the appropriate material, rather than relying on the multi-primitive
+ * split inside a single GLB.
+ * <p>
+ * Push-down (rather than sibling) split keeps the cell root in place with
+ * its grid coordinates intact, so the 3D Tiles
+ * {@link org.citydb.vis.scene.CellAggregator} continues to index
+ * cells correctly regardless of how far the mesh moves into the subtree.
  * <p>
  * Run after {@link TreeBuildingStage}: the tree structure and per-node
  * entries must exist, and the per-feature texture flags populated by
@@ -52,15 +57,12 @@ public final class MixedNodeSplitStage implements Stage {
         NodeEntryStore nodeEntryStore = stores.getNodeEntryStore();
         List<SceneNode> allNodes = ctx.allNodes();
         Set<Integer> meshNodeIndices = ctx.meshNodeIndices();
-        Set<Integer> cellRootIndices = ctx.cellRootGridCoords() != null
-                ? ctx.cellRootGridCoords().keySet() : Set.of();
 
         // Snapshot the original index set — we append new nodes during the loop.
         List<Integer> originals = new ArrayList<>(meshNodeIndices);
         Set<Integer> updatedMeshIndices = new HashSet<>(meshNodeIndices);
         int nextIndex = allNodes.size();
         int splitCount = 0;
-        int cellRootSkipCount = 0;
 
         try {
             for (int nodeIndex : originals) {
@@ -83,39 +85,31 @@ public final class MixedNodeSplitStage implements Stage {
                 }
 
                 SceneNode original = allNodes.get(nodeIndex);
-                SceneNode parent = original.getParent();
-                if (parent == null) {
-                    // Global root is never a mesh node in practice; guard defensively.
-                    continue;
-                }
+                int childLevel = original.getLevel() + 1;
 
-                // Cell roots are direct children of the global root. Adding a
-                // sibling here would put a node under globalRoot without grid
-                // coords, which the 3D Tiles CellAggregator indexes by cell —
-                // so leave these rare leaf cell roots to the intra-node
-                // white-pixel fallback in the atlas. Expected to be uncommon:
-                // cell roots are leaves only when the cell holds fewer than
-                // maxFeaturesPerNode features.
-                if (cellRootIndices.contains(nodeIndex)) {
-                    cellRootSkipCount++;
-                    continue;
-                }
-
-                SceneNode sibling = new SceneNode(nextIndex, original.getLevel());
-                sibling.setBoundingVolume(original.getBoundingVolume());
-                sibling.setFeatureCount(untextured.size());
-                parent.addChild(sibling);
-                allNodes.add(sibling);
-
-                // Overwriting the original index orphans its old on-disk entries
-                // but updates the offset pointer — acceptable since the node entry
-                // file is a short-lived temp store.
-                nodeEntryStore.writeNode(nodeIndex, textured);
-                nodeEntryStore.writeNode(nextIndex, untextured);
-                original.setFeatureCount(textured.size());
-
+                SceneNode texturedChild = new SceneNode(nextIndex, childLevel);
+                texturedChild.setBoundingVolume(original.getBoundingVolume());
+                texturedChild.setFeatureCount(textured.size());
+                original.addChild(texturedChild);
+                allNodes.add(texturedChild);
+                nodeEntryStore.writeNode(nextIndex, textured);
                 updatedMeshIndices.add(nextIndex);
                 nextIndex++;
+
+                SceneNode untexturedChild = new SceneNode(nextIndex, childLevel);
+                untexturedChild.setBoundingVolume(original.getBoundingVolume());
+                untexturedChild.setFeatureCount(untextured.size());
+                original.addChild(untexturedChild);
+                allNodes.add(untexturedChild);
+                nodeEntryStore.writeNode(nextIndex, untextured);
+                updatedMeshIndices.add(nextIndex);
+                nextIndex++;
+
+                // Original keeps its bbox and aggregate feature count but stops
+                // carrying mesh data. Its on-disk NodeEntry list is orphaned —
+                // acceptable since the node entry file is a short-lived temp
+                // store and the offset pointer is simply never read again.
+                updatedMeshIndices.remove(nodeIndex);
                 splitCount++;
             }
         } catch (IOException e) {
@@ -123,14 +117,10 @@ public final class MixedNodeSplitStage implements Stage {
         }
 
         if (splitCount > 0) {
-            logger.info("Split {} mixed-texture nodes into per-texture sibling pairs.",
+            logger.info("Pushed down {} mixed-texture node(s); each now has a textured and " +
+                            "an untextured child holding the respective features.",
                     splitCount);
             ctx.setMeshNodeIndices(updatedMeshIndices);
-        }
-        if (cellRootSkipCount > 0) {
-            logger.info("Left {} mixed-texture leaf cell root(s) unsplit; " +
-                    "untextured triangles will sample the atlas white pixel.",
-                    cellRootSkipCount);
         }
     }
 }
