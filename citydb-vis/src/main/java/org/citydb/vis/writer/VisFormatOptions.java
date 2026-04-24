@@ -15,17 +15,27 @@ import org.citydb.io.writer.options.OutputFormatOptions;
  * partitioning and texture handling parameters.
  */
 public abstract class VisFormatOptions implements OutputFormatOptions {
-    private int maxFeaturesPerNode = 64;
+    private double gridEdgeLength = 200.0;
+    private double lodRefineRadius = 128.0;
     private boolean clampToGround;
     private double textureScale = 1.0;
-    private int maxAtlasSize = 2048;
+    private int maxAtlasSize = 1024;
 
-    public int getMaxFeaturesPerNode() {
-        return maxFeaturesPerNode;
+    public double getGridEdgeLength() {
+        return gridEdgeLength;
     }
 
-    public VisFormatOptions setMaxFeaturesPerNode(int maxFeaturesPerNode) {
-        this.maxFeaturesPerNode = maxFeaturesPerNode;
+    public VisFormatOptions setGridEdgeLength(double gridEdgeLength) {
+        this.gridEdgeLength = gridEdgeLength;
+        return this;
+    }
+
+    public double getLodRefineRadius() {
+        return lodRefineRadius;
+    }
+
+    public VisFormatOptions setLodRefineRadius(double lodRefineRadius) {
+        this.lodRefineRadius = lodRefineRadius;
         return this;
     }
 
