@@ -164,6 +164,14 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         if (Command.hasMatchedOption("--max-atlas-size", commandSpec)) {
             options.setMaxAtlasSize(sceneOptions.getMaxAtlasSize());
         }
+
+        if (Command.hasMatchedOption("--atlas-overflow-mode", commandSpec)) {
+            options.setAtlasOverflowMode(sceneOptions.getAtlasOverflowMode());
+        }
+
+        if (Command.hasMatchedOption("--atlas-fallback", commandSpec)) {
+            options.setAtlasFallbackStrategy(sceneOptions.getAtlasFallbackStrategy());
+        }
     }
 
     private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,
