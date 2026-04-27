@@ -208,8 +208,9 @@ public class I3SWriter extends VisWriter {
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
                                     List<AttrField> attrFields) throws VisExportException {
-        PreparedNode prepared = prepareNodeMesh(node, false);
+        PreparedNode prepared = prepareNodeMesh(node, AtlasMode.SINGLE_ATLAS);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
+        logAtlasViolations(node, prepared, featureDataList);
 
         try {
             node.setMesh(prepared.mesh());
@@ -222,7 +223,7 @@ public class I3SWriter extends VisWriter {
 
             // Geometry confirmed — now safe to materialize the atlas file.
             // I3S is guaranteed single-page (prepareNodeMesh called with
-            // allowMultiAtlas=false), so atlases.get(0) is the only page.
+            // AtlasMode.SINGLE_ATLAS), so atlases.get(0) is the only page.
             if (!prepared.atlases().isEmpty()) {
                 TextureAtlas atlas = prepared.atlases().get(0);
                 Path textureDir = layerDir.resolve("nodes")
