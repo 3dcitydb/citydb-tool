@@ -28,6 +28,7 @@ import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.pipeline.ExportPipeline;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.stages.AggregationStage;
+import org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage;
 import org.citydb.vis.pipeline.stages.ExtentComputationStage;
 import org.citydb.vis.pipeline.stages.MixedNodeSplitStage;
 import org.citydb.vis.pipeline.stages.PartitioningStage;
@@ -271,6 +272,7 @@ public abstract class VisWriter implements FeatureWriter {
                     new PartitioningStage(),
                     new TreeBuildingStage(),
                     new MixedNodeSplitStage(),
+                    new AtlasOverflowQuadtreeStage(),
                     new AggregationStage()
             ).run(ctx);
 
@@ -300,16 +302,50 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     /**
+     * Whether this writer's geometry encoder samples the atlas for untextured
+     * triangles (and therefore needs the {@code build()} path to reserve a
+     * 4×4 white-pixel sentinel for intra-feature mixed cells).
+     * <p>
+     * I3S: {@code true} (default) — each node has exactly one material, so
+     * untextured triangles must sample a guaranteed-white atlas region.
+     * <p>
+     * 3D Tiles: {@code false} (overridden by {@code Tiles3DWriter}) — its
+     * GLB encoder partitions untextured triangles to a separate primitive
+     * with its own untextured material, so the atlas is never sampled for
+     * those triangles.
+     */
+    protected boolean atlasNeedsWhitePixelSentinel() {
+        return true;
+    }
+
+    /**
+     * Strategy for atlas page generation per node.
+     */
+    protected enum AtlasMode {
+        /**
+         * Force a single atlas page. Required for I3S because the spec
+         * permits only one material per node; overflow is handled by the
+         * single-atlas path's rescale + atlas-size expansion fallback.
+         */
+        SINGLE_ATLAS,
+        /**
+         * Single page when the textures fit; spill onto additional pages
+         * only when the BSP packer would otherwise overflow even after
+         * per-texture clamping. Preserves source resolution on the
+         * residual cells that the {@link
+         * org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
+         * could not subdivide further (single-feature or depth-cap
+         * fallback). Used by 3D Tiles, whose GLB supports multiple
+         * primitives per mesh.
+         */
+        AUTO
+    }
+
+    /**
      * Prepare a node's mesh data: load and merge meshes from the sharded
      * store, build texture atlas(es), and remap UV coordinates.
-     *
-     * @param allowMultiAtlas when {@code true}, spill overflow regions onto
-     *                        additional atlas pages instead of rescaling all
-     *                        textures down to fit a single page. Used by the
-     *                        3D Tiles writer; I3S must pass {@code false}
-     *                        since the spec requires one material per node.
      */
-    protected PreparedNode prepareNodeMesh(SceneNode node, boolean allowMultiAtlas) throws VisExportException {
+    protected PreparedNode prepareNodeMesh(SceneNode node, AtlasMode mode) throws VisExportException {
         try {
             List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(node.getIndex());
 
@@ -331,14 +367,33 @@ public abstract class VisWriter implements FeatureWriter {
             List<TextureAtlas> atlases = List.of();
             if (!uniqueTexIds.isEmpty()) {
                 Map<Integer, float[]> uvExtents = merged.computeUVExtents();
-                if (allowMultiAtlas) {
+                // AUTO: prefer single page; spill to multi-page only when
+                // the BSP packer would otherwise overflow. The wouldOverflow
+                // predicate runs on metadata only (~3-4% of full build cost),
+                // so the extra check is negligible and keeps the common case
+                // on the cheaper single-atlas path.
+                boolean useMulti = mode == AtlasMode.AUTO
+                        && TextureAtlas.wouldOverflow(uniqueTexIds, stores.getTextureStore(),
+                                formatOptions.getTextureScale(),
+                                formatOptions.getMaxAtlasSize(), uvExtents);
+                if (useMulti) {
                     atlases = TextureAtlas.buildMulti(
                             uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
                             formatOptions.getMaxAtlasSize(), uvExtents);
                 } else {
+                    // Only reserve the 4x4 white-pixel sentinel when the
+                    // writer's encoder actually samples the atlas for
+                    // untextured triangles (I3S, single material per node).
+                    // 3D Tiles partitions untextured triangles to a separate
+                    // primitive in the GLB and never samples the atlas for
+                    // them, so reserving the sentinel just wastes BSP space
+                    // and can push a borderline-fitting atlas over the edge,
+                    // triggering needless Phase 2 expansion.
+                    boolean needsWhitePixel = hasUntexturedTriangle && atlasNeedsWhitePixelSentinel();
                     TextureAtlas single = TextureAtlas.build(
                             uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
-                            formatOptions.getMaxAtlasSize(), uvExtents, hasUntexturedTriangle);
+                            formatOptions.getMaxAtlasSize(), uvExtents, needsWhitePixel,
+                            formatOptions.getAtlasFallbackStrategy());
                     atlases = single != null ? List.of(single) : List.of();
                 }
                 if (!atlases.isEmpty()) {
@@ -375,6 +430,84 @@ public abstract class VisWriter implements FeatureWriter {
         } catch (IOException e) {
             throw new VisExportException("Failed to load node attribute data.", e);
         }
+    }
+
+    /**
+     * Emit a DEBUG per detected user-setting violation on the prepared node:
+     * <ul>
+     *   <li>Atlas page size exceeded {@code --max-atlas-size} — fires when the
+     *       single-atlas path's atlas-size expansion grew the page beyond the
+     *       user-requested cap (typical I3S {@code --atlas-fallback=expand}
+     *       residual case). 3D Tiles {@code AUTO} mode does not trigger this
+     *       since it spills to multi-page atlases instead.</li>
+     *   <li>Texture scale dropped below {@code --texture-scale} — fires when
+     *       the rescale loop shrank textures uniformly (typical
+     *       {@code --atlas-fallback=rescale} residual case, or the EXPAND
+     *       last-resort post-expansion rescale at 16K).</li>
+     * </ul>
+     * DEBUG (not WARN): residual cells in the default {@code expand} mode are
+     * common — hundreds per export — and the violations are by-design behavior
+     * of the chosen fallback strategy, not errors. Users debugging a specific
+     * building's missing/blurry texture can enable DEBUG to see the per-cell
+     * detail naming the affected {@code gml:id}.
+     */
+    protected void logAtlasViolations(SceneNode node, PreparedNode prepared,
+                                      List<FeatureData> features) {
+        if (prepared.atlases().isEmpty() || !logger.isDebugEnabled()) {
+            return;
+        }
+
+        int requestedMaxSize = formatOptions.getMaxAtlasSize();
+        double requestedScale = formatOptions.getTextureScale();
+
+        int actualMaxSize = 0;
+        double actualScale = 1.0;
+        for (TextureAtlas atlas : prepared.atlases()) {
+            actualMaxSize = Math.max(actualMaxSize, Math.max(atlas.getWidth(), atlas.getHeight()));
+            actualScale = Math.min(actualScale, atlas.getActualScale());
+        }
+
+        boolean atlasExpanded = actualMaxSize > requestedMaxSize;
+        boolean texturesRescaled = actualScale < requestedScale;
+        if (!atlasExpanded && !texturesRescaled) {
+            return;
+        }
+
+        String featureSummary = formatFeatureSummary(features);
+        if (atlasExpanded) {
+            logger.debug("Atlas page expanded to {}×{} beyond --max-atlas-size {}×{} " +
+                            "for {} (node {}).",
+                    actualMaxSize, actualMaxSize, requestedMaxSize, requestedMaxSize,
+                    featureSummary, node.getIndex());
+        }
+        if (texturesRescaled) {
+            logger.debug("Textures rescaled from --texture-scale {} to {} for {} " +
+                            "(node {}).",
+                    requestedScale, actualScale, featureSummary, node.getIndex());
+        }
+    }
+
+    /**
+     * Render a human-readable feature list for a violation DEBUG message.
+     * Single feature shows the bare {@code gml:id}; up to five list all of
+     * them; larger nodes show count + first id as a sample.
+     */
+    private static String formatFeatureSummary(List<FeatureData> features) {
+        if (features.isEmpty()) {
+            return "node with no features";
+        }
+        if (features.size() == 1) {
+            return "feature " + features.get(0).objectId();
+        }
+        if (features.size() <= 5) {
+            StringBuilder sb = new StringBuilder("features ");
+            for (int i = 0; i < features.size(); i++) {
+                if (i > 0) sb.append(", ");
+                sb.append(features.get(i).objectId());
+            }
+            return sb.toString();
+        }
+        return features.size() + " features (first: " + features.get(0).objectId() + ")";
     }
 
     // ---- Parallel node processing -------------------------------------------
