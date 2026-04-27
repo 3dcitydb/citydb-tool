@@ -190,7 +190,18 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
                 depthCapFallback += plan.depthCapFallback;
 
                 if (plan.rootBecameIntermediate) {
-                    updatedMeshIndices.remove(plan.rootIndex);
+                    // Keep the split root in meshNodeIndices and mark it as
+                    // an LOD preview: the writer will emit a low-resolution
+                    // single-atlas (RESCALE strategy) for fast distant view,
+                    // and the quadtree-leaf children carry the high-resolution
+                    // content the runtime refines to. For 3D Tiles the
+                    // serializer emits refine=REPLACE on this tile so
+                    // children replace it once loaded; I3S handles refinement
+                    // automatically via uniform lodThreshold.
+                    SceneNode root = allNodes.get(plan.rootIndex);
+                    root.setLodPreview(true);
+                    // updatedMeshIndices already contains plan.rootIndex
+                    // from the initial copy; intentionally not removed.
                 }
 
                 for (int i = 0; i < plan.created.size(); i++) {
