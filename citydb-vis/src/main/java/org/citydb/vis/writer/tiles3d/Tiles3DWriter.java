@@ -5,6 +5,7 @@
 
 package org.citydb.vis.writer.tiles3d;
 
+import org.citydb.vis.writer.VisFormatOptions;
 import org.citydb.vis.writer.VisWriter;
 
 import org.citydb.core.file.OutputFile;
@@ -82,6 +83,19 @@ public class Tiles3DWriter extends VisWriter {
         this.tilesetSerializer = new TilesetSerializer();
     }
 
+    /**
+     * 3D Tiles never needs the atlas's white-pixel sentinel: untextured
+     * triangles are partitioned into a separate GLB primitive (with its own
+     * untextured PBR material) by {@code GlbEncoder.partitionByAtlasPage} and
+     * never sample the atlas. Reserving the sentinel just wastes BSP space
+     * and can push a borderline-fitting atlas over the edge into needless
+     * expansion.
+     */
+    @Override
+    protected boolean atlasNeedsWhitePixelSentinel() {
+        return false;
+    }
+
     // ---- Format-specific output (Phase 5) -----------------------------------
 
     @Override
@@ -155,13 +169,36 @@ public class Tiles3DWriter extends VisWriter {
 
     /**
      * Process a single mesh node: merge meshes, build texture atlas, encode GLB.
+     * <p>
+     * Atlas mode is picked from the user's {@code --atlas-fallback} setting:
+     * <ul>
+     *   <li>{@code expand} → {@link AtlasMode#AUTO}: the GLB encoder spills
+     *       overflow onto additional atlas pages
+     *       ({@link TextureAtlas#buildMulti}) on residual cells the
+     *       {@link org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
+     *       could not subdivide further, preserving source-resolution
+     *       textures.</li>
+     *   <li>{@code rescale} → {@link AtlasMode#SINGLE_ATLAS}: every node
+     *       gets exactly one atlas page; overflow on residual cells is
+     *       resolved by shrinking textures to fit
+     *       {@code --max-atlas-size}, matching the I3S behavior.</li>
+     * </ul>
+     * I3S cannot offer the {@code AUTO} path because its spec mandates one
+     * material per node, but the fallback strategy itself is symmetric:
+     * I3S {@code expand} grows the single atlas page (up to the WebGL 16K
+     * cap) instead of spilling onto additional pages.
      */
     private boolean writeNodeGlb(SceneNode node, Path tilesDir,
                                  Map<Integer, int[]> tilePaths,
                                  List<AttrField> attrFields, double[] datasetCenter)
             throws VisExportException {
-        PreparedNode prepared = prepareNodeMesh(node, true);
+        AtlasMode mode = getFormatOptions().getAtlasFallbackStrategy()
+                == VisFormatOptions.AtlasFallbackStrategy.EXPAND
+                ? AtlasMode.AUTO
+                : AtlasMode.SINGLE_ATLAS;
+        PreparedNode prepared = prepareNodeMesh(node, mode);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
+        logAtlasViolations(node, prepared, featureDataList);
 
         try {
             // Serialize each atlas page to JPEG bytes and index texture ids by
