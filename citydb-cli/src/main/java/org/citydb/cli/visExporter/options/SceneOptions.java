@@ -6,6 +6,7 @@
 package org.citydb.cli.visExporter.options;
 
 import org.citydb.cli.common.Option;
+import org.citydb.vis.writer.VisFormatOptions;
 import picocli.CommandLine;
 
 public class SceneOptions implements Option {
@@ -44,6 +45,33 @@ public class SceneOptions implements Option {
                     "(e.g., 2048² = 16 MB RGBA8 per atlas page, 4× more than 1024²).")
     private int maxAtlasSize;
 
+    @CommandLine.Option(names = "--atlas-overflow-mode", paramLabel = "<mode>",
+            defaultValue = "quadtree",
+            description = "Strategy when a cell's textures exceed --max-atlas-size: " +
+                    "${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). " +
+                    "'quadtree' subdivides the offending cell spatially (2x2 push-down) " +
+                    "until each leaf fits one atlas page; the few cells that cannot be " +
+                    "subdivided further (single-feature / depth-cap residuals) are " +
+                    "handled per --atlas-fallback. 'rescale' disables the split stage " +
+                    "entirely and shrinks textures uniformly to fit one atlas page on " +
+                    "every overflowing cell — implies --atlas-fallback=rescale " +
+                    "regardless of an explicit value (legacy / debugging).")
+    private VisFormatOptions.AtlasOverflowMode atlasOverflowMode;
+
+    @CommandLine.Option(names = "--atlas-fallback", paramLabel = "<strategy>",
+            defaultValue = "expand",
+            description = "How to resolve texture overflow on residual cells the " +
+                    "quadtree stage could not subdivide further (single-feature or " +
+                    "depth-cap fallback): ${COMPLETION-CANDIDATES} (default: " +
+                    "${DEFAULT-VALUE}). 'expand' preserves source-resolution textures: " +
+                    "3D Tiles spills onto additional atlas pages (multi-page GLB), I3S " +
+                    "grows the single atlas page up to the WebGL 16K cap. 'rescale' " +
+                    "honors --max-atlas-size by shrinking textures uniformly, accepting " +
+                    "silent quality loss; 3D Tiles forces single-atlas mode (no multi-page). " +
+                    "Ignored when --atlas-overflow-mode=rescale (which forces 'rescale' " +
+                    "globally on every overflowing cell).")
+    private VisFormatOptions.AtlasFallbackStrategy atlasFallbackStrategy;
+
     public double getGridEdgeLength() {
         return gridEdgeLength;
     }
@@ -62,6 +90,14 @@ public class SceneOptions implements Option {
 
     public int getMaxAtlasSize() {
         return maxAtlasSize;
+    }
+
+    public VisFormatOptions.AtlasOverflowMode getAtlasOverflowMode() {
+        return atlasOverflowMode;
+    }
+
+    public VisFormatOptions.AtlasFallbackStrategy getAtlasFallbackStrategy() {
+        return atlasFallbackStrategy;
     }
 
     @Override

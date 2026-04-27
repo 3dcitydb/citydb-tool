@@ -10,6 +10,7 @@ import org.citydb.textureAtlas.model.AtlasRegion;
 import org.citydb.textureAtlas.packer.Packer;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.TextureStore;
+import org.citydb.vis.writer.VisFormatOptions.AtlasFallbackStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,16 +68,26 @@ public class TextureAtlas {
     private final Set<Integer> rotatedTextureIds;
     /** Atlas-space UV of the reserved white pixel center, or {@code null}. */
     private final float[] whitePixelUV;
+    /**
+     * Final scale applied to source textures. Equal to the user's
+     * {@code --texture-scale} request when no rescale fired; less than
+     * the request when overflow forced a Phase 1 / Phase 3 rescale loop.
+     * Callers compare against {@code formatOptions.getTextureScale()} to
+     * detect a {@code --texture-scale} violation.
+     */
+    private final double actualScale;
 
     private TextureAtlas(Map<Integer, float[]> uvRegions, BufferedImage image,
                          Map<Integer, float[]> tileOffsets,
                          Set<Integer> rotatedTextureIds,
-                         float[] whitePixelUV) {
+                         float[] whitePixelUV,
+                         double actualScale) {
         this.uvRegions = uvRegions;
         this.image = image;
         this.tileOffsets = tileOffsets;
         this.rotatedTextureIds = rotatedTextureIds;
         this.whitePixelUV = whitePixelUV;
+        this.actualScale = actualScale;
     }
 
     /**
@@ -85,11 +96,19 @@ public class TextureAtlas {
      * {@code needsWhitePixel} is true, reserves a small solid-white region
      * so untextured triangles in a mixed node can sample a known-white color
      * while sharing the textured material.
+     * <p>
+     * {@code fallback} selects how overflow is resolved (see
+     * {@link AtlasFallbackStrategy}): {@code RESCALE} shrinks textures to fit
+     * the user's {@code maxAtlasSize} cap before any atlas-page expansion;
+     * {@code EXPAND} skips rescale and expands the atlas page directly up to
+     * the WebGL 16K cap, preserving source-resolution textures at the cost of
+     * a larger page.
      */
     public static TextureAtlas build(Collection<Integer> textureIds, TextureStore textureStore,
                                      double textureScale, int maxAtlasSize,
                                      Map<Integer, float[]> uvExtents,
-                                     boolean needsWhitePixel) throws IOException {
+                                     boolean needsWhitePixel,
+                                     AtlasFallbackStrategy fallback) throws IOException {
         List<TextureMeta> metas = new ArrayList<>();
         Map<Integer, float[]> tileOffsets = new HashMap<>();
 
@@ -103,7 +122,43 @@ public class TextureAtlas {
         }
 
         double scale = Math.min(1.0, Math.max(0.01, textureScale));
-        return buildSingleAtlas(metas, scale, maxAtlasSize, tileOffsets, textureStore);
+        return buildSingleAtlas(metas, scale, maxAtlasSize, tileOffsets, textureStore, fallback);
+    }
+
+    /**
+     * Predicate: would packing the given textures at {@code textureScale} into
+     * a single {@code maxAtlasSize}² page overflow onto a higher BSP level?
+     * <p>
+     * Mirrors the first packing pass of {@link #buildSingleAtlas} (no rescale
+     * retry, no compositing). Used by the atlas-overflow quadtree stage to
+     * decide whether a node should be spatially subdivided <i>before</i> the
+     * silent global rescale would otherwise kick in.
+     * <p>
+     * Cost: file-header reads in {@link #gatherMetaTiled} plus one BSP pack —
+     * roughly one to two orders of magnitude cheaper than a full
+     * {@link #buildSingleAtlas} call (no JPEG decode, no atlas image
+     * allocation). Single non-tiled texture short-circuits to {@code false}
+     * because that case takes {@link #buildSingleTextureAtlas}'s direct
+     * downscale path, which never reports overflow.
+     */
+    public static boolean wouldOverflow(Collection<Integer> textureIds, TextureStore textureStore,
+                                        double textureScale, int maxAtlasSize,
+                                        Map<Integer, float[]> uvExtents) throws IOException {
+        List<TextureMeta> metas = new ArrayList<>();
+        Map<Integer, float[]> tileOffsets = new HashMap<>();
+        gatherMetaTiled(textureIds, textureStore, uvExtents, metas, tileOffsets);
+        if (metas.isEmpty()) return false;
+        if (metas.size() == 1) {
+            TextureMeta only = metas.get(0);
+            if (only.tilesU == 1 && only.tilesV == 1) return false;
+        }
+
+        double scale = Math.min(1.0, Math.max(0.01, textureScale));
+        org.citydb.textureAtlas.model.TextureAtlas packed = packAtScale(metas, scale, maxAtlasSize);
+        for (AtlasRegion r : packed.getRegions()) {
+            if (r.level > 0) return true;
+        }
+        return false;
     }
 
     /**
@@ -159,7 +214,7 @@ public class TextureAtlas {
 
         List<TextureAtlas> pages = new ArrayList<>(byLevel.size());
         for (List<AtlasRegion> regions : byLevel.values()) {
-            pages.add(composePage(regions, metas, texIdToIdx, tileOffsets, textureStore));
+            pages.add(composePage(regions, metas, texIdToIdx, tileOffsets, textureStore, baseScale));
         }
         return pages;
     }
@@ -174,7 +229,8 @@ public class TextureAtlas {
                                             List<TextureMeta> metas,
                                             Map<Integer, Integer> texIdToIdx,
                                             Map<Integer, float[]> tileOffsets,
-                                            TextureStore textureStore) throws IOException {
+                                            TextureStore textureStore,
+                                            double actualScale) throws IOException {
         int atlasWidth = 0, atlasHeight = 0;
         Map<Integer, int[]> pixelRegions = new LinkedHashMap<>();
         Set<Integer> rotated = new HashSet<>();
@@ -251,7 +307,7 @@ public class TextureAtlas {
             uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
         }
 
-        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, null);
+        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, null, actualScale);
     }
 
     // ---- Metadata gathering (no pixel decode) -------------------------------
@@ -316,6 +372,41 @@ public class TextureAtlas {
         }
     }
 
+    /**
+     * Run the BSP packer on metadata only at the given scale. No pixel decode,
+     * no compositing. Shared by {@link #buildSingleAtlas}'s initial and rescale
+     * passes, by the atlas-size expansion loop, and by {@link #wouldOverflow}.
+     * <p>
+     * Per-texture clamp: when a texture's UV range exceeds {@code [0,1]}, its
+     * {@code effectiveWidth = srcWidth × tilesU} can be much larger than the
+     * source bitmap (e.g., {@code tilesU = 100} for a wall whose UV spans
+     * {@code [0, 100]}). At low {@code scale} the effective size may still
+     * exceed {@code maxAtlasSize}, in which case the BSP packer would mark
+     * the region {@code level > 0} on its own and force every other texture
+     * to spill alongside it. We pre-shrink any such region to fit the page
+     * (mirrors what {@link #buildMulti} does at lines 132-147), accepting
+     * heavy quality loss on extreme tilers in exchange for a placeable
+     * region. Each tile copy then gets {@code maxAtlasSize/tilesU} pixels —
+     * blurry but rendered, which is what the caller wants instead of being
+     * dropped.
+     */
+    private static org.citydb.textureAtlas.model.TextureAtlas packAtScale(
+            List<TextureMeta> metas, double scale, int maxAtlasSize) {
+        Packer packer = new Packer(maxAtlasSize, maxAtlasSize,
+                TextureAtlasCreator.BASIC, false);
+        for (TextureMeta m : metas) {
+            int w = Math.max(1, (int) (m.effectiveWidth() * scale));
+            int h = Math.max(1, (int) (m.effectiveHeight() * scale));
+            if (w > maxAtlasSize || h > maxAtlasSize) {
+                double clamp = (double) maxAtlasSize / Math.max(w, h);
+                w = Math.max(1, (int) (w * clamp));
+                h = Math.max(1, (int) (h * clamp));
+            }
+            packer.addRegion(String.valueOf(m.texId), w, h);
+        }
+        return packer.pack(false);
+    }
+
     // ---- Core atlas builder --------------------------------------------------
 
     /**
@@ -325,6 +416,22 @@ public class TextureAtlas {
      * {@code maxAtlasSize}). Anything beyond is handled by {@code drawImage}.
      */
     private static final int MAX_DECODE_SUBSAMPLE = 8;
+
+    /**
+     * Hard upper bound on atlas page edge length when the rescale loop cannot
+     * fit textures within the user's {@code --max-atlas-size}. Matches the
+     * WebGL 2.0 desktop-GPU baseline and the existing CLI cap, so the runtime
+     * can always upload the resulting page.
+     */
+    private static final int ABSOLUTE_MAX_ATLAS_SIZE = 16384;
+
+    /** Whether any packed region was spilled onto a higher BSP level. */
+    private static boolean hasAnyOverflow(org.citydb.textureAtlas.model.TextureAtlas packed) {
+        for (AtlasRegion r : packed.getRegions()) {
+            if (r.level > 0) return true;
+        }
+        return false;
+    }
 
     /**
      * Core atlas builder. Works in two phases:
@@ -343,7 +450,8 @@ public class TextureAtlas {
     private static TextureAtlas buildSingleAtlas(List<TextureMeta> metas,
                                                   double scale, int maxAtlasSize,
                                                   Map<Integer, float[]> tileOffsets,
-                                                  TextureStore textureStore) throws IOException {
+                                                  TextureStore textureStore,
+                                                  AtlasFallbackStrategy fallback) throws IOException {
         if (metas.size() == 1) {
             TextureMeta m = metas.get(0);
             if (m.tilesU == 1 && m.tilesV == 1) {
@@ -354,16 +462,10 @@ public class TextureAtlas {
 
         // Pack with BASIC (Lightmap/BSP) — O(n log n), may rotate textures
         Map<Integer, Integer> texIdToIdx = new HashMap<>();
-        Packer packer = new Packer(maxAtlasSize, maxAtlasSize,
-                TextureAtlasCreator.BASIC, false);
         for (int i = 0; i < metas.size(); i++) {
-            TextureMeta m = metas.get(i);
-            int w = Math.max(1, (int) (m.effectiveWidth() * scale));
-            int h = Math.max(1, (int) (m.effectiveHeight() * scale));
-            packer.addRegion(String.valueOf(m.texId), w, h);
-            texIdToIdx.put(m.texId, i);
+            texIdToIdx.put(metas.get(i).texId, i);
         }
-        org.citydb.textureAtlas.model.TextureAtlas packed = packer.pack(false);
+        org.citydb.textureAtlas.model.TextureAtlas packed = packAtScale(metas, scale, maxAtlasSize);
 
         // When the BASIC packer cannot fit everything on a single page it
         // spills the rest onto additional "roots" whose coordinates all
@@ -372,52 +474,81 @@ public class TextureAtlas {
         // region would overwrite a level 0 region at the same (x,y) and the
         // affected texId's UV remap would then sample whichever texture was
         // drawn last — visible as unrelated buildings stealing each other's
-        // facade textures. Scale down and repack iteratively until every
-        // region lands on level 0. One rescale pass is insufficient because
-        // BSP fragmentation plus rotation can still overflow at the 0.9
-        // safety factor; tighten by an extra 0.85× each attempt to converge.
+        // facade textures.
+        //
+        // Two-phase resolution, ordered by the chosen fallback strategy:
+        //   - RESCALE: try to honor --max-atlas-size first by shrinking
+        //     textures (Phase 1), expand the page only as a last resort
+        //     (Phase 2). Trades quality for bounded GPU memory.
+        //   - EXPAND: skip Phase 1 entirely. Grow the page directly up to
+        //     the 16K cap to keep source resolution; only fall back to a
+        //     post-expansion rescale if 16K still cannot fit the textures.
+        // Per-texture pixel dimensions are clamped at 1 by Math.max(1, …)
+        // inside packAtScale, so very small `scale` doesn't reduce pixel
+        // count further. Only the residual case where even 16K cannot fit
+        // triggers the ultimate-fallback drop below.
         final double minScale = 0.01;
         final int maxRetries = 10;
-        for (int attempt = 0; attempt < maxRetries; attempt++) {
-            boolean hasOverflow = false;
-            for (AtlasRegion r : packed.getRegions()) {
-                if (r.level > 0) { hasOverflow = true; break; }
-            }
-            if (!hasOverflow) break;
+        if (fallback == AtlasFallbackStrategy.RESCALE) {
+            for (int attempt = 0; attempt < maxRetries; attempt++) {
+                if (!hasAnyOverflow(packed)) break;
 
-            long totalArea = 0;
-            for (TextureMeta m : metas) {
-                totalArea += (long) Math.max(1, (int) (m.effectiveWidth() * scale))
-                        * Math.max(1, (int) (m.effectiveHeight() * scale));
-            }
-            double areaRatio = (double) ((long) maxAtlasSize * maxAtlasSize) / totalArea;
-            // Use attempt+1 so the very first retry applies a real tightening:
-            // with attempt=0 the 0.85^0=1 multiplier collapses to the area
-            // ratio alone, which is ≥1 on pure fragmentation overflow
-            // (area fits but BSP can't place) and the loop would break at
-            // `nextScale >= scale` without making any progress.
-            double factor = Math.min(1.0, areaRatio * 0.9) * Math.pow(0.85, attempt + 1);
-            double nextScale = Math.max(minScale, scale * Math.sqrt(factor));
-            if (nextScale >= scale) break;
-            scale = nextScale;
+                long totalArea = 0;
+                for (TextureMeta m : metas) {
+                    totalArea += (long) Math.max(1, (int) (m.effectiveWidth() * scale))
+                            * Math.max(1, (int) (m.effectiveHeight() * scale));
+                }
+                double areaRatio = (double) ((long) maxAtlasSize * maxAtlasSize) / totalArea;
+                // Use attempt+1 so the very first retry applies a real tightening:
+                // with attempt=0 the 0.85^0=1 multiplier collapses to the area
+                // ratio alone, which is ≥1 on pure fragmentation overflow
+                // (area fits but BSP can't place) and the loop would break at
+                // `nextScale >= scale` without making any progress.
+                double factor = Math.min(1.0, areaRatio * 0.9) * Math.pow(0.85, attempt + 1);
+                double nextScale = Math.max(minScale, scale * Math.sqrt(factor));
+                if (nextScale >= scale) break;
+                scale = nextScale;
 
-            packer = new Packer(maxAtlasSize, maxAtlasSize,
-                    TextureAtlasCreator.BASIC, false);
-            for (TextureMeta m : metas) {
-                int w = Math.max(1, (int) (m.effectiveWidth() * scale));
-                int h = Math.max(1, (int) (m.effectiveHeight() * scale));
-                packer.addRegion(String.valueOf(m.texId), w, h);
+                packed = packAtScale(metas, scale, maxAtlasSize);
+                if (scale <= minScale) break;
             }
-            packed = packer.pack(false);
-            if (scale <= minScale) break;
         }
 
+        // Phase 2: grow the atlas page (doubling) up to the WebGL-safe 16K cap.
+        // For RESCALE this only runs when rescale exhausted at minScale and
+        // overflow remains. For EXPAND this is the primary mechanism.
+        int currentMaxSize = maxAtlasSize;
+        while (hasAnyOverflow(packed) && currentMaxSize < ABSOLUTE_MAX_ATLAS_SIZE) {
+            currentMaxSize = Math.min(ABSOLUTE_MAX_ATLAS_SIZE, currentMaxSize * 2);
+            packed = packAtScale(metas, scale, currentMaxSize);
+        }
+        // Post-expansion rescale (EXPAND only): if the 16K page still cannot
+        // fit the textures, fall back to shrinking them at the expanded size.
+        // Last line of defense before the drop path. RESCALE already exhausted
+        // its rescale budget in Phase 1.
+        if (fallback == AtlasFallbackStrategy.EXPAND && hasAnyOverflow(packed)) {
+            for (int attempt = 0; attempt < maxRetries; attempt++) {
+                if (!hasAnyOverflow(packed)) break;
+                double factor = Math.pow(0.85, attempt + 1);
+                double nextScale = Math.max(minScale, scale * Math.sqrt(factor));
+                if (nextScale >= scale) break;
+                scale = nextScale;
+                packed = packAtScale(metas, scale, currentMaxSize);
+                if (scale <= minScale) break;
+            }
+        }
+
+        // User-setting violations (currentMaxSize > maxAtlasSize, or scale
+        // dropped below the user's --texture-scale) are logged by the writer
+        // after loadNodeFeatures so the per-cell DEBUG can name the affected
+        // building object IDs. The atlas's final dimensions and the
+        // `actualScale` getter expose the values used.
+
         // Collect placement results and track rotated textures. Skip any
-        // region still at level > 0 after the retry loop — compositing it
-        // into the single atlas image would corrupt overlapping level 0
-        // regions. Their textures won't render correctly, but this is
-        // preferable to silently painting the wrong facade on other
-        // buildings.
+        // region still at level > 0 — even after rescale and atlas expansion
+        // up to the WebGL cap. Compositing them would corrupt overlapping
+        // level 0 regions. Truly pathological case (extreme tiling or absurd
+        // texture counts on a single feature), logged at WARN.
         int atlasWidth = 0, atlasHeight = 0;
         Map<Integer, int[]> pixelRegions = new LinkedHashMap<>();
         Set<Integer> rotated = new HashSet<>();
@@ -436,10 +567,11 @@ public class TextureAtlas {
             }
         }
         if (dropped > 0) {
-            logger.warn("Atlas overflow could not be resolved by rescaling; " +
-                    "dropped {} of {} textures (scale={}). Consider lowering " +
-                    "texture scale or reducing node feature count.",
-                    dropped, metas.size(), scale);
+            logger.warn("Atlas overflow could not be resolved by the {} fallback " +
+                            "(scale={}, atlas={}×{}); dropped {} of {} textures. " +
+                            "Affected triangles will render as untextured. Consider " +
+                            "lowering --texture-scale or switching --atlas-fallback.",
+                    fallback, scale, currentMaxSize, currentMaxSize, dropped, metas.size());
         }
 
         // Compose atlas image — decode each source JIT with subsampling
@@ -519,7 +651,7 @@ public class TextureAtlas {
             }
         }
 
-        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, whitePixelUV);
+        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, whitePixelUV, scale);
     }
 
     /**
@@ -560,7 +692,11 @@ public class TextureAtlas {
             g.dispose();
         }
         Map<Integer, float[]> regions = Map.of(m.texId, new float[]{0f, 0f, 1f, 1f});
-        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of(), null);
+        // actualScale=1.0: no global rescale loop applied. The single-texture
+        // fast path may downscale the bitmap to fit maxAtlasSize, but that is
+        // independent of the user's --texture-scale (which only governs the
+        // multi-texture rescale loop in buildSingleAtlas).
+        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of(), null, 1.0);
     }
 
     /**
@@ -681,6 +817,16 @@ public class TextureAtlas {
 
     public int getHeight() {
         return image.getHeight();
+    }
+
+    /**
+     * Final scale applied to source textures by the rescale loop. Equal to
+     * the user's clamped {@code --texture-scale} when no rescale fired; less
+     * when overflow forced one. Callers compare against
+     * {@code formatOptions.getTextureScale()} to detect a violation.
+     */
+    public double getActualScale() {
+        return actualScale;
     }
 
     /**
