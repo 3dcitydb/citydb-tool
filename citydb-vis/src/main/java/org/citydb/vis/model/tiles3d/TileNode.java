@@ -32,12 +32,20 @@ public class TileNode {
     /**
      * Build a tile node from a SceneNode with an optional content URI
      * (null for nodes without their own geometry).
+     * <p>
+     * Refinement is {@code REPLACE} for every tile: children take over from
+     * the parent once their content meets the screen-space error. LOD-preview
+     * cell roots ({@code node.isLodPreview()}) need this so the low-resolution
+     * preview is hidden when the high-resolution quadtree leaves load;
+     * content-less intermediates (aggregation, mixed-split, quadtree depth>1)
+     * also use REPLACE so the runtime never renders them alongside their
+     * descendants.
      */
     public static TileNode of(SceneNode node, double geometricError, String contentUri) {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = geometricError;
-        tile.refine = "ADD";
+        tile.refine = "REPLACE";
 
         if (contentUri != null) {
             tile.content = new TileContent(contentUri);
@@ -51,13 +59,20 @@ public class TileNode {
     }
 
     /**
-     * Create a tile node that references an external subtileset.
+     * Create a tile node that references an external subtileset. Always
+     * emits {@code refine=REPLACE} so the parent tileset's view of this
+     * tile matches the external subtree's intent regardless of how the
+     * runtime resolves external-ref refinement (some implementations use
+     * the external-ref tile's refine, others use the loaded subtree
+     * root's refine — setting it explicitly here keeps both code paths
+     * consistent).
      */
     public static TileNode ofExternalRef(SceneNode node, double geometricError, String uri) {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = geometricError;
         tile.content = new TileContent(uri);
+        tile.refine = "REPLACE";
         return tile;
     }
 
@@ -69,7 +84,7 @@ public class TileNode {
         TileNode tile = new TileNode();
         tile.boundingVolume = boundingVolume;
         tile.geometricError = geometricError;
-        tile.refine = "ADD";
+        tile.refine = "REPLACE";
         tile.transform = transform;
         tile.children = new ArrayList<>();
         return tile;
