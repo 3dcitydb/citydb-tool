@@ -367,12 +367,20 @@ public abstract class VisWriter implements FeatureWriter {
             List<TextureAtlas> atlases = List.of();
             if (!uniqueTexIds.isEmpty()) {
                 Map<Integer, float[]> uvExtents = merged.computeUVExtents();
+                // LOD-preview nodes are split-cell parents that need a
+                // low-resolution single-atlas preview (replaced at runtime
+                // by the high-resolution quadtree children). Force
+                // single-atlas + RESCALE strategy regardless of the user's
+                // --atlas-fallback so the preview always fits one page and
+                // stays within the user's --max-atlas-size budget.
+                boolean lodPreview = node.isLodPreview();
                 // AUTO: prefer single page; spill to multi-page only when
                 // the BSP packer would otherwise overflow. The wouldOverflow
                 // predicate runs on metadata only (~3-4% of full build cost),
                 // so the extra check is negligible and keeps the common case
                 // on the cheaper single-atlas path.
-                boolean useMulti = mode == AtlasMode.AUTO
+                boolean useMulti = !lodPreview
+                        && mode == AtlasMode.AUTO
                         && TextureAtlas.wouldOverflow(uniqueTexIds, stores.getTextureStore(),
                                 formatOptions.getTextureScale(),
                                 formatOptions.getMaxAtlasSize(), uvExtents);
@@ -390,10 +398,13 @@ public abstract class VisWriter implements FeatureWriter {
                     // and can push a borderline-fitting atlas over the edge,
                     // triggering needless Phase 2 expansion.
                     boolean needsWhitePixel = hasUntexturedTriangle && atlasNeedsWhitePixelSentinel();
+                    VisFormatOptions.AtlasFallbackStrategy strategy = lodPreview
+                            ? VisFormatOptions.AtlasFallbackStrategy.RESCALE
+                            : formatOptions.getAtlasFallbackStrategy();
                     TextureAtlas single = TextureAtlas.build(
                             uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
                             formatOptions.getMaxAtlasSize(), uvExtents, needsWhitePixel,
-                            formatOptions.getAtlasFallbackStrategy());
+                            strategy);
                     atlases = single != null ? List.of(single) : List.of();
                 }
                 if (!atlases.isEmpty()) {

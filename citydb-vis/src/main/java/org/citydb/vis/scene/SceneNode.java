@@ -31,6 +31,7 @@ public class SceneNode {
     private int outputVertexCount;
     private boolean textured;
     private int texelCountHint;
+    private boolean lodPreview;
 
     public SceneNode(int index, int level) {
         this.index = index;
@@ -130,6 +131,32 @@ public class SceneNode {
 
     public SceneNode setTexelCountHint(int texelCountHint) {
         this.texelCountHint = texelCountHint;
+        return this;
+    }
+
+    /**
+     * Whether this node carries a low-resolution LOD preview of its descendants:
+     * an atlas rescaled to fit {@code --max-atlas-size} for fast initial load,
+     * to be replaced by the higher-resolution children when the runtime refines
+     * to them. Set by {@link org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
+     * on cell roots that got spatially split into quadtree children.
+     * <p>
+     * Consumed by:
+     * <ul>
+     *   <li>{@code VisWriter.prepareNodeMesh}: forces single-atlas
+     *       {@code RESCALE} fallback regardless of the user's
+     *       {@code --atlas-fallback} so the preview always fits one page.</li>
+     *   <li>{@code TilesetSerializer} (3D Tiles): emits {@code refine=REPLACE}
+     *       so children replace this tile when loaded (rather than ADD,
+     *       which would render both at the same time).</li>
+     * </ul>
+     */
+    public boolean isLodPreview() {
+        return lodPreview;
+    }
+
+    public SceneNode setLodPreview(boolean lodPreview) {
+        this.lodPreview = lodPreview;
         return this;
     }
 
