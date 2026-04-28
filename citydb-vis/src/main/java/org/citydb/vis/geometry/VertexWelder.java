@@ -43,10 +43,16 @@ public class VertexWelder {
         float weldTolerance = 0.02f; // 2 cm
         float weldTolerance2 = weldTolerance * weldTolerance;
         boolean hasUV = mesh.hasTexCoords();
+        boolean hasColor = mesh.hasColors();
         float uvTolerance = 0.001f;
+        // ~1/255 — vertices whose RGBA differs by less than one 8-bit step
+        // are treated as the same color for welding purposes. Anything coarser
+        // would drop legitimately distinct material boundaries.
+        float colorTolerance = 0.004f;
 
         List<double[]> positions = mesh.getPositions();
         List<float[]> texCoords = mesh.getTexCoords();
+        List<float[]> colors = mesh.getColors();
         int posCount = positions.size();
 
         float[][] f32 = new float[posCount][3];
@@ -90,6 +96,16 @@ public class VertexWelder {
                                     float[] uvJ = texCoords.get(j);
                                     if (Math.abs(uvI[0] - uvJ[0]) > uvTolerance
                                             || Math.abs(uvI[1] - uvJ[1]) > uvTolerance) {
+                                        continue;
+                                    }
+                                }
+                                if (hasColor) {
+                                    float[] cI = colors.get(i);
+                                    float[] cJ = colors.get(j);
+                                    if (Math.abs(cI[0] - cJ[0]) > colorTolerance
+                                            || Math.abs(cI[1] - cJ[1]) > colorTolerance
+                                            || Math.abs(cI[2] - cJ[2]) > colorTolerance
+                                            || Math.abs(cI[3] - cJ[3]) > colorTolerance) {
                                         continue;
                                     }
                                 }
