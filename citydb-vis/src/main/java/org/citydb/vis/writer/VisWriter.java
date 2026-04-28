@@ -224,6 +224,7 @@ public abstract class VisWriter implements FeatureWriter {
         List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
         Map<LinearRing, List<TextureCoordinate>> texCoords = appearance.texCoords();
         Map<LinearRing, Integer> ringTextureIds = appearance.ringTextureIds();
+        Map<LinearRing, float[]> ringColors = appearance.ringColors();
         if (ringTextureIds != null && !ringTextureIds.isEmpty()) {
             stores.setFeatureTextured(featureId);
         }
@@ -233,7 +234,8 @@ public abstract class VisWriter implements FeatureWriter {
         service.execute(() -> {
             try {
                 featureProcessor.process(featureId, objectId, featureType,
-                        envelope, attributes, geomProps, texCoords, ringTextureIds);
+                        envelope, attributes, geomProps, texCoords, ringTextureIds,
+                        ringColors);
                 result.complete(true);
             } catch (Throwable e) {
                 shouldRun = false;

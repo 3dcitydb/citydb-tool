@@ -395,8 +395,12 @@ public class TextureAtlas {
         Packer packer = new Packer(maxAtlasSize, maxAtlasSize,
                 TextureAtlasCreator.BASIC, false);
         for (TextureMeta m : metas) {
-            int w = Math.max(1, (int) (m.effectiveWidth() * scale));
-            int h = Math.max(1, (int) (m.effectiveHeight() * scale));
+            // The white-pixel sentinel must keep its declared size regardless
+            // of scale: rescaling shrinks the JPEG quantization-stable core
+            // that its UV center samples, defeating the sentinel's purpose.
+            double effectiveScale = m.texId < 0 ? 1.0 : scale;
+            int w = Math.max(1, (int) (m.effectiveWidth() * effectiveScale));
+            int h = Math.max(1, (int) (m.effectiveHeight() * effectiveScale));
             if (w > maxAtlasSize || h > maxAtlasSize) {
                 double clamp = (double) maxAtlasSize / Math.max(w, h);
                 w = Math.max(1, (int) (w * clamp));
@@ -790,8 +794,10 @@ public class TextureAtlas {
         }
 
         // Mixed node: point every vertex reached only from untextured triangles
-        // at the reserved white pixel so the single textured material renders
-        // those features as solid white, matching the untextured-node PBR default.
+        // at the reserved white pixel. The single textured material then
+        // renders those vertices as white × COLOR_0 — which yields the baked
+        // X3DMaterial color where one is present, and solid white otherwise
+        // (matching the untextured-node PBR default).
         if (whitePixelUV != null) {
             for (int v = 0; v < vertexCount; v++) {
                 if (vertexTexId[v] < 0) {
