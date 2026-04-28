@@ -46,16 +46,24 @@ public class SceneOptions implements Option {
     private int maxAtlasSize;
 
     @CommandLine.Option(names = "--atlas-overflow-mode", paramLabel = "<mode>",
-            defaultValue = "quadtree",
+            defaultValue = "hybrid",
             description = "Strategy when a cell's textures exceed --max-atlas-size: " +
                     "${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). " +
-                    "'quadtree' subdivides the offending cell spatially (2x2 push-down) " +
-                    "until each leaf fits one atlas page; the few cells that cannot be " +
-                    "subdivided further (single-feature / depth-cap residuals) are " +
-                    "handled per --atlas-fallback. 'rescale' disables the split stage " +
-                    "entirely and shrinks textures uniformly to fit one atlas page on " +
-                    "every overflowing cell — implies --atlas-fallback=rescale " +
-                    "regardless of an explicit value (legacy / debugging).")
+                    "'hybrid' subdivides the offending cell spatially (2x2 push-down) " +
+                    "until each leaf fits one atlas page AND retains a low-resolution " +
+                    "rescaled preview on each split cell root, replaced at runtime by " +
+                    "the quadtree leaves once they cross the LOD threshold — smoothest " +
+                    "LOD cascade. 'quadtree' runs the same split but drops the preview: " +
+                    "the split cell root becomes a content-less intermediate, the " +
+                    "runtime refines straight from the parent aggregation to the " +
+                    "quadtree leaves (one fewer LOD level, faster export, sharper LOD " +
+                    "transition). The few cells that cannot be subdivided further " +
+                    "(single-feature / depth-cap residuals) are handled per " +
+                    "--atlas-fallback in both quadtree-based modes. 'rescale' disables " +
+                    "the split stage entirely and shrinks textures uniformly to fit " +
+                    "one atlas page on every overflowing cell — implies " +
+                    "--atlas-fallback=rescale regardless of an explicit value " +
+                    "(legacy / debugging).")
     private VisFormatOptions.AtlasOverflowMode atlasOverflowMode;
 
     @CommandLine.Option(names = "--atlas-fallback", paramLabel = "<strategy>",
