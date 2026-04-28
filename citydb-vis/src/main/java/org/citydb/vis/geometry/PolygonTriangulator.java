@@ -53,12 +53,14 @@ public class PolygonTriangulator {
 
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-                                    Map<LinearRing, Integer> ringTextureMap) {
+                                    Map<LinearRing, Integer> ringTextureMap,
+                                    Map<LinearRing, float[]> ringColorMap) {
         TriangleMesh mesh = new TriangleMesh();
         List<Polygon> polygons = collectPolygons(geometry);
 
         for (Polygon polygon : polygons) {
-            triangulatePolygon(polygon, featureId, mesh, texCoordMap, ringTextureMap);
+            triangulatePolygon(polygon, featureId, mesh, texCoordMap, ringTextureMap,
+                    ringColorMap);
         }
 
         return mesh;
@@ -92,7 +94,8 @@ public class PolygonTriangulator {
 
     private static void triangulatePolygon(Polygon polygon, long featureId, TriangleMesh mesh,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-                                    Map<LinearRing, Integer> ringTextureMap) {
+                                    Map<LinearRing, Integer> ringTextureMap,
+                                    Map<LinearRing, float[]> ringColorMap) {
         LinearRing exteriorRing = polygon.getExteriorRing();
         List<Coordinate> outerPoints = exteriorRing.getPoints();
 
@@ -106,6 +109,10 @@ public class PolygonTriangulator {
         boolean hasUV = outerTexCoords != null && outerTexCoords.size() >= outerPoints.size();
         int polyTextureId = (ringTextureMap != null)
                 ? ringTextureMap.getOrDefault(exteriorRing, -1) : -1;
+        // Per-polygon RGBA from X3DMaterial; null when the ring has no
+        // material assignment. Texture wins over material — the extractor
+        // already drops material entries for rings that have a texture id.
+        float[] polyColor = ringColorMap != null ? ringColorMap.get(exteriorRing) : null;
 
         // Compute centroid latitude for degree-to-meter conversion
         double centroidLat = 0;
@@ -180,32 +187,41 @@ public class PolygonTriangulator {
         // Ear clipping using scaled coordinates (requires CCW winding)
         List<int[]> triangleIndices = earClip(scaledRing, projAxis);
 
-        // Add vertices using ORIGINAL coordinates (degrees/meters) for output
+        // Add vertices using ORIGINAL coordinates (degrees/meters) for output.
+        // A polygon never carries both UV and material color (extractor drops
+        // material entries for textured rings), so the four call paths are
+        // mutually exclusive.
         int baseVertex = mesh.getVertexCount();
         for (int i = 0; i < ring.size(); i++) {
             double[] pt = ring.get(i);
             if (uvRing != null) {
                 float[] uv = uvRing.get(i);
                 mesh.addVertex(pt[0], pt[1], pt[2], normal[0], normal[1], normal[2], uv[0], uv[1]);
+            } else if (polyColor != null) {
+                mesh.addVertex(pt[0], pt[1], pt[2], normal[0], normal[1], normal[2],
+                        polyColor[0], polyColor[1], polyColor[2], polyColor[3]);
             } else {
                 mesh.addVertex(pt[0], pt[1], pt[2], normal[0], normal[1], normal[2]);
             }
         }
 
-        // Add triangles — if original polygon was CW, swap winding to restore face direction
+        // Add triangles — if original polygon was CW, swap winding to restore face direction.
+        // The colored flag flows from the X3DMaterial extractor; see
+        // TriangleMesh#triangleColored for how the GLB writer consumes it.
+        boolean polyColored = polyColor != null;
         for (int[] tri : triangleIndices) {
             if (reverseWinding) {
                 mesh.addTriangle(
                         baseVertex + tri[0],
                         baseVertex + tri[2],
                         baseVertex + tri[1],
-                        featureId, polyTextureId);
+                        featureId, polyTextureId, polyColored);
             } else {
                 mesh.addTriangle(
                         baseVertex + tri[0],
                         baseVertex + tri[1],
                         baseVertex + tri[2],
-                        featureId, polyTextureId);
+                        featureId, polyTextureId, polyColored);
             }
         }
     }
