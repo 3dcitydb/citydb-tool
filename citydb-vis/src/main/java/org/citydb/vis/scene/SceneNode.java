@@ -139,7 +139,9 @@ public class SceneNode {
      * an atlas rescaled to fit {@code --max-atlas-size} for fast initial load,
      * to be replaced by the higher-resolution children when the runtime refines
      * to them. Set by {@link org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
-     * on cell roots that got spatially split into quadtree children.
+     * on cell roots that got spatially split, but only when
+     * {@code --atlas-overflow-mode=hybrid}; the pure {@code quadtree} mode
+     * drops the cell root from {@code meshNodeIndices} entirely instead.
      * <p>
      * Consumed by:
      * <ul>

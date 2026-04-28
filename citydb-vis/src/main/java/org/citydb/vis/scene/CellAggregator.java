@@ -66,6 +66,11 @@ public final class CellAggregator {
         int maxGy = Integer.MIN_VALUE, maxGx = Integer.MIN_VALUE;
         for (SceneNode cellRoot : cellRoots) {
             int[] gc = gridCoords.get(cellRoot.getIndex());
+            if (gc == null) {
+                throw new IllegalStateException("Cell root " + cellRoot.getIndex() +
+                        " has no grid coordinates; only TreeBuildingStage's cell roots " +
+                        "may appear under globalRoot at this point.");
+            }
             cells.add(new Cell(cellRoot, gc[0], gc[1]));
             minGy = Math.min(minGy, gc[0]);
             maxGy = Math.max(maxGy, gc[0]);
