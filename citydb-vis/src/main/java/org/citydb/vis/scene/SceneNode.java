@@ -32,6 +32,8 @@ public class SceneNode {
     private boolean textured;
     private int texelCountHint;
     private boolean lodPreview;
+    private boolean colored;
+    private boolean coloredBlend;
 
     public SceneNode(int index, int level) {
         this.index = index;
@@ -123,6 +125,28 @@ public class SceneNode {
 
     public boolean hasTexture() {
         return textured;
+    }
+
+    public SceneNode setColored(boolean colored) {
+        this.colored = colored;
+        return this;
+    }
+
+    public boolean isColored() {
+        return colored;
+    }
+
+    /**
+     * For colored nodes: whether any baked vertex carries alpha &lt; 1, which
+     * promotes the I3S MaterialDefinition from OPAQUE to BLEND.
+     */
+    public SceneNode setColoredBlend(boolean coloredBlend) {
+        this.coloredBlend = coloredBlend;
+        return this;
+    }
+
+    public boolean isColoredBlend() {
+        return coloredBlend;
     }
 
     public int getTexelCountHint() {
