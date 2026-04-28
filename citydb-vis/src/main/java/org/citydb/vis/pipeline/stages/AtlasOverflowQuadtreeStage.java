@@ -42,6 +42,14 @@ import java.util.concurrent.TimeUnit;
  * cannot be subdivided further. Intermediate nodes lose their mesh data
  * (push-down split), with new mesh leaves attached as descendants.
  * <p>
+ * Runs for {@link VisFormatOptions.AtlasOverflowMode#QUADTREE} (pure split:
+ * the cell root becomes a content-less intermediate) and for
+ * {@link VisFormatOptions.AtlasOverflowMode#HYBRID} (split plus a
+ * low-resolution rescaled preview retained on each split cell root,
+ * marked via {@link SceneNode#setLodPreview(boolean)} for the writer to
+ * emit). The fallback paths and per-leaf packing are identical between the
+ * two modes; only the cell-root retention differs.
+ * <p>
  * Replaces the silent global texture rescale that {@link TextureAtlas#build}
  * otherwise applies inside the writer's {@code prepareNodeMesh} step. Each
  * resulting leaf packs its self-contained subset of the parent's textures into
@@ -107,12 +115,15 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
     @Override
     public void execute(PipelineContext ctx) throws VisExportException {
         VisFormatOptions opts = ctx.formatOptions();
-        if (opts.getAtlasOverflowMode() != VisFormatOptions.AtlasOverflowMode.QUADTREE) {
+        VisFormatOptions.AtlasOverflowMode mode = opts.getAtlasOverflowMode();
+        if (mode != VisFormatOptions.AtlasOverflowMode.QUADTREE
+                && mode != VisFormatOptions.AtlasOverflowMode.HYBRID) {
             return;
         }
         if (!ctx.hasTextures()) {
             return;
         }
+        boolean withPreview = mode == VisFormatOptions.AtlasOverflowMode.HYBRID;
 
         VisExportStores stores = ctx.stores();
         NodeEntryStore nodeEntryStore = stores.getNodeEntryStore();
@@ -190,18 +201,31 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
                 depthCapFallback += plan.depthCapFallback;
 
                 if (plan.rootBecameIntermediate) {
-                    // Keep the split root in meshNodeIndices and mark it as
-                    // an LOD preview: the writer will emit a low-resolution
-                    // single-atlas (RESCALE strategy) for fast distant view,
-                    // and the quadtree-leaf children carry the high-resolution
-                    // content the runtime refines to. For 3D Tiles the
-                    // serializer emits refine=REPLACE on this tile so
-                    // children replace it once loaded; I3S handles refinement
-                    // automatically via uniform lodThreshold.
-                    SceneNode root = allNodes.get(plan.rootIndex);
-                    root.setLodPreview(true);
-                    // updatedMeshIndices already contains plan.rootIndex
-                    // from the initial copy; intentionally not removed.
+                    if (withPreview) {
+                        // HYBRID: keep the split root in meshNodeIndices and
+                        // mark it as an LOD preview. The writer will emit a
+                        // low-resolution single-atlas (RESCALE strategy) for
+                        // fast distant view, replaced at runtime by the
+                        // quadtree-leaf children once they cross the LOD
+                        // threshold. For 3D Tiles the serializer emits
+                        // refine=REPLACE on this tile so children replace it
+                        // once loaded; I3S handles refinement automatically
+                        // via uniform lodThreshold.
+                        SceneNode root = allNodes.get(plan.rootIndex);
+                        root.setLodPreview(true);
+                        // updatedMeshIndices already contains plan.rootIndex
+                        // from the initial copy; intentionally not removed.
+                    } else {
+                        // QUADTREE (pure split): the split root becomes a
+                        // content-less intermediate. The runtime refines from
+                        // the cell's parent aggregation directly to the
+                        // quadtree leaves, with no extra preview level. Drop
+                        // the root from meshNodeIndices so the writer skips
+                        // geometry/atlas emission for it; its on-disk
+                        // NodeEntry list is orphaned (same trade-off as
+                        // MixedNodeSplitStage).
+                        updatedMeshIndices.remove(plan.rootIndex);
+                    }
                 }
 
                 for (int i = 0; i < plan.created.size(); i++) {
