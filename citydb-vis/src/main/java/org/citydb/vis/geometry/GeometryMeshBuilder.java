@@ -36,11 +36,13 @@ public final class GeometryMeshBuilder {
      * @param featureId          owning feature id, propagated into the mesh
      * @param texCoordMap        per-ring UV coordinates, or {@code null} if untextured
      * @param ringTextureMap     per-ring texture id, or {@code null} if untextured
+     * @param ringColorMap       per-ring RGBA from X3D material, or {@code null}
      */
     public static TriangleMesh build(List<GeometryProperty> geometryProperties,
                                      long featureId,
                                      Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-                                     Map<LinearRing, Integer> ringTextureMap) {
+                                     Map<LinearRing, Integer> ringTextureMap,
+                                     Map<LinearRing, float[]> ringColorMap) {
         PolygonTriangulator triangulator = new PolygonTriangulator();
         TriangleMesh mesh = new TriangleMesh();
 
@@ -54,7 +56,7 @@ public final class GeometryMeshBuilder {
                 case POLYGON, MULTI_SURFACE, COMPOSITE_SURFACE, SOLID,
                         MULTI_SOLID, COMPOSITE_SOLID, TRIANGULATED_SURFACE -> {
                     TriangleMesh geomMesh = triangulator.triangulate(geometry, featureId,
-                            texCoordMap, ringTextureMap);
+                            texCoordMap, ringTextureMap, ringColorMap);
                     mesh.merge(geomMesh);
                 }
                 default -> {
