@@ -96,6 +96,7 @@ public class I3SWriter extends VisWriter {
         double[] extent = ctx.extent();
         List<AttrField> attrFields = ctx.attrFields();
         boolean hasTextures = ctx.hasTextures();
+        boolean hasColors = ctx.hasColors();
         // Set I3S LOD thresholds on the tree
         int lodThreshold = lodThresholdFor(getFormatOptions().getLodRefineRadius());
         setLodThresholds(allNodes, lodThreshold);
@@ -109,7 +110,8 @@ public class I3SWriter extends VisWriter {
         // Pro requirement); folder mode emits it only when --obb is passed.
         boolean includeObb = slpk || options.isObb();
         SceneLayer sceneLayer = buildSceneLayer(extent);
-        writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices, hasTextures, includeObb);
+        writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices,
+                hasTextures, hasColors, includeObb);
 
         if (slpk) {
             try {
@@ -175,6 +177,7 @@ public class I3SWriter extends VisWriter {
                                 List<AttrField> attrFields,
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures,
+                                boolean hasColors,
                                 boolean includeObb) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
@@ -183,14 +186,14 @@ public class I3SWriter extends VisWriter {
             Files.createDirectories(layerDir);
             // Scene layer JSON
             jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
-                    hasTextures);
+                    hasTextures, hasColors);
         } catch (IOException e) {
             throw new VisExportException("Failed to write I3S scene layer JSON.", e);
         }
 
         // Parallel: encode geometry + write features/attributes per node.
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
-                node -> writeNodeOutput(node, layerDir, attrFields));
+                node -> writeNodeOutput(node, layerDir, attrFields, hasColors));
 
         try {
             // Node pages AFTER geometry so vertex counts are accurate
@@ -207,14 +210,16 @@ public class I3SWriter extends VisWriter {
      * write per-node feature/attribute JSON files.
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
-                                    List<AttrField> attrFields) throws VisExportException {
+                                    List<AttrField> attrFields,
+                                    boolean layerHasColors) throws VisExportException {
         PreparedNode prepared = prepareNodeMesh(node, AtlasMode.SINGLE_ATLAS);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
         logAtlasViolations(node, prepared, featureDataList);
 
         try {
             node.setMesh(prepared.mesh());
-            I3SGeometryEncoder.NodeGeometryResult geomResult = geometryEncoder.writeNodeGeometry(layerDir, node);
+            I3SGeometryEncoder.NodeGeometryResult geomResult =
+                    geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors);
             if (geomResult == null) {
                 return false;
             }

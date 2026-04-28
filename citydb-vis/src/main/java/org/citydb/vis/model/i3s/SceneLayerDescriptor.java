@@ -23,6 +23,8 @@ public class SceneLayerDescriptor {
      */
     public static final int UNTEXTURED_DEFINITION_INDEX = 0;
     public static final int TEXTURED_DEFINITION_INDEX = 1;
+    public static final int VERTEX_COLORED_OPAQUE_DEFINITION_INDEX = 2;
+    public static final int VERTEX_COLORED_BLEND_DEFINITION_INDEX = 3;
 
     private int id;
     private String version;
@@ -45,7 +47,8 @@ public class SceneLayerDescriptor {
 
     public static SceneLayerDescriptor of(SceneLayer sceneLayer,
                                           List<AttrField> attrFields,
-                                          boolean hasTextures) {
+                                          boolean hasTextures,
+                                          boolean hasColors) {
         SceneLayerDescriptor descriptor = new SceneLayerDescriptor();
         descriptor.id = 0;
         // I3S scene layer 'version' is a per-layer lifecycle UUID, NOT the
@@ -60,13 +63,13 @@ public class SceneLayerDescriptor {
         descriptor.heightModelInfo = HeightModelInfo.egm96Meter();
         descriptor.spatialReference = SpatialReference.of(sceneLayer.getWkid());
         descriptor.store = Store.of(sceneLayer, hasTextures);
-        descriptor.geometryDefinitions = buildGeometryDefinitions(hasTextures);
+        descriptor.geometryDefinitions = buildGeometryDefinitions(hasTextures, hasColors);
 
         if (hasTextures) {
             descriptor.textureSetDefinitions = List.of(TextureSetDefinition.jpeg());
         }
 
-        descriptor.materialDefinitions = buildMaterialDefinitions(hasTextures);
+        descriptor.materialDefinitions = buildMaterialDefinitions(hasTextures, hasColors);
         descriptor.fullExtent = FullExtent.from(sceneLayer.getExtent());
         descriptor.fields = buildFields(attrFields);
         // Our OID-typed field is named "OID" (not Esri's default "OBJECTID"),
@@ -79,20 +82,42 @@ public class SceneLayerDescriptor {
         return descriptor;
     }
 
-    private static List<GeometryDefinition> buildGeometryDefinitions(boolean hasTextures) {
-        List<GeometryDefinition> definitions = new ArrayList<>(2);
+    private static List<GeometryDefinition> buildGeometryDefinitions(boolean hasTextures,
+                                                                     boolean hasColors) {
+        // The textured slot (index 1) is filled with a placeholder untextured
+        // definition when the layer has colors but no textures, so that the
+        // OPAQUE/BLEND colored definitions can stay at fixed indices 2/3.
+        List<GeometryDefinition> definitions = new ArrayList<>(4);
         definitions.add(GeometryDefinition.untextured());
         if (hasTextures) {
-            definitions.add(GeometryDefinition.textured());
+            definitions.add(hasColors
+                    ? GeometryDefinition.texturedColored()
+                    : GeometryDefinition.textured());
+        } else if (hasColors) {
+            definitions.add(GeometryDefinition.untextured());
+        }
+        if (hasColors) {
+            // OPAQUE and BLEND share the same Draco layout; alphaMode is set
+            // on the paired MaterialDefinition, not here.
+            GeometryDefinition colored = GeometryDefinition.colored();
+            definitions.add(colored);
+            definitions.add(colored);
         }
         return definitions;
     }
 
-    private static List<MaterialDefinition> buildMaterialDefinitions(boolean hasTextures) {
-        List<MaterialDefinition> materials = new ArrayList<>(2);
+    private static List<MaterialDefinition> buildMaterialDefinitions(boolean hasTextures,
+                                                                    boolean hasColors) {
+        List<MaterialDefinition> materials = new ArrayList<>(4);
         materials.add(MaterialDefinition.untextured());
         if (hasTextures) {
             materials.add(MaterialDefinition.textured());
+        } else if (hasColors) {
+            materials.add(MaterialDefinition.untextured());
+        }
+        if (hasColors) {
+            materials.add(MaterialDefinition.colored(false));
+            materials.add(MaterialDefinition.colored(true));
         }
         return materials;
     }
