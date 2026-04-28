@@ -16,9 +16,16 @@ public class NodeMesh {
 
     public static NodeMesh of(SceneNode node, boolean hasTextures) {
         boolean nodeHasTexture = hasTextures && node.hasTexture();
-        int definition = nodeHasTexture
-                ? SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX
-                : SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX;
+        int definition;
+        if (nodeHasTexture) {
+            definition = SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX;
+        } else if (node.isColored()) {
+            definition = node.isColoredBlend()
+                    ? SceneLayerDescriptor.VERTEX_COLORED_BLEND_DEFINITION_INDEX
+                    : SceneLayerDescriptor.VERTEX_COLORED_OPAQUE_DEFINITION_INDEX;
+        } else {
+            definition = SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX;
+        }
         // ArcGIS requires non-negative resource index. Use the node's own
         // resource index (same as geometry) for both textured and untextured.
         int materialResource = node.getIndex();

@@ -44,9 +44,10 @@ public final class FeatureProcessor {
                         Envelope envelope, Map<String, Object> attributes,
                         List<GeometryProperty> geomProps,
                         Map<LinearRing, List<TextureCoordinate>> texCoords,
-                        Map<LinearRing, Integer> ringTextureIds) throws VisExportException {
+                        Map<LinearRing, Integer> ringTextureIds,
+                        Map<LinearRing, float[]> ringColors) throws VisExportException {
         TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId,
-                texCoords, ringTextureIds);
+                texCoords, ringTextureIds, ringColors);
         if (mesh.isEmpty()) {
             return;
         }

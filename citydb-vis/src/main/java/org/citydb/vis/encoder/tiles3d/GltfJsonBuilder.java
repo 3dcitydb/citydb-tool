@@ -50,6 +50,10 @@ final class GltfJsonBuilder {
     private List<AttrField> attrFields;
     private List<PropertyTableBufferViews> propBvs;
 
+    // Set by writeMaterials when the untextured material gets KHR_materials_unlit
+    // applied; consumed by writeExtensions to declare it in extensionsUsed.
+    private boolean unlitUsed;
+
     GltfJsonBuilder bufferViews(List<GltfBufferView> bufferViews, int binLength) {
         this.bufferViews = bufferViews;
         this.binLength = binLength;
@@ -138,6 +142,13 @@ final class GltfJsonBuilder {
                 accTexCoord = accIdx++;
             }
 
+            int accColor = -1;
+            if (p.bvColors >= 0) {
+                accessors.add(makeAccessor(p.bvColors, COMPONENT_TYPE_FLOAT, p.vertexCount,
+                        "VEC4", null, null));
+                accColor = accIdx++;
+            }
+
             accessors.add(makeAccessor(p.bvIndices, COMPONENT_TYPE_UNSIGNED_INT, p.vertexCount,
                     "SCALAR", null, null));
             int accIndices = accIdx++;
@@ -146,7 +157,7 @@ final class GltfJsonBuilder {
                     "SCALAR", null, null));
             int accFeatureId = accIdx++;
 
-            result.add(new PrimitiveAccessors(accPosition, accNormal, accTexCoord,
+            result.add(new PrimitiveAccessors(accPosition, accNormal, accTexCoord, accColor,
                     accIndices, accFeatureId));
         }
         root.put("accessors", accessors);
@@ -175,8 +186,24 @@ final class GltfJsonBuilder {
 
     /**
      * Emit one textured PBR material per referenced atlas page (each with a
-     * baseColorTexture pointing at its own atlas) plus a single default
-     * untextured PBR material when any untextured primitive is present.
+     * baseColorTexture pointing at its own atlas), plus up to two untextured
+     * materials:
+     * <ul>
+     *   <li><b>plain</b> — default PBR, used by untextured primitives without
+     *       X3DMaterial vertex colors (white surfaces with NORMAL get
+     *       Lambertian shading);</li>
+     *   <li><b>colored</b> — PBR + {@code KHR_materials_unlit}, used by
+     *       untextured primitives carrying X3DMaterial {@code COLOR_0}. Unlit
+     *       prevents Cesium from darkening the authored diffuseColor with
+     *       sun-direction shading and matches the "flat thematic color"
+     *       semantics. Flipped to {@code alphaMode=BLEND} when any colored
+     *       primitive has an alpha less than 1 — vertex {@code COLOR_0}
+     *       multiplies into baseColor so BLEND is required for transparency
+     *       to render.</li>
+     * </ul>
+     * Splitting the untextured path into two materials lets a feature with
+     * mixed X3DMaterial and bare polygons keep PBR shading on the bare
+     * surfaces while X3DMaterial surfaces render at authored intensity.
      * Returns the resolved material indices keyed by atlas page so
      * {@link #writeMeshes} can reference them.
      */
@@ -185,13 +212,24 @@ final class GltfJsonBuilder {
         int pageCount = bvTextures.size();
         int[] texturedIdx = new int[pageCount];
         Arrays.fill(texturedIdx, -1);
-        int untexturedIdx = -1;
+        int untexturedPlainIdx = -1;
+        int untexturedColoredIdx = -1;
 
         boolean[] pageUsed = new boolean[pageCount];
-        boolean needUntextured = false;
+        boolean needPlain = false;
+        boolean needColored = false;
+        boolean coloredNeedsBlend = false;
         for (Primitive p : primitives) {
-            if (p.atlasPage >= 0) pageUsed[p.atlasPage] = true;
-            else needUntextured = true;
+            if (p.atlasPage >= 0) {
+                pageUsed[p.atlasPage] = true;
+            } else if (p.bvColors >= 0) {
+                needColored = true;
+                if (p.anyAlphaBelowOne) {
+                    coloredNeedsBlend = true;
+                }
+            } else {
+                needPlain = true;
+            }
         }
 
         int textureSlot = 0;
@@ -210,18 +248,35 @@ final class GltfJsonBuilder {
             materials.add(material);
         }
 
-        if (needUntextured) {
+        if (needPlain) {
             JSONObject material = new JSONObject();
             JSONObject pbr = new JSONObject();
             pbr.put("metallicFactor", 0.0);
             pbr.put("roughnessFactor", 1.0);
             material.put("pbrMetallicRoughness", pbr);
-            untexturedIdx = materials.size();
+            untexturedPlainIdx = materials.size();
+            materials.add(material);
+        }
+
+        if (needColored) {
+            JSONObject material = new JSONObject();
+            JSONObject pbr = new JSONObject();
+            pbr.put("metallicFactor", 0.0);
+            pbr.put("roughnessFactor", 1.0);
+            material.put("pbrMetallicRoughness", pbr);
+            if (coloredNeedsBlend) {
+                material.put("alphaMode", "BLEND");
+            }
+            JSONObject extensions = new JSONObject();
+            extensions.put("KHR_materials_unlit", new JSONObject());
+            material.put("extensions", extensions);
+            unlitUsed = true;
+            untexturedColoredIdx = materials.size();
             materials.add(material);
         }
 
         root.put("materials", materials);
-        return new MaterialIndices(texturedIdx, untexturedIdx);
+        return new MaterialIndices(texturedIdx, untexturedPlainIdx, untexturedColoredIdx);
     }
 
     /**
@@ -279,12 +334,21 @@ final class GltfJsonBuilder {
             if (acc.texCoord >= 0) {
                 attributes.put("TEXCOORD_0", acc.texCoord);
             }
+            if (acc.color >= 0) {
+                attributes.put("COLOR_0", acc.color);
+            }
             attributes.put("_FEATURE_ID_0", acc.featureId);
             primitive.put("attributes", attributes);
             primitive.put("indices", acc.indices);
-            primitive.put("material", p.atlasPage >= 0
-                    ? materials.textured[p.atlasPage]
-                    : materials.untextured);
+            int materialIdx;
+            if (p.atlasPage >= 0) {
+                materialIdx = materials.textured[p.atlasPage];
+            } else if (p.bvColors >= 0) {
+                materialIdx = materials.untexturedColored;
+            } else {
+                materialIdx = materials.untexturedPlain;
+            }
+            primitive.put("material", materialIdx);
 
             JSONObject meshFeaturesExt = new JSONObject();
             JSONArray featureIdsArr = new JSONArray();
@@ -316,6 +380,9 @@ final class GltfJsonBuilder {
         JSONArray extUsed = new JSONArray();
         extUsed.add("EXT_mesh_features");
         extUsed.add("EXT_structural_metadata");
+        if (unlitUsed) {
+            extUsed.add("KHR_materials_unlit");
+        }
         root.put("extensionsUsed", extUsed);
     }
 
@@ -383,24 +450,30 @@ final class GltfJsonBuilder {
     /**
      * Per-primitive geometry inputs. {@code atlasPage >= 0} selects the
      * textured path (material indexed by atlas page); {@code -1} selects the
-     * default untextured PBR material. {@code bvNormals} and {@code bvUvs}
-     * may be {@code -1} when the primitive doesn't carry that attribute —
-     * textured primitives skip normals, untextured primitives skip UVs.
+     * default untextured PBR material. {@code bvNormals}, {@code bvUvs} and
+     * {@code bvColors} may be {@code -1} when the primitive doesn't carry
+     * that attribute — textured primitives skip normals and colors,
+     * untextured primitives skip UVs and skip colors when no X3DMaterial
+     * was applied. {@code anyAlphaBelowOne} flips the untextured material
+     * to {@code alphaMode=BLEND}.
      */
     record Primitive(int atlasPage, int vertexCount, float[] posMin, float[] posMax,
-                     int bvPositions, int bvNormals, int bvUvs, int bvIndices, int bvFeatureIds) {
+                     int bvPositions, int bvNormals, int bvUvs, int bvColors,
+                     int bvIndices, int bvFeatureIds,
+                     boolean anyAlphaBelowOne) {
     }
 
-    private record PrimitiveAccessors(int position, int normal, int texCoord,
+    private record PrimitiveAccessors(int position, int normal, int texCoord, int color,
                                       int indices, int featureId) {
     }
 
     /**
      * Resolved glTF material indices. {@code textured[p]} is the material
      * index for atlas page {@code p}, or {@code -1} if that page wasn't
-     * referenced. {@code untextured} is {@code -1} when no untextured
-     * primitive is present.
+     * referenced. {@code untexturedPlain} / {@code untexturedColored} are
+     * {@code -1} when the corresponding kind of untextured primitive isn't
+     * present in this GLB.
      */
-    private record MaterialIndices(int[] textured, int untextured) {
+    private record MaterialIndices(int[] textured, int untexturedPlain, int untexturedColored) {
     }
 }
