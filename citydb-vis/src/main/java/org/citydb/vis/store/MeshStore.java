@@ -98,6 +98,7 @@ class MeshStore implements Closeable {
      *   int32  triangleCount
      *   int32[tc*3]    triangles (v0,v1,v2 interleaved)
      *   int64[tc]      featureIds
+     *   int32[tc]      triTexIds (&lt; 0 = untextured triangle)
      * </pre>
      */
     private static ByteBuffer serialize(TriangleMesh mesh) {
