@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
@@ -46,7 +44,6 @@ public class NodePageEntry {
     private int lodThreshold;
     private List<Integer> children;
     private Integer parentIndex;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteNulls)
     private NodeMesh mesh;
     private int featureCount;
 
@@ -71,11 +68,18 @@ public class NodePageEntry {
 
         entry.lodThreshold = node.getLodThreshold();
 
-        List<Integer> childIndices = new ArrayList<>(node.getChildren().size());
-        for (SceneNode child : node.getChildren()) {
-            childIndices.add(child.getIndex());
+        // Omit children for leaf nodes (null → not serialized by fastjson2).
+        // Esri's own I3S samples follow this convention; ArcGIS treats an
+        // explicit empty array as a non-leaf with zero children, which is
+        // semantically different from "this is a leaf".
+        List<SceneNode> nodeChildren = node.getChildren();
+        if (!nodeChildren.isEmpty()) {
+            List<Integer> childIndices = new ArrayList<>(nodeChildren.size());
+            for (SceneNode child : nodeChildren) {
+                childIndices.add(child.getIndex());
+            }
+            entry.children = childIndices;
         }
-        entry.children = childIndices;
 
         // Omit parentIndex for root node (null → not serialized by fastjson2).
         // ArcGIS rejects -1 as "not convertible to Int".
