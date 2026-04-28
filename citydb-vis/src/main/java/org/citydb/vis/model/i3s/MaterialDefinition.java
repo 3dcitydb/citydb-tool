@@ -17,22 +17,37 @@ import com.alibaba.fastjson2.annotation.JSONType;
 @JSONType(alphabetic = false)
 public class MaterialDefinition {
     private static final String CULL_FACE = "none";
+    private static final String ALPHA_MODE_BLEND = "BLEND";
 
     private String cullFace;
+    private String alphaMode;
     private PbrMetallicRoughness pbrMetallicRoughness;
 
     public static MaterialDefinition untextured() {
-        MaterialDefinition material = new MaterialDefinition();
-        material.cullFace = CULL_FACE;
-        material.pbrMetallicRoughness = new PbrMetallicRoughness(null, 0);
-        return material;
+        return pbr(null);
     }
 
     public static MaterialDefinition textured() {
+        return pbr(new BaseColorTexture(0, 0));
+    }
+
+    /**
+     * Untextured material that consumes per-vertex COLOR_0. {@code blend=true}
+     * emits {@code alphaMode=BLEND} for X3DMaterial transparency; opaque
+     * colored nodes rely on I3S's default OPAQUE.
+     */
+    public static MaterialDefinition colored(boolean blend) {
+        MaterialDefinition material = pbr(null);
+        if (blend) {
+            material.alphaMode = ALPHA_MODE_BLEND;
+        }
+        return material;
+    }
+
+    private static MaterialDefinition pbr(BaseColorTexture baseColor) {
         MaterialDefinition material = new MaterialDefinition();
         material.cullFace = CULL_FACE;
-        material.pbrMetallicRoughness = new PbrMetallicRoughness(
-                new BaseColorTexture(0, 0), 0);
+        material.pbrMetallicRoughness = new PbrMetallicRoughness(baseColor, 0);
         return material;
     }
 

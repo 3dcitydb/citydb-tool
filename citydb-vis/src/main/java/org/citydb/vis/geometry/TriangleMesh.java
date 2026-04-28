@@ -8,6 +8,7 @@ package org.citydb.vis.geometry;
 import org.citydb.vis.util.BoundingBoxUtils;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,21 +17,33 @@ import java.util.Map;
 import java.util.Set;
 
 public class TriangleMesh {
+    private static final float[] WHITE_RGBA = {1f, 1f, 1f, 1f};
+
     private final List<double[]> positions;
     private final List<float[]> normals;
     private final List<float[]> texCoords;
+    private final List<float[]> colors;
     private final List<int[]> triangles;
     private final List<Long> featureIds;
     private final List<Integer> triangleTextureIds;
+    // Per-triangle bit: set when the triangle's source polygon carried an
+    // explicit X3DMaterial color (so its vertex COLOR_0 values are authored,
+    // not WHITE_RGBA padding from merge/mixed-feature processing). Drives the
+    // GLB writer's untextured-plain vs untextured-unlit primitive split so
+    // unappeared surfaces in a colored feature still render with PBR shading.
+    private final BitSet triangleColored;
     private boolean hasTexCoords;
+    private boolean hasColors;
 
     public TriangleMesh() {
         positions = new ArrayList<>();
         normals = new ArrayList<>();
         texCoords = new ArrayList<>();
+        colors = new ArrayList<>();
         triangles = new ArrayList<>();
         featureIds = new ArrayList<>();
         triangleTextureIds = new ArrayList<>();
+        triangleColored = new BitSet();
     }
 
     public List<double[]> getPositions() {
@@ -58,6 +71,14 @@ public class TriangleMesh {
         return this;
     }
 
+    public List<float[]> getColors() {
+        return Collections.unmodifiableList(colors);
+    }
+
+    public boolean hasColors() {
+        return hasColors;
+    }
+
     public List<Long> getFeatureIds() {
         return Collections.unmodifiableList(featureIds);
     }
@@ -78,10 +99,13 @@ public class TriangleMesh {
         int index = positions.size();
         positions.add(new double[]{x, y, z});
         normals.add(new float[]{nx, ny, nz});
-        // If the mesh already has UVs, pad this vertex so the
-        // texCoords.size() == positions.size() invariant holds.
+        // If the mesh already has UVs/colors, pad this vertex so the
+        // texCoords.size()/colors.size() == positions.size() invariant holds.
         if (hasTexCoords) {
             texCoords.add(new float[]{0f, 0f});
+        }
+        if (hasColors) {
+            colors.add(WHITE_RGBA.clone());
         }
         return index;
     }
@@ -100,21 +124,77 @@ public class TriangleMesh {
             hasTexCoords = true;
         }
         texCoords.add(new float[]{u, v});
+        if (hasColors) {
+            colors.add(WHITE_RGBA.clone());
+        }
         return index;
     }
 
-    public void addTriangle(int v0, int v1, int v2, long featureId, int textureId) {
+    public int addVertex(double x, double y, double z, float nx, float ny, float nz,
+                         float r, float g, float b, float a) {
+        int index = positions.size();
+        positions.add(new double[]{x, y, z});
+        normals.add(new float[]{nx, ny, nz});
+        if (hasTexCoords) {
+            texCoords.add(new float[]{0f, 0f});
+        }
+        if (!hasColors) {
+            while (colors.size() < index) {
+                colors.add(WHITE_RGBA.clone());
+            }
+            hasColors = true;
+        }
+        colors.add(new float[]{r, g, b, a});
+        return index;
+    }
+
+    public int addVertex(double x, double y, double z, float nx, float ny, float nz,
+                         float u, float v, float r, float g, float b, float a) {
+        int index = positions.size();
+        positions.add(new double[]{x, y, z});
+        normals.add(new float[]{nx, ny, nz});
+        if (!hasTexCoords) {
+            while (texCoords.size() < index) {
+                texCoords.add(new float[]{0f, 0f});
+            }
+            hasTexCoords = true;
+        }
+        texCoords.add(new float[]{u, v});
+        if (!hasColors) {
+            while (colors.size() < index) {
+                colors.add(WHITE_RGBA.clone());
+            }
+            hasColors = true;
+        }
+        colors.add(new float[]{r, g, b, a});
+        return index;
+    }
+
+    public void addTriangle(int v0, int v1, int v2, long featureId, int textureId, boolean colored) {
+        int triIndex = triangles.size();
         triangles.add(new int[]{v0, v1, v2});
         featureIds.add(featureId);
         triangleTextureIds.add(textureId);
+        if (colored) {
+            triangleColored.set(triIndex);
+        }
     }
 
     public List<Integer> getTriangleTextureIds() {
         return Collections.unmodifiableList(triangleTextureIds);
     }
 
+    /**
+     * Whether the triangle at the given index came from an X3DMaterial-colored
+     * polygon. Always {@code false} when {@link #hasColors()} is {@code false}.
+     */
+    public boolean isTriangleColored(int triIndex) {
+        return triangleColored.get(triIndex);
+    }
+
     public void merge(TriangleMesh other) {
         int offset = positions.size();
+        int otherSize = other.positions.size();
         positions.addAll(other.positions);
         normals.addAll(other.normals);
 
@@ -128,7 +208,6 @@ public class TriangleMesh {
             if (other.hasTexCoords) {
                 texCoords.addAll(other.texCoords);
             } else {
-                int otherSize = other.positions.size();
                 for (int i = 0; i < otherSize; i++) {
                     texCoords.add(new float[]{0f, 0f});
                 }
@@ -136,11 +215,35 @@ public class TriangleMesh {
             hasTexCoords = true;
         }
 
+        // Same invariant for colors: pad missing side with white so colored
+        // and uncolored sub-meshes can coexist within one node.
+        if (hasColors || other.hasColors) {
+            while (colors.size() < offset) {
+                colors.add(WHITE_RGBA.clone());
+            }
+            if (other.hasColors) {
+                colors.addAll(other.colors);
+            } else {
+                for (int i = 0; i < otherSize; i++) {
+                    colors.add(WHITE_RGBA.clone());
+                }
+            }
+            hasColors = true;
+        }
+
+        int triOffset = triangles.size();
         for (int[] tri : other.triangles) {
             triangles.add(new int[]{tri[0] + offset, tri[1] + offset, tri[2] + offset});
         }
         featureIds.addAll(other.featureIds);
         triangleTextureIds.addAll(other.triangleTextureIds);
+
+        // Shift other.triangleColored bits by triOffset and OR into ours.
+        // BitSet has no built-in shift, so iterate set bits explicitly.
+        for (int bit = other.triangleColored.nextSetBit(0); bit >= 0;
+                bit = other.triangleColored.nextSetBit(bit + 1)) {
+            triangleColored.set(bit + triOffset);
+        }
     }
 
     /**
@@ -224,6 +327,9 @@ public class TriangleMesh {
             List<int[]> newTriangles = new ArrayList<>();
             List<Long> newFeatureIds = new ArrayList<>();
             List<Integer> newTriTexIds = new ArrayList<>();
+            // Per-new-triangle colored flag, inherited from the parent triangle
+            // being split. Both sub-triangles share the parent's flag.
+            List<Boolean> newColored = new ArrayList<>();
 
             for (int s = 0; s < splits.size(); s++) {
                 int[] split = splits.get(s);
@@ -236,24 +342,42 @@ public class TriangleMesh {
                 int ei3 = tri[(edgeSlot + 2) % 3];
                 long fid = featureIds.get(ti);
                 int texId = triangleTextureIds.get(ti);
+                boolean colored = triangleColored.get(ti);
 
                 // New vertex at vi's position with the split triangle's normal.
-                // Interpolate UV along the edge at the parametric position t.
+                // Interpolate UV/color along the edge at the parametric position t.
                 // Assumes per-face normals (all edge vertices share the same
                 // normal, as emitted by PolygonTriangulator). If upstream ever
                 // produces per-vertex smooth normals, this should interpolate.
                 float[] triNormal = normals.get(ei1);
                 double[] viPos = positions.get(vi);
+                float tParam = (float) splitParams.get(s).doubleValue();
                 int newVi;
-                if (hasTexCoords) {
-                    float[] uv1 = texCoords.get(ei1);
-                    float[] uv2 = texCoords.get(ei2);
-                    float tParam = (float) splitParams.get(s).doubleValue();
-                    float interpU = uv1[0] + tParam * (uv2[0] - uv1[0]);
-                    float interpV = uv1[1] + tParam * (uv2[1] - uv1[1]);
+                if (hasTexCoords && hasColors) {
+                    float[] uv1 = texCoords.get(ei1), uv2 = texCoords.get(ei2);
+                    float[] c1 = colors.get(ei1), c2 = colors.get(ei2);
                     newVi = addVertex(viPos[0], viPos[1], viPos[2],
                             triNormal[0], triNormal[1], triNormal[2],
-                            interpU, interpV);
+                            uv1[0] + tParam * (uv2[0] - uv1[0]),
+                            uv1[1] + tParam * (uv2[1] - uv1[1]),
+                            c1[0] + tParam * (c2[0] - c1[0]),
+                            c1[1] + tParam * (c2[1] - c1[1]),
+                            c1[2] + tParam * (c2[2] - c1[2]),
+                            c1[3] + tParam * (c2[3] - c1[3]));
+                } else if (hasTexCoords) {
+                    float[] uv1 = texCoords.get(ei1), uv2 = texCoords.get(ei2);
+                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
+                            triNormal[0], triNormal[1], triNormal[2],
+                            uv1[0] + tParam * (uv2[0] - uv1[0]),
+                            uv1[1] + tParam * (uv2[1] - uv1[1]));
+                } else if (hasColors) {
+                    float[] c1 = colors.get(ei1), c2 = colors.get(ei2);
+                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
+                            triNormal[0], triNormal[1], triNormal[2],
+                            c1[0] + tParam * (c2[0] - c1[0]),
+                            c1[1] + tParam * (c2[1] - c1[1]),
+                            c1[2] + tParam * (c2[2] - c1[2]),
+                            c1[3] + tParam * (c2[3] - c1[3]));
                 } else {
                     newVi = addVertex(viPos[0], viPos[1], viPos[2],
                             triNormal[0], triNormal[1], triNormal[2]);
@@ -263,24 +387,38 @@ public class TriangleMesh {
                 newTriangles.add(new int[]{ei1, newVi, ei3});
                 newFeatureIds.add(fid);
                 newTriTexIds.add(texId);
+                newColored.add(colored);
                 newTriangles.add(new int[]{newVi, ei2, ei3});
                 newFeatureIds.add(fid);
                 newTriTexIds.add(texId);
+                newColored.add(colored);
             }
 
             List<int[]> updatedTri = new ArrayList<>();
             List<Long> updatedFid = new ArrayList<>();
             List<Integer> updatedTexId = new ArrayList<>();
+            BitSet updatedColored = new BitSet();
+            int outIdx = 0;
             for (int ti = 0; ti < triCount; ti++) {
                 if (!removed.contains(ti)) {
                     updatedTri.add(triangles.get(ti));
                     updatedFid.add(featureIds.get(ti));
                     updatedTexId.add(triangleTextureIds.get(ti));
+                    if (triangleColored.get(ti)) {
+                        updatedColored.set(outIdx);
+                    }
+                    outIdx++;
                 }
             }
             updatedTri.addAll(newTriangles);
             updatedFid.addAll(newFeatureIds);
             updatedTexId.addAll(newTriTexIds);
+            for (Boolean c : newColored) {
+                if (c) {
+                    updatedColored.set(outIdx);
+                }
+                outIdx++;
+            }
 
             triangles.clear();
             triangles.addAll(updatedTri);
@@ -288,6 +426,8 @@ public class TriangleMesh {
             featureIds.addAll(updatedFid);
             triangleTextureIds.clear();
             triangleTextureIds.addAll(updatedTexId);
+            triangleColored.clear();
+            triangleColored.or(updatedColored);
         }
     }
 
@@ -315,6 +455,7 @@ public class TriangleMesh {
         List<int[]> kept = new ArrayList<>();
         List<Long> keptIds = new ArrayList<>();
         List<Integer> keptTexIds = new ArrayList<>();
+        BitSet keptColored = new BitSet();
 
         for (int i = 0; i < triangles.size(); i++) {
             int[] tri = triangles.get(i);
@@ -328,6 +469,9 @@ public class TriangleMesh {
             if (h0 > h1) { long t = h0; h0 = h1; h1 = t; }
 
             if (seen.add(new TriangleKey(h0, h1, h2))) {
+                if (triangleColored.get(i)) {
+                    keptColored.set(kept.size());
+                }
                 kept.add(tri);
                 keptIds.add(featureIds.get(i));
                 keptTexIds.add(triangleTextureIds.get(i));
@@ -341,6 +485,8 @@ public class TriangleMesh {
             featureIds.addAll(keptIds);
             triangleTextureIds.clear();
             triangleTextureIds.addAll(keptTexIds);
+            triangleColored.clear();
+            triangleColored.or(keptColored);
         }
     }
 

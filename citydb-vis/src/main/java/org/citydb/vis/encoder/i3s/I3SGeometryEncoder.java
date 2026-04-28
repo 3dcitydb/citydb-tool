@@ -35,19 +35,31 @@ import java.util.List;
 
 /**
  * Encodes I3S node meshes into a single Draco-compressed geometry buffer
- * ({@code geometries/0}). Attributes for untextured nodes are
- * {@code position, normal, feature-index}; textured nodes use
- * {@code position, uv0, feature-index} with normals regenerated at render
- * time by the client.
+ * ({@code geometries/0}). Attribute layout per node category:
+ * <ul>
+ *   <li>untextured: {@code position, normal, feature-index}</li>
+ *   <li>textured:   {@code position, uv0, [color,] feature-index} — normals
+ *       regenerated client-side; {@code color} is added when the layer
+ *       carries any baked X3DMaterial colors</li>
+ *   <li>colored:    {@code position, normal, color, feature-index} — no
+ *       texture, baked X3DMaterial vertex colors only</li>
+ * </ul>
  */
 public class I3SGeometryEncoder {
     /**
-     * Unique ID for the feature-index Draco attribute. Set explicitly via
-     * {@link PointAttribute#setUniqueId} so the attribute can be referenced
-     * unambiguously in the injected per-attribute metadata section
-     * (independent of the attribute's position in the Draco stream).
+     * Unique ID for the feature-index Draco attribute, used to key the
+     * injected metadata block to that attribute. Must not collide with the
+     * positional uniqueIds Drako auto-assigns to POSITION/NORMAL/UV/COLOR
+     * (0..N-1), so we pick a value well above any plausible attribute slot.
      */
-    private static final short FEATURE_INDEX_UID = 2;
+    private static final short FEATURE_INDEX_UID = 100;
+    /** Quantization bits per COLOR channel — 8 matches the browser's 8 bpc
+     *  framebuffer; higher just bloats the Draco buffer for no visible gain. */
+    private static final int COLOR_QUANT_BITS = 8;
+    /** Default RGBA for vertices in a layer that carries colors but a given
+     *  mesh has none — keeps COLOR_0 in lock-step with the layer's
+     *  compressedAttributes declaration without tinting the texture sample. */
+    private static final float[] WHITE_RGBA = new float[]{1f, 1f, 1f, 1f};
     /** Draco header size: "DRACO" (5) + major (1) + minor (1) + type (1) + method (1) + flags (2) */
     private static final int DRACO_HEADER_SIZE = 11;
     /** Bit in the Draco header flags field that indicates metadata is present. */
@@ -75,13 +87,24 @@ public class I3SGeometryEncoder {
      *         node). The caller must use this list to align per-node
      *         feature/attribute output with the Draco feature-index attribute.
      */
-    public NodeGeometryResult writeNodeGeometry(Path layerDir, SceneNode node) throws IOException {
+    public NodeGeometryResult writeNodeGeometry(Path layerDir, SceneNode node,
+                                                boolean layerHasColors) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
+        // Pure-colored path: no texture + baked X3DMaterial colors. Textured
+        // nodes that also carry colors keep the textured material and let
+        // glTF PBR modulate the texture sample via COLOR_0.
+        boolean nodeIsColored = !hasTexCoords && mesh.hasColors();
+        // The Draco buffer must mirror the layer's compressedAttributes
+        // declaration exactly, otherwise CesiumJS drops the node. Textured
+        // nodes in a layer with hasColors emit a default-white COLOR_0;
+        // untextured nodes emit COLOR_0 only on the pure-colored path.
+        boolean emitColor = layerHasColors && (hasTexCoords || nodeIsColored);
 
         if (!hasTexCoords) {
             node.setTextured(false);
         }
+        node.setColored(nodeIsColored);
 
         BoundingVolume mbs = node.getBoundingVolume();
         double centerX = mbs.getCenterX();
@@ -97,12 +120,10 @@ public class I3SGeometryEncoder {
 
         int vertexCount = weld.vertexCount();
 
-        // Collect positions, ECEF normals (untextured only), and UVs (textured
-        // only) into arrays for Draco encoding. Textured nodes skip normals —
-        // the client regenerates them from geometry.
         float[][] outPositions = new float[vertexCount][];
         float[][] outNormals = hasTexCoords ? null : new float[vertexCount][3];
         float[][] outUVs = hasTexCoords ? new float[vertexCount][] : null;
+        float[][] outColors = emitColor ? new float[vertexCount][] : null;
 
         // ENU-to-ECEF rotation at the node's geographic center.
         // Note on normal consistency: per-polygon normals come from
@@ -115,6 +136,8 @@ public class I3SGeometryEncoder {
         GeoTransform.EnuBasis enu = outNormals != null
                 ? GeoTransform.EnuBasis.at(centerX, centerY) : null;
 
+        boolean meshHasColors = mesh.hasColors();
+        boolean[] anyAlphaBelowOne = new boolean[1];
         VertexWelder.iterateOutputVertices(weld, mesh, (idx, weldedPos, srcIdx) -> {
             outPositions[idx] = weldedPos;
             if (outNormals != null) {
@@ -123,7 +146,25 @@ public class I3SGeometryEncoder {
             if (outUVs != null) {
                 outUVs[idx] = mesh.getTexCoords().get(srcIdx);
             }
+            if (outColors != null) {
+                if (meshHasColors) {
+                    float[] c = mesh.getColors().get(srcIdx);
+                    outColors[idx] = c;
+                    if (c[3] < 0.999f) {
+                        anyAlphaBelowOne[0] = true;
+                    }
+                } else {
+                    outColors[idx] = WHITE_RGBA;
+                }
+            }
         });
+
+        // Textured material is layer-level OPAQUE — mixed-node colored polys
+        // lose alpha by design (one-material-per-node I3S limitation); only
+        // pure-colored nodes can opt into BLEND.
+        if (nodeIsColored) {
+            node.setColoredBlend(anyAlphaBelowOne[0]);
+        }
 
         List<double[]> featureAabbs = computeFeatureAabbs(weld, centerX, centerY, centerZ);
 
@@ -134,7 +175,7 @@ public class I3SGeometryEncoder {
         List<Long> rangeFeatureIds = weld.rangeFeatureIds();
 
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
-                outUVs, vertexFeatureIndices, numTriangles, rangeFeatureIds);
+                outUVs, outColors, vertexFeatureIndices, numTriangles, rangeFeatureIds);
         return new NodeGeometryResult(rangeFeatureIds, featureAabbs);
     }
 
@@ -173,21 +214,20 @@ public class I3SGeometryEncoder {
 
     /**
      * Encode geometry using Draco compression. Attribute order matches the
-     * compressedAttributes declaration in geometryDefinitions:
-     * <ul>
-     *   <li>Untextured: {@code position, normal, feature-index}</li>
-     *   <li>Textured:   {@code position, uv0, feature-index} — normals are
-     *       generated at runtime by CesiumJS from geometry</li>
-     * </ul>
+     * compressedAttributes declaration in geometryDefinitions (see class
+     * Javadoc). CesiumJS {@code decodeI3S.js} auto-maps Draco
+     * {@code AttributeType.COLOR} to glTF {@code COLOR_0} (FLOAT VEC4), so
+     * no metadata override is needed for the colored variant.
      */
     private static void writeDracoGeometry(Path layerDir, SceneNode node,
                                     double centerLatDeg,
                                     float[][] positions, float[][] normals,
-                                    float[][] uvs,
+                                    float[][] uvs, float[][] colors,
                                     int[] featureIndices, int numTriangles,
                                     List<Long> rangeFeatureIds) throws IOException {
         int numVertices = positions.length;
         boolean hasUV = uvs != null;
+        boolean hasColor = colors != null;
 
         // Draco uses uniform quantization for POSITION — the largest axis range
         // determines the grid.  Scale X/Y to meters so all axes share a comparable range.
@@ -227,9 +267,41 @@ public class I3SGeometryEncoder {
             dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.TEX_COORD, uvVectors));
         }
 
+        // COLOR attribute. The peculiar FLOAT32 + pre-scaled-to-[0,255]
+        // encoding is forced by two library quirks:
+        //  - CesiumJS decodeI3S unconditionally divides decoded color values
+        //    by 255, so the on-disk payload must already be in [0, 255];
+        //  - Drako's integer attribute encoder loses every component past
+        //    the first for multi-component attributes, so UINT8 RGBA decodes
+        //    as (R, 0, 0, 0). Only the FLOAT32 quantization path is
+        //    multi-component-correct.
+        // FLOAT32 with values pre-scaled to [0, 255] plus setColorBits(8)
+        // threads both: Cesium's /255 yields the original [0, 1] colors,
+        // and Drako's 256-level quantizer round-trips integer-valued sources
+        // exactly.
+        if (hasColor) {
+            DataBuffer colorBuffer = new DataBuffer();
+            colorBuffer.setCapacity(numVertices * 16);
+            for (int i = 0; i < numVertices; i++) {
+                float[] c = colors[i];
+                int base = i * 16;
+                colorBuffer.write(base,      clampUnit(c[0]) * 255f);
+                colorBuffer.write(base + 4,  clampUnit(c[1]) * 255f);
+                colorBuffer.write(base + 8,  clampUnit(c[2]) * 255f);
+                colorBuffer.write(base + 12, clampUnit(c[3]) * 255f);
+            }
+            PointAttribute colorAttr = new PointAttribute(
+                    AttributeType.COLOR, DataType.FLOAT32, 4, false, 16, 0, colorBuffer);
+            colorAttr.setNumUniqueEntries(numVertices);
+            dracoMesh.addAttribute(colorAttr);
+        }
+
         // Feature-index attribute (GENERIC, INT32, 1 component per vertex).
-        // Set uniqueId explicitly so we can reference it in injected metadata
-        // independently of the attribute's position in the Draco stream.
+        // setUniqueId must be called AFTER addAttribute: Drako's addAttribute
+        // overwrites uniqueId with the attribute's positional index, so an
+        // earlier call would be silently lost — and the injected metadata
+        // block (keyed by FEATURE_INDEX_UID) would then map to the wrong
+        // attribute slot.
         DataBuffer intBuffer = new DataBuffer();
         intBuffer.setCapacity(numVertices * 4);
         for (int i = 0; i < numVertices; i++) {
@@ -238,8 +310,8 @@ public class I3SGeometryEncoder {
         PointAttribute featureAttr = new PointAttribute(
                 AttributeType.GENERIC, DataType.INT32, 1, false, 4, 0, intBuffer);
         featureAttr.setNumUniqueEntries(numVertices);
-        featureAttr.setUniqueId(FEATURE_INDEX_UID);
         dracoMesh.addAttribute(featureAttr);
+        featureAttr.setUniqueId(FEATURE_INDEX_UID);
 
         // Faces: triangle soup — sequential indices (0,1,2), (3,4,5), ...
         for (int t = 0; t < numTriangles; t++) {
@@ -253,6 +325,9 @@ public class I3SGeometryEncoder {
         }
         if (hasUV) {
             options.setTextureCoordinateBits(12);
+        }
+        if (hasColor) {
+            options.setColorBits(COLOR_QUANT_BITS);
         }
         options.setCompressionLevel(DracoCompressionLevel.STANDARD);
 
@@ -399,6 +474,10 @@ public class I3SGeometryEncoder {
         byte[] bytes = new byte[8];
         ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).putDouble(value);
         return bytes;
+    }
+
+    private static float clampUnit(float v) {
+        return v < 0f ? 0f : (v > 1f ? 1f : v);
     }
 
     /** Encode a non-negative int as a Draco varint (LEB128). */
