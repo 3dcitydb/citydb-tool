@@ -10,10 +10,11 @@ import com.alibaba.fastjson2.annotation.JSONType;
 import java.util.List;
 
 /**
- * Geometry definition with a single Draco-compressed geometryBuffer.
- * Attributes: {@code position + (normal or uv0) + feature-index}. The
- * feature-index attribute carries per-vertex feature identification for
- * picking (via injected {@code i3s-feature-ids} Draco metadata).
+ * Geometry definition with a single Draco-compressed geometryBuffer. The
+ * four layouts cover the cross-product of textured/untextured and
+ * with/without baked X3DMaterial vertex colors. The feature-index attribute
+ * carries per-vertex feature identification for picking (via injected
+ * {@code i3s-feature-ids} Draco metadata).
  */
 @JSONType(alphabetic = false)
 public class GeometryDefinition {
@@ -21,23 +22,48 @@ public class GeometryDefinition {
 
     public static GeometryDefinition untextured() {
         GeometryDefinition def = new GeometryDefinition();
-        def.geometryBuffers = List.of(DracoBuffer.of(false));
+        def.geometryBuffers = List.of(DracoBuffer.untextured());
         return def;
     }
 
     public static GeometryDefinition textured() {
         GeometryDefinition def = new GeometryDefinition();
-        def.geometryBuffers = List.of(DracoBuffer.of(true));
+        def.geometryBuffers = List.of(DracoBuffer.textured());
+        return def;
+    }
+
+    public static GeometryDefinition texturedColored() {
+        GeometryDefinition def = new GeometryDefinition();
+        def.geometryBuffers = List.of(DracoBuffer.texturedColored());
+        return def;
+    }
+
+    public static GeometryDefinition colored() {
+        GeometryDefinition def = new GeometryDefinition();
+        def.geometryBuffers = List.of(DracoBuffer.colored());
         return def;
     }
 
     public static class DracoBuffer {
         private CompressedAttributes compressedAttributes;
 
-        public static DracoBuffer of(boolean withUV) {
-            List<String> attrs = withUV
-                    ? List.of("position", "uv0", "feature-index")
-                    : List.of("position", "normal", "feature-index");
+        public static DracoBuffer untextured() {
+            return wrap(List.of("position", "normal", "feature-index"));
+        }
+
+        public static DracoBuffer textured() {
+            return wrap(List.of("position", "uv0", "feature-index"));
+        }
+
+        public static DracoBuffer texturedColored() {
+            return wrap(List.of("position", "uv0", "color", "feature-index"));
+        }
+
+        public static DracoBuffer colored() {
+            return wrap(List.of("position", "normal", "color", "feature-index"));
+        }
+
+        private static DracoBuffer wrap(List<String> attrs) {
             DracoBuffer buffer = new DracoBuffer();
             buffer.compressedAttributes = new CompressedAttributes("draco", attrs);
             return buffer;

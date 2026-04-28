@@ -31,8 +31,10 @@ public class I3SJsonSerializer {
 
     public void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
                                     List<AttrField> attrFields,
-                                    boolean hasTextures) throws IOException {
-        SceneLayerDescriptor descriptor = SceneLayerDescriptor.of(sceneLayer, attrFields, hasTextures);
+                                    boolean hasTextures,
+                                    boolean hasColors) throws IOException {
+        SceneLayerDescriptor descriptor = SceneLayerDescriptor.of(sceneLayer, attrFields,
+                hasTextures, hasColors);
         JsonHelper.writePojo(layerDir.resolve("index.json"), descriptor);
     }
 
