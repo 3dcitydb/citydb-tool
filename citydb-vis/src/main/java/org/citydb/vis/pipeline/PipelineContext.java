@@ -40,6 +40,8 @@ import java.util.Set;
  *       {@link org.citydb.vis.pipeline.stages.AggregationStage} to place
  *       cells in the 2×2 aggregation tree</li>
  *   <li>{@link #hasTextures()} — whether any feature registered a texture</li>
+ *   <li>{@link #hasColors()} — whether any mesh carries baked vertex colors
+ *       (from X3DMaterial diffuseColor + transparency)</li>
  * </ul>
  */
 public final class PipelineContext {
@@ -55,6 +57,7 @@ public final class PipelineContext {
     private Set<Integer> meshNodeIndices;
     private Map<Integer, int[]> cellRootGridCoords;
     private boolean hasTextures;
+    private boolean hasColors;
 
     public PipelineContext(VisExportStores stores,
                            VisFormatOptions formatOptions,
@@ -146,6 +149,15 @@ public final class PipelineContext {
 
     public PipelineContext setHasTextures(boolean hasTextures) {
         this.hasTextures = hasTextures;
+        return this;
+    }
+
+    public boolean hasColors() {
+        return hasColors;
+    }
+
+    public PipelineContext setHasColors(boolean hasColors) {
+        this.hasColors = hasColors;
         return this;
     }
 }

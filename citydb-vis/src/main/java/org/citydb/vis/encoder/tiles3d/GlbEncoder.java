@@ -83,46 +83,52 @@ public class GlbEncoder {
 
         DatasetFrame frame = DatasetFrame.from(mbs, datasetCenter);
 
-        // Partition valid triangles by atlas page (textured) plus a single
-        // untextured bucket. Face-range index is tracked per entry so the
-        // per-vertex _FEATURE_ID_0 can reference the shared property table
-        // regardless of which primitive the triangle lands in — this
-        // preserves the original encoder's semantics, where two
-        // non-contiguous runs of the same feature become two distinct
-        // property table rows.
+        // Partition valid triangles by atlas page (textured) plus two
+        // untextured buckets — "plain" (renders with PBR shading, default
+        // baseColor) and "colored" (X3DMaterial vertex colors, renders
+        // unlit). Face-range index is tracked per entry so the per-vertex
+        // _FEATURE_ID_0 can reference the shared property table regardless
+        // of which primitive the triangle lands in — this preserves the
+        // original encoder's semantics, where two non-contiguous runs of
+        // the same feature become two distinct property table rows.
         int pageCount = atlasBytesList.size();
         List<List<TriEntry>> texturedTrisByPage;
-        List<TriEntry> untexturedTris;
+        List<TriEntry> untexturedPlainTris = new ArrayList<>();
+        List<TriEntry> untexturedColoredTris = new ArrayList<>();
         if (hasTexture) {
             texturedTrisByPage = new ArrayList<>(pageCount);
             for (int i = 0; i < pageCount; i++) {
                 texturedTrisByPage.add(new ArrayList<>());
             }
-            untexturedTris = new ArrayList<>();
-            partitionByAtlasPage(mesh, weld, texIdToPage, texturedTrisByPage, untexturedTris);
+            partitionByAtlasPage(mesh, weld, texIdToPage, texturedTrisByPage,
+                    untexturedPlainTris, untexturedColoredTris);
         } else {
             texturedTrisByPage = Collections.emptyList();
-            untexturedTris = collectAllEntries(weld);
+            collectAllEntries(mesh, weld, untexturedPlainTris, untexturedColoredTris);
         }
 
         int featureCount = weld.faceRanges().size();
 
-        // One primitive per non-empty atlas page + optional untextured
-        // primitive. An empty page can arise when every triangle routed to it
-        // was dropped by the weld/degenerate filter; its material + texture
-        // would still be referenced in the glTF JSON, but no primitive would
-        // draw it, so we simply skip it below and the JSON builder sees a
-        // compact set of primitives.
-        List<PrimitiveArrays> primitives = new ArrayList<>(pageCount + 1);
+        // One primitive per non-empty atlas page + up to two untextured
+        // primitives (plain + colored). An empty page can arise when every
+        // triangle routed to it was dropped by the weld/degenerate filter;
+        // its material + texture would still be referenced in the glTF JSON,
+        // but no primitive would draw it, so we simply skip it below and the
+        // JSON builder sees a compact set of primitives.
+        List<PrimitiveArrays> primitives = new ArrayList<>(pageCount + 2);
         for (int p = 0; p < pageCount; p++) {
             List<TriEntry> tris = texturedTrisByPage.get(p);
             if (!tris.isEmpty()) {
                 primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, frame));
             }
         }
-        if (!untexturedTris.isEmpty()) {
-            primitives.add(buildPrimitiveArrays(mesh, weld, untexturedTris,
-                    UNTEXTURED_PAGE, frame));
+        if (!untexturedPlainTris.isEmpty()) {
+            primitives.add(buildPrimitiveArrays(mesh, weld, untexturedPlainTris,
+                    UNTEXTURED_PLAIN_PAGE, frame));
+        }
+        if (!untexturedColoredTris.isEmpty()) {
+            primitives.add(buildPrimitiveArrays(mesh, weld, untexturedColoredTris,
+                    UNTEXTURED_COLORED_PAGE, frame));
         }
         node.setMesh(null); // release source mesh; no longer needed
 
@@ -170,9 +176,11 @@ public class GlbEncoder {
         int bvPositions = bin.addFloat32Array(p.positions);
         int bvNormals = p.normals != null ? bin.addFloat32Array(p.normals) : -1;
         int bvUvs = p.uvs != null ? bin.addFloat32Array(p.uvs) : -1;
+        int bvColors = p.colors != null ? bin.addFloat32Array(p.colors) : -1;
         int bvIndices = bin.addUint32Array(p.indices);
         int bvFeatureIds = bin.addUint32Array(p.featureIds);
-        return new PrimitiveBufferIds(bvPositions, bvNormals, bvUvs, bvIndices, bvFeatureIds);
+        return new PrimitiveBufferIds(bvPositions, bvNormals, bvUvs, bvColors,
+                bvIndices, bvFeatureIds);
     }
 
     private static List<GltfJsonBuilder.Primitive> toJsonPrimitives(
@@ -184,22 +192,25 @@ public class GlbEncoder {
             out.add(new GltfJsonBuilder.Primitive(
                     p.atlasPage,
                     p.vertexCount, p.posMin, p.posMax,
-                    b.positions, b.normals, b.uvs, b.indices, b.featureIds));
+                    b.positions, b.normals, b.uvs, b.colors, b.indices, b.featureIds,
+                    p.anyAlphaBelowOne));
         }
         return out;
     }
 
     /**
      * Walk valid triangles in face-range order and bucket them by atlas page
-     * (for textured triangles) or into the untextured list. The face-range
-     * index is tracked alongside the original triangle index so the per-vertex
-     * {@code _FEATURE_ID_0} can reference the shared property table regardless
-     * of which primitive the triangle ends up in.
+     * (textured) or into one of two untextured buckets — plain (no
+     * X3DMaterial) or colored (carries X3DMaterial vertex color). The
+     * face-range index is tracked alongside the original triangle index so
+     * the per-vertex {@code _FEATURE_ID_0} can reference the shared property
+     * table regardless of which primitive the triangle ends up in.
      */
     private static void partitionByAtlasPage(TriangleMesh mesh, VertexWelder.WeldResult weld,
                                              Map<Integer, Integer> texIdToPage,
                                              List<List<TriEntry>> texturedByPage,
-                                             List<TriEntry> untextured) {
+                                             List<TriEntry> untexturedPlain,
+                                             List<TriEntry> untexturedColored) {
         List<Integer> validTriIndices = weld.validTriIndices();
         List<int[]> faceRanges = weld.faceRanges();
         List<Integer> triTexIds = mesh.getTriangleTextureIds();
@@ -217,32 +228,35 @@ public class GlbEncoder {
                 Integer page = texIdToPage.get(texId);
                 // A texId missing from the map means the atlas builder dropped
                 // this texture (e.g. corrupt source). Route the triangle to
-                // the untextured bucket so the feature still renders.
+                // an untextured bucket so the feature still renders.
                 if (page != null) {
                     texturedByPage.get(page).add(entry);
-                } else {
-                    untextured.add(entry);
+                    continue;
                 }
-            } else {
-                untextured.add(entry);
             }
+            (mesh.isTriangleColored(ti) ? untexturedColored : untexturedPlain).add(entry);
         }
     }
 
-    /** Untextured-only node: every valid triangle goes straight to the untextured primitive. */
-    private static List<TriEntry> collectAllEntries(VertexWelder.WeldResult weld) {
+    /**
+     * Untextured-only node: every valid triangle goes into one of the two
+     * untextured buckets, split by per-triangle X3DMaterial colored bit.
+     */
+    private static void collectAllEntries(TriangleMesh mesh, VertexWelder.WeldResult weld,
+                                          List<TriEntry> untexturedPlain,
+                                          List<TriEntry> untexturedColored) {
         List<Integer> validTriIndices = weld.validTriIndices();
         List<int[]> faceRanges = weld.faceRanges();
-        List<TriEntry> entries = new ArrayList<>(validTriIndices.size());
         int rangeIdx = 0;
         int[] currentRange = faceRanges.get(0);
         for (int i = 0; i < validTriIndices.size(); i++) {
             while (i > currentRange[1]) {
                 currentRange = faceRanges.get(++rangeIdx);
             }
-            entries.add(new TriEntry(validTriIndices.get(i), rangeIdx));
+            int ti = validTriIndices.get(i);
+            TriEntry entry = new TriEntry(ti, rangeIdx);
+            (mesh.isTriangleColored(ti) ? untexturedColored : untexturedPlain).add(entry);
         }
-        return entries;
     }
 
     /**
@@ -250,22 +264,29 @@ public class GlbEncoder {
      * Rewrites welded positions from ENU (meters, East/North/Up) into glTF
      * Y-up (X=East, Y=Up, Z=-North), collects per-axis min/max for the
      * POSITION accessor, and emits {@code NORMAL} (when untextured) or
-     * {@code TEXCOORD_0} (when textured) accordingly. {@code atlasPage >= 0}
-     * selects the textured path; {@link #UNTEXTURED_PAGE} selects untextured.
+     * {@code TEXCOORD_0} (when textured) accordingly. {@code atlasPage}:
+     * {@code >=0} = textured (atlas page index); {@link #UNTEXTURED_PLAIN_PAGE}
+     * = untextured-no-color (PBR-shaded); {@link #UNTEXTURED_COLORED_PAGE} =
+     * untextured-with-X3DMaterial (emits {@code COLOR_0}, rendered unlit). The
+     * resulting array's {@code anyAlphaBelowOne} flag drives
+     * {@code alphaMode=BLEND} downstream.
      */
     private static PrimitiveArrays buildPrimitiveArrays(TriangleMesh mesh,
                                                         VertexWelder.WeldResult weld,
                                                         List<TriEntry> triEntries,
                                                         int atlasPage, DatasetFrame frame) {
         boolean textured = atlasPage >= 0;
+        boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
         int vertexCount = triEntries.size() * 3;
         float[] positions = new float[vertexCount * 3];
         float[] normals = textured ? null : new float[vertexCount * 3];
         float[] uvs = textured ? new float[vertexCount * 2] : null;
+        float[] colors = emitColors ? new float[vertexCount * 4] : null;
         int[] indices = new int[vertexCount]; // triangle soup: 0,1,2,3,...
         int[] featureIds = new int[vertexCount];
         float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] posMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+        boolean anyAlphaBelowOne = false;
 
         float[][] weldedPositions = weld.weldedPositions();
         List<int[]> triangles = mesh.getTriangles();
@@ -303,6 +324,22 @@ public class GlbEncoder {
                     uvs[idx * 2] = uv[0];
                     uvs[idx * 2 + 1] = uv[1];
                 }
+                if (colors != null) {
+                    // Mesh colors are sRGB display values (as authored in
+                    // X3DMaterial); glTF mandates linear COLOR_0, so convert
+                    // RGB on the way out. Alpha is not a color channel and
+                    // passes through unchanged. The I3S writer keeps raw
+                    // sRGB values per Cesium's I3S loader convention; see
+                    // AppearanceExtractor.Result javadoc for rationale.
+                    float[] c = mesh.getColors().get(srcIdx);
+                    colors[idx * 4] = srgbToLinear(c[0]);
+                    colors[idx * 4 + 1] = srgbToLinear(c[1]);
+                    colors[idx * 4 + 2] = srgbToLinear(c[2]);
+                    colors[idx * 4 + 3] = c[3];
+                    if (c[3] < 0.999f) {
+                        anyAlphaBelowOne = true;
+                    }
+                }
                 indices[idx] = idx;
                 featureIds[idx] = fIdx;
                 idx++;
@@ -310,7 +347,7 @@ public class GlbEncoder {
         }
 
         return new PrimitiveArrays(atlasPage, vertexCount, positions, normals, uvs,
-                indices, featureIds, posMin, posMax);
+                colors, indices, featureIds, posMin, posMax, anyAlphaBelowOne);
     }
 
     /**
@@ -330,8 +367,17 @@ public class GlbEncoder {
         }
     }
 
-    /** Sentinel for {@link PrimitiveArrays#atlasPage} meaning "no texture". */
-    private static final int UNTEXTURED_PAGE = -1;
+    /**
+     * {@link PrimitiveArrays#atlasPage} sentinels for the two untextured
+     * primitive flavours. {@code _PLAIN} means "no X3DMaterial color" — gets
+     * the default PBR material with {@code NORMAL}-driven Lambertian shading.
+     * {@code _COLORED} means "has X3DMaterial vertex color" — emits
+     * {@code COLOR_0} and is rendered unlit. The {@link GltfJsonBuilder}
+     * distinguishes the two via the primitive's {@code bvColors >= 0} flag,
+     * which is set iff this sentinel was {@code _COLORED}.
+     */
+    private static final int UNTEXTURED_PLAIN_PAGE = -1;
+    private static final int UNTEXTURED_COLORED_PAGE = -2;
 
     /**
      * One valid triangle earmarked for a specific primitive, paired with the
@@ -342,12 +388,25 @@ public class GlbEncoder {
 
     private record PrimitiveArrays(int atlasPage, int vertexCount,
                                    float[] positions, float[] normals, float[] uvs,
+                                   float[] colors,
                                    int[] indices, int[] featureIds,
-                                   float[] posMin, float[] posMax) {
+                                   float[] posMin, float[] posMax,
+                                   boolean anyAlphaBelowOne) {
     }
 
-    private record PrimitiveBufferIds(int positions, int normals, int uvs,
+    private record PrimitiveBufferIds(int positions, int normals, int uvs, int colors,
                                       int indices, int featureIds) {
+    }
+
+    /**
+     * IEC 61966-2-1 sRGB → linear, applied per RGB channel when baking
+     * X3DMaterial colors into glTF {@code COLOR_0}.
+     */
+    private static float srgbToLinear(float c) {
+        if (c <= 0.04045f) {
+            return c / 12.92f;
+        }
+        return (float) Math.pow((c + 0.055f) / 1.055f, 2.4);
     }
 
     // ---- Property table encoding ----------------------------------------
