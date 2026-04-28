@@ -32,6 +32,7 @@ class MeshStore implements Closeable {
     private final Path tempFile;
     private final FileChannel channel;
     private long writePosition = 0;
+    private volatile boolean hasColors;
 
     MeshStore(Path tempDir) throws IOException {
         tempFile = Files.createTempFile(tempDir, "vis-mesh-", ".bin");
@@ -47,6 +48,9 @@ class MeshStore implements Closeable {
      */
     long store(TriangleMesh mesh) throws IOException {
         ByteBuffer buf = serialize(mesh);
+        if (mesh.hasColors()) {
+            hasColors = true;
+        }
         synchronized (this) {
             long startPos = writePosition;
             long filePos = startPos;
@@ -56,6 +60,10 @@ class MeshStore implements Closeable {
             writePosition = filePos;
             return startPos;
         }
+    }
+
+    boolean hasColors() {
+        return hasColors;
     }
 
     /**
@@ -95,28 +103,39 @@ class MeshStore implements Closeable {
      *   byte   hasTexCoords      (0 or 1)
      *   if hasTexCoords:
      *     float32[vc*2]  texCoords (u,v interleaved)
+     *   byte   hasColors         (0 or 1)
+     *   if hasColors:
+     *     float32[vc*4]  colors  (r,g,b,a interleaved)
      *   int32  triangleCount
      *   int32[tc*3]    triangles (v0,v1,v2 interleaved)
      *   int64[tc]      featureIds
      *   int32[tc]      triTexIds (&lt; 0 = untextured triangle)
+     *   if hasColors:
+     *     byte[(tc+7)/8] triColored (LSB-first bit-packed; bit i is in byte i/8 at bit i%8)
      * </pre>
      */
     private static ByteBuffer serialize(TriangleMesh mesh) {
         List<double[]> positions = mesh.getPositions();
         List<float[]> normals = mesh.getNormals();
         List<float[]> texCoords = mesh.getTexCoords();
+        List<float[]> colors = mesh.getColors();
         List<int[]> triangles = mesh.getTriangles();
         List<Long> featureIds = mesh.getFeatureIds();
         boolean hasTC = mesh.hasTexCoords();
+        boolean hasCol = mesh.hasColors();
 
         int vc = positions.size();
         int tc = triangles.size();
+        // Bit-packed colored bits, only when hasCol. One bit per triangle.
+        int coloredBytes = hasCol ? ((tc + 7) >>> 3) : 0;
         // Compute in long space and check for overflow before narrowing. A
         // single mesh this large is unexpected, but silent truncation would
         // corrupt the entire store, so fail loudly instead.
         long dataSizeLong = 4L + (long) vc * 24 + (long) vc * 12 + 1L
                 + (hasTC ? (long) vc * 8 : 0)
-                + 4L + (long) tc * 12 + (long) tc * 8 + (long) tc * 4;
+                + 1L + (hasCol ? (long) vc * 16 : 0)
+                + 4L + (long) tc * 12 + (long) tc * 8 + (long) tc * 4
+                + coloredBytes;
         if (dataSizeLong > Integer.MAX_VALUE - 4) {
             throw new IllegalStateException("Mesh serialized size exceeds 2 GB: " + dataSizeLong);
         }
@@ -142,6 +161,15 @@ class MeshStore implements Closeable {
                 buf.putFloat(uv[1]);
             }
         }
+        buf.put((byte) (hasCol ? 1 : 0));
+        if (hasCol) {
+            for (float[] c : colors) {
+                buf.putFloat(c[0]);
+                buf.putFloat(c[1]);
+                buf.putFloat(c[2]);
+                buf.putFloat(c[3]);
+            }
+        }
         buf.putInt(tc);
         for (int[] t : triangles) {
             buf.putInt(t[0]);
@@ -155,6 +183,15 @@ class MeshStore implements Closeable {
         for (int texId : triTexIds) {
             buf.putInt(texId);
         }
+        if (hasCol) {
+            byte[] packed = new byte[coloredBytes];
+            for (int i = 0; i < tc; i++) {
+                if (mesh.isTriangleColored(i)) {
+                    packed[i >>> 3] |= (byte) (1 << (i & 7));
+                }
+            }
+            buf.put(packed);
+        }
 
         buf.flip();
         return buf;
@@ -163,10 +200,9 @@ class MeshStore implements Closeable {
     private static TriangleMesh deserialize(ByteBuffer buf) {
         TriangleMesh mesh = new TriangleMesh();
         int vc = buf.getInt();
-        // Serialized layout keeps positions, normals and uvs in separate
-        // contiguous blocks, so we need three passes to read them — but
-        // stash each vertex's values into tmp arrays and feed mesh.addVertex
-        // to preserve the texCoords/positions invariant.
+        // Serialized layout keeps positions, normals, uvs and colors in
+        // separate contiguous blocks, so we read them into tmp arrays and
+        // then feed mesh.addVertex to preserve the size-equality invariants.
         double[][] positions = new double[vc][3];
         for (int i = 0; i < vc; i++) {
             positions[i][0] = buf.getDouble();
@@ -180,23 +216,48 @@ class MeshStore implements Closeable {
             normals[i][2] = buf.getFloat();
         }
         boolean hasTC = buf.get() != 0;
+        float[][] texCoords = null;
         if (hasTC) {
+            texCoords = new float[vc][2];
             for (int i = 0; i < vc; i++) {
-                float u = buf.getFloat();
-                float v = buf.getFloat();
-                mesh.addVertex(positions[i][0], positions[i][1], positions[i][2],
-                        normals[i][0], normals[i][1], normals[i][2], u, v);
+                texCoords[i][0] = buf.getFloat();
+                texCoords[i][1] = buf.getFloat();
             }
-        } else {
+        }
+        boolean hasCol = buf.get() != 0;
+        float[][] colors = null;
+        if (hasCol) {
+            colors = new float[vc][4];
             for (int i = 0; i < vc; i++) {
-                mesh.addVertex(positions[i][0], positions[i][1], positions[i][2],
-                        normals[i][0], normals[i][1], normals[i][2]);
+                colors[i][0] = buf.getFloat();
+                colors[i][1] = buf.getFloat();
+                colors[i][2] = buf.getFloat();
+                colors[i][3] = buf.getFloat();
+            }
+        }
+        for (int i = 0; i < vc; i++) {
+            double[] p = positions[i];
+            float[] n = normals[i];
+            if (hasTC && hasCol) {
+                float[] uv = texCoords[i], c = colors[i];
+                mesh.addVertex(p[0], p[1], p[2], n[0], n[1], n[2],
+                        uv[0], uv[1], c[0], c[1], c[2], c[3]);
+            } else if (hasTC) {
+                float[] uv = texCoords[i];
+                mesh.addVertex(p[0], p[1], p[2], n[0], n[1], n[2], uv[0], uv[1]);
+            } else if (hasCol) {
+                float[] c = colors[i];
+                mesh.addVertex(p[0], p[1], p[2], n[0], n[1], n[2],
+                        c[0], c[1], c[2], c[3]);
+            } else {
+                mesh.addVertex(p[0], p[1], p[2], n[0], n[1], n[2]);
             }
         }
 
         int tc = buf.getInt();
-        // Triangles, featureIds and triTexIds are stored in three contiguous
-        // blocks; stash first two so mesh.addTriangle can receive all three.
+        // Triangles, featureIds, triTexIds and the optional colored bitmap
+        // are stored in four contiguous blocks; stash the first three so
+        // mesh.addTriangle can receive all of them along with the colored bit.
         int[][] triangles = new int[tc][3];
         for (int i = 0; i < tc; i++) {
             triangles[i][0] = buf.getInt();
@@ -207,9 +268,19 @@ class MeshStore implements Closeable {
         for (int i = 0; i < tc; i++) {
             featureIds[i] = buf.getLong();
         }
+        int[] texIds = new int[tc];
         for (int i = 0; i < tc; i++) {
+            texIds[i] = buf.getInt();
+        }
+        byte[] colored = null;
+        if (hasCol) {
+            colored = new byte[(tc + 7) >>> 3];
+            buf.get(colored);
+        }
+        for (int i = 0; i < tc; i++) {
+            boolean isColored = colored != null && (colored[i >>> 3] & (1 << (i & 7))) != 0;
             mesh.addTriangle(triangles[i][0], triangles[i][1], triangles[i][2],
-                    featureIds[i], buf.getInt());
+                    featureIds[i], texIds[i], isColored);
         }
         return mesh;
     }

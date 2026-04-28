@@ -79,6 +79,7 @@ public final class TreeBuildingStage implements Stage {
             ctx.setMeshNodeIndices(meshNodeIndices);
             ctx.setCellRootGridCoords(cellRootGridCoords);
             ctx.setHasTextures(ctx.stores().getTextureStore().hasTextures());
+            ctx.setHasColors(ctx.stores().getMeshStore().hasColors());
         } catch (IOException e) {
             throw new VisExportException("Failed to build spatial tree.", e);
         }
