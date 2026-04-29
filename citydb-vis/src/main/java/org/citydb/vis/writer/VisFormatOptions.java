@@ -6,6 +6,8 @@
 package org.citydb.vis.writer;
 
 import org.citydb.io.writer.options.OutputFormatOptions;
+import org.citydb.vis.appearance.AtlasFallbackStrategy;
+import org.citydb.vis.appearance.AtlasOverflowMode;
 
 /**
  * Base format options shared by all visualization export formats (I3S, 3D Tiles, etc.).
@@ -15,73 +17,6 @@ import org.citydb.io.writer.options.OutputFormatOptions;
  * partitioning and texture handling parameters.
  */
 public abstract class VisFormatOptions implements OutputFormatOptions {
-    /**
-     * Top-level strategy for handling cells whose textures don't fit a
-     * single {@code maxAtlasSize}² atlas page.
-     * <p>
-     * {@link #QUADTREE} runs the spatial subdivision stage in pure-split
-     * mode: the offending cell is split 2×2 push-down until each leaf
-     * fits one atlas page or cannot be subdivided further (single-feature
-     * / depth-cap residuals). The original cell root becomes a
-     * content-less intermediate — the runtime refines from the cell's
-     * parent aggregation directly to the quadtree leaves. Residuals are
-     * handled per {@link AtlasFallbackStrategy}.
-     * <p>
-     * {@link #HYBRID} combines the two strategies: runs the same quadtree
-     * subdivision as {@link #QUADTREE} and additionally retains a
-     * low-resolution rescaled (RESCALE) preview on each split cell root,
-     * replaced at runtime by the quadtree-leaf children once they cross
-     * the LOD threshold. Trades a small extra encode cost (one rescaled
-     * atlas per split root) for a smoother LOD cascade in viewers that
-     * have to wait for leaf data to load.
-     * <p>
-     * {@link #RESCALE} disables the split stage entirely: every overflowing
-     * cell is processed in place, with textures shrunk uniformly to fit one
-     * atlas page (legacy behavior, kept for debugging / size-strict
-     * deployments). Implies {@link AtlasFallbackStrategy#RESCALE} regardless
-     * of any explicit {@code --atlas-fallback} value — the two flags are
-     * coupled here because "rescale mode" is a self-contained semantic
-     * (no split + shrink to fit).
-     */
-    public enum AtlasOverflowMode {
-        RESCALE, QUADTREE, HYBRID
-    }
-
-    /**
-     * Strategy used when residual cells (single-feature or depth-cap fallback
-     * after the quadtree split, or any cell when {@link AtlasOverflowMode}
-     * {@code = RESCALE}) cannot fit their textures into the user's
-     * {@code --max-atlas-size} budget.
-     * <p>
-     * {@link #RESCALE} shrinks textures uniformly via the iterative rescale
-     * loop in {@code TextureAtlas.buildSingleAtlas} so the atlas page stays
-     * within the user-requested cap, accepting silent quality loss. If the
-     * rescale loop exhausts at its minimum scale and overflow remains, the
-     * atlas page is allowed to grow as a last-resort fallback (mirroring
-     * the {@link #EXPAND} mechanism); this is rare in practice. Per-format:
-     * <ul>
-     *   <li>3D Tiles uses {@link VisWriter.AtlasMode#SINGLE_ATLAS} (forces
-     *       the rescale path, no multi-page fallback).</li>
-     *   <li>I3S uses its mandatory single-atlas path; rescale is its
-     *       primary defense before atlas-page expansion.</li>
-     * </ul>
-     * <p>
-     * {@link #EXPAND} preserves source-resolution textures by skipping the
-     * rescale loop entirely; the atlas page is allowed to grow beyond
-     * {@code --max-atlas-size} (up to the 16K WebGL cap). Per-format:
-     * <ul>
-     *   <li>3D Tiles uses {@link VisWriter.AtlasMode#AUTO} so the GLB
-     *       encoder spills overflow onto additional atlas pages
-     *       ({@code TextureAtlas.buildMulti}) — preserves quality without
-     *       inflating any single page.</li>
-     *   <li>I3S (one-material-per-node spec) cannot multi-page, so it
-     *       expands a single page up to 16K instead.</li>
-     * </ul>
-     */
-    public enum AtlasFallbackStrategy {
-        RESCALE, EXPAND
-    }
-
     private double gridEdgeLength = 200.0;
     private double lodRefineRadius = 128.0;
     private boolean clampToGround;
