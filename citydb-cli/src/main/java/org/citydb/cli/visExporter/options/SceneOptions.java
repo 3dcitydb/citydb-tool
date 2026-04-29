@@ -6,7 +6,8 @@
 package org.citydb.cli.visExporter.options;
 
 import org.citydb.cli.common.Option;
-import org.citydb.vis.writer.VisFormatOptions;
+import org.citydb.vis.appearance.AtlasFallbackStrategy;
+import org.citydb.vis.appearance.AtlasOverflowMode;
 import picocli.CommandLine;
 
 public class SceneOptions implements Option {
@@ -64,7 +65,7 @@ public class SceneOptions implements Option {
                     "one atlas page on every overflowing cell — implies " +
                     "--atlas-fallback=rescale regardless of an explicit value " +
                     "(legacy / debugging).")
-    private VisFormatOptions.AtlasOverflowMode atlasOverflowMode;
+    private AtlasOverflowMode atlasOverflowMode;
 
     @CommandLine.Option(names = "--atlas-fallback", paramLabel = "<strategy>",
             defaultValue = "expand",
@@ -78,7 +79,7 @@ public class SceneOptions implements Option {
                     "silent quality loss; 3D Tiles forces single-atlas mode (no multi-page). " +
                     "Ignored when --atlas-overflow-mode=rescale (which forces 'rescale' " +
                     "globally on every overflowing cell).")
-    private VisFormatOptions.AtlasFallbackStrategy atlasFallbackStrategy;
+    private AtlasFallbackStrategy atlasFallbackStrategy;
 
     public double getGridEdgeLength() {
         return gridEdgeLength;
@@ -100,11 +101,11 @@ public class SceneOptions implements Option {
         return maxAtlasSize;
     }
 
-    public VisFormatOptions.AtlasOverflowMode getAtlasOverflowMode() {
+    public AtlasOverflowMode getAtlasOverflowMode() {
         return atlasOverflowMode;
     }
 
-    public VisFormatOptions.AtlasFallbackStrategy getAtlasFallbackStrategy() {
+    public AtlasFallbackStrategy getAtlasFallbackStrategy() {
         return atlasFallbackStrategy;
     }
 
