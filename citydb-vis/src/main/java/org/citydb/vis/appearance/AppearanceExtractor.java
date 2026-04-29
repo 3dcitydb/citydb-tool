@@ -53,10 +53,21 @@ import java.util.Map;
  *       are dropped after dispatch (see the post-pass {@code removeAll}).</li>
  *   <li><b>ParameterizedTexture vs. GeoreferencedTexture</b>: PT always wins
  *       (authored UVs are more precise than a projection). Implemented by the
- *       asymmetric write semantics — PT uses {@code putAll} (overwrites) and
- *       GT uses {@code putIfAbsent} (does not overwrite), so PT wins
+ *       asymmetric write semantics — PT uses overwrite (via
+ *       {@link #putNormalizedByPolygon}) and GT uses {@code putIfAbsent} (via
+ *       {@link #normalizeAndWrite} with {@code overwrite=false}), so PT wins
  *       regardless of dispatch order.</li>
  * </ul>
+ * <p>
+ * UV normalization: both texture paths shift each polygon's UVs as a unit
+ * by {@code (floor(minU), floor(minV))} so the values land near the origin
+ * before reaching the texture atlas. CityGML's georeferenced UV
+ * parameterization can produce ranges like {@code [-715, 715]} per texture;
+ * without normalization the atlas would try to pre-bake the full tile grid
+ * and the BSP packer's per-texture clamp would compress the source down to
+ * sub-pixel-per-tile. Per-polygon (not per-ring) granularity keeps exterior
+ * and interior rings of the same polygon in the same shifted UV space so
+ * {@code PolygonTriangulator}'s hole-bridging interpolates correctly.
  */
 public final class AppearanceExtractor {
     /**
@@ -120,7 +131,16 @@ public final class AppearanceExtractor {
                     }
                     Map<LinearRing, List<TextureCoordinate>> ptCoords =
                             pt.getTextureCoordinates();
-                    texCoordMap.putAll(ptCoords);
+                    // Normalize per-polygon: shift each polygon's combined UV
+                    // bounds by (floor(minU), floor(minV)) so the resulting UVs
+                    // sit near the origin and the per-texture aggregate range
+                    // reflects the largest single-polygon span instead of the
+                    // global span across all uses of the texture. Atlas
+                    // tiling allocates srcWidth × tilesU pixels, so an
+                    // un-normalized georeferenced UV range like [-715, 715]
+                    // would force the BSP packer to clamp the slot down to
+                    // sub-pixel-per-tile.
+                    putNormalizedByPolygon(texCoordMap, ptCoords);
                     if (ptTextureId >= 0) {
                         for (LinearRing ring : ptCoords.keySet()) {
                             ringTextureMap.put(ring, ptTextureId);
@@ -229,13 +249,10 @@ public final class AppearanceExtractor {
      * authored CRS — the {@code orientation} matrix already encodes any
      * world-axis-to-texture-axis mapping (e.g. V-axis flip).
      * <p>
-     * UVs outside [0, 1] are passed through as-authored. The downstream
-     * texture-atlas remapping treats the texture's atlas tile as the [0, 1]
-     * region, so out-of-range UVs would sample neighbouring atlas content
-     * rather than wrapping/clamping per the texture's wrap mode. For typical
-     * GeoreferencedTexture use (one orthophoto draped onto a region whose
-     * footprint is exactly the texture's coverage) UVs naturally land in
-     * range, so this is a known but rare edge case.
+     * Each polygon's projected UVs are normalized as a unit (see
+     * {@link #putNormalizedByPolygon}) — exterior and interior rings of the
+     * same polygon receive an identical shift so {@code PolygonTriangulator}'s
+     * hole-bridging interpolates UVs in a consistent space.
      */
     private static void collectGeoreferencedRings(Surface<?> surface,
                                                   Map<LinearRing, List<TextureCoordinate>> uvSink,
@@ -247,21 +264,120 @@ public final class AppearanceExtractor {
         surface.accept(new ModelWalker() {
             @Override
             public void visit(Polygon polygon) {
+                Map<LinearRing, List<TextureCoordinate>> projected = new IdentityHashMap<>();
                 LinearRing ext = polygon.getExteriorRing();
                 if (ext != null) {
-                    uvSink.putIfAbsent(ext, projectRingUVs(ext, refX, refY, m00, m01, m10, m11));
-                    if (textureId >= 0) {
-                        texSink.putIfAbsent(ext, textureId);
-                    }
+                    projected.put(ext, projectRingUVs(ext, refX, refY, m00, m01, m10, m11));
                 }
                 if (polygon.hasInteriorRings()) {
                     for (LinearRing interior : polygon.getInteriorRings()) {
-                        uvSink.putIfAbsent(interior,
+                        projected.put(interior,
                                 projectRingUVs(interior, refX, refY, m00, m01, m10, m11));
                     }
                 }
+                // GT uses putIfAbsent semantics: ParameterizedTexture wins
+                // when both target the same ring (asymmetric write rule).
+                normalizeAndWrite(projected, uvSink, false);
+                if (textureId >= 0 && ext != null) {
+                    texSink.putIfAbsent(ext, textureId);
+                }
             }
         });
+    }
+
+    /**
+     * Normalize per-polygon: each polygon's combined ring UV bounds get a
+     * single shift {@code (floor(minU), floor(minV))} applied uniformly to
+     * all its rings so the result sits near {@code (0, 0)}. Without this,
+     * georeferenced (world-coordinate) UV parameterizations like
+     * {@code [-715, 715]} would force the texture atlas to allocate
+     * {@code srcWidth × ceil(span)} pixels per texture and the BSP packer's
+     * per-texture clamp to compress that down to sub-pixel-per-tile.
+     * <p>
+     * Polygons are identified by walking up from each ring via
+     * {@link org.citydb.model.common.Child#getParent()} until a
+     * {@link Polygon} is found. Rings whose parent is not a Polygon
+     * (defensive) get an independent shift.
+     * <p>
+     * Source {@code TextureCoordinate} instances are not mutated — shifted
+     * copies are produced — so the original CityGML model objects remain
+     * unchanged for any other consumer (e.g., write-back paths).
+     * <p>
+     * Uses overwrite semantics, matching the original {@code putAll}: a later
+     * ParameterizedTexture writing to a ring already populated by an earlier
+     * one wins. The GeoreferencedTexture path uses
+     * {@link #normalizeAndWrite} with {@code putIfAbsent} instead, so a PT
+     * entry on the same ring is preserved (PT-wins-over-GT rule).
+     */
+    private static void putNormalizedByPolygon(
+            Map<LinearRing, List<TextureCoordinate>> sink,
+            Map<LinearRing, List<TextureCoordinate>> source) {
+        normalizeAndWrite(source, sink, true);
+    }
+
+    /**
+     * Group rings of {@code source} into shift-groups, compute a shared shift
+     * per group, and write shifted copies into {@code sink}. {@code overwrite}
+     * controls write semantics: {@code true} uses {@code put} (PT path);
+     * {@code false} uses {@code putIfAbsent} (GT path) so a prior PT entry on
+     * the same ring is preserved (PT-wins-over-GT rule).
+     * <p>
+     * Rings sharing the same parent {@link Polygon} go into one group.
+     * Defensive: a ring whose ancestry chain doesn't reach a Polygon (should
+     * not occur for well-formed CityGML) becomes its own singleton group, so
+     * it still receives a normalized shift rather than being dropped.
+     */
+    private static void normalizeAndWrite(
+            Map<LinearRing, List<TextureCoordinate>> source,
+            Map<LinearRing, List<TextureCoordinate>> sink,
+            boolean overwrite) {
+        // Group key is the Polygon when present, otherwise the ring itself —
+        // an Object key keeps the orphan and per-polygon paths uniform.
+        Map<Object, List<LinearRing>> groups = new IdentityHashMap<>();
+        for (LinearRing ring : source.keySet()) {
+            Polygon parent = ring.getParent(Polygon.class);
+            Object key = parent != null ? parent : ring;
+            groups.computeIfAbsent(key, k -> new ArrayList<>()).add(ring);
+        }
+
+        for (List<LinearRing> rings : groups.values()) {
+            float minU = Float.POSITIVE_INFINITY;
+            float minV = Float.POSITIVE_INFINITY;
+            for (LinearRing r : rings) {
+                for (TextureCoordinate uv : source.get(r)) {
+                    if (uv.getS() < minU) minU = uv.getS();
+                    if (uv.getT() < minV) minV = uv.getT();
+                }
+            }
+            // Empty UV lists across the whole group: leave shift at 0.
+            float shiftU = Float.isFinite(minU) ? (float) Math.floor(minU) : 0f;
+            float shiftV = Float.isFinite(minV) ? (float) Math.floor(minV) : 0f;
+            for (LinearRing r : rings) {
+                List<TextureCoordinate> shifted = shiftCopies(source.get(r), shiftU, shiftV);
+                if (overwrite) {
+                    sink.put(r, shifted);
+                } else {
+                    sink.putIfAbsent(r, shifted);
+                }
+            }
+        }
+    }
+
+    /**
+     * Build a fresh list of shifted {@link TextureCoordinate} instances. Always
+     * allocates a new list so {@code sink} never aliases the model's internal
+     * UV storage — keeps {@code Result.texCoords()}'s ownership contract clean
+     * for any downstream stage that might mutate UVs (none today, but the cost
+     * of one extra list allocation is negligible compared to the safety
+     * margin).
+     */
+    private static List<TextureCoordinate> shiftCopies(List<TextureCoordinate> uvs,
+                                                       float shiftU, float shiftV) {
+        List<TextureCoordinate> out = new ArrayList<>(uvs.size());
+        for (TextureCoordinate uv : uvs) {
+            out.add(TextureCoordinate.of(uv.getS() - shiftU, uv.getT() - shiftV));
+        }
+        return out;
     }
 
     /**
