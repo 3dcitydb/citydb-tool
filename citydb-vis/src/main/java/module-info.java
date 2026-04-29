@@ -7,6 +7,7 @@ module org.citydb.vis {
     requires java.desktop;
 
     exports org.citydb.vis;
+    exports org.citydb.vis.appearance;
     exports org.citydb.vis.encoder;
     exports org.citydb.vis.encoder.i3s;
     exports org.citydb.vis.encoder.tiles3d;
@@ -17,8 +18,6 @@ module org.citydb.vis {
     exports org.citydb.vis.writer;
     exports org.citydb.vis.writer.i3s;
     exports org.citydb.vis.writer.tiles3d;
-    // Serialization POJOs — exported so fastjson2's ASM-generated
-    // ObjectWriters (which live in the unnamed module) can load the classes.
     exports org.citydb.vis.model;
     exports org.citydb.vis.model.i3s;
     exports org.citydb.vis.model.tiles3d;

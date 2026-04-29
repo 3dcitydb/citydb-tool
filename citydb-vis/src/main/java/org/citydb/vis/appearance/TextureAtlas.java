@@ -3,14 +3,13 @@
  * Copyright Stuttgart University of Applied Sciences <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.encoder;
+package org.citydb.vis.appearance;
 
 import org.citydb.textureAtlas.TextureAtlasCreator;
 import org.citydb.textureAtlas.model.AtlasRegion;
 import org.citydb.textureAtlas.packer.Packer;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.TextureStore;
-import org.citydb.vis.writer.VisFormatOptions.AtlasFallbackStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
