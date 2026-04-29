@@ -6,7 +6,8 @@
 package org.citydb.vis.pipeline.stages;
 
 import org.citydb.vis.VisExportException;
-import org.citydb.vis.encoder.TextureAtlas;
+import org.citydb.vis.appearance.AtlasOverflowMode;
+import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
@@ -42,9 +43,9 @@ import java.util.concurrent.TimeUnit;
  * cannot be subdivided further. Intermediate nodes lose their mesh data
  * (push-down split), with new mesh leaves attached as descendants.
  * <p>
- * Runs for {@link VisFormatOptions.AtlasOverflowMode#QUADTREE} (pure split:
+ * Runs for {@link AtlasOverflowMode#QUADTREE} (pure split:
  * the cell root becomes a content-less intermediate) and for
- * {@link VisFormatOptions.AtlasOverflowMode#HYBRID} (split plus a
+ * {@link AtlasOverflowMode#HYBRID} (split plus a
  * low-resolution rescaled preview retained on each split cell root,
  * marked via {@link SceneNode#setLodPreview(boolean)} for the writer to
  * emit). The fallback paths and per-leaf packing are identical between the
@@ -115,15 +116,15 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
     @Override
     public void execute(PipelineContext ctx) throws VisExportException {
         VisFormatOptions opts = ctx.formatOptions();
-        VisFormatOptions.AtlasOverflowMode mode = opts.getAtlasOverflowMode();
-        if (mode != VisFormatOptions.AtlasOverflowMode.QUADTREE
-                && mode != VisFormatOptions.AtlasOverflowMode.HYBRID) {
+        AtlasOverflowMode mode = opts.getAtlasOverflowMode();
+        if (mode != AtlasOverflowMode.QUADTREE
+                && mode != AtlasOverflowMode.HYBRID) {
             return;
         }
         if (!ctx.hasTextures()) {
             return;
         }
-        boolean withPreview = mode == VisFormatOptions.AtlasOverflowMode.HYBRID;
+        boolean withPreview = mode == AtlasOverflowMode.HYBRID;
 
         VisExportStores stores = ctx.stores();
         NodeEntryStore nodeEntryStore = stores.getNodeEntryStore();

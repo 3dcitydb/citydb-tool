@@ -20,8 +20,11 @@ import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.VisExportException;
+import org.citydb.vis.appearance.AppearanceExtractor;
+import org.citydb.vis.appearance.AtlasFallbackStrategy;
+import org.citydb.vis.appearance.AtlasMode;
+import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.encoder.AttributeEncoder;
-import org.citydb.vis.encoder.TextureAtlas;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
@@ -321,29 +324,6 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     /**
-     * Strategy for atlas page generation per node.
-     */
-    protected enum AtlasMode {
-        /**
-         * Force a single atlas page. Required for I3S because the spec
-         * permits only one material per node; overflow is handled by the
-         * single-atlas path's rescale + atlas-size expansion fallback.
-         */
-        SINGLE_ATLAS,
-        /**
-         * Single page when the textures fit; spill onto additional pages
-         * only when the BSP packer would otherwise overflow even after
-         * per-texture clamping. Preserves source resolution on the
-         * residual cells that the {@link
-         * org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
-         * could not subdivide further (single-feature or depth-cap
-         * fallback). Used by 3D Tiles, whose GLB supports multiple
-         * primitives per mesh.
-         */
-        AUTO
-    }
-
-    /**
      * Prepare a node's mesh data: load and merge meshes from the sharded
      * store, build texture atlas(es), and remap UV coordinates.
      */
@@ -400,8 +380,8 @@ public abstract class VisWriter implements FeatureWriter {
                     // and can push a borderline-fitting atlas over the edge,
                     // triggering needless Phase 2 expansion.
                     boolean needsWhitePixel = hasUntexturedTriangle && atlasNeedsWhitePixelSentinel();
-                    VisFormatOptions.AtlasFallbackStrategy strategy = lodPreview
-                            ? VisFormatOptions.AtlasFallbackStrategy.RESCALE
+                    AtlasFallbackStrategy strategy = lodPreview
+                            ? AtlasFallbackStrategy.RESCALE
                             : formatOptions.getAtlasFallbackStrategy();
                     TextureAtlas single = TextureAtlas.build(
                             uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),

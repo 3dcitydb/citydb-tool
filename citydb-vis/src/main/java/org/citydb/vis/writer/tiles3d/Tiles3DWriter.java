@@ -5,7 +5,6 @@
 
 package org.citydb.vis.writer.tiles3d;
 
-import org.citydb.vis.writer.VisFormatOptions;
 import org.citydb.vis.writer.VisWriter;
 
 import org.citydb.core.file.OutputFile;
@@ -13,7 +12,9 @@ import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.VisExportException;
-import org.citydb.vis.encoder.TextureAtlas;
+import org.citydb.vis.appearance.AtlasFallbackStrategy;
+import org.citydb.vis.appearance.AtlasMode;
+import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
@@ -193,7 +194,7 @@ public class Tiles3DWriter extends VisWriter {
                                  List<AttrField> attrFields, double[] datasetCenter)
             throws VisExportException {
         AtlasMode mode = getFormatOptions().getAtlasFallbackStrategy()
-                == VisFormatOptions.AtlasFallbackStrategy.EXPAND
+                == AtlasFallbackStrategy.EXPAND
                 ? AtlasMode.AUTO
                 : AtlasMode.SINGLE_ATLAS;
         PreparedNode prepared = prepareNodeMesh(node, mode);
