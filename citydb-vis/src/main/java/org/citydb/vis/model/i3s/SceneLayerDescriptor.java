@@ -8,6 +8,7 @@ package org.citydb.vis.model.i3s;
 import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
+import org.citydb.vis.styling.DefaultObjectStyle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,7 +49,8 @@ public class SceneLayerDescriptor {
     public static SceneLayerDescriptor of(SceneLayer sceneLayer,
                                           List<AttrField> attrFields,
                                           boolean hasTextures,
-                                          boolean hasColors) {
+                                          boolean hasColors,
+                                          DefaultObjectStyle defaultStyle) {
         SceneLayerDescriptor descriptor = new SceneLayerDescriptor();
         descriptor.id = 0;
         // I3S scene layer 'version' is a per-layer lifecycle UUID, NOT the
@@ -69,7 +71,8 @@ public class SceneLayerDescriptor {
             descriptor.textureSetDefinitions = List.of(TextureSetDefinition.jpeg());
         }
 
-        descriptor.materialDefinitions = buildMaterialDefinitions(hasTextures, hasColors);
+        descriptor.materialDefinitions = buildMaterialDefinitions(hasTextures, hasColors,
+                defaultStyle);
         descriptor.fullExtent = FullExtent.from(sceneLayer.getExtent());
         descriptor.fields = buildFields(attrFields);
         // Our OID-typed field is named "OID" (not Esri's default "OBJECTID"),
@@ -107,13 +110,14 @@ public class SceneLayerDescriptor {
     }
 
     private static List<MaterialDefinition> buildMaterialDefinitions(boolean hasTextures,
-                                                                    boolean hasColors) {
+                                                                    boolean hasColors,
+                                                                    DefaultObjectStyle defaultStyle) {
         List<MaterialDefinition> materials = new ArrayList<>(4);
-        materials.add(MaterialDefinition.untextured());
+        materials.add(MaterialDefinition.untextured(defaultStyle));
         if (hasTextures) {
             materials.add(MaterialDefinition.textured());
         } else if (hasColors) {
-            materials.add(MaterialDefinition.untextured());
+            materials.add(MaterialDefinition.untextured(defaultStyle));
         }
         if (hasColors) {
             materials.add(MaterialDefinition.colored(false));
