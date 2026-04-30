@@ -219,6 +219,11 @@ final class GltfJsonBuilder {
      *       has alpha below 1 — vertex {@code COLOR_0} multiplies into
      *       baseColor so BLEND is required for transparency to render.</li>
      * </ul>
+     * All three materials carry {@code doubleSided: true}. CityGML imports
+     * routinely have inconsistent triangle winding on walls; the glTF default
+     * (single-sided, back-face culled) would silently drop those triangles
+     * from one viewing side. Mirrors the I3S writer's {@code cullFace="none"}
+     * decision (see I3S {@code MaterialDefinition} javadoc).
      * Returns the resolved material indices keyed by atlas page so
      * {@link #writeMeshes} can reference them.
      */
@@ -259,6 +264,7 @@ final class GltfJsonBuilder {
             pbr.put("metallicFactor", 0.0);
             pbr.put("roughnessFactor", 1.0);
             material.put("pbrMetallicRoughness", pbr);
+            material.put("doubleSided", true);
             JSONObject extensions = new JSONObject();
             extensions.put("KHR_materials_unlit", new JSONObject());
             material.put("extensions", extensions);
@@ -284,6 +290,7 @@ final class GltfJsonBuilder {
                 }
             }
             material.put("pbrMetallicRoughness", pbr);
+            material.put("doubleSided", true);
             untexturedPlainIdx = materials.size();
             materials.add(material);
         }
@@ -297,6 +304,7 @@ final class GltfJsonBuilder {
             if (coloredNeedsBlend) {
                 material.put("alphaMode", "BLEND");
             }
+            material.put("doubleSided", true);
             JSONObject extensions = new JSONObject();
             extensions.put("KHR_materials_unlit", new JSONObject());
             material.put("extensions", extensions);
