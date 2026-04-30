@@ -27,7 +27,7 @@ package org.citydb.vis.styling;
  * <p>
  * The class is intentionally shaped as a value holder: changing the fields
  * on the single {@link DefaultObjectStyle} instance held by
- * {@link org.citydb.vis.writer.VisFormatOptions} propagates uniformly to
+ * {@link org.citydb.vis.config.VisFormatOptions} propagates uniformly to
  * every feature class on the plain path. Adding more knobs later
  * ({@code metallicFactor}, {@code roughnessFactor}, {@code doubleSided}, …)
  * is a pure addition — append a field and a setter.

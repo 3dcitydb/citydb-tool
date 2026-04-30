@@ -10,6 +10,7 @@ import org.citydb.vis.writer.VisWriter;
 import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.vis.config.I3SFormatOptions;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasMode;
