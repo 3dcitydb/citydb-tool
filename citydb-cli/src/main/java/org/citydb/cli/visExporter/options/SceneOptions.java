@@ -8,6 +8,7 @@ package org.citydb.cli.visExporter.options;
 import org.citydb.cli.common.Option;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
+import org.citydb.vis.styling.DefaultObjectStyle;
 import picocli.CommandLine;
 
 public class SceneOptions implements Option {
@@ -81,6 +82,16 @@ public class SceneOptions implements Option {
                     "globally on every overflowing cell).")
     private AtlasFallbackStrategy atlasFallbackStrategy;
 
+    @CommandLine.Option(names = "--default-color", paramLabel = "<#rrggbb[aa]>",
+            description = "Default sRGB color applied to features that have neither a " +
+                    "texture nor an X3DMaterial (default: opaque white). Form: '#rrggbb' " +
+                    "or '#rrggbbaa'. Applies uniformly to every feature class on the " +
+                    "no-appearance path (Building, Bridge, Tunnel, ...). Surfaces with an " +
+                    "explicit texture or X3DMaterial keep their authored color and are " +
+                    "not affected. Default-colored surfaces always render with PBR + " +
+                    "per-face Lambertian shading so 3D form is visible.")
+    private String defaultColor;
+
     public double getGridEdgeLength() {
         return gridEdgeLength;
     }
@@ -109,6 +120,19 @@ public class SceneOptions implements Option {
         return atlasFallbackStrategy;
     }
 
+    /**
+     * Build a {@link DefaultObjectStyle} from the {@code --default-color}
+     * CLI flag. The caller is expected to gate the call on
+     * {@code Command.hasMatchedOption("--default-color", ...)} so the
+     * writer's format-options-level default is not overwritten when no
+     * flag was provided.
+     */
+    public DefaultObjectStyle getDefaultObjectStyle() {
+        return defaultColor != null
+                ? DefaultObjectStyle.parseColor(defaultColor)
+                : DefaultObjectStyle.defaults();
+    }
+
     @Override
     public void preprocess(CommandLine commandLine) {
         if (gridEdgeLength <= 0) {
@@ -133,6 +157,15 @@ public class SceneOptions implements Option {
             throw new CommandLine.ParameterException(commandLine,
                     "Error: --max-atlas-size must be between 1024 and 16384 but was '" +
                             maxAtlasSize + "'");
+        }
+
+        if (defaultColor != null) {
+            try {
+                DefaultObjectStyle.parseColor(defaultColor);
+            } catch (IllegalArgumentException e) {
+                throw new CommandLine.ParameterException(commandLine,
+                        "Error: --default-color " + e.getMessage());
+            }
         }
     }
 }

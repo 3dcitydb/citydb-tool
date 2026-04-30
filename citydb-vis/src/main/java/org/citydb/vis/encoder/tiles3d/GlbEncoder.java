@@ -12,6 +12,7 @@ import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.util.GeoTransform;
 
 import java.io.ByteArrayOutputStream;
@@ -65,12 +66,15 @@ public class GlbEncoder {
      * @param features       per-feature attribute data
      * @param attrFields     finalized attribute field definitions
      * @param datasetCenter  [centerLon, centerLat, centerAlt] of the dataset
+     * @param defaultStyle   global style applied to no-appearance surfaces;
+     *                       drives the plain material's {@code baseColorFactor}
      * @return GLB bytes, or {@code null} if empty
      */
     public byte[] encode(SceneNode node, List<byte[]> atlasBytesList,
                          Map<Integer, Integer> texIdToPage,
                          List<FeatureData> features, List<AttrField> attrFields,
-                         double[] datasetCenter) throws IOException {
+                         double[] datasetCenter,
+                         DefaultObjectStyle defaultStyle) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexture = mesh.hasTexCoords() && !atlasBytesList.isEmpty();
         if (!hasTexture) {
@@ -167,6 +171,7 @@ public class GlbEncoder {
                 .textures(bvTextures)
                 .primitives(toJsonPrimitives(primitives, primitiveBvs))
                 .metadata(featureCount, attrFields, propBvs)
+                .defaultStyle(defaultStyle)
                 .build();
 
         return GlbContainer.assemble(jsonData, binData);

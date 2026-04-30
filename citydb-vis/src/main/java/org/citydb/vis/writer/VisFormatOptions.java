@@ -8,6 +8,7 @@ package org.citydb.vis.writer;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
+import org.citydb.vis.styling.DefaultObjectStyle;
 
 /**
  * Base format options shared by all visualization export formats (I3S, 3D Tiles, etc.).
@@ -24,6 +25,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     private int maxAtlasSize = 1024;
     private AtlasOverflowMode atlasOverflowMode = AtlasOverflowMode.HYBRID;
     private AtlasFallbackStrategy atlasFallbackStrategy = AtlasFallbackStrategy.EXPAND;
+    private DefaultObjectStyle defaultObjectStyle = DefaultObjectStyle.defaults();
 
     public double getGridEdgeLength() {
         return gridEdgeLength;
@@ -96,6 +98,15 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
 
     public VisFormatOptions setAtlasFallbackStrategy(AtlasFallbackStrategy atlasFallbackStrategy) {
         this.atlasFallbackStrategy = atlasFallbackStrategy != null ? atlasFallbackStrategy : AtlasFallbackStrategy.EXPAND;
+        return this;
+    }
+
+    public DefaultObjectStyle getDefaultObjectStyle() {
+        return defaultObjectStyle;
+    }
+
+    public VisFormatOptions setDefaultObjectStyle(DefaultObjectStyle defaultObjectStyle) {
+        this.defaultObjectStyle = defaultObjectStyle != null ? defaultObjectStyle : DefaultObjectStyle.defaults();
         return this;
     }
 }
