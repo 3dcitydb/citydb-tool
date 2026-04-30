@@ -11,11 +11,18 @@ import org.citydb.vis.styling.DefaultObjectStyle;
 import java.util.List;
 
 /**
- * {@code cullFace = "none"} rather than "back": CityGML imports often mix
- * triangle winding on walls, and "back" culling then removes those
- * triangles from the ArcGIS pick buffer, making the feature unpickable
- * from certain camera angles even though it still renders correctly on
- * the lit side.
+ * Both {@code cullFace="none"} and {@code doubleSided=true} are emitted on
+ * every material — different I3S clients read different fields:
+ * <ul>
+ *   <li><b>ArcGIS Pro</b> honours the legacy I3S 1.6-era {@code cullFace}
+ *       enum. Required for Pro pick to find triangles whose CityGML winding
+ *       points away from the camera (CityGML imports routinely have
+ *       inconsistent wall winding).</li>
+ *   <li><b>CesiumJS I3S loader</b> aligned with glTF in I3S 1.7+, reads the
+ *       boolean {@code doubleSided}. Without this, Cesium back-face-culls
+ *       wrong-winding triangles and they vanish from one viewing side.</li>
+ * </ul>
+ * Writing both is safe — clients ignore the field they don't recognise.
  */
 @JSONType(alphabetic = false)
 public class MaterialDefinition {
@@ -23,6 +30,7 @@ public class MaterialDefinition {
     private static final String ALPHA_MODE_BLEND = "BLEND";
 
     private String cullFace;
+    private Boolean doubleSided;
     private String alphaMode;
     private PbrMetallicRoughness pbrMetallicRoughness;
 
@@ -73,6 +81,7 @@ public class MaterialDefinition {
     private static MaterialDefinition pbr(BaseColorTexture baseColor) {
         MaterialDefinition material = new MaterialDefinition();
         material.cullFace = CULL_FACE;
+        material.doubleSided = true;
         material.pbrMetallicRoughness = new PbrMetallicRoughness(baseColor, null, 0);
         return material;
     }
