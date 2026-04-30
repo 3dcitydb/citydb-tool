@@ -33,17 +33,22 @@ import java.util.Map;
  *   <li>{@code EXT_structural_metadata}: per-feature property table</li>
  * </ul>
  * <p>
- * A node emits one textured primitive per atlas page plus an optional
- * untextured primitive, all sharing the same mesh / property table:
+ * A node emits one textured primitive per atlas page plus optional
+ * untextured primitives, all sharing the same mesh / property table.
+ * NORMAL is only emitted on the no-appearance plain path; textured and
+ * X3DMaterial-colored paths render unlit:
  * <ul>
  *   <li>Textured primitive (per atlas page): {@code POSITION + TEXCOORD_0 +
- *       _FEATURE_ID_0}, uses a textured PBR material backed by that page.
- *       Normals are omitted so CesiumJS generates flat per-face normals at
- *       render time — matches the I3S behaviour and looks best on faceted
- *       building geometry.</li>
- *   <li>Untextured primitive: {@code POSITION + NORMAL + _FEATURE_ID_0}, uses
- *       a default PBR material. Encoded per-face normals give proper lighting
- *       with the plain white base color.</li>
+ *       _FEATURE_ID_0}, uses an unlit textured material backed by that
+ *       page. NORMAL omitted; {@code KHR_materials_unlit} prevents CesiumJS
+ *       from auto-deriving flat normals (which would dim the texture).</li>
+ *   <li>Untextured-plain primitive: {@code POSITION + NORMAL + _FEATURE_ID_0},
+ *       uses a default PBR material. The only shaded path: per-face NORMAL
+ *       gives a default-white surface a 3D form via Lambertian shading.</li>
+ *   <li>Untextured-colored primitive (X3DMaterial): {@code POSITION +
+ *       COLOR_0 + _FEATURE_ID_0}, uses an unlit material. NORMAL omitted
+ *       so the authored thematic / heat-map colors render at full
+ *       intensity.</li>
  * </ul>
  * Positions are in a local ENU coordinate frame relative to a dataset center.
  * The root tile's {@code transform} in {@code tileset.json} converts ENU to ECEF.
@@ -263,11 +268,12 @@ public class GlbEncoder {
      * Build per-primitive welded vertex arrays from the chosen triangle subset.
      * Rewrites welded positions from ENU (meters, East/North/Up) into glTF
      * Y-up (X=East, Y=Up, Z=-North), collects per-axis min/max for the
-     * POSITION accessor, and emits {@code NORMAL} (when untextured) or
-     * {@code TEXCOORD_0} (when textured) accordingly. {@code atlasPage}:
-     * {@code >=0} = textured (atlas page index); {@link #UNTEXTURED_PLAIN_PAGE}
-     * = untextured-no-color (PBR-shaded); {@link #UNTEXTURED_COLORED_PAGE} =
-     * untextured-with-X3DMaterial (emits {@code COLOR_0}, rendered unlit). The
+     * POSITION accessor, and emits {@code TEXCOORD_0} (textured) /
+     * {@code COLOR_0} (X3DMaterial) / {@code NORMAL} (plain only)
+     * accordingly. {@code atlasPage}: {@code >=0} = textured (atlas page
+     * index, unlit); {@link #UNTEXTURED_PLAIN_PAGE} = untextured-no-color
+     * (PBR-shaded, NORMAL emitted); {@link #UNTEXTURED_COLORED_PAGE} =
+     * untextured-with-X3DMaterial (unlit, COLOR_0 emitted, no NORMAL). The
      * resulting array's {@code anyAlphaBelowOne} flag drives
      * {@code alphaMode=BLEND} downstream.
      */
@@ -277,9 +283,14 @@ public class GlbEncoder {
                                                         int atlasPage, DatasetFrame frame) {
         boolean textured = atlasPage >= 0;
         boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
+        // NORMAL only on the no-appearance plain path. Textured/colored paths
+        // render unlit (see GltfJsonBuilder.writeMaterials), so NORMAL would
+        // be unused — and dropping it also avoids the textured-dim symptom
+        // observed on the I3S side for the same data.
+        boolean emitNormals = !textured && !emitColors;
         int vertexCount = triEntries.size() * 3;
         float[] positions = new float[vertexCount * 3];
-        float[] normals = textured ? null : new float[vertexCount * 3];
+        float[] normals = emitNormals ? new float[vertexCount * 3] : null;
         float[] uvs = textured ? new float[vertexCount * 2] : null;
         float[] colors = emitColors ? new float[vertexCount * 4] : null;
         int[] indices = new int[vertexCount]; // triangle soup: 0,1,2,3,...
@@ -370,9 +381,10 @@ public class GlbEncoder {
     /**
      * {@link PrimitiveArrays#atlasPage} sentinels for the two untextured
      * primitive flavours. {@code _PLAIN} means "no X3DMaterial color" — gets
-     * the default PBR material with {@code NORMAL}-driven Lambertian shading.
-     * {@code _COLORED} means "has X3DMaterial vertex color" — emits
-     * {@code COLOR_0} and is rendered unlit. The {@link GltfJsonBuilder}
+     * the default PBR material with {@code NORMAL}-driven Lambertian shading
+     * (the only shaded path). {@code _COLORED} means "has X3DMaterial vertex
+     * color" — emits {@code COLOR_0} with an unlit material so authored
+     * thematic colors render at full intensity. The {@link GltfJsonBuilder}
      * distinguishes the two via the primitive's {@code bvColors >= 0} flag,
      * which is set iff this sentinel was {@code _COLORED}.
      */
