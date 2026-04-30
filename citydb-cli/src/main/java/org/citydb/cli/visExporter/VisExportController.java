@@ -172,6 +172,10 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         if (Command.hasMatchedOption("--atlas-fallback", commandSpec)) {
             options.setAtlasFallbackStrategy(sceneOptions.getAtlasFallbackStrategy());
         }
+
+        if (Command.hasMatchedOption("--default-color", commandSpec)) {
+            options.setDefaultObjectStyle(sceneOptions.getDefaultObjectStyle());
+        }
     }
 
     private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,

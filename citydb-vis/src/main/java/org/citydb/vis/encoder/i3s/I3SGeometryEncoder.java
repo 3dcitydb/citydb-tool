@@ -37,18 +37,19 @@ import java.util.List;
  * Encodes I3S node meshes into a single Draco-compressed geometry buffer
  * ({@code geometries/0}). Attribute layout per node category:
  * <ul>
- *   <li>untextured (no appearance): {@code position, normal, feature-index} —
- *       PBR + NORMAL gives default-white surfaces a 3D form via Lambertian
- *       shading.</li>
+ *   <li>untextured (no appearance): {@code position, normal, feature-index}</li>
  *   <li>textured:                   {@code position, uv0, feature-index}</li>
  *   <li>textured-colored:           {@code position, uv0, color, feature-index}</li>
  *   <li>colored (X3DMaterial only): {@code position, color, feature-index}</li>
  * </ul>
  * Policy: NORMAL is emitted only when the node has no appearance (no texture
- * and no X3DMaterial vertex colors). Any node with texture or X3DMaterial
- * skips NORMAL so the authored color/texture renders at full intensity —
- * X3DMaterial in this project is used for thematic / heat-map style
- * visualisation where Lambertian shading would dim the authored colors.
+ * and no X3DMaterial vertex colors). The plain path is always shaded
+ * (PBR + per-face NORMAL); the user's configured default color (see
+ * {@code DefaultObjectStyle}) rides on the material's {@code baseColorFactor}
+ * separately. Any node with texture or X3DMaterial skips NORMAL so the
+ * authored color/texture renders at full intensity — X3DMaterial in this
+ * project is used for thematic / heat-map style visualisation where
+ * Lambertian shading would dim the authored colors.
  */
 public class I3SGeometryEncoder {
     /**
