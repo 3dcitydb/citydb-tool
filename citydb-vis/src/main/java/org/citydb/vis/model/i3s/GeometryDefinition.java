@@ -12,9 +12,12 @@ import java.util.List;
 /**
  * Geometry definition with a single Draco-compressed geometryBuffer. The
  * four layouts cover the cross-product of textured/untextured and
- * with/without baked X3DMaterial vertex colors. The feature-index attribute
- * carries per-vertex feature identification for picking (via injected
- * {@code i3s-feature-ids} Draco metadata).
+ * with/without baked X3DMaterial vertex colors. NORMAL is present only on
+ * the no-appearance variant ({@link DracoBuffer#untextured()}); textured
+ * and X3DMaterial-colored nodes render unlit so authored colors and
+ * textures are not dimmed by Lambertian shading. The feature-index
+ * attribute carries per-vertex feature identification for picking (via
+ * injected {@code i3s-feature-ids} Draco metadata).
  */
 @JSONType(alphabetic = false)
 public class GeometryDefinition {
@@ -60,7 +63,7 @@ public class GeometryDefinition {
         }
 
         public static DracoBuffer colored() {
-            return wrap(List.of("position", "normal", "color", "feature-index"));
+            return wrap(List.of("position", "color", "feature-index"));
         }
 
         private static DracoBuffer wrap(List<String> attrs) {
