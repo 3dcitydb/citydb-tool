@@ -11,6 +11,7 @@ import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.tiles3d.MetadataProperty;
+import org.citydb.vis.styling.DefaultObjectStyle;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -50,6 +51,10 @@ final class GltfJsonBuilder {
     private List<AttrField> attrFields;
     private List<PropertyTableBufferViews> propBvs;
 
+    // Global default style applied to the no-appearance plain material.
+    // Default white shaded keeps current behavior when unset.
+    private DefaultObjectStyle defaultStyle = DefaultObjectStyle.defaults();
+
     // Set by writeMaterials when any material gets KHR_materials_unlit applied;
     // consumed by writeExtensions to declare it in extensionsUsed.
     private boolean unlitUsed;
@@ -75,6 +80,11 @@ final class GltfJsonBuilder {
         this.featureCount = featureCount;
         this.attrFields = attrFields;
         this.propBvs = propBvs;
+        return this;
+    }
+
+    GltfJsonBuilder defaultStyle(DefaultObjectStyle defaultStyle) {
+        this.defaultStyle = defaultStyle != null ? defaultStyle : DefaultObjectStyle.defaults();
         return this;
     }
 
@@ -194,9 +204,13 @@ final class GltfJsonBuilder {
      *       the texture renders at authored intensity; matches the I3S
      *       textured material (which has no NORMAL and renders unlit).</li>
      *   <li><b>plain</b> — default PBR, used by untextured primitives without
-     *       X3DMaterial vertex colors. The only shaded path: white surfaces
-     *       get Lambertian shading from NORMAL so a default-colored building
-     *       still shows 3D form.</li>
+     *       X3DMaterial vertex colors. The only shaded path: surfaces get
+     *       Lambertian shading from NORMAL so a default-colored building
+     *       still shows 3D form. Receives {@code baseColorFactor} from the
+     *       configured {@link DefaultObjectStyle} (omitted when the style
+     *       still has the opaque-white default); promotes to
+     *       {@code alphaMode=BLEND} when the configured color carries
+     *       alpha &lt; 1.</li>
      *   <li><b>colored</b> — PBR + {@code KHR_materials_unlit}, used by
      *       untextured primitives carrying X3DMaterial {@code COLOR_0}.
      *       Unlit because X3DMaterial in this project is used for thematic /
@@ -258,6 +272,17 @@ final class GltfJsonBuilder {
             JSONObject pbr = new JSONObject();
             pbr.put("metallicFactor", 0.0);
             pbr.put("roughnessFactor", 1.0);
+            // baseColorFactor: only emit when the user actually configured a
+            // non-default color; the glTF default is opaque white, so omitting
+            // the field keeps the JSON minimal in the common case.
+            if (defaultStyle.hasNonDefaultColor()) {
+                JSONArray baseColorFactor = new JSONArray();
+                for (float v : defaultStyle.toLinearRgba()) baseColorFactor.add(v);
+                pbr.put("baseColorFactor", baseColorFactor);
+                if (defaultStyle.hasAlpha()) {
+                    material.put("alphaMode", "BLEND");
+                }
+            }
             material.put("pbrMetallicRoughness", pbr);
             untexturedPlainIdx = materials.size();
             materials.add(material);
