@@ -21,6 +21,7 @@ import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.util.FileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +113,7 @@ public class I3SWriter extends VisWriter {
         boolean includeObb = slpk || options.isObb();
         SceneLayer sceneLayer = buildSceneLayer(extent);
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices,
-                hasTextures, hasColors, includeObb);
+                hasTextures, hasColors, includeObb, options.getDefaultObjectStyle());
 
         if (slpk) {
             try {
@@ -179,7 +180,8 @@ public class I3SWriter extends VisWriter {
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures,
                                 boolean hasColors,
-                                boolean includeObb) throws VisExportException {
+                                boolean includeObb,
+                                DefaultObjectStyle defaultStyle) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
 
@@ -187,7 +189,7 @@ public class I3SWriter extends VisWriter {
             Files.createDirectories(layerDir);
             // Scene layer JSON
             jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
-                    hasTextures, hasColors);
+                    hasTextures, hasColors, defaultStyle);
         } catch (IOException e) {
             throw new VisExportException("Failed to write I3S scene layer JSON.", e);
         }
