@@ -8,6 +8,7 @@ module org.citydb.vis {
 
     exports org.citydb.vis;
     exports org.citydb.vis.appearance;
+    exports org.citydb.vis.config;
     exports org.citydb.vis.encoder;
     exports org.citydb.vis.encoder.i3s;
     exports org.citydb.vis.encoder.tiles3d;
