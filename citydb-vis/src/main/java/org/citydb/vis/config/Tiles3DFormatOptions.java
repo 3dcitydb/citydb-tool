@@ -3,9 +3,7 @@
  * Copyright Stuttgart University of Applied Sciences (HFT Stuttgart) <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.writer.tiles3d;
-
-import org.citydb.vis.writer.VisFormatOptions;
+package org.citydb.vis.config;
 
 import org.citydb.config.SerializableConfig;
 
