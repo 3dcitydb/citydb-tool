@@ -24,6 +24,7 @@ import org.citydb.vis.appearance.AppearanceExtractor;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.TextureAtlas;
+import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.encoder.AttributeEncoder;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;

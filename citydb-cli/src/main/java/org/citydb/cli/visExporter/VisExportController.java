@@ -40,7 +40,7 @@ import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.vis.writer.VisFormatOptions;
+import org.citydb.vis.config.VisFormatOptions;
 import picocli.CommandLine;
 
 import java.io.IOException;
