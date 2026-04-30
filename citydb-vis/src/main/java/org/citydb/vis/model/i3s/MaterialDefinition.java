@@ -32,7 +32,13 @@ public class MaterialDefinition {
     }
 
     /**
-     * Untextured material that consumes per-vertex COLOR_0. {@code blend=true}
+     * Untextured material that consumes per-vertex COLOR_0. Renders unlit
+     * (no Lambertian shading) because the paired Draco buffer
+     * ({@link GeometryDefinition.DracoBuffer#colored()}) omits NORMAL — the
+     * CesiumJS I3S loader skips lighting when NORMAL is absent. This is the
+     * I3S equivalent of the 3D Tiles colored material's
+     * {@code KHR_materials_unlit}; both paths must stay unlit so authored
+     * thematic / heat-map colors render at full intensity. {@code blend=true}
      * emits {@code alphaMode=BLEND} for X3DMaterial transparency; opaque
      * colored nodes rely on I3S's default OPAQUE.
      */

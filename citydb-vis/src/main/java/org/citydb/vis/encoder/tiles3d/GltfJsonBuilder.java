@@ -50,8 +50,8 @@ final class GltfJsonBuilder {
     private List<AttrField> attrFields;
     private List<PropertyTableBufferViews> propBvs;
 
-    // Set by writeMaterials when the untextured material gets KHR_materials_unlit
-    // applied; consumed by writeExtensions to declare it in extensionsUsed.
+    // Set by writeMaterials when any material gets KHR_materials_unlit applied;
+    // consumed by writeExtensions to declare it in extensionsUsed.
     private boolean unlitUsed;
 
     GltfJsonBuilder bufferViews(List<GltfBufferView> bufferViews, int binLength) {
@@ -185,25 +185,26 @@ final class GltfJsonBuilder {
     }
 
     /**
-     * Emit one textured PBR material per referenced atlas page (each with a
+     * Emit one textured material per referenced atlas page (each with a
      * baseColorTexture pointing at its own atlas), plus up to two untextured
-     * materials:
+     * materials. The texturing/X3DMaterial paths are unlit; only the
+     * no-appearance plain path is shaded:
      * <ul>
+     *   <li><b>textured</b> — PBR + {@code KHR_materials_unlit}. Unlit so
+     *       the texture renders at authored intensity; matches the I3S
+     *       textured material (which has no NORMAL and renders unlit).</li>
      *   <li><b>plain</b> — default PBR, used by untextured primitives without
-     *       X3DMaterial vertex colors (white surfaces with NORMAL get
-     *       Lambertian shading);</li>
+     *       X3DMaterial vertex colors. The only shaded path: white surfaces
+     *       get Lambertian shading from NORMAL so a default-colored building
+     *       still shows 3D form.</li>
      *   <li><b>colored</b> — PBR + {@code KHR_materials_unlit}, used by
-     *       untextured primitives carrying X3DMaterial {@code COLOR_0}. Unlit
-     *       prevents Cesium from darkening the authored diffuseColor with
-     *       sun-direction shading and matches the "flat thematic color"
-     *       semantics. Flipped to {@code alphaMode=BLEND} when any colored
-     *       primitive has an alpha less than 1 — vertex {@code COLOR_0}
-     *       multiplies into baseColor so BLEND is required for transparency
-     *       to render.</li>
+     *       untextured primitives carrying X3DMaterial {@code COLOR_0}.
+     *       Unlit because X3DMaterial in this project is used for thematic /
+     *       heat-map colors where Lambertian darkening is undesirable.
+     *       Flipped to {@code alphaMode=BLEND} when any colored primitive
+     *       has alpha below 1 — vertex {@code COLOR_0} multiplies into
+     *       baseColor so BLEND is required for transparency to render.</li>
      * </ul>
-     * Splitting the untextured path into two materials lets a feature with
-     * mixed X3DMaterial and bare polygons keep PBR shading on the bare
-     * surfaces while X3DMaterial surfaces render at authored intensity.
      * Returns the resolved material indices keyed by atlas page so
      * {@link #writeMeshes} can reference them.
      */
@@ -244,6 +245,10 @@ final class GltfJsonBuilder {
             pbr.put("metallicFactor", 0.0);
             pbr.put("roughnessFactor", 1.0);
             material.put("pbrMetallicRoughness", pbr);
+            JSONObject extensions = new JSONObject();
+            extensions.put("KHR_materials_unlit", new JSONObject());
+            material.put("extensions", extensions);
+            unlitUsed = true;
             texturedIdx[p] = materials.size();
             materials.add(material);
         }
@@ -449,13 +454,14 @@ final class GltfJsonBuilder {
 
     /**
      * Per-primitive geometry inputs. {@code atlasPage >= 0} selects the
-     * textured path (material indexed by atlas page); {@code -1} selects the
-     * default untextured PBR material. {@code bvNormals}, {@code bvUvs} and
-     * {@code bvColors} may be {@code -1} when the primitive doesn't carry
-     * that attribute — textured primitives skip normals and colors,
-     * untextured primitives skip UVs and skip colors when no X3DMaterial
-     * was applied. {@code anyAlphaBelowOne} flips the untextured material
-     * to {@code alphaMode=BLEND}.
+     * textured path (material indexed by atlas page); negative sentinels
+     * select one of the two untextured materials (plain PBR or unlit
+     * colored). {@code bvNormals}, {@code bvUvs} and {@code bvColors} may
+     * be {@code -1} when the primitive doesn't carry that attribute — only
+     * the untextured-plain path emits NORMAL; textured primitives carry UV
+     * (no normal, no color); X3DMaterial-colored primitives carry COLOR_0
+     * (no normal, no UV). {@code anyAlphaBelowOne} flips the untextured
+     * colored material to {@code alphaMode=BLEND}.
      */
     record Primitive(int atlasPage, int vertexCount, float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvColors,
