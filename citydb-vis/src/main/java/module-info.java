@@ -14,6 +14,7 @@ module org.citydb.vis {
     exports org.citydb.vis.geometry;
     exports org.citydb.vis.scene;
     exports org.citydb.vis.store;
+    exports org.citydb.vis.styling;
     exports org.citydb.vis.util;
     exports org.citydb.vis.writer;
     exports org.citydb.vis.writer.i3s;
