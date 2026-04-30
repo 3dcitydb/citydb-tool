@@ -10,7 +10,7 @@ import org.citydb.vis.model.AttrField;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.PartitionedEntryStore;
 import org.citydb.vis.store.VisExportStores;
-import org.citydb.vis.writer.VisFormatOptions;
+import org.citydb.vis.config.VisFormatOptions;
 
 import java.util.List;
 import java.util.Map;

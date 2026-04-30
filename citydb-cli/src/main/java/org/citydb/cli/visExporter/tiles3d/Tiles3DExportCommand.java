@@ -13,7 +13,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.Tiles3DAdapter;
-import org.citydb.vis.writer.tiles3d.Tiles3DFormatOptions;
+import org.citydb.vis.config.Tiles3DFormatOptions;
 import picocli.CommandLine;
 
 @CommandLine.Command(
