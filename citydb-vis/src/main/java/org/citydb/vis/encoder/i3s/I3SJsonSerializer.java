@@ -15,6 +15,7 @@ import org.citydb.vis.model.i3s.NodePage;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.model.i3s.SceneLayerDescriptor;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.styling.DefaultObjectStyle;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,9 +33,10 @@ public class I3SJsonSerializer {
     public void writeSceneLayerJson(Path layerDir, SceneLayer sceneLayer,
                                     List<AttrField> attrFields,
                                     boolean hasTextures,
-                                    boolean hasColors) throws IOException {
+                                    boolean hasColors,
+                                    DefaultObjectStyle defaultStyle) throws IOException {
         SceneLayerDescriptor descriptor = SceneLayerDescriptor.of(sceneLayer, attrFields,
-                hasTextures, hasColors);
+                hasTextures, hasColors, defaultStyle);
         JsonHelper.writePojo(layerDir.resolve("index.json"), descriptor);
     }
 
