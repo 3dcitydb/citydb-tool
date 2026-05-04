@@ -1,5 +1,6 @@
 module org.citydb.vis {
     requires org.citydb.io;
+    requires org.citydb.database;
     requires com.alibaba.fastjson2;
     requires org.slf4j;
     requires drako;
