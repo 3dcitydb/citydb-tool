@@ -26,6 +26,16 @@ public class SceneLayerDescriptor {
     public static final int TEXTURED_DEFINITION_INDEX = 1;
     public static final int VERTEX_COLORED_OPAQUE_DEFINITION_INDEX = 2;
     public static final int VERTEX_COLORED_BLEND_DEFINITION_INDEX = 3;
+    /**
+     * Per-feature-type styling slots. Allocated only when
+     * {@code hasStyleOverrides} is true on the scene layer. Carry baked
+     * per-triangle COLOR_0 <i>plus</i> NORMAL so each surface type can
+     * render with its own colour while still picking up Lambertian shading.
+     * The OPAQUE / BLEND split mirrors the X3DMaterial pair: a node with
+     * any styled triangle below {@code alpha = 1} routes to BLEND.
+     */
+    public static final int STYLED_COLORED_OPAQUE_DEFINITION_INDEX = 4;
+    public static final int STYLED_COLORED_BLEND_DEFINITION_INDEX = 5;
 
     private int id;
     private String version;
@@ -50,6 +60,7 @@ public class SceneLayerDescriptor {
                                           List<AttrField> attrFields,
                                           boolean hasTextures,
                                           boolean hasColors,
+                                          boolean hasStyleOverrides,
                                           DefaultObjectStyle defaultStyle) {
         SceneLayerDescriptor descriptor = new SceneLayerDescriptor();
         descriptor.id = 0;
@@ -65,14 +76,15 @@ public class SceneLayerDescriptor {
         descriptor.heightModelInfo = HeightModelInfo.egm96Meter();
         descriptor.spatialReference = SpatialReference.of(sceneLayer.getWkid());
         descriptor.store = Store.of(sceneLayer, hasTextures);
-        descriptor.geometryDefinitions = buildGeometryDefinitions(hasTextures, hasColors);
+        descriptor.geometryDefinitions = buildGeometryDefinitions(hasTextures, hasColors,
+                hasStyleOverrides);
 
         if (hasTextures) {
             descriptor.textureSetDefinitions = List.of(TextureSetDefinition.jpeg());
         }
 
         descriptor.materialDefinitions = buildMaterialDefinitions(hasTextures, hasColors,
-                defaultStyle);
+                hasStyleOverrides, defaultStyle);
         descriptor.fullExtent = FullExtent.from(sceneLayer.getExtent());
         descriptor.fields = buildFields(attrFields);
         // Our OID-typed field is named "OID" (not Esri's default "OBJECTID"),
@@ -86,42 +98,59 @@ public class SceneLayerDescriptor {
     }
 
     private static List<GeometryDefinition> buildGeometryDefinitions(boolean hasTextures,
-                                                                     boolean hasColors) {
+                                                                     boolean hasColors,
+                                                                     boolean hasStyleOverrides) {
         // The textured slot (index 1) is filled with a placeholder untextured
         // definition when the layer has colors but no textures, so that the
-        // OPAQUE/BLEND colored definitions can stay at fixed indices 2/3.
-        List<GeometryDefinition> definitions = new ArrayList<>(4);
+        // OPAQUE/BLEND colored definitions stay at fixed indices 2/3.
+        // In a pure-styling layer (overrides but no X3DMaterial) slots 2/3
+        // are unreferenced placeholders held for index stability; in a
+        // mixed layer they're the active X3DMaterial slots.
+        List<GeometryDefinition> definitions = new ArrayList<>(6);
         definitions.add(GeometryDefinition.untextured());
         if (hasTextures) {
             definitions.add(hasColors
                     ? GeometryDefinition.texturedColored()
                     : GeometryDefinition.textured());
-        } else if (hasColors) {
+        } else if (hasColors || hasStyleOverrides) {
             definitions.add(GeometryDefinition.untextured());
         }
-        if (hasColors) {
+        if (hasColors || hasStyleOverrides) {
             // OPAQUE and BLEND share the same Draco layout; alphaMode is set
             // on the paired MaterialDefinition, not here.
             GeometryDefinition colored = GeometryDefinition.colored();
             definitions.add(colored);
             definitions.add(colored);
         }
+        if (hasStyleOverrides) {
+            GeometryDefinition styled = GeometryDefinition.coloredShaded();
+            definitions.add(styled);
+            definitions.add(styled);
+        }
         return definitions;
     }
 
     private static List<MaterialDefinition> buildMaterialDefinitions(boolean hasTextures,
                                                                     boolean hasColors,
+                                                                    boolean hasStyleOverrides,
                                                                     DefaultObjectStyle defaultStyle) {
-        List<MaterialDefinition> materials = new ArrayList<>(4);
+        List<MaterialDefinition> materials = new ArrayList<>(6);
         materials.add(MaterialDefinition.untextured(defaultStyle));
         if (hasTextures) {
             materials.add(MaterialDefinition.textured());
-        } else if (hasColors) {
+        } else if (hasColors || hasStyleOverrides) {
             materials.add(MaterialDefinition.untextured(defaultStyle));
         }
-        if (hasColors) {
+        if (hasColors || hasStyleOverrides) {
+            // X3DMaterial unlit slots — used when the layer has X3DMaterial.
+            // Allocated as placeholders in a pure-styling layer so the
+            // styled-colored slots stay at fixed indices 4/5.
             materials.add(MaterialDefinition.colored(false));
             materials.add(MaterialDefinition.colored(true));
+        }
+        if (hasStyleOverrides) {
+            materials.add(MaterialDefinition.coloredShaded(false));
+            materials.add(MaterialDefinition.coloredShaded(true));
         }
         return materials;
     }
