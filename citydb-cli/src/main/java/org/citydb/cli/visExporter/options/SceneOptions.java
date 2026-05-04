@@ -11,6 +11,8 @@ import org.citydb.vis.appearance.AtlasOverflowMode;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import picocli.CommandLine;
 
+import java.util.Map;
+
 public class SceneOptions implements Option {
     @CommandLine.Option(names = "--grid-edge-length", paramLabel = "<meters>",
             defaultValue = "200.0",
@@ -92,6 +94,19 @@ public class SceneOptions implements Option {
                     "per-face Lambertian shading so 3D form is visible.")
     private String defaultColor;
 
+    @CommandLine.Option(names = "--feature-type-style", split = ",",
+            paramLabel = "<type=#rrggbb[aa]>",
+            description = "Per-feature-type sRGB color override on the no-appearance path " +
+                    "(supported by both 3D Tiles and I3S). The key is a qualified feature " +
+                    "type name like 'bldg:Building'. Child types take precedence over " +
+                    "parents via the schema type hierarchy, so an override on " +
+                    "'core:AbstractCityObject' acts as a default for every CityGML feature " +
+                    "and a more specific override on 'bldg:Building' wins for buildings " +
+                    "only. Multiple entries may be supplied either by repeating the option " +
+                    "or with a comma-separated list, e.g. " +
+                    "--feature-type-style bldg:Building=#ff0000,tran:Road=#808080cc.")
+    private Map<String, String> featureTypeStyles;
+
     public double getGridEdgeLength() {
         return gridEdgeLength;
     }
@@ -133,6 +148,18 @@ public class SceneOptions implements Option {
                 : DefaultObjectStyle.defaults();
     }
 
+    /**
+     * Raw {@code qualifiedName -> hex color} map from
+     * {@code --feature-type-style}. The controller resolves each qualified
+     * name against the {@link org.citydb.database.schema.SchemaMapping} and
+     * builds the {@link org.citydb.vis.styling.ObjectStyleRegistry}; this
+     * class only validates the hex syntax in {@link #preprocess}.
+     * Returns an empty map when the option was not provided.
+     */
+    public Map<String, String> getFeatureTypeStyles() {
+        return featureTypeStyles != null ? featureTypeStyles : Map.of();
+    }
+
     @Override
     public void preprocess(CommandLine commandLine) {
         if (gridEdgeLength <= 0) {
@@ -165,6 +192,17 @@ public class SceneOptions implements Option {
             } catch (IllegalArgumentException e) {
                 throw new CommandLine.ParameterException(commandLine,
                         "Error: --default-color " + e.getMessage());
+            }
+        }
+
+        if (featureTypeStyles != null) {
+            for (Map.Entry<String, String> e : featureTypeStyles.entrySet()) {
+                try {
+                    DefaultObjectStyle.parseColor(e.getValue());
+                } catch (IllegalArgumentException ex) {
+                    throw new CommandLine.ParameterException(commandLine,
+                            "Error: --feature-type-style for '" + e.getKey() + "' " + ex.getMessage());
+                }
             }
         }
     }

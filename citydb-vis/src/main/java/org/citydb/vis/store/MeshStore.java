@@ -5,6 +5,7 @@
 
 package org.citydb.vis.store;
 
+import org.citydb.model.common.Name;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.FileHelper;
@@ -13,10 +14,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Disk-backed storage for {@link TriangleMesh} instances.
@@ -112,7 +117,15 @@ class MeshStore implements Closeable {
      *   int32[tc]      triTexIds (&lt; 0 = untextured triangle)
      *   if hasColors:
      *     byte[(tc+7)/8] triColored (LSB-first bit-packed; bit i is in byte i/8 at bit i%8)
+     *   int16  surfaceTypeCount  (S — typically 1..10, capped at 32767)
+     *   for each of S types:
+     *     int32 localNameLen + bytes localName  (UTF-8)
+     *     int32 namespaceLen + bytes namespace  (UTF-8, may be empty)
+     *   int16[tc] surfaceTypeIds (index into the per-mesh dictionary)
      * </pre>
+     * The surface-type dictionary is per-mesh and tiny in practice (a few
+     * distinct types per feature) so an int16 index is sufficient and keeps
+     * the per-triangle storage cost to 2 bytes.
      */
     private static ByteBuffer serialize(TriangleMesh mesh) {
         List<double[]> positions = mesh.getPositions();
@@ -128,6 +141,33 @@ class MeshStore implements Closeable {
         int tc = triangles.size();
         // Bit-packed colored bits, only when hasCol. One bit per triangle.
         int coloredBytes = hasCol ? ((tc + 7) >>> 3) : 0;
+
+        // Build the per-mesh surface-type dictionary up front so we can size
+        // the buffer correctly. Using a LinkedHashMap-like pattern via a
+        // HashMap<Name, Integer> + List<Name> preserves first-encounter order.
+        Map<Name, Integer> typeIndex = new HashMap<>();
+        List<Name> typeDict = new ArrayList<>();
+        short[] surfaceTypeIds = new short[tc];
+        for (int i = 0; i < tc; i++) {
+            Name type = mesh.getTriangleSurfaceType(i);
+            Integer idx = typeIndex.get(type);
+            if (idx == null) {
+                if (typeDict.size() >= Short.MAX_VALUE) {
+                    throw new IllegalStateException(
+                            "Mesh exceeds " + Short.MAX_VALUE + " distinct surface types.");
+                }
+                idx = typeDict.size();
+                typeIndex.put(type, idx);
+                typeDict.add(type);
+            }
+            surfaceTypeIds[i] = idx.shortValue();
+        }
+        long dictBytes = 2L; // surfaceTypeCount field
+        for (Name type : typeDict) {
+            dictBytes += 4L + utf8Len(type.getLocalName());
+            dictBytes += 4L + utf8Len(type.getNamespace());
+        }
+
         // Compute in long space and check for overflow before narrowing. A
         // single mesh this large is unexpected, but silent truncation would
         // corrupt the entire store, so fail loudly instead.
@@ -135,7 +175,8 @@ class MeshStore implements Closeable {
                 + (hasTC ? (long) vc * 8 : 0)
                 + 1L + (hasCol ? (long) vc * 16 : 0)
                 + 4L + (long) tc * 12 + (long) tc * 8 + (long) tc * 4
-                + coloredBytes;
+                + coloredBytes
+                + dictBytes + (long) tc * 2;
         if (dataSizeLong > Integer.MAX_VALUE - 4) {
             throw new IllegalStateException("Mesh serialized size exceeds 2 GB: " + dataSizeLong);
         }
@@ -193,8 +234,37 @@ class MeshStore implements Closeable {
             buf.put(packed);
         }
 
+        // Surface-type dictionary + per-triangle indices. Always present
+        // (even when only one distinct type exists); empty meshes skip
+        // serialization entirely so this field count is consistent.
+        buf.putShort((short) typeDict.size());
+        for (Name type : typeDict) {
+            writeUtf8(buf, type.getLocalName());
+            writeUtf8(buf, type.getNamespace());
+        }
+        for (short id : surfaceTypeIds) {
+            buf.putShort(id);
+        }
+
         buf.flip();
         return buf;
+    }
+
+    private static int utf8Len(String s) {
+        return s == null ? 0 : s.getBytes(StandardCharsets.UTF_8).length;
+    }
+
+    private static void writeUtf8(ByteBuffer buf, String s) {
+        byte[] bytes = (s == null ? "" : s).getBytes(StandardCharsets.UTF_8);
+        buf.putInt(bytes.length);
+        buf.put(bytes);
+    }
+
+    private static String readUtf8(ByteBuffer buf) {
+        int len = buf.getInt();
+        byte[] bytes = new byte[len];
+        buf.get(bytes);
+        return new String(bytes, StandardCharsets.UTF_8);
     }
 
     private static TriangleMesh deserialize(ByteBuffer buf) {
@@ -277,10 +347,25 @@ class MeshStore implements Closeable {
             colored = new byte[(tc + 7) >>> 3];
             buf.get(colored);
         }
+
+        // Read surface-type dictionary + per-triangle indices, then resolve
+        // each id back to its Name before feeding mesh.addTriangle.
+        int typeCount = buf.getShort();
+        Name[] typeDict = new Name[typeCount];
+        for (int i = 0; i < typeCount; i++) {
+            String localName = readUtf8(buf);
+            String namespace = readUtf8(buf);
+            typeDict[i] = Name.of(localName, namespace);
+        }
+        short[] surfaceTypeIds = new short[tc];
+        for (int i = 0; i < tc; i++) {
+            surfaceTypeIds[i] = buf.getShort();
+        }
+
         for (int i = 0; i < tc; i++) {
             boolean isColored = colored != null && (colored[i >>> 3] & (1 << (i & 7))) != 0;
             mesh.addTriangle(triangles[i][0], triangles[i][1], triangles[i][2],
-                    featureIds[i], texIds[i], isColored);
+                    featureIds[i], texIds[i], isColored, typeDict[surfaceTypeIds[i]]);
         }
         return mesh;
     }

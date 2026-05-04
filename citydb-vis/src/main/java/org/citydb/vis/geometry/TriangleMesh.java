@@ -5,6 +5,7 @@
 
 package org.citydb.vis.geometry;
 
+import org.citydb.model.common.Name;
 import org.citydb.vis.util.BoundingBoxUtils;
 
 import java.util.ArrayList;
@@ -32,6 +33,13 @@ public class TriangleMesh {
     // GLB writer's untextured-plain vs untextured-unlit primitive split so
     // unappeared surfaces in a colored feature still render with PBR shading.
     private final BitSet triangleColored;
+    // Per-triangle source surface feature type — the most-specific Feature
+    // ancestor of the triangle's polygon (e.g. RoofSurface / WallSurface for
+    // a CityGML 3.0 Building, falling back to the top-level Feature when the
+    // geometry is not nested in a boundary surface). Drives per-feature-type
+    // styling on the 3D Tiles plain path so a single building can render
+    // each surface with a different color. Always non-null when filled in.
+    private final List<Name> triangleSurfaceTypes;
     private boolean hasTexCoords;
     private boolean hasColors;
 
@@ -44,6 +52,7 @@ public class TriangleMesh {
         featureIds = new ArrayList<>();
         triangleTextureIds = new ArrayList<>();
         triangleColored = new BitSet();
+        triangleSurfaceTypes = new ArrayList<>();
     }
 
     public List<double[]> getPositions() {
@@ -170,7 +179,8 @@ public class TriangleMesh {
         return index;
     }
 
-    public void addTriangle(int v0, int v1, int v2, long featureId, int textureId, boolean colored) {
+    public void addTriangle(int v0, int v1, int v2, long featureId, int textureId,
+                            boolean colored, Name surfaceType) {
         int triIndex = triangles.size();
         triangles.add(new int[]{v0, v1, v2});
         featureIds.add(featureId);
@@ -178,6 +188,17 @@ public class TriangleMesh {
         if (colored) {
             triangleColored.set(triIndex);
         }
+        triangleSurfaceTypes.add(surfaceType);
+    }
+
+    /**
+     * Source surface feature type of the triangle at {@code triIndex} — see
+     * {@link #triangleSurfaceTypes} for semantics. Never {@code null} on
+     * meshes built through the standard pipeline; tests that synthesize a
+     * mesh directly should pass a non-null type to {@link #addTriangle}.
+     */
+    public Name getTriangleSurfaceType(int triIndex) {
+        return triangleSurfaceTypes.get(triIndex);
     }
 
     public List<Integer> getTriangleTextureIds() {
@@ -237,6 +258,7 @@ public class TriangleMesh {
         }
         featureIds.addAll(other.featureIds);
         triangleTextureIds.addAll(other.triangleTextureIds);
+        triangleSurfaceTypes.addAll(other.triangleSurfaceTypes);
 
         // Shift other.triangleColored bits by triOffset and OR into ours.
         // BitSet has no built-in shift, so iterate set bits explicitly.
@@ -330,6 +352,9 @@ public class TriangleMesh {
             // Per-new-triangle colored flag, inherited from the parent triangle
             // being split. Both sub-triangles share the parent's flag.
             List<Boolean> newColored = new ArrayList<>();
+            // Per-new-triangle source surface type, also inherited from the
+            // parent triangle (a single split never crosses a surface boundary).
+            List<Name> newSurfaceTypes = new ArrayList<>();
 
             for (int s = 0; s < splits.size(); s++) {
                 int[] split = splits.get(s);
@@ -343,6 +368,7 @@ public class TriangleMesh {
                 long fid = featureIds.get(ti);
                 int texId = triangleTextureIds.get(ti);
                 boolean colored = triangleColored.get(ti);
+                Name surfaceType = triangleSurfaceTypes.get(ti);
 
                 // New vertex at vi's position with the split triangle's normal.
                 // Interpolate UV/color along the edge at the parametric position t.
@@ -388,16 +414,19 @@ public class TriangleMesh {
                 newFeatureIds.add(fid);
                 newTriTexIds.add(texId);
                 newColored.add(colored);
+                newSurfaceTypes.add(surfaceType);
                 newTriangles.add(new int[]{newVi, ei2, ei3});
                 newFeatureIds.add(fid);
                 newTriTexIds.add(texId);
                 newColored.add(colored);
+                newSurfaceTypes.add(surfaceType);
             }
 
             List<int[]> updatedTri = new ArrayList<>();
             List<Long> updatedFid = new ArrayList<>();
             List<Integer> updatedTexId = new ArrayList<>();
             BitSet updatedColored = new BitSet();
+            List<Name> updatedSurfaceTypes = new ArrayList<>();
             int outIdx = 0;
             for (int ti = 0; ti < triCount; ti++) {
                 if (!removed.contains(ti)) {
@@ -407,6 +436,7 @@ public class TriangleMesh {
                     if (triangleColored.get(ti)) {
                         updatedColored.set(outIdx);
                     }
+                    updatedSurfaceTypes.add(triangleSurfaceTypes.get(ti));
                     outIdx++;
                 }
             }
@@ -419,6 +449,7 @@ public class TriangleMesh {
                 }
                 outIdx++;
             }
+            updatedSurfaceTypes.addAll(newSurfaceTypes);
 
             triangles.clear();
             triangles.addAll(updatedTri);
@@ -428,6 +459,8 @@ public class TriangleMesh {
             triangleTextureIds.addAll(updatedTexId);
             triangleColored.clear();
             triangleColored.or(updatedColored);
+            triangleSurfaceTypes.clear();
+            triangleSurfaceTypes.addAll(updatedSurfaceTypes);
         }
     }
 
@@ -456,6 +489,7 @@ public class TriangleMesh {
         List<Long> keptIds = new ArrayList<>();
         List<Integer> keptTexIds = new ArrayList<>();
         BitSet keptColored = new BitSet();
+        List<Name> keptSurfaceTypes = new ArrayList<>();
 
         for (int i = 0; i < triangles.size(); i++) {
             int[] tri = triangles.get(i);
@@ -475,6 +509,7 @@ public class TriangleMesh {
                 kept.add(tri);
                 keptIds.add(featureIds.get(i));
                 keptTexIds.add(triangleTextureIds.get(i));
+                keptSurfaceTypes.add(triangleSurfaceTypes.get(i));
             }
         }
 
@@ -487,6 +522,8 @@ public class TriangleMesh {
             triangleTextureIds.addAll(keptTexIds);
             triangleColored.clear();
             triangleColored.or(keptColored);
+            triangleSurfaceTypes.clear();
+            triangleSurfaceTypes.addAll(keptSurfaceTypes);
         }
     }
 
