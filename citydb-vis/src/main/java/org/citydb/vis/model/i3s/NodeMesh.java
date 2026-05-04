@@ -19,6 +19,15 @@ public class NodeMesh {
         int definition;
         if (nodeHasTexture) {
             definition = SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX;
+        } else if (node.hasStyleOverride()) {
+            // Per-feature-type styling routes through the shaded-colored
+            // slot only when the node has no X3DMaterial — see
+            // I3SGeometryEncoder for how the flag is set. X3DMaterial
+            // nodes (with or without styling baked alongside) land in the
+            // unlit colored slot below.
+            definition = node.isColoredBlend()
+                    ? SceneLayerDescriptor.STYLED_COLORED_BLEND_DEFINITION_INDEX
+                    : SceneLayerDescriptor.STYLED_COLORED_OPAQUE_DEFINITION_INDEX;
         } else if (node.isColored()) {
             definition = node.isColoredBlend()
                     ? SceneLayerDescriptor.VERTEX_COLORED_BLEND_DEFINITION_INDEX

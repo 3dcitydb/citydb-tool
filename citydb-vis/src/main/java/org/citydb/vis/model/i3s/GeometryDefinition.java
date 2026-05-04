@@ -11,13 +11,24 @@ import java.util.List;
 
 /**
  * Geometry definition with a single Draco-compressed geometryBuffer. The
- * four layouts cover the cross-product of textured/untextured and
- * with/without baked X3DMaterial vertex colors. NORMAL is present only on
- * the no-appearance variant ({@link DracoBuffer#untextured()}); textured
- * and X3DMaterial-colored nodes render unlit so authored colors and
- * textures are not dimmed by Lambertian shading. The feature-index
- * attribute carries per-vertex feature identification for picking (via
- * injected {@code i3s-feature-ids} Draco metadata).
+ * five layouts cover the cross-product of textured/untextured and
+ * with/without baked vertex colors, plus a shaded-colored variant used
+ * by per-feature-type styling.
+ * <p>
+ * NORMAL emission rules:
+ * <ul>
+ *   <li>{@link DracoBuffer#untextured()} — NORMAL present (shaded plain path).</li>
+ *   <li>{@link DracoBuffer#textured()} / {@link DracoBuffer#texturedColored()} —
+ *       no NORMAL (unlit so the texture sample isn't dimmed by Lambertian).</li>
+ *   <li>{@link DracoBuffer#colored()} — no NORMAL (unlit X3DMaterial path:
+ *       authored thematic colors render at full intensity).</li>
+ *   <li>{@link DracoBuffer#coloredShaded()} — NORMAL <i>and</i> COLOR present.
+ *       Used when per-feature-type styling routes a node's plain triangles
+ *       through baked vertex colors but still wants Lambertian shading so
+ *       a uniform-coloured surface (e.g. a red roof) shows 3D form.</li>
+ * </ul>
+ * The feature-index attribute carries per-vertex feature identification for
+ * picking (via injected {@code i3s-feature-ids} Draco metadata).
  */
 @JSONType(alphabetic = false)
 public class GeometryDefinition {
@@ -47,6 +58,12 @@ public class GeometryDefinition {
         return def;
     }
 
+    public static GeometryDefinition coloredShaded() {
+        GeometryDefinition def = new GeometryDefinition();
+        def.geometryBuffers = List.of(DracoBuffer.coloredShaded());
+        return def;
+    }
+
     public static class DracoBuffer {
         private CompressedAttributes compressedAttributes;
 
@@ -64,6 +81,10 @@ public class GeometryDefinition {
 
         public static DracoBuffer colored() {
             return wrap(List.of("position", "color", "feature-index"));
+        }
+
+        public static DracoBuffer coloredShaded() {
+            return wrap(List.of("position", "normal", "color", "feature-index"));
         }
 
         private static DracoBuffer wrap(List<String> attrs) {

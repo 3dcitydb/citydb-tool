@@ -5,6 +5,7 @@
 
 package org.citydb.vis.writer;
 
+import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.appearance.TextureCoordinate;
@@ -42,12 +43,18 @@ public final class FeatureProcessor {
     }
 
     public void process(long featureId, String objectId, String featureType,
+                        String featureTypeNamespace,
                         Envelope envelope, Map<String, Object> attributes,
                         List<GeometryProperty> geomProps,
                         Map<LinearRing, List<TextureCoordinate>> texCoords,
                         Map<LinearRing, Integer> ringTextureIds,
                         Map<LinearRing, float[]> ringColors) throws VisExportException {
-        TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId,
+        // Surface type fallback for geometries that hang directly off the
+        // top-level feature (e.g. a Building's own LoD1 box) — anything
+        // owned by a nested boundary surface picks up that surface's type
+        // inside GeometryMeshBuilder.
+        Name defaultSurfaceType = Name.of(featureType, featureTypeNamespace);
+        TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId, defaultSurfaceType,
                 texCoords, ringTextureIds, ringColors);
         if (mesh.isEmpty()) {
             return;
