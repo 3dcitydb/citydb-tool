@@ -25,6 +25,9 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.schema.FeatureType;
+import org.citydb.database.schema.SchemaMapping;
+import org.citydb.model.common.PrefixedName;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
@@ -41,12 +44,15 @@ import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.styling.DefaultObjectStyle;
+import org.citydb.vis.styling.ObjectStyleRegistry;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class VisExportController<T extends VisFormatOptions> implements Command {
@@ -128,10 +134,11 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
      * behavior by implementing {@link #newFormatOptions} and optionally
      * overriding {@link #applyAdditionalFormatOptions}.
      */
-    protected final OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions)
+    protected final OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions,
+                                                         SchemaMapping schemaMapping)
             throws ExecutionException {
         T options = newFormatOptions(formatOptions);
-        applySceneOptions(options);
+        applySceneOptions(options, schemaMapping);
         applyAdditionalFormatOptions(options);
         return options;
     }
@@ -140,7 +147,8 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
      * Apply the shared scene CLI options to the given format options.
      * Only values explicitly matched on the command line override the config.
      */
-    private void applySceneOptions(VisFormatOptions options) {
+    private void applySceneOptions(VisFormatOptions options, SchemaMapping schemaMapping)
+            throws ExecutionException {
         if (sceneOptions == null) {
             return;
         }
@@ -173,9 +181,40 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             options.setAtlasFallbackStrategy(sceneOptions.getAtlasFallbackStrategy());
         }
 
-        if (Command.hasMatchedOption("--default-color", commandSpec)) {
-            options.setDefaultObjectStyle(sceneOptions.getDefaultObjectStyle());
+        // The styling registry combines --default-color (if matched) with
+        // any --feature-type-style overrides. Only built when the user
+        // actually configured one of them; otherwise the format options
+        // keep their default empty registry.
+        boolean hasDefaultColor = Command.hasMatchedOption("--default-color", commandSpec);
+        Map<String, String> typeStyles = sceneOptions.getFeatureTypeStyles();
+        if (!hasDefaultColor && typeStyles.isEmpty()) {
+            return;
         }
+
+        ObjectStyleRegistry.Builder builder = ObjectStyleRegistry.builder()
+                .schemaMapping(schemaMapping);
+        if (hasDefaultColor) {
+            builder.defaultStyle(sceneOptions.getDefaultObjectStyle());
+        }
+        for (Map.Entry<String, String> e : typeStyles.entrySet()) {
+            // Strict qualified-name match: typos like 'building' or
+            // 'bldgg:Building' fail loudly rather than silently picking
+            // the wrong type via local-name fallback. The styling space
+            // wants precision over convenience.
+            PrefixedName name = PrefixedName.of(e.getKey());
+            if (name.getPrefix().isEmpty()) {
+                throw new ExecutionException("Error: --feature-type-style key '" + e.getKey() +
+                        "' must be a qualified name with a namespace prefix (e.g. 'bldg:Building').");
+            }
+            FeatureType ft = schemaMapping.getFeatureType(name);
+            if (ft == FeatureType.UNDEFINED) {
+                throw new ExecutionException("Error: --feature-type-style references " +
+                        "unknown feature type '" + e.getKey() + "'.");
+            }
+            DefaultObjectStyle style = DefaultObjectStyle.parseColor(e.getValue());
+            builder.override(ft.getName(), style);
+        }
+        options.setStyleRegistry(builder.build());
     }
 
     private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,
@@ -243,7 +282,8 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         DatabaseManager databaseManager = helper.connect(connectionOptions, config);
         VisExportOptions exportOptions = getExportOptions();
         WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
-        writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
+        SchemaMapping schemaMapping = databaseManager.getAdapter().getSchemaAdapter().getSchemaMapping();
+        writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions(), schemaMapping));
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
 

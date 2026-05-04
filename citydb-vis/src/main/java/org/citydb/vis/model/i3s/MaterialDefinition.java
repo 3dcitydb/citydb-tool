@@ -27,7 +27,12 @@ import java.util.List;
 @JSONType(alphabetic = false)
 public class MaterialDefinition {
     private static final String CULL_FACE = "none";
-    private static final String ALPHA_MODE_BLEND = "BLEND";
+    // I3S 1.7 spec uses lowercase alpha-mode values ("opaque", "blend",
+    // "mask"); CesiumJS uppercases internally before constructing the glTF
+    // material (I3SGeometry.js: gltfMaterial.alphaMode.toUpperCase()), so
+    // it accepts either case. ArcGIS clients are stricter about the spec
+    // form, so emit lowercase.
+    private static final String ALPHA_MODE_BLEND = "blend";
 
     private String cullFace;
     private Boolean doubleSided;
@@ -60,17 +65,41 @@ public class MaterialDefinition {
     }
 
     /**
-     * Untextured material that consumes per-vertex COLOR_0. Renders unlit
-     * (no Lambertian shading) because the paired Draco buffer
-     * ({@link GeometryDefinition.DracoBuffer#colored()}) omits NORMAL — the
-     * CesiumJS I3S loader skips lighting when NORMAL is absent. This is the
-     * I3S equivalent of the 3D Tiles colored material's
-     * {@code KHR_materials_unlit}; both paths must stay unlit so authored
-     * thematic / heat-map colors render at full intensity. {@code blend=true}
-     * emits {@code alphaMode=BLEND} for X3DMaterial transparency; opaque
-     * colored nodes rely on I3S's default OPAQUE.
+     * Untextured material that consumes per-vertex COLOR_0. The paired
+     * Draco buffer ({@link GeometryDefinition.DracoBuffer#colored()})
+     * omits NORMAL — X3DMaterial in this project is used for thematic /
+     * heat-map colours where Lambertian darkening is undesirable.
+     * {@code blend=true} emits {@code alphaMode=blend}; opaque colored
+     * nodes rely on I3S's default opaque.
      */
     public static MaterialDefinition colored(boolean blend) {
+        MaterialDefinition material = pbr(null);
+        if (blend) {
+            material.alphaMode = ALPHA_MODE_BLEND;
+        }
+        return material;
+    }
+
+    /**
+     * Untextured material that consumes per-vertex COLOR_0 <i>and</i>
+     * receives Lambertian shading from the paired
+     * {@link GeometryDefinition.DracoBuffer#coloredShaded()} layout (which
+     * carries NORMAL alongside COLOR). Used by the per-feature-type styling
+     * pipeline so a uniform-coloured surface — e.g. all of a building's
+     * RoofSurface triangles painted red via {@code --feature-type-style} —
+     * still shows 3D form via per-face shading. Distinct from
+     * {@link #colored(boolean)} (X3DMaterial) which is unlit by design.
+     * <p>
+     * {@code blend=true} emits {@code alphaMode=blend} for transparent
+     * COLOR_0.a; Cesium decodes COLOR_0 as VEC4 FLOAT (alpha intact).
+     * CesiumJS consumers must construct {@code I3SDataProvider} with
+     * {@code adjustMaterialAlphaMode: true} — its default {@code false}
+     * causes {@code I3SGeometry.js} to force-rewrite the declared
+     * {@code alphaMode=blend} back to {@code OPAQUE}. Building Scene
+     * Layers auto-enable the option; non-BSL layers need it set explicitly.
+     * See {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder} javadoc.
+     */
+    public static MaterialDefinition coloredShaded(boolean blend) {
         MaterialDefinition material = pbr(null);
         if (blend) {
             material.alphaMode = ALPHA_MODE_BLEND;

@@ -16,20 +16,26 @@ import org.citydb.vis.styling.DefaultObjectStyle;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fluent builder for the glTF 2.0 JSON chunk of a GLB file. Inputs are
  * supplied in four groups — buffer layout, textures, primitives, metadata —
  * and {@link #build()} produces the UTF-8-encoded JSON bytes.
  * <p>
- * The document has a single scene containing a single node that references a
- * single mesh. The mesh carries one primitive per atlas page (each backed by
- * its own textured PBR material) plus an optional untextured primitive, so
- * that a node whose texture footprint would exceed {@code --max-atlas-size}
- * in a single page is split across multiple pages — each rendered with its
- * own material — instead of being globally downscaled. All primitives share
- * the {@code EXT_structural_metadata} property table.
+ * The document has a single scene containing a single node that references
+ * a single mesh. The mesh carries one primitive per atlas page (each backed
+ * by its own textured PBR material), one plain primitive per distinct
+ * {@link DefaultObjectStyle} used by no-appearance surfaces in the node
+ * (each backed by its own PBR material), and an optional X3DMaterial-
+ * colored primitive. The atlas-page split lets a node whose texture
+ * footprint exceeds {@code --max-atlas-size} render across multiple pages
+ * instead of being globally downscaled; the per-style plain split lets
+ * per-feature-type colors render without further mesh-level work. All
+ * primitives share the {@code EXT_structural_metadata} property table.
  */
 final class GltfJsonBuilder {
     private static final int COMPONENT_TYPE_FLOAT = 5126;
@@ -50,10 +56,6 @@ final class GltfJsonBuilder {
     private int featureCount;
     private List<AttrField> attrFields;
     private List<PropertyTableBufferViews> propBvs;
-
-    // Global default style applied to the no-appearance plain material.
-    // Default white shaded keeps current behavior when unset.
-    private DefaultObjectStyle defaultStyle = DefaultObjectStyle.defaults();
 
     // Set by writeMaterials when any material gets KHR_materials_unlit applied;
     // consumed by writeExtensions to declare it in extensionsUsed.
@@ -80,11 +82,6 @@ final class GltfJsonBuilder {
         this.featureCount = featureCount;
         this.attrFields = attrFields;
         this.propBvs = propBvs;
-        return this;
-    }
-
-    GltfJsonBuilder defaultStyle(DefaultObjectStyle defaultStyle) {
-        this.defaultStyle = defaultStyle != null ? defaultStyle : DefaultObjectStyle.defaults();
         return this;
     }
 
@@ -206,11 +203,13 @@ final class GltfJsonBuilder {
      *   <li><b>plain</b> — default PBR, used by untextured primitives without
      *       X3DMaterial vertex colors. The only shaded path: surfaces get
      *       Lambertian shading from NORMAL so a default-colored building
-     *       still shows 3D form. Receives {@code baseColorFactor} from the
-     *       configured {@link DefaultObjectStyle} (omitted when the style
-     *       still has the opaque-white default); promotes to
-     *       {@code alphaMode=BLEND} when the configured color carries
-     *       alpha &lt; 1.</li>
+     *       still shows 3D form. One material is emitted per distinct
+     *       {@link DefaultObjectStyle} carried by the plain primitives in
+     *       the node — this is how per-feature-type color overrides reach
+     *       the GLB. Each material receives {@code baseColorFactor} from
+     *       its style (omitted when the style still has the opaque-white
+     *       default) and {@code alphaMode=BLEND} when the style's color
+     *       carries alpha &lt; 1.</li>
      *   <li><b>colored</b> — PBR + {@code KHR_materials_unlit}, used by
      *       untextured primitives carrying X3DMaterial {@code COLOR_0}.
      *       Unlit because X3DMaterial in this project is used for thematic /
@@ -232,11 +231,14 @@ final class GltfJsonBuilder {
         int pageCount = bvTextures.size();
         int[] texturedIdx = new int[pageCount];
         Arrays.fill(texturedIdx, -1);
-        int untexturedPlainIdx = -1;
         int untexturedColoredIdx = -1;
 
+        // Pass 1: scan primitives to discover which textured pages are in
+        // use, the set of distinct plain styles (in encounter order so the
+        // emitted material order is stable across runs), and whether any
+        // colored primitive carries below-1 alpha.
         boolean[] pageUsed = new boolean[pageCount];
-        boolean needPlain = false;
+        LinkedHashSet<DefaultObjectStyle> plainStyles = new LinkedHashSet<>();
         boolean needColored = false;
         boolean coloredNeedsBlend = false;
         for (Primitive p : primitives) {
@@ -248,10 +250,14 @@ final class GltfJsonBuilder {
                     coloredNeedsBlend = true;
                 }
             } else {
-                needPlain = true;
+                // Plain primitive — track its style. plainStyle is required
+                // to be non-null on plain primitives by the encoder contract.
+                plainStyles.add(p.plainStyle);
             }
         }
 
+        // Pass 2: emit materials in fixed order — textured (per atlas
+        // page), plain (per distinct style), colored — and record indices.
         int textureSlot = 0;
         for (int p = 0; p < pageCount; p++) {
             if (!pageUsed[p]) continue;
@@ -273,25 +279,26 @@ final class GltfJsonBuilder {
             materials.add(material);
         }
 
-        if (needPlain) {
+        Map<DefaultObjectStyle, Integer> plainIdxByStyle = new HashMap<>(plainStyles.size() * 2);
+        for (DefaultObjectStyle style : plainStyles) {
             JSONObject material = new JSONObject();
             JSONObject pbr = new JSONObject();
             pbr.put("metallicFactor", 0.0);
             pbr.put("roughnessFactor", 1.0);
-            // baseColorFactor: only emit when the user actually configured a
-            // non-default color; the glTF default is opaque white, so omitting
+            // baseColorFactor: only emit when the style is non-default
+            // opaque white; the glTF default is opaque white so omitting
             // the field keeps the JSON minimal in the common case.
-            if (defaultStyle.hasNonDefaultColor()) {
+            if (style.hasNonDefaultColor()) {
                 JSONArray baseColorFactor = new JSONArray();
-                for (float v : defaultStyle.toLinearRgba()) baseColorFactor.add(v);
+                for (float v : style.toLinearRgba()) baseColorFactor.add(v);
                 pbr.put("baseColorFactor", baseColorFactor);
-                if (defaultStyle.hasAlpha()) {
+                if (style.hasAlpha()) {
                     material.put("alphaMode", "BLEND");
                 }
             }
             material.put("pbrMetallicRoughness", pbr);
             material.put("doubleSided", true);
-            untexturedPlainIdx = materials.size();
+            plainIdxByStyle.put(style, materials.size());
             materials.add(material);
         }
 
@@ -314,7 +321,7 @@ final class GltfJsonBuilder {
         }
 
         root.put("materials", materials);
-        return new MaterialIndices(texturedIdx, untexturedPlainIdx, untexturedColoredIdx);
+        return new MaterialIndices(texturedIdx, plainIdxByStyle, untexturedColoredIdx);
     }
 
     /**
@@ -384,7 +391,7 @@ final class GltfJsonBuilder {
             } else if (p.bvColors >= 0) {
                 materialIdx = materials.untexturedColored;
             } else {
-                materialIdx = materials.untexturedPlain;
+                materialIdx = materials.untexturedPlainByStyle.get(p.plainStyle);
             }
             primitive.put("material", materialIdx);
 
@@ -499,7 +506,8 @@ final class GltfJsonBuilder {
     record Primitive(int atlasPage, int vertexCount, float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvColors,
                      int bvIndices, int bvFeatureIds,
-                     boolean anyAlphaBelowOne) {
+                     boolean anyAlphaBelowOne,
+                     DefaultObjectStyle plainStyle) {
     }
 
     private record PrimitiveAccessors(int position, int normal, int texCoord, int color,
@@ -509,10 +517,14 @@ final class GltfJsonBuilder {
     /**
      * Resolved glTF material indices. {@code textured[p]} is the material
      * index for atlas page {@code p}, or {@code -1} if that page wasn't
-     * referenced. {@code untexturedPlain} / {@code untexturedColored} are
-     * {@code -1} when the corresponding kind of untextured primitive isn't
-     * present in this GLB.
+     * referenced. {@code untexturedPlainByStyle} maps each plain primitive's
+     * {@link DefaultObjectStyle} to the material index that carries that
+     * style's {@code baseColorFactor}; one entry per distinct style used by
+     * a plain primitive in this GLB. {@code untexturedColored} is {@code -1}
+     * when no X3DMaterial-colored primitives are present.
      */
-    private record MaterialIndices(int[] textured, int untexturedPlain, int untexturedColored) {
+    private record MaterialIndices(int[] textured,
+                                   Map<DefaultObjectStyle, Integer> untexturedPlainByStyle,
+                                   int untexturedColored) {
     }
 }
