@@ -9,6 +9,7 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
 import org.citydb.vis.styling.DefaultObjectStyle;
+import org.citydb.vis.styling.ObjectStyleRegistry;
 
 /**
  * Base format options shared by all visualization export formats (I3S, 3D Tiles, etc.).
@@ -25,7 +26,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     private int maxAtlasSize = 1024;
     private AtlasOverflowMode atlasOverflowMode = AtlasOverflowMode.HYBRID;
     private AtlasFallbackStrategy atlasFallbackStrategy = AtlasFallbackStrategy.EXPAND;
-    private DefaultObjectStyle defaultObjectStyle = DefaultObjectStyle.defaults();
+    private ObjectStyleRegistry styleRegistry = ObjectStyleRegistry.empty();
 
     public double getGridEdgeLength() {
         return gridEdgeLength;
@@ -101,12 +102,23 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
         return this;
     }
 
+    /**
+     * Global fallback style for surfaces without an explicit per-feature-type
+     * override. Mirrored from {@link #getStyleRegistry()} so I3S — which
+     * cannot consume the per-type registry due to its node-level material
+     * model — keeps its current behavior of applying one style to every
+     * no-appearance surface in a scene layer.
+     */
     public DefaultObjectStyle getDefaultObjectStyle() {
-        return defaultObjectStyle;
+        return styleRegistry.defaultStyle();
     }
 
-    public VisFormatOptions setDefaultObjectStyle(DefaultObjectStyle defaultObjectStyle) {
-        this.defaultObjectStyle = defaultObjectStyle != null ? defaultObjectStyle : DefaultObjectStyle.defaults();
+    public ObjectStyleRegistry getStyleRegistry() {
+        return styleRegistry;
+    }
+
+    public VisFormatOptions setStyleRegistry(ObjectStyleRegistry styleRegistry) {
+        this.styleRegistry = styleRegistry != null ? styleRegistry : ObjectStyleRegistry.empty();
         return this;
     }
 }

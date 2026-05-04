@@ -20,6 +20,8 @@ import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.styling.DefaultObjectStyle;
+import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.GeoTransform;
 
@@ -32,24 +34,50 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Encodes I3S node meshes into a single Draco-compressed geometry buffer
  * ({@code geometries/0}). Attribute layout per node category:
  * <ul>
- *   <li>untextured (no appearance): {@code position, normal, feature-index}</li>
- *   <li>textured:                   {@code position, uv0, feature-index}</li>
- *   <li>textured-colored:           {@code position, uv0, color, feature-index}</li>
- *   <li>colored (X3DMaterial only): {@code position, color, feature-index}</li>
+ *   <li>untextured (no appearance):     {@code position, normal, feature-index}</li>
+ *   <li>textured:                       {@code position, uv0, feature-index}</li>
+ *   <li>textured-colored:               {@code position, uv0, color, feature-index}</li>
+ *   <li>colored (X3DMaterial only):     {@code position, color, feature-index}</li>
+ *   <li>colored-shaded (per-type style): {@code position, normal, color, feature-index}</li>
  * </ul>
- * Policy: NORMAL is emitted only when the node has no appearance (no texture
- * and no X3DMaterial vertex colors). The plain path is always shaded
- * (PBR + per-face NORMAL); the user's configured default color (see
- * {@code DefaultObjectStyle}) rides on the material's {@code baseColorFactor}
- * separately. Any node with texture or X3DMaterial skips NORMAL so the
- * authored color/texture renders at full intensity — X3DMaterial in this
- * project is used for thematic / heat-map style visualisation where
- * Lambertian shading would dim the authored colors.
+ * NORMAL is emitted on the shaded paths only — the plain path (no
+ * appearance, no styling override) and the styled-colored path (styling
+ * override on a node that has NO X3DMaterial). Textured nodes and any
+ * node containing X3DMaterial skip NORMAL: X3DMaterial wins over styling
+ * per-polygon and forces the whole node unlit so authored thematic /
+ * heat-map colours are not dimmed by Lambertian. On a mixed node
+ * (X3DMaterial on some triangles, plain on others) the plain triangles
+ * still get a colour baked into COLOR_0 — from the matching
+ * {@code --feature-type-style} override if any, otherwise from
+ * {@code --default-color}, otherwise white. They render unlit alongside
+ * the X3DMaterial triangles because the colored slot has no NORMAL. On a
+ * pure-styling node (no X3DMaterial) the styled-colored slot (NORMAL +
+ * COLOR_0) lets a uniform-colour surface — e.g. all of a building's
+ * RoofSurface triangles painted red via
+ * {@code --feature-type-style con:RoofSurface=#ff0000} — still pick up
+ * Lambertian shading. Pure-plain nodes with only {@code --default-color}
+ * skip COLOR_0 entirely: the default colour rides on the untextured
+ * material's {@code baseColorFactor}.
+ * <p>
+ * <b>Transparency on CesiumJS — consumer config required</b>: the
+ * styled-colored slot encodes per-vertex COLOR_0.a and the paired
+ * material declares {@code alphaMode=blend}. CesiumJS decodes COLOR_0
+ * as VEC4 FLOAT with alpha intact and routes through the standard glTF
+ * model pipeline, so the data renders transparency correctly — but
+ * <i>only</i> when {@code I3SDataProvider} is constructed with
+ * {@code adjustMaterialAlphaMode: true}. With the default
+ * {@code false}, {@code I3SGeometry.js} actively force-rewrites any
+ * {@code alphaMode=blend} on a non-{@code isTransparent}-flagged
+ * primitive back to {@code OPAQUE}, dropping all transparency. Building
+ * Scene Layers auto-enable the option; non-BSL layers (3DObject,
+ * IntegratedMesh) need it set explicitly. The encoded I3S is
+ * spec-compliant either way.
  */
 public class I3SGeometryEncoder {
     /**
@@ -70,6 +98,16 @@ public class I3SGeometryEncoder {
     private static final int DRACO_HEADER_SIZE = 11;
     /** Bit in the Draco header flags field that indicates metadata is present. */
     private static final short DRACO_METADATA_FLAG = (short) 0x8000;
+
+    // Per-export counters for --feature-type-style application coverage.
+    // Why: I3S is one-material-per-node. The styled-colored slot fires only
+    // on pure-plain nodes; nodes with texture or X3DMaterial silently fall
+    // back (textured=fully dropped or partially baked on white-pixel
+    // triangles; X3DMaterial=baked into colored slot but renders unlit).
+    // The writer reads these after parallel encoding to surface a single
+    // summary instead of per-node noise.
+    private final AtomicInteger texturedNodesWithStyleConfig = new AtomicInteger();
+    private final AtomicInteger x3dNodesWithStyleOverride = new AtomicInteger();
 
     /**
      * Result of encoding a node's geometry. {@code featureAabbs} is aligned
@@ -94,23 +132,19 @@ public class I3SGeometryEncoder {
      *         feature/attribute output with the Draco feature-index attribute.
      */
     public NodeGeometryResult writeNodeGeometry(Path layerDir, SceneNode node,
-                                                boolean layerHasColors) throws IOException {
+                                                boolean layerHasColors,
+                                                ObjectStyleRegistry styleRegistry) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
-        // Pure-colored path: no texture + baked X3DMaterial colors. Textured
-        // nodes that also carry colors keep the textured material and let
-        // glTF PBR modulate the texture sample via COLOR_0.
-        boolean nodeIsColored = !hasTexCoords && mesh.hasColors();
-        // The Draco buffer must mirror the layer's compressedAttributes
-        // declaration exactly, otherwise CesiumJS drops the node. Textured
-        // nodes in a layer with hasColors emit a default-white COLOR_0;
-        // untextured nodes emit COLOR_0 only on the pure-colored path.
-        boolean emitColor = layerHasColors && (hasTexCoords || nodeIsColored);
+        boolean meshHasColors = mesh.hasColors();
+        // Pure-X3DMaterial path: no texture + baked X3DMaterial vertex colors.
+        // Textured nodes that also carry colors keep the textured material
+        // and let glTF PBR modulate the texture sample via COLOR_0.
+        boolean nodeIsX3DColored = !hasTexCoords && meshHasColors;
 
         if (!hasTexCoords) {
             node.setTextured(false);
         }
-        node.setColored(nodeIsColored);
 
         BoundingVolume mbs = node.getBoundingVolume();
         double centerX = mbs.getCenterX();
@@ -124,12 +158,113 @@ public class I3SGeometryEncoder {
             return null;
         }
 
+        // Detect intra-feature mixed: textured node whose mesh still has
+        // some triangles flagged untextured (texId < 0). The atlas builder
+        // routes these via a reserved white-pixel sentinel region so they
+        // ride through the textured material as flat white. Without
+        // per-vertex bake the styling/default colour is dropped for those
+        // triangles — the textured slot has no baseColorFactor.
+        List<Integer> triTexIds = hasTexCoords ? mesh.getTriangleTextureIds() : null;
+        boolean intraFeatureMixed = false;
+        if (hasTexCoords) {
+            for (int ti : weld.validTriIndices()) {
+                if (triTexIds.get(ti) < 0) {
+                    intraFeatureMixed = true;
+                    break;
+                }
+            }
+        }
+
+        // Resolve per-triangle styles up front. Two independent flags drive
+        // the downstream decisions:
+        //  - anyTypeOverride: at least one triangle hit a per-type override
+        //    (--feature-type-style). On a pure-plain node this switches
+        //    routing from the untextured slot to the colored slot.
+        //  - anyNonWhiteStyle: at least one triangle's resolved style
+        //    produces a non-white colour. Decides whether per-vertex
+        //    COLOR_0 baking is needed; the all-white case falls back to
+        //    WHITE_RGBA in the iterator.
+        // Entry conditions — the work is worth doing only when the registry
+        // can produce a non-white colour somewhere AND the node has
+        // somewhere to bake it:
+        //  - Pure-untextured node with overrides, or with X3DMaterial +
+        //    non-white default (mixed colored slot has no baseColorFactor,
+        //    so the default colour can only land on per-vertex COLOR_0).
+        //    Pure-plain nodes with only --default-color skip baking — the
+        //    colour rides on the untextured material's baseColorFactor.
+        //  - Textured node that contains intra-feature mixed triangles:
+        //    bake styling/default colour onto the white-pixel-UV vertices
+        //    so those polys aren't dropped to flat white.
+        // Identity check `s != defaultStyle` works because
+        // ObjectStyleRegistry's cache returns the same instance for every
+        // type that resolves to the default style.
+        DefaultObjectStyle[] perTriangleStyle = null;
+        boolean anyTypeOverride = false;
+        boolean anyNonWhiteStyle = false;
+        boolean buildStyles = (!hasTexCoords && (styleRegistry.hasOverrides()
+                || (meshHasColors && styleRegistry.defaultStyle().hasNonDefaultColor())))
+                || (hasTexCoords && intraFeatureMixed && (styleRegistry.hasOverrides()
+                        || styleRegistry.defaultStyle().hasNonDefaultColor()));
+        if (buildStyles) {
+            perTriangleStyle = resolveTriangleStyles(weld, mesh, styleRegistry);
+            DefaultObjectStyle defaultStyle = styleRegistry.defaultStyle();
+            for (DefaultObjectStyle s : perTriangleStyle) {
+                if (s != defaultStyle) {
+                    anyTypeOverride = true;
+                }
+                if (s.hasNonDefaultColor()) {
+                    anyNonWhiteStyle = true;
+                }
+                if (anyTypeOverride && anyNonWhiteStyle) {
+                    break;
+                }
+            }
+            if (!anyNonWhiteStyle) {
+                // Every triangle resolves to opaque white — no point
+                // paying the per-vertex COLOR_0 cost; fall back to
+                // WHITE_RGBA in the iterator.
+                perTriangleStyle = null;
+            }
+        }
+        // Styled-colored slot (NORMAL + COLOR_0 + alphaMode=blend) is used
+        // only for pure-plain nodes that hit a per-type override. Mixed
+        // nodes stay on the X3DMaterial colored slot 2/3 (one-material-per-
+        // node I3S limit) and bake styled / default colours into COLOR_0
+        // alongside the X3D-authored colours, but render unlit because
+        // colored slot 2/3 has no NORMAL — X3DMaterial unlit policy.
+        // Textured nodes that hit overrides on their white-pixel triangles
+        // stay on the textured slot and bake into COLOR_0 there — the
+        // texture sample on those vertices is white, so white × COLOR_0
+        // = COLOR_0 yields the styling/default colour at full saturation.
+        // Per-vertex alpha is encoded into COLOR_0.a; CesiumJS renders it
+        // correctly when the consumer constructs I3SDataProvider with
+        // adjustMaterialAlphaMode: true (see class javadoc).
+        boolean useStyledColoredSlot = anyTypeOverride && !meshHasColors && !hasTexCoords;
+        node.setColored(nodeIsX3DColored);
+        node.setHasStyleOverride(useStyledColoredSlot);
+
+        if (styleRegistry.hasOverrides()) {
+            if (hasTexCoords) {
+                texturedNodesWithStyleConfig.incrementAndGet();
+            } else if (meshHasColors && anyTypeOverride) {
+                x3dNodesWithStyleOverride.incrementAndGet();
+            }
+        }
+
         int vertexCount = weld.vertexCount();
 
-        // NORMAL only on the no-appearance path (no texture and no X3DMaterial).
-        // See class Javadoc.
-        boolean meshHasColors = mesh.hasColors();
+        // NORMAL on the shaded paths only: plain default-white (no styling)
+        // and the styled-colored slot. X3DMaterial in any form forces unlit
+        // by attribute absence so authored thematic colours render at full
+        // intensity.
         boolean emitNormals = !hasTexCoords && !meshHasColors;
+        // COLOR_0 must mirror the layer's compressedAttributes for the
+        // chosen slot — CesiumJS drops the node otherwise. Emit when:
+        //  - textured layer that also has colors (white padding),
+        //  - X3DMaterial colored node (authored or padding),
+        //  - styled-colored slot (styled colours baked).
+        boolean emitColor = (layerHasColors && (hasTexCoords || nodeIsX3DColored))
+                || useStyledColoredSlot;
 
         float[][] outPositions = new float[vertexCount][];
         float[][] outNormals = emitNormals ? new float[vertexCount][3] : null;
@@ -148,6 +283,9 @@ public class I3SGeometryEncoder {
                 ? GeoTransform.EnuBasis.at(centerX, centerY) : null;
 
         boolean[] anyAlphaBelowOne = new boolean[1];
+        DefaultObjectStyle[] styles = perTriangleStyle;
+        List<Integer> validTriIndices = weld.validTriIndices();
+        List<Integer> triTexIdsFinal = triTexIds;
         VertexWelder.iterateOutputVertices(weld, mesh, (idx, weldedPos, srcIdx) -> {
             outPositions[idx] = weldedPos;
             if (outNormals != null) {
@@ -157,22 +295,57 @@ public class I3SGeometryEncoder {
                 outUVs[idx] = mesh.getTexCoords().get(srcIdx);
             }
             if (outColors != null) {
-                if (meshHasColors) {
-                    float[] c = mesh.getColors().get(srcIdx);
-                    outColors[idx] = c;
-                    if (c[3] < 0.999f) {
-                        anyAlphaBelowOne[0] = true;
-                    }
+                int triLocalIdx = idx / 3;
+                int srcTriIdx = validTriIndices.get(triLocalIdx);
+                boolean whitePixelTri = hasTexCoords && triTexIdsFinal.get(srcTriIdx) < 0;
+                boolean x3dColored = mesh.isTriangleColored(srcTriIdx);
+                float[] c;
+                if (whitePixelTri && !x3dColored && styles != null) {
+                    // Intra-feature mixed: this triangle has no real texture
+                    // (atlas builder pointed its UVs at the white-pixel
+                    // sentinel). Bake the resolved styling / default colour
+                    // into COLOR_0 — texture sample is white, so white ×
+                    // COLOR_0 yields the chosen colour at full saturation.
+                    // Skipped when the triangle is also X3D-authored: the
+                    // next branch returns the authored RGBA, which wins
+                    // over styling per X3DMaterial precedence.
+                    c = styles[triLocalIdx].color();
+                } else if (meshHasColors && (hasTexCoords || x3dColored)) {
+                    // mesh.getColors() returns the authored X3DMaterial RGBA
+                    // for X3D-authored vertices and WHITE_RGBA padding (set
+                    // by mesh.merge()) for the rest. On textured nodes this
+                    // passes through directly: textured-only polys carry
+                    // white (no-op modulator on the texture sample), and
+                    // X3D-authored polys tint their white-pixel fallback
+                    // into the authored colour. On non-textured nodes only
+                    // X3D-authored triangles enter this branch — non-X3D
+                    // triangles fall through to styling or default white.
+                    c = mesh.getColors().get(srcIdx);
+                } else if (!hasTexCoords && styles != null) {
+                    // Non-textured + non-X3D triangle on a styled node:
+                    // bake the resolved style colour. Source is the
+                    // matching --feature-type-style override when present,
+                    // otherwise --default-color (the registry resolves
+                    // both into one DefaultObjectStyle per triangle). Gate
+                    // on !hasTexCoords so this fallback never tints a real
+                    // textured triangle on a textured node — only the
+                    // dedicated white-pixel branch above applies styling
+                    // through a textured material.
+                    c = styles[triLocalIdx].color();
                 } else {
-                    outColors[idx] = WHITE_RGBA;
+                    c = WHITE_RGBA;
+                }
+                outColors[idx] = c;
+                if (c[3] < 0.999f) {
+                    anyAlphaBelowOne[0] = true;
                 }
             }
         });
 
         // Textured material is layer-level OPAQUE — mixed-node colored polys
         // lose alpha by design (one-material-per-node I3S limitation); only
-        // pure-colored nodes can opt into BLEND.
-        if (nodeIsColored) {
+        // pure-colored and styled-colored nodes can opt into BLEND.
+        if (nodeIsX3DColored || useStyledColoredSlot) {
             node.setColoredBlend(anyAlphaBelowOne[0]);
         }
 
@@ -187,6 +360,24 @@ public class I3SGeometryEncoder {
         writeDracoGeometry(layerDir, node, centerY, outPositions, outNormals,
                 outUVs, outColors, vertexFeatureIndices, numTriangles, rangeFeatureIds);
         return new NodeGeometryResult(rangeFeatureIds, featureAabbs);
+    }
+
+    /**
+     * Resolve each valid triangle's source surface type to a
+     * {@link DefaultObjectStyle} via the registry. Returned array is
+     * aligned with {@link VertexWelder.WeldResult#validTriIndices()} —
+     * index {@code i / 3} on a per-vertex iteration locates the style for
+     * the triangle owning vertex {@code i}.
+     */
+    private static DefaultObjectStyle[] resolveTriangleStyles(VertexWelder.WeldResult weld,
+                                                              TriangleMesh mesh,
+                                                              ObjectStyleRegistry registry) {
+        List<Integer> validTriIndices = weld.validTriIndices();
+        DefaultObjectStyle[] styles = new DefaultObjectStyle[validTriIndices.size()];
+        for (int i = 0; i < validTriIndices.size(); i++) {
+            styles[i] = registry.resolve(mesh.getTriangleSurfaceType(validTriIndices.get(i)));
+        }
+        return styles;
     }
 
     /**
@@ -504,6 +695,14 @@ public class I3SGeometryEncoder {
         }
         tmp[pos++] = (byte) v;
         return Arrays.copyOf(tmp, pos);
+    }
+
+    public int getTexturedNodesWithStyleConfig() {
+        return texturedNodesWithStyleConfig.get();
+    }
+
+    public int getX3DNodesWithStyleOverride() {
+        return x3dNodesWithStyleOverride.get();
     }
 
 }

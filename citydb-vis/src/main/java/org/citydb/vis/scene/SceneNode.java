@@ -34,6 +34,7 @@ public class SceneNode {
     private boolean lodPreview;
     private boolean colored;
     private boolean coloredBlend;
+    private boolean hasStyleOverride;
 
     public SceneNode(int index, int level) {
         this.index = index;
@@ -147,6 +148,23 @@ public class SceneNode {
 
     public boolean isColoredBlend() {
         return coloredBlend;
+    }
+
+    /**
+     * Whether at least one triangle in this node resolves to a non-default
+     * style via the {@link org.citydb.vis.styling.ObjectStyleRegistry}.
+     * Set by the I3S geometry encoder during per-triangle color resolution.
+     * When {@code true}, the node's NodeMesh is routed to the styled-colored
+     * material slot (NORMAL + COLOR_0, shaded). When {@code false}, the
+     * node uses the existing untextured or X3DMaterial-colored slots.
+     */
+    public SceneNode setHasStyleOverride(boolean hasStyleOverride) {
+        this.hasStyleOverride = hasStyleOverride;
+        return this;
+    }
+
+    public boolean hasStyleOverride() {
+        return hasStyleOverride;
     }
 
     public int getTexelCountHint() {
