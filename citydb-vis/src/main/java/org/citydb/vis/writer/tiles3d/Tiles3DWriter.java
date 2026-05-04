@@ -222,7 +222,7 @@ public class Tiles3DWriter extends VisWriter {
             node.setMesh(prepared.mesh());
             byte[] glb = glbEncoder.encode(node, atlasBytesList, texIdToPage,
                     featureDataList, attrFields, datasetCenter,
-                    getFormatOptions().getDefaultObjectStyle());
+                    getFormatOptions().getStyleRegistry());
             if (glb == null) {
                 return false;
             }

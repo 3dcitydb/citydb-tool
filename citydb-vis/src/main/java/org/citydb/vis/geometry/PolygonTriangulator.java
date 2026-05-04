@@ -6,6 +6,7 @@
 package org.citydb.vis.geometry;
 
 import org.citydb.model.appearance.TextureCoordinate;
+import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.LinearRing;
@@ -48,11 +49,19 @@ public class PolygonTriangulator {
     // reachable via two parents); the id/reversed key catches the xlink-copy
     // case, where the CityGML reader rebuilds a fresh Polygon instance per
     // reference and all instances carry the source gml:id.
+    //
+    // Dedup is "first-wins" — the first triangulate() call to encounter a
+    // given polygon records its surface type, all later calls that touch the
+    // same polygon are silently dropped. GeometryMeshBuilder relies on this
+    // by sorting properties most-specific-owner-first before triangulating,
+    // so a polygon shared between a Building's lod3Solid and one of its
+    // boundedBy surfaces is recorded with the BoundarySurface's type rather
+    // than Building's. Don't break that ordering contract upstream.
     private final Set<Polygon> seenInstances =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<String> seenIds = new HashSet<>();
 
-    public TriangleMesh triangulate(Geometry<?> geometry, long featureId,
+    public TriangleMesh triangulate(Geometry<?> geometry, long featureId, Name surfaceType,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
                                     Map<LinearRing, Integer> ringTextureMap,
                                     Map<LinearRing, float[]> ringColorMap) {
@@ -60,7 +69,7 @@ public class PolygonTriangulator {
         List<Polygon> polygons = collectPolygons(geometry);
 
         for (Polygon polygon : polygons) {
-            triangulatePolygon(polygon, featureId, mesh, texCoordMap, ringTextureMap,
+            triangulatePolygon(polygon, featureId, surfaceType, mesh, texCoordMap, ringTextureMap,
                     ringColorMap);
         }
 
@@ -93,7 +102,8 @@ public class PolygonTriangulator {
         return polygons;
     }
 
-    private static void triangulatePolygon(Polygon polygon, long featureId, TriangleMesh mesh,
+    private static void triangulatePolygon(Polygon polygon, long featureId, Name surfaceType,
+                                    TriangleMesh mesh,
                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
                                     Map<LinearRing, Integer> ringTextureMap,
                                     Map<LinearRing, float[]> ringColorMap) {
@@ -227,13 +237,13 @@ public class PolygonTriangulator {
                         baseVertex + tri[0],
                         baseVertex + tri[2],
                         baseVertex + tri[1],
-                        featureId, polyTextureId, polyColored);
+                        featureId, polyTextureId, polyColored, surfaceType);
             } else {
                 mesh.addTriangle(
                         baseVertex + tri[0],
                         baseVertex + tri[1],
                         baseVertex + tri[2],
-                        featureId, polyTextureId, polyColored);
+                        featureId, polyTextureId, polyColored, surfaceType);
             }
         }
     }

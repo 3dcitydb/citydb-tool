@@ -109,6 +109,12 @@ public class AttributeStore implements Closeable {
      * </pre>
      * All lengths are 32-bit to avoid silent truncation on long free-form
      * text attributes or on features with more than 65535 attributes.
+     * The feature-type namespace is intentionally not stored — per-feature
+     * styling reads surface types per-triangle from
+     * {@link org.citydb.vis.geometry.TriangleMesh}, which carries fully-
+     * qualified {@link org.citydb.model.common.Name} via its own
+     * dictionary, so the local name alone is enough for the "featureType"
+     * attribute slot in popups.
      */
     private static byte[] serialize(String objectId, String featureType,
                                     Map<String, Object> attributes) {

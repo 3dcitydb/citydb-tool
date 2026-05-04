@@ -5,17 +5,27 @@
 
 package org.citydb.vis.styling;
 
+import java.util.Arrays;
+
 /**
- * Global default style applied to every CityGML object (Building, Bridge,
- * Tunnel, …) on the no-appearance render path — i.e. surfaces that carry
- * neither a texture nor an X3DMaterial vertex color. Surfaces with explicit
- * appearance keep their authored look untouched.
+ * Style applied to a CityGML object on the no-appearance render path —
+ * i.e. surfaces that carry neither a texture nor an X3DMaterial vertex
+ * color. Surfaces with explicit appearance keep their authored look
+ * untouched.
+ * <p>
+ * Instances are owned by {@link ObjectStyleRegistry}: one default plus
+ * zero or more per-feature-type overrides. The 3D Tiles writer emits one
+ * plain material per distinct {@link DefaultObjectStyle} used by a node;
+ * the I3S writer consumes only the registry's default style.
  * <p>
  * Single knob today: {@link #color}, the sRGB RGBA factor written to the
- * plain material's PBR {@code baseColorFactor} (3D Tiles) and the equivalent
- * I3S material slot. The default is opaque white {@code (1,1,1,1)}, which
- * reproduces the historical "plain white" rendering when no style is
- * configured.
+ * plain material's PBR {@code baseColorFactor}. The default is opaque
+ * white {@code (1,1,1,1)}, which reproduces the historical "plain white"
+ * rendering when no style is configured. Adding more knobs later
+ * ({@code metallicFactor}, {@code roughnessFactor}, {@code doubleSided},
+ * …) is a pure addition — append a field, a setter, and update
+ * {@link #equals(Object)} / {@link #hashCode()} so the encoder's per-style
+ * material dedup keeps working.
  * <p>
  * The plain path is always shaded (PBR + per-face NORMAL + Lambertian).
  * An earlier {@code shaded} toggle was explored but dropped — making I3S
@@ -24,13 +34,6 @@ package org.citydb.vis.styling;
  * cross-client inconsistency wasn't worth the knob. If you need flat
  * thematic colors, route them through X3DMaterial vertex colors instead;
  * that path is unlit by design.
- * <p>
- * The class is intentionally shaped as a value holder: changing the fields
- * on the single {@link DefaultObjectStyle} instance held by
- * {@link org.citydb.vis.config.VisFormatOptions} propagates uniformly to
- * every feature class on the plain path. Adding more knobs later
- * ({@code metallicFactor}, {@code roughnessFactor}, {@code doubleSided}, …)
- * is a pure addition — append a field and a setter.
  * <p>
  * Color values are stored in raw sRGB (the user's authoring space). Each
  * writer is responsible for sRGB→linear conversion when the destination
@@ -142,5 +145,21 @@ public final class DefaultObjectStyle {
 
     private static float clampUnit(float v) {
         return v < 0f ? 0f : (v > 1f ? 1f : v);
+    }
+
+    /**
+     * Value equality based on the configured color. Allows the 3D Tiles
+     * encoder to dedupe plain materials when distinct feature types resolve
+     * to styles with identical color components — the writer emits one
+     * material per distinct style, not per distinct type.
+     */
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof DefaultObjectStyle other && Arrays.equals(color, other.color);
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(color);
     }
 }
