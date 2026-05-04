@@ -206,17 +206,25 @@ public abstract class VisWriter implements FeatureWriter {
         long featureId = featureIdCounter.incrementAndGet();
         String objectId = feature.getObjectId().orElseGet(() -> "feature_" + featureId);
         String featureType = feature.getFeatureType().getLocalName();
+        String featureTypeNamespace = feature.getFeatureType().getNamespace();
         Envelope envelope = feature.getEnvelope().orElse(null);
         Map<String, Object> attributes = attributeEncoder.extractAttributes(feature);
 
+        // Always include geometries from contained features (boundedBy
+        // RoofSurface / WallSurface / ...) alongside the top-level feature's
+        // own geometry. This captures the per-surface ownership needed for
+        // per-feature-type styling: a CityGML 3.0 Building typically carries
+        // both a lod2Solid (whose surfaceMembers xlink to BoundarySurface
+        // polygons) AND each BoundarySurface's own lod2MultiSurface — using
+        // SKIP_NESTED_FEATURES would pick only the lod2Solid and lose the
+        // surface-type info, since its polygons are owned by Building.
+        // PolygonTriangulator's gml:id-based dedup drops the duplicates
+        // introduced by the dual paths, and GeometryMeshBuilder's
+        // most-specific-owner-first ordering ensures the BoundarySurface
+        // owner wins on each polygon's first triangulation.
         GeometryInfo geometryInfo = feature.getGeometryInfo(
-                GeometryInfo.Mode.SKIP_NESTED_FEATURES);
+                GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
         List<GeometryProperty> geometryProperties = geometryInfo.getGeometries();
-        if (geometryProperties.isEmpty()) {
-            geometryInfo = feature.getGeometryInfo(
-                    GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
-            geometryProperties = geometryInfo.getGeometries();
-        }
 
         if (geometryProperties.isEmpty()) {
             return CompletableFuture.completedFuture(true);
@@ -238,6 +246,7 @@ public abstract class VisWriter implements FeatureWriter {
         service.execute(() -> {
             try {
                 featureProcessor.process(featureId, objectId, featureType,
+                        featureTypeNamespace,
                         envelope, attributes, geomProps, texCoords, ringTextureIds,
                         ringColors);
                 result.complete(true);

@@ -22,7 +22,7 @@ import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.scene.SceneNode;
-import org.citydb.vis.styling.DefaultObjectStyle;
+import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.citydb.vis.util.FileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -99,12 +99,22 @@ public class I3SWriter extends VisWriter {
         double[] extent = ctx.extent();
         List<AttrField> attrFields = ctx.attrFields();
         boolean hasTextures = ctx.hasTextures();
-        boolean hasColors = ctx.hasColors();
+        I3SFormatOptions options = (I3SFormatOptions) getFormatOptions();
+        ObjectStyleRegistry styleRegistry = options.getStyleRegistry();
+        // "Layer bakes per-vertex colour" widens the X3DMaterial signal so
+        // that intra-feature-mixed textured nodes can also carry COLOR_0:
+        // their white-pixel-UV triangles bake --default-color / per-type
+        // styles into COLOR_0 (texture sample is white, so white × COLOR_0
+        // = COLOR_0). Without this widening, the textured slot stays at
+        // GeometryDefinition.textured() with no COLOR_0 in compressedAttributes,
+        // and Cesium ignores any per-vertex colour we encode.
+        boolean hasColors = ctx.hasColors()
+                || styleRegistry.defaultStyle().hasNonDefaultColor()
+                || styleRegistry.hasOverrides();
         // Set I3S LOD thresholds on the tree
         int lodThreshold = lodThresholdFor(getFormatOptions().getLodRefineRadius());
         setLodThresholds(allNodes, lodThreshold);
 
-        I3SFormatOptions options = (I3SFormatOptions) getFormatOptions();
         boolean slpk = options.isSlpk();
         // OBB policy is target-dependent and the two consumers are mutually
         // incompatible: ArcGIS (Pro, Maps SDK JS, Online Scene Viewer) needs
@@ -114,7 +124,7 @@ public class I3SWriter extends VisWriter {
         boolean includeObb = slpk || options.isObb();
         SceneLayer sceneLayer = buildSceneLayer(extent);
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices,
-                hasTextures, hasColors, includeObb, options.getDefaultObjectStyle());
+                hasTextures, hasColors, includeObb, styleRegistry);
 
         if (slpk) {
             try {
@@ -182,22 +192,37 @@ public class I3SWriter extends VisWriter {
                                 boolean hasTextures,
                                 boolean hasColors,
                                 boolean includeObb,
-                                DefaultObjectStyle defaultStyle) throws VisExportException {
+                                ObjectStyleRegistry styleRegistry) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
 
+        boolean hasStyleOverrides = styleRegistry.hasOverrides();
+
         try {
             Files.createDirectories(layerDir);
-            // Scene layer JSON
             jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
-                    hasTextures, hasColors, defaultStyle);
+                    hasTextures, hasColors, hasStyleOverrides, styleRegistry.defaultStyle());
         } catch (IOException e) {
             throw new VisExportException("Failed to write I3S scene layer JSON.", e);
         }
 
         // Parallel: encode geometry + write features/attributes per node.
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
-                node -> writeNodeOutput(node, layerDir, attrFields, hasColors));
+                node -> writeNodeOutput(node, layerDir, attrFields, hasColors, styleRegistry));
+
+        if (hasStyleOverrides && logger.isDebugEnabled()) {
+            int textured = geometryEncoder.getTexturedNodesWithStyleConfig();
+            int x3d = geometryEncoder.getX3DNodesWithStyleOverride();
+            if (textured > 0) {
+                logger.debug("--feature-type-style: {} textured node(s) cannot fully apply " +
+                        "overrides (I3S is one-material-per-node; styling only bakes onto " +
+                        "untextured / white-pixel triangles).", textured);
+            }
+            if (x3d > 0) {
+                logger.debug("--feature-type-style: {} X3DMaterial node(s) bake overrides into " +
+                        "COLOR_0 but render unlit (X3DMaterial precedence forces no NORMAL).", x3d);
+            }
+        }
 
         try {
             // Node pages AFTER geometry so vertex counts are accurate
@@ -215,7 +240,8 @@ public class I3SWriter extends VisWriter {
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
                                     List<AttrField> attrFields,
-                                    boolean layerHasColors) throws VisExportException {
+                                    boolean layerHasColors,
+                                    ObjectStyleRegistry styleRegistry) throws VisExportException {
         PreparedNode prepared = prepareNodeMesh(node, AtlasMode.SINGLE_ATLAS);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
         logAtlasViolations(node, prepared, featureDataList);
@@ -223,7 +249,7 @@ public class I3SWriter extends VisWriter {
         try {
             node.setMesh(prepared.mesh());
             I3SGeometryEncoder.NodeGeometryResult geomResult =
-                    geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors);
+                    geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors, styleRegistry);
             if (geomResult == null) {
                 return false;
             }
