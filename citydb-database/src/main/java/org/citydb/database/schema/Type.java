@@ -61,8 +61,18 @@ public abstract class Type<T extends Type<T>> implements Joinable {
         return Optional.ofNullable(superType);
     }
 
-    public Map<Name, Property> getProperties() {
+    public Map<Name, Property> getDeclaredProperties() {
         return properties != null ? properties : Collections.emptyMap();
+    }
+
+    public Map<Name, Property> getProperties() {
+        Map<Name, Property> properties = new LinkedHashMap<>();
+        if (superType != null) {
+            properties.putAll(superType.getProperties());
+        }
+
+        properties.putAll(getDeclaredProperties());
+        return properties;
     }
 
     @Override

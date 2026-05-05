@@ -178,7 +178,7 @@ public class SchemaPathBuilder {
 
     private Property getProperty(Name name, Type<?> type) {
         do {
-            Property property = getProperty(name, type.getProperties());
+            Property property = getProperty(name, type.getDeclaredProperties());
             if (property != null) {
                 return property;
             }

@@ -107,7 +107,7 @@ public class SqlContextBuilder {
                             .orElse(null);
                     if (child != null
                             && (!(child instanceof Property property)
-                            || !type.getProperties().containsKey(property.getName()))) {
+                            || !type.getDeclaredProperties().containsKey(property.getName()))) {
                         table = build(type, select, table, node, useLateral, predicates);
                     }
                 }

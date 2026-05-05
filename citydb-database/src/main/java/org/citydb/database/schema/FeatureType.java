@@ -70,7 +70,7 @@ public class FeatureType extends Type<FeatureType> {
         Property duplicate = property.getProperties().get(property.getName());
         if (duplicate == null) {
             duplicate = property.getType()
-                    .map(type -> type.getProperties().get(property.getName()))
+                    .map(type -> type.getDeclaredProperties().get(property.getName()))
                     .orElse(null);
         }
 

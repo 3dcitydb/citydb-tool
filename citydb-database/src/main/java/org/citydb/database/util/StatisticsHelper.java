@@ -430,9 +430,16 @@ public abstract class StatisticsHelper {
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
+                String name = rs.getString(2);
+
+                if (Namespaces.GENERICS.equals(featureType.getName().getNamespace())
+                        && featureType.getDeclaredProperties().containsKey(Name.of(name, Namespaces.GENERICS))) {
+                    continue;
+                }
+
                 DataType dataType = schemaMapping.getDataType(rs.getInt(3));
                 genericAttributes.computeIfAbsent(featureType, k -> new IdentityHashMap<>())
-                        .computeIfAbsent(rs.getString(2), k -> new HashSet<>())
+                        .computeIfAbsent(name, k -> new HashSet<>())
                         .add(dataType);
             }
         }
