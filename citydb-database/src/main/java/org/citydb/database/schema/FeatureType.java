@@ -11,15 +11,14 @@ import org.citydb.model.common.Namespaces;
 import java.util.Map;
 
 public class FeatureType extends Type<FeatureType> {
-    public static final FeatureType UNDEFINED = new FeatureType(1, "core:Undefined",
-            Name.of("Undefined", Namespaces.CORE), Table.FEATURE, null, false, false, null, null, null, null);
+    public static final FeatureType UNDEFINED = new FeatureType(1, Name.of("Undefined", Namespaces.CORE), Table.FEATURE,
+            null, false, false, null, null, null, null);
 
     private final boolean isTopLevel;
 
-    FeatureType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
-                boolean isTopLevel, Integer superTypeId, Map<Name, Property> properties, Join join,
-                JoinTable joinTable) {
-        super(id, identifier, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
+    FeatureType(int id, Name name, Table table, String description, boolean isAbstract, boolean isTopLevel,
+                Integer superTypeId, Map<Name, Property> properties, Join join, JoinTable joinTable) {
+        super(id, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
         this.isTopLevel = isTopLevel;
     }
 

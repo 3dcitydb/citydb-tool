@@ -11,7 +11,6 @@ import java.util.*;
 
 public abstract class Type<T extends Type<T>> implements Joinable {
     final int id;
-    final String identifier;
     final Name name;
     final Table table;
     final String description;
@@ -22,10 +21,9 @@ public abstract class Type<T extends Type<T>> implements Joinable {
     final JoinTable joinTable;
     T superType;
 
-    Type(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
-         Integer superTypeId, Map<Name, Property> properties, Join join, JoinTable joinTable) {
+    Type(int id, Name name, Table table, String description, boolean isAbstract, Integer superTypeId,
+         Map<Name, Property> properties, Join join, JoinTable joinTable) {
         this.id = id;
-        this.identifier = identifier;
         this.name = name;
         this.table = table;
         this.description = description;
@@ -40,10 +38,6 @@ public abstract class Type<T extends Type<T>> implements Joinable {
 
     public int getId() {
         return id;
-    }
-
-    String getIdentifier() {
-        return identifier;
     }
 
     @Override

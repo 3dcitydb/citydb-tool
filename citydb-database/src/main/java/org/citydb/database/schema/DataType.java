@@ -12,14 +12,14 @@ import java.util.Map;
 import java.util.Optional;
 
 public class DataType extends Type<DataType> implements ValueObject {
-    public static final DataType UNDEFINED = new DataType(1, "core:Undefined", Name.of("Undefined", Namespaces.CORE),
-            Table.PROPERTY, null, false, null, null, null, null, null);
+    public static final DataType UNDEFINED = new DataType(1, Name.of("Undefined", Namespaces.CORE), Table.PROPERTY,
+            null, false, null, null, null, null, null);
 
     private final Value value;
 
-    DataType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
-             Integer superTypeId, Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
-        super(id, identifier, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
+    DataType(int id, Name name, Table table, String description, boolean isAbstract, Integer superTypeId,
+             Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
+        super(id, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
         this.value = value;
     }
 

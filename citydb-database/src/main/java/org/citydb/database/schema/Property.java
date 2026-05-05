@@ -6,6 +6,7 @@
 package org.citydb.database.schema;
 
 import org.citydb.model.common.Name;
+import org.citydb.model.common.PrefixedName;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -116,14 +117,14 @@ public class Property implements ValueObject, Typeable, Joinable {
         if (value != null) {
             value.postprocess(properties);
         } else if (typeIdentifier != null) {
-            type = schemaMapping.getDataTypeByIdentifier(typeIdentifier);
+            type = schemaMapping.getDataType(PrefixedName.of(typeIdentifier));
             if (type == DataType.UNDEFINED) {
                 throw new SchemaException("The property references an undefined type " + typeIdentifier + ".");
             }
         }
 
         if (targetIdentifier != null) {
-            FeatureType candidate = schemaMapping.getFeatureTypeByIdentifier(targetIdentifier);
+            FeatureType candidate = schemaMapping.getFeatureType(PrefixedName.of(targetIdentifier));
             if (candidate != FeatureType.UNDEFINED) {
                 targetFeature = candidate;
             } else {

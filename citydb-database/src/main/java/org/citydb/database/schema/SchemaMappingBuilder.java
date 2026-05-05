@@ -12,6 +12,7 @@ import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
+import org.citydb.model.common.PrefixedName;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -21,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class SchemaMappingBuilder {
+    private final SchemaMapping schemaMapping = new SchemaMapping();
 
     private SchemaMappingBuilder() {
     }
@@ -31,17 +33,18 @@ public class SchemaMappingBuilder {
 
     public SchemaMapping build(DatabaseAdapter adapter) throws SchemaException {
         try (Connection connection = adapter.getPool().getConnection()) {
-            SchemaMapping schemaMapping = new SchemaMapping();
-            buildNamespaces(schemaMapping, connection, adapter);
-            buildDataTypes(schemaMapping, connection, adapter);
-            buildFeatureTypes(schemaMapping, connection, adapter);
-            return schemaMapping.build();
+            buildNamespaces(connection, adapter);
+            buildDataTypes(connection, adapter);
+            buildFeatureTypes(connection, adapter);
+            postprocess();
+
+            return schemaMapping;
         } catch (SQLException e) {
             throw new SchemaException("Failed to query schema mapping.", e);
         }
     }
 
-    private void buildNamespaces(SchemaMapping schemaMapping, Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
+    private void buildNamespaces(Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery("select id, namespace, alias " +
                      "from " + adapter.getConnectionDetails().getSchema() + "." + Table.NAMESPACE)) {
@@ -58,7 +61,7 @@ public class SchemaMappingBuilder {
         }
     }
 
-    private void buildDataTypes(SchemaMapping schemaMapping, Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
+    private void buildDataTypes(Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery("select id, supertype_id, typename, is_abstract, namespace_id, schema " +
                      "from " + adapter.getConnectionDetails().getSchema() + "." + Table.DATATYPE)) {
@@ -101,7 +104,7 @@ public class SchemaMappingBuilder {
         }
     }
 
-    private void buildFeatureTypes(SchemaMapping schemaMapping, Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
+    private void buildFeatureTypes(Connection connection, DatabaseAdapter adapter) throws SchemaException, SQLException {
         try (Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery("select id, superclass_id, classname, is_abstract, is_toplevel, " +
                      "namespace_id, schema " +
@@ -158,6 +161,8 @@ public class SchemaMappingBuilder {
 
         if (identifier == null) {
             throw new SchemaException("No identifier defined for data type (ID " + id + ").");
+        } else if (!name.equals(schemaMapping.resolvePrefixedName(PrefixedName.of(identifier)))) {
+            throw new SchemaException("Identifier does not match qualified name for data type (ID " + id + ").");
         } else if (tableName == null) {
             throw new SchemaException("No table defined for data type (ID " + id + ").");
         } else if (joinObject != null && joinTableObject != null) {
@@ -170,7 +175,7 @@ public class SchemaMappingBuilder {
         }
 
         try {
-            return new DataType(id, identifier, name, table, description, isAbstract, superTypeId,
+            return new DataType(id, name, table, description, isAbstract, superTypeId,
                     propertiesArray != null ? buildProperties(propertiesArray, adapter) : null,
                     valueObject != null ? buildValue(valueObject) : null,
                     joinObject != null ? buildJoin(joinObject) : null,
@@ -191,6 +196,8 @@ public class SchemaMappingBuilder {
 
         if (identifier == null) {
             throw new SchemaException("No identifier defined for feature type (ID " + id + ").");
+        } else if (!name.equals(schemaMapping.resolvePrefixedName(PrefixedName.of(identifier)))) {
+            throw new SchemaException("Identifier does not match qualified name for feature type (ID " + id + ").");
         } else if (tableName == null) {
             throw new SchemaException("No table defined for feature type (ID " + id + ").");
         } else if (joinObject != null && joinTableObject != null) {
@@ -203,7 +210,7 @@ public class SchemaMappingBuilder {
         }
 
         try {
-            return new FeatureType(id, identifier, name, table, description, isAbstract, isTopLevel, superTypeId,
+            return new FeatureType(id, name, table, description, isAbstract, isTopLevel, superTypeId,
                     propertiesArray != null ? buildProperties(propertiesArray, adapter) : null,
                     joinObject != null ? buildJoin(joinObject) : null,
                     joinTableObject != null ? buildJoinTable(joinTableObject) : null);
@@ -413,6 +420,16 @@ public class SchemaMappingBuilder {
             }
 
             return relationType;
+        }
+    }
+
+    private void postprocess() throws SchemaException {
+        for (DataType dataType : schemaMapping.getDataTypes()) {
+            dataType.postprocess(schemaMapping);
+        }
+
+        for (FeatureType featureType : schemaMapping.getFeatureTypes()) {
+            featureType.postprocess(schemaMapping);
         }
     }
 }
