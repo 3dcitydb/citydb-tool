@@ -41,9 +41,14 @@ public class SchemaMappingBuilder {
              ResultSet rs = stmt.executeQuery("select id, namespace, alias " +
                      "from " + adapter.getConnectionDetails().getSchema() + "." + Table.NAMESPACE)) {
             while (rs.next()) {
-                schemaMapping.addNamespace(Namespace.of(rs.getInt("id"),
-                        rs.getString("namespace"),
-                        rs.getString("alias")));
+                int id = rs.getInt("id");
+
+                String namespace = rs.getString("namespace");
+                if (rs.wasNull()) {
+                    throw new SchemaException("No namespace URI defined for the namespace (ID " + id + ").");
+                }
+
+                schemaMapping.addNamespace(new Namespace(id, namespace, rs.getString("alias")));
             }
         }
     }

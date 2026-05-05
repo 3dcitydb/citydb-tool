@@ -61,8 +61,8 @@ public enum Table {
     public Set<Table> getDependencies(boolean transitive) {
         return transitive ?
                 Arrays.stream(values())
-                        .filter(this::dependsOn)
-                        .collect(Collectors.toSet()) :
+                .filter(this::dependsOn)
+                .collect(Collectors.toSet()) :
                 dependencies;
     }
 
