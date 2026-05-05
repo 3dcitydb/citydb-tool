@@ -17,6 +17,7 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Matrix2x2;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Coordinate;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.geometry.Polygon;
@@ -113,12 +114,31 @@ public final class AppearanceExtractor {
         if (!feature.hasAppearances()) {
             return Result.empty();
         }
+        return extractFrom(feature.getAppearances().getAll(), textureStore);
+    }
 
+    /**
+     * Extract appearance data from a CityGML implicit geometry's prototype.
+     * Implicit-geometry appearances live on the {@link ImplicitGeometry} (the
+     * prototype), not on the parent feature, so this is a separate entry
+     * point. The returned maps are keyed by the prototype's own
+     * {@link LinearRing} identities — caller must remap to per-instance ring
+     * identities when the prototype geometry is deep-copied for placement.
+     */
+    public static Result extract(ImplicitGeometry implicitGeometry, TextureStore textureStore) {
+        if (!implicitGeometry.hasAppearances()) {
+            return Result.empty();
+        }
+        return extractFrom(implicitGeometry.getAppearances().getAll(), textureStore);
+    }
+
+    private static Result extractFrom(Iterable<AppearanceProperty> appearances,
+                                      TextureStore textureStore) {
         Map<LinearRing, List<TextureCoordinate>> texCoordMap = new IdentityHashMap<>();
         Map<LinearRing, Integer> ringTextureMap = new IdentityHashMap<>();
         Map<LinearRing, float[]> ringColorMap = new IdentityHashMap<>();
 
-        for (AppearanceProperty ap : feature.getAppearances().getAll()) {
+        for (AppearanceProperty ap : appearances) {
             Appearance appearance = ap.getObject();
             if (appearance == null) continue;
             for (SurfaceDataProperty sdp : appearance.getSurfaceData()) {

@@ -14,10 +14,17 @@ import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.appearance.TextureCoordinate;
+import org.citydb.model.common.Matrix4x4;
+import org.citydb.model.common.Name;
+import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Envelope;
+import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.LinearRing;
+import org.citydb.model.geometry.Point;
 import org.citydb.model.property.GeometryProperty;
+import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AppearanceExtractor;
@@ -26,6 +33,7 @@ import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.encoder.AttributeEncoder;
+import org.citydb.vis.geometry.ImplicitInstanceTransformer;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
@@ -50,6 +58,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -225,22 +234,72 @@ public abstract class VisWriter implements FeatureWriter {
         GeometryInfo geometryInfo = feature.getGeometryInfo(
                 GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
         List<GeometryProperty> geometryProperties = geometryInfo.getGeometries();
+        List<ImplicitGeometryProperty> implicitProperties = geometryInfo.getImplicitGeometries();
 
-        if (geometryProperties.isEmpty()) {
+        if (geometryProperties.isEmpty() && implicitProperties.isEmpty()) {
             return CompletableFuture.completedFuture(true);
         }
 
-        AppearanceExtractor.Result appearance =
-                AppearanceExtractor.extract(feature, stores.getTextureStore());
+        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
 
-        List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
-        Map<LinearRing, List<TextureCoordinate>> texCoords = appearance.texCoords();
-        Map<LinearRing, Integer> ringTextureIds = appearance.ringTextureIds();
-        Map<LinearRing, float[]> ringColors = appearance.ringColors();
-        if (ringTextureIds != null && !ringTextureIds.isEmpty()) {
-            stores.setFeatureTextured(featureId);
+        if (!geometryProperties.isEmpty()) {
+            AppearanceExtractor.Result appearance =
+                    AppearanceExtractor.extract(feature, stores.getTextureStore());
+
+            List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
+            Map<LinearRing, List<TextureCoordinate>> texCoords = appearance.texCoords();
+            Map<LinearRing, Integer> ringTextureIds = appearance.ringTextureIds();
+            Map<LinearRing, float[]> ringColors = appearance.ringColors();
+            if (ringTextureIds != null && !ringTextureIds.isEmpty()) {
+                stores.setFeatureTextured(featureId);
+            }
+
+            futures.add(dispatchProcessing(featureId, objectId, featureType,
+                    featureTypeNamespace, envelope, attributes, geomProps,
+                    texCoords, ringTextureIds, ringColors));
         }
 
+        if (!implicitProperties.isEmpty()) {
+            // Cache appearance extraction per prototype identity so a feature
+            // with N instances of the same prototype walks the appearance
+            // tree once. Scoped to this feature: implicit prototypes are
+            // typically reused across features, but caching globally would
+            // need a thread-safe map keyed by prototype identity — not worth
+            // the complexity unless profiling shows a hot spot.
+            Map<ImplicitGeometry, AppearanceExtractor.Result> protoAppearanceCache =
+                    new IdentityHashMap<>();
+
+            for (ImplicitGeometryProperty property : implicitProperties) {
+                CompletableFuture<Boolean> instance = dispatchImplicitInstance(
+                        property, objectId, featureType, featureTypeNamespace,
+                        attributes, protoAppearanceCache);
+                if (instance != null) {
+                    futures.add(instance);
+                }
+            }
+        }
+
+        if (futures.isEmpty()) {
+            return CompletableFuture.completedFuture(true);
+        }
+        if (futures.size() == 1) {
+            return futures.get(0);
+        }
+        // Join: completes successfully only if every per-instance task completed
+        // successfully. Any exceptional completion propagates via allOf and
+        // the thenApply lambda below treats it as failure.
+        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .handle((v, t) -> t == null
+                        && futures.stream().allMatch(f -> f.isDone() && !f.isCompletedExceptionally()));
+    }
+
+    private CompletableFuture<Boolean> dispatchProcessing(
+            long featureId, String objectId, String featureType, String featureTypeNamespace,
+            Envelope envelope, Map<String, Object> attributes,
+            List<GeometryProperty> geomProps,
+            Map<LinearRing, List<TextureCoordinate>> texCoords,
+            Map<LinearRing, Integer> ringTextureIds,
+            Map<LinearRing, float[]> ringColors) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
         service.execute(() -> {
@@ -258,6 +317,78 @@ public abstract class VisWriter implements FeatureWriter {
             }
         });
         return result;
+    }
+
+    /**
+     * Materialize one CityGML implicit-geometry instance into a world-space
+     * mesh, allocate it a fresh featureId so spatial partitioning sees its
+     * own bbox, and dispatch the same {@link FeatureProcessor#process} path
+     * used for explicit geometries. The instance shares the parent feature's
+     * objectId / featureType / attributes so picking still resolves to the
+     * CityGML feature even though the spatial entry is distinct.
+     * <p>
+     * Returns {@code null} when the instance is silently skipped (pure
+     * reference, library object, or missing transformation/reference point);
+     * a DEBUG line records each skip reason.
+     */
+    private CompletableFuture<Boolean> dispatchImplicitInstance(
+            ImplicitGeometryProperty property,
+            String objectId, String featureType, String featureTypeNamespace,
+            Map<String, Object> attributes,
+            Map<ImplicitGeometry, AppearanceExtractor.Result> protoAppearanceCache) {
+        ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
+        if (implicitGeometry == null) {
+            logger.debug("Skipping implicit-geometry-property without inline prototype on feature {}.",
+                    objectId);
+            return null;
+        }
+        Geometry<?> prototype = implicitGeometry.getGeometry().orElse(null);
+        if (prototype == null) {
+            // libraryObject form (.dae/.obj/...) — vis-export does not parse
+            // external mesh files, would need a separate loader.
+            logger.debug("Skipping library-object implicit geometry on feature {} (no inline mesh).",
+                    objectId);
+            return null;
+        }
+        Matrix4x4 transformationMatrix = property.getTransformationMatrix().orElse(null);
+        Point referencePoint = property.getReferencePoint().orElse(null);
+        if (transformationMatrix == null || referencePoint == null) {
+            logger.debug("Skipping implicit instance on feature {} — missing transformation matrix or reference point.",
+                    objectId);
+            return null;
+        }
+
+        AppearanceExtractor.Result protoAppearance = protoAppearanceCache.computeIfAbsent(
+                implicitGeometry,
+                p -> AppearanceExtractor.extract(p, stores.getTextureStore()));
+
+        ImplicitInstanceTransformer.Result placed = ImplicitInstanceTransformer.transform(
+                prototype, transformationMatrix, referencePoint, protoAppearance);
+
+        long instanceId = featureIdCounter.incrementAndGet();
+        Map<LinearRing, Integer> instanceTextureIds = placed.appearance().ringTextureIds();
+        if (instanceTextureIds != null && !instanceTextureIds.isEmpty()) {
+            stores.setFeatureTextured(instanceId);
+        }
+
+        // Wrap the placed prototype copy as a single GeometryProperty. Its
+        // parent walk does not reach a Feature (the copy is a fresh tree
+        // detached from the feature graph), so GeometryMeshBuilder falls
+        // back to defaultSurfaceType — exactly what we want: every triangle
+        // gets the parent feature's type for styling purposes.
+        GeometryProperty wrapped = GeometryProperty.of(
+                Name.of("implicitInstance", Namespaces.CORE),
+                placed.geometry());
+
+        // Pass envelope=null so process() recomputes the bbox from the
+        // transformed mesh — the parent feature's envelope covers all its
+        // explicit + implicit content combined and would not match the
+        // single-instance footprint that spatial partitioning needs.
+        return dispatchProcessing(instanceId, objectId, featureType, featureTypeNamespace,
+                null, attributes, List.of(wrapped),
+                placed.appearance().texCoords(),
+                placed.appearance().ringTextureIds(),
+                placed.appearance().ringColors());
     }
 
     @Override
