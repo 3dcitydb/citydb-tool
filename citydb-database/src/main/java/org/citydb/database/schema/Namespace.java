@@ -16,18 +16,10 @@ public class Namespace {
     private final String uri;
     private final String alias;
 
-    private Namespace(Integer id, String uri, String alias) {
+    Namespace(Integer id, String uri, String alias) {
         this.id = id;
         this.uri = uri;
         this.alias = alias;
-    }
-
-    static Namespace of(int id, String uri, String alias) throws SchemaException {
-        if (uri == null) {
-            throw new SchemaException("No namespace URI defined for the namespace (ID " + id + ").");
-        }
-
-        return new Namespace(id, uri, alias);
     }
 
     public Integer getId() {

@@ -19,10 +19,8 @@ public class SchemaMapping {
     private final Map<String, Namespace> namespacesByAlias = new HashMap<>();
     private final Map<Integer, DataType> dataTypesById = new HashMap<>();
     private final Map<Name, DataType> dataTypesByName = new HashMap<>();
-    private final Map<String, DataType> dataTypesByIdentifier = new HashMap<>();
     private final Map<Integer, FeatureType> featureTypesById = new HashMap<>();
     private final Map<Name, FeatureType> featureTypesByName = new HashMap<>();
-    private final Map<String, FeatureType> featureTypesByIdentifier = new HashMap<>();
 
     SchemaMapping() {
     }
@@ -75,14 +73,15 @@ public class SchemaMapping {
         return getDataType(Name.of(localName, namespace));
     }
 
-    DataType getDataTypeByIdentifier(String identifier) {
-        return dataTypesByIdentifier.getOrDefault(identifier, DataType.UNDEFINED);
+    public DataType getDataType(PrefixedName name) {
+        return name != null ?
+                getDataType(resolvePrefixedName(name)) :
+                DataType.UNDEFINED;
     }
 
     void addDataType(DataType dataType) {
         dataTypesById.put(dataType.getId(), dataType);
         dataTypesByName.put(dataType.getName(), dataType);
-        dataTypesByIdentifier.put(dataType.getIdentifier(), dataType);
     }
 
     public Collection<FeatureType> getFeatureTypes() {
@@ -99,10 +98,6 @@ public class SchemaMapping {
 
     public FeatureType getFeatureType(String localName, String namespace) {
         return getFeatureType(Name.of(localName, namespace));
-    }
-
-    FeatureType getFeatureTypeByIdentifier(String identifier) {
-        return featureTypesByIdentifier.getOrDefault(identifier, FeatureType.UNDEFINED);
     }
 
     public FeatureType getFeatureType(PrefixedName name) {
@@ -128,7 +123,6 @@ public class SchemaMapping {
     void addFeatureType(FeatureType featureType) {
         featureTypesById.put(featureType.getId(), featureType);
         featureTypesByName.put(featureType.getName(), featureType);
-        featureTypesByIdentifier.put(featureType.getIdentifier(), featureType);
     }
 
     public FeatureType getSuperType(Collection<FeatureType> featureTypes) {
@@ -162,19 +156,5 @@ public class SchemaMapping {
         }
 
         return ids;
-    }
-
-    SchemaMapping build() throws SchemaException {
-        for (DataType dataType : dataTypesById.values()) {
-            dataType.postprocess(this);
-        }
-
-        for (FeatureType featureType : featureTypesById.values()) {
-            featureType.postprocess(this);
-        }
-
-        dataTypesByIdentifier.clear();
-        featureTypesByIdentifier.clear();
-        return this;
     }
 }

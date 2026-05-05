@@ -5,7 +5,6 @@
 
 package org.citydb.database.schema;
 
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.common.Name;
 
 import java.util.Map;
@@ -21,32 +20,9 @@ public class Value {
         propertyIndex = null;
     }
 
-    private Value(Integer propertyIndex) {
+    Value(Integer propertyIndex) {
         this.propertyIndex = propertyIndex;
         column = null;
-    }
-
-    static Value of(JSONObject object) throws SchemaException {
-        String columnName = object.getString("column");
-        String typeName = object.getString("type");
-        Integer propertyIndex = object.getInteger("property");
-
-        if (columnName == null && typeName == null && propertyIndex == null) {
-            throw new SchemaException("A value must define either a column and type or a property index.");
-        } else if (propertyIndex == null) {
-            if (columnName == null || typeName == null) {
-                throw new SchemaException("A value must define both a column and type.");
-            }
-
-            ColumnType type = ColumnType.of(typeName);
-            if (type == null) {
-                throw new SchemaException("The value uses an unsupported column data type " + typeName + ".");
-            }
-
-            return new Value(new Column(columnName, type));
-        } else {
-            return new Value(propertyIndex);
-        }
     }
 
     public Optional<Column> getColumn() {
