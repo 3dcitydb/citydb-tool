@@ -5,9 +5,6 @@
 
 package org.citydb.database.schema;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
@@ -20,44 +17,10 @@ public class DataType extends Type<DataType> implements ValueObject {
 
     private final Value value;
 
-    private DataType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
-                     Integer superTypeId, Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
+    DataType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
+             Integer superTypeId, Map<Name, Property> properties, Value value, Join join, JoinTable joinTable) {
         super(id, identifier, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
         this.value = value;
-    }
-
-    static DataType of(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object,
-                       DatabaseAdapter adapter) throws SchemaException {
-        String identifier = object.getString("identifier");
-        String tableName = object.getString("table");
-        String description = object.getString("description");
-        JSONArray propertiesArray = object.getJSONArray("properties");
-        JSONObject valueObject = object.getJSONObject("value");
-        JSONObject joinObject = object.getJSONObject("join");
-        JSONObject joinTableObject = object.getJSONObject("joinTable");
-
-        if (identifier == null) {
-            throw new SchemaException("No identifier defined for data type (ID " + id + ").");
-        } else if (tableName == null) {
-            throw new SchemaException("No table defined for data type (ID " + id + ").");
-        } else if (joinObject != null && joinTableObject != null) {
-            throw new SchemaException("The data type (ID " + id + ") defines both a join and a join table.");
-        }
-
-        Table table = Table.of(tableName);
-        if (table == null) {
-            throw new SchemaException("The table " + tableName + " of data type (ID: " + id + ") is not supported.");
-        }
-
-        try {
-            return new DataType(id, identifier, name, table, description, isAbstract, superTypeId,
-                    propertiesArray != null ? Type.buildProperties(propertiesArray, adapter) : null,
-                    valueObject != null ? Value.of(valueObject) : null,
-                    joinObject != null ? Join.of(joinObject) : null,
-                    joinTableObject != null ? JoinTable.of(joinTableObject) : null);
-        } catch (SchemaException e) {
-            throw new SchemaException("Failed to build data type (ID: " + id + ").", e);
-        }
     }
 
     @Override

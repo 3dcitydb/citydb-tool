@@ -5,9 +5,6 @@
 
 package org.citydb.database.schema;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 
@@ -19,43 +16,11 @@ public class FeatureType extends Type<FeatureType> {
 
     private final boolean isTopLevel;
 
-    private FeatureType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
-                        boolean isTopLevel, Integer superTypeId, Map<Name, Property> properties, Join join,
-                        JoinTable joinTable) {
+    FeatureType(int id, String identifier, Name name, Table table, String description, boolean isAbstract,
+                boolean isTopLevel, Integer superTypeId, Map<Name, Property> properties, Join join,
+                JoinTable joinTable) {
         super(id, identifier, name, table, description, isAbstract, superTypeId, properties, join, joinTable);
         this.isTopLevel = isTopLevel;
-    }
-
-    static FeatureType of(int id, Name name, boolean isAbstract, boolean isTopLevel, Integer superTypeId,
-                          JSONObject object, DatabaseAdapter adapter) throws SchemaException {
-        String identifier = object.getString("identifier");
-        String tableName = object.getString("table");
-        String description = object.getString("description");
-        JSONArray propertiesArray = object.getJSONArray("properties");
-        JSONObject joinObject = object.getJSONObject("join");
-        JSONObject joinTableObject = object.getJSONObject("joinTable");
-
-        if (identifier == null) {
-            throw new SchemaException("No identifier defined for feature type (ID " + id + ").");
-        } else if (tableName == null) {
-            throw new SchemaException("No table defined for feature type (ID " + id + ").");
-        } else if (joinObject != null && joinTableObject != null) {
-            throw new SchemaException("The feature type (ID " + id + ") defines both a join and a join table.");
-        }
-
-        Table table = Table.of(tableName);
-        if (table == null) {
-            throw new SchemaException("The table " + tableName + " of feature type (ID: " + id + ") is not supported.");
-        }
-
-        try {
-            return new FeatureType(id, identifier, name, table, description, isAbstract, isTopLevel, superTypeId,
-                    propertiesArray != null ? Type.buildProperties(propertiesArray, adapter) : null,
-                    joinObject != null ? Join.of(joinObject) : null,
-                    joinTableObject != null ? JoinTable.of(joinTableObject) : null);
-        } catch (SchemaException e) {
-            throw new SchemaException("Failed to build feature type (ID: " + id + ").", e);
-        }
     }
 
     public boolean isTopLevel() {

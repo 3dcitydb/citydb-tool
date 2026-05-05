@@ -5,9 +5,6 @@
 
 package org.citydb.database.schema;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Name;
 
 import java.util.*;
@@ -37,25 +34,6 @@ public abstract class Type<T extends Type<T>> implements Joinable {
         this.properties = properties;
         this.join = join;
         this.joinTable = joinTable;
-    }
-
-    static Map<Name, Property> buildProperties(JSONArray propertiesArray, DatabaseAdapter adapter) throws SchemaException {
-        Map<Name, Property> properties = null;
-        if (!propertiesArray.isEmpty()) {
-            properties = new LinkedHashMap<>();
-            for (Object item : propertiesArray) {
-                if (item instanceof JSONObject propertyObject) {
-                    Property property = Property.of(propertyObject, adapter);
-                    properties.put(property.getName(), property);
-                }
-            }
-
-            if (properties.size() != propertiesArray.size()) {
-                throw new SchemaException("The properties array contains invalid properties.");
-            }
-        }
-
-        return properties;
     }
 
     abstract T self();
