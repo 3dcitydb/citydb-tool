@@ -3,7 +3,9 @@
 ## [Unreleased]
 
 ### Fixed
-- Fixed the import of implicit geometries when import filters are used.
+- Fixed import of implicit geometries when import filters are applied.
+- Fixed an issue where properties of generic feature types were incorrectly counted as generic attributes in the
+  database report.
 
 ## [1.3.0] - 2026-03-09
 
