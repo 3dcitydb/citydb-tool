@@ -15,19 +15,23 @@ import java.util.Map;
 
 public class SceneOptions implements Option {
     @CommandLine.Option(names = "--grid-edge-length", paramLabel = "<meters>",
-            defaultValue = "200.0",
             description = "Edge length in meters of one grid cell used as the leaf of the " +
-                    "spatial aggregation tree (default: ${DEFAULT-VALUE}). Smaller values " +
-                    "produce a finer grid and shorter camera load distances.")
+                    "spatial aggregation tree. When omitted, the cell edge is sized to the " +
+                    "longest side of the dataset extent so the entire dataset fits in a " +
+                    "single root cell (no spatial subdivision). Set an explicit smaller " +
+                    "value to produce a finer grid and shorter camera load distances.")
     private double gridEdgeLength;
 
     @CommandLine.Option(names = "--lod-refine-radius", paramLabel = "<pixels>",
-            defaultValue = "128.0",
+            defaultValue = "56",
             description = "Projected MBS radius (pixels) above which a tile refines to its " +
                     "children (default: ${DEFAULT-VALUE}). Applied uniformly to both 3D Tiles " +
                     "(via geometric error) and I3S (via LOD threshold) so both formats load " +
-                    "the same level of detail at any given camera distance. Lower values " +
-                    "load more detail, higher values lighten the viewer.")
+                    "the same level of detail at any given camera distance. Lower values load " +
+                    "more detail (heavier viewer), higher values defer refinement (lighter " +
+                    "viewer). Pass 0 to disable LOD entirely and always refine to the leaves; " +
+                    "this can crash the viewer on city-scale datasets and is intended for " +
+                    "small exports or debugging.")
     private double lodRefineRadius;
 
     @CommandLine.Option(names = "--clamp-to-ground",
@@ -177,15 +181,15 @@ public class SceneOptions implements Option {
 
     @Override
     public void preprocess(CommandLine commandLine) {
-        if (gridEdgeLength <= 0) {
+        if (gridEdgeLength < 0) {
             throw new CommandLine.ParameterException(commandLine,
-                    "Error: --grid-edge-length must be a positive number of meters but was '" +
+                    "Error: --grid-edge-length must be a non-negative number of meters but was '" +
                             gridEdgeLength + "'");
         }
 
-        if (lodRefineRadius <= 0) {
+        if (lodRefineRadius < 0) {
             throw new CommandLine.ParameterException(commandLine,
-                    "Error: --lod-refine-radius must be a positive number of pixels but was '" +
+                    "Error: --lod-refine-radius must be a non-negative number of pixels but was '" +
                             lodRefineRadius + "'");
         }
 
