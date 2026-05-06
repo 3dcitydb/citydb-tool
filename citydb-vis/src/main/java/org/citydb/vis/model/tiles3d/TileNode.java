@@ -119,10 +119,19 @@ public class TileNode {
      * {@code maximumScreenSpaceError = 16}, this makes a tile refine when
      * its projected MBS radius exceeds {@code lodRefineRadius} pixels —
      * identical to the I3S refine point at the same parameter.
+     * <p>
+     * When {@code lodRefineRadius == 0} the caller passes
+     * {@code POSITIVE_INFINITY} as {@code geRatio}; we collapse that to
+     * {@link #ALWAYS_REFINE_GE} (a finite, JSON-safe huge value) so Cesium
+     * always sees SSE above its threshold and refines into the leaves.
      */
     public static double computeGeometricError(SceneNode node, double geRatio) {
         if (node.getChildren().isEmpty()) return 0;
         BoundingVolume bv = node.getBoundingVolume();
-        return bv != null ? bv.getRadius() * geRatio : 0;
+        if (bv == null) return 0;
+        if (Double.isInfinite(geRatio)) return ALWAYS_REFINE_GE;
+        return bv.getRadius() * geRatio;
     }
+
+    private static final double ALWAYS_REFINE_GE = 1.0e10;
 }

@@ -19,8 +19,16 @@ import org.citydb.vis.styling.ObjectStyleRegistry;
  * partitioning and texture handling parameters.
  */
 public abstract class VisFormatOptions implements OutputFormatOptions {
-    private double gridEdgeLength = 200.0;
-    private double lodRefineRadius = 128.0;
+    // 0 is a sentinel for "auto": PartitioningStage treats it as a single
+    // root cell sized to the dataset extent's longest side (no spatial
+    // subdivision). Override with a positive value for a finer grid.
+    private double gridEdgeLength = 0.0;
+    // Default: refine when projected MBS radius exceeds 56 px — safe for
+    // city-scale data. 0 is a sentinel both writers translate into an
+    // always-refine policy (every leaf loads immediately); useful for
+    // small exports / debugging but easily crashes the viewer on large
+    // datasets, so users must opt in explicitly with --lod-refine-radius=0.
+    private double lodRefineRadius = 56.0;
     private boolean clampToGround;
     private double textureScale = 1.0;
     private int maxAtlasSize = 1024;
