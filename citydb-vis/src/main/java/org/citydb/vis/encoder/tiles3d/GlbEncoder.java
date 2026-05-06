@@ -37,25 +37,33 @@ import java.util.Map;
  * </ul>
  * <p>
  * A node emits up to three flavours of primitives, all sharing the same
- * mesh / property table. NORMAL is only emitted on the no-appearance plain
- * path; textured and X3DMaterial-colored paths render unlit:
+ * mesh / property table. {@code --enable-shading} toggles NORMAL emission
+ * and the {@code KHR_materials_unlit} extension uniformly across every
+ * primitive type, mirroring the I3S writer:
  * <ul>
  *   <li>Textured primitive (one per atlas page): {@code POSITION +
- *       TEXCOORD_0 + _FEATURE_ID_0}, uses an unlit textured material backed
- *       by that page. NORMAL omitted; {@code KHR_materials_unlit} prevents
- *       CesiumJS from auto-deriving flat normals (which would dim the
- *       texture).</li>
+ *       TEXCOORD_0 + _FEATURE_ID_0}, plus {@code NORMAL} when
+ *       {@code --enable-shading} is on. The emitted normal is the local
+ *       "up" direction (+Y in GLB Y-up local frame, which the root tile
+ *       transform rotates to ECEF up at the dataset center) — not the
+ *       polygon's true geometric normal. Lambertian then evaluates against
+ *       a single direction across all textured triangles in the node, so
+ *       walls and roofs end up at the same brightness (matches the I3S
+ *       up-normal trick). When the flag is off the material carries
+ *       {@code KHR_materials_unlit} to prevent CesiumJS from auto-deriving
+ *       flat normals (which would dim the texture).</li>
  *   <li>Untextured-plain primitive (one per distinct {@link DefaultObjectStyle}
- *       used by the node): {@code POSITION + NORMAL + _FEATURE_ID_0}, uses
- *       a per-style PBR material that carries the style's
- *       {@code baseColorFactor}. The only shaded path: per-face NORMAL gives
- *       each surface a 3D form via Lambertian shading. Per-feature-type
- *       overrides reach the GLB through this split — e.g. RoofSurface red +
- *       WallSurface white emits two plain primitives in one node.</li>
+ *       used by the node): {@code POSITION + _FEATURE_ID_0}, plus
+ *       {@code NORMAL} when {@code --enable-shading} is on. The material
+ *       carries the style's {@code baseColorFactor} and switches between
+ *       PBR-shaded and {@code KHR_materials_unlit} based on the flag.
+ *       Per-feature-type overrides reach the GLB through this split —
+ *       e.g. RoofSurface red + WallSurface white emits two plain primitives
+ *       in one node.</li>
  *   <li>Untextured-colored primitive (X3DMaterial): {@code POSITION +
- *       COLOR_0 + _FEATURE_ID_0}, uses an unlit material. NORMAL omitted
- *       so the authored thematic / heat-map colors render at full
- *       intensity.</li>
+ *       COLOR_0 + _FEATURE_ID_0}, plus {@code NORMAL} when
+ *       {@code --enable-shading} is on. Its material is PBR when shaded
+ *       and unlit otherwise.</li>
  * </ul>
  * Positions are in a local ENU coordinate frame relative to a dataset center.
  * The root tile's {@code transform} in {@code tileset.json} converts ENU to ECEF.
@@ -86,7 +94,8 @@ public class GlbEncoder {
                          Map<Integer, Integer> texIdToPage,
                          List<FeatureData> features, List<AttrField> attrFields,
                          double[] datasetCenter,
-                         ObjectStyleRegistry styleRegistry) throws IOException {
+                         ObjectStyleRegistry styleRegistry,
+                         boolean enableShading) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexture = mesh.hasTexCoords() && !atlasBytesList.isEmpty();
         if (!hasTexture) {
@@ -151,18 +160,18 @@ public class GlbEncoder {
         for (int p = 0; p < pageCount; p++) {
             List<TriEntry> tris = texturedTrisByPage.get(p);
             if (!tris.isEmpty()) {
-                primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, null, frame));
+                primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, null, frame, enableShading));
             }
         }
         for (Map.Entry<DefaultObjectStyle, List<TriEntry>> e : untexturedPlainTrisByStyle.entrySet()) {
             if (!e.getValue().isEmpty()) {
                 primitives.add(buildPrimitiveArrays(mesh, weld, e.getValue(),
-                        UNTEXTURED_PLAIN_PAGE, e.getKey(), frame));
+                        UNTEXTURED_PLAIN_PAGE, e.getKey(), frame, enableShading));
             }
         }
         if (!untexturedColoredTris.isEmpty()) {
             primitives.add(buildPrimitiveArrays(mesh, weld, untexturedColoredTris,
-                    UNTEXTURED_COLORED_PAGE, null, frame));
+                    UNTEXTURED_COLORED_PAGE, null, frame, enableShading));
         }
         node.setMesh(null); // release source mesh; no longer needed
 
@@ -196,6 +205,7 @@ public class GlbEncoder {
                 .textures(bvTextures)
                 .primitives(toJsonPrimitives(primitives, primitiveBvs))
                 .metadata(featureCount, attrFields, propBvs)
+                .enableShading(enableShading)
                 .build();
 
         return GlbContainer.assemble(jsonData, binData);
@@ -334,14 +344,15 @@ public class GlbEncoder {
                                                         List<TriEntry> triEntries,
                                                         int atlasPage,
                                                         DefaultObjectStyle plainStyle,
-                                                        DatasetFrame frame) {
+                                                        DatasetFrame frame,
+                                                        boolean enableShading) {
         boolean textured = atlasPage >= 0;
         boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
-        // NORMAL only on the no-appearance plain path. Textured/colored paths
-        // render unlit (see GltfJsonBuilder.writeMaterials), so NORMAL would
-        // be unused — and dropping it also avoids the textured-dim symptom
-        // observed on the I3S side for the same data.
-        boolean emitNormals = !textured && !emitColors;
+        // NORMAL emitted on every path when --enable-shading is on. Textured
+        // primitives use the up-direction trick (constant +Y in local frame,
+        // see normal-write block below) so walls and roofs render at uniform
+        // brightness — matches the I3S writer's behaviour.
+        boolean emitNormals = enableShading;
         int vertexCount = triEntries.size() * 3;
         float[] positions = new float[vertexCount * 3];
         float[] normals = emitNormals ? new float[vertexCount * 3] : null;
@@ -379,10 +390,24 @@ public class GlbEncoder {
                 posMax[2] = Math.max(posMax[2], -north);
 
                 if (normals != null) {
-                    float[] n = mesh.getNormals().get(srcIdx);
-                    normals[idx * 3] = n[0];
-                    normals[idx * 3 + 1] = n[2];
-                    normals[idx * 3 + 2] = -n[1];
+                    if (textured) {
+                        // Up-direction trick: emit local +Y (which the root
+                        // tile transform rotates to ECEF up at the dataset
+                        // center) for every textured vertex, instead of the
+                        // polygon's geometric normal. Lambertian then yields
+                        // the same brightness for every textured triangle in
+                        // the node — walls and roofs equally lit, no per-face
+                        // dimming on back-facing walls. Mirrors the I3S
+                        // writer (see I3SGeometryEncoder.fillUpInEcef).
+                        normals[idx * 3] = 0f;
+                        normals[idx * 3 + 1] = 1f;
+                        normals[idx * 3 + 2] = 0f;
+                    } else {
+                        float[] n = mesh.getNormals().get(srcIdx);
+                        normals[idx * 3] = n[0];
+                        normals[idx * 3 + 1] = n[2];
+                        normals[idx * 3 + 2] = -n[1];
+                    }
                 }
                 if (uvs != null) {
                     float[] uv = mesh.getTexCoords().get(srcIdx);
