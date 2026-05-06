@@ -23,6 +23,13 @@ import java.util.List;
  *       wrong-winding triangles and they vanish from one viewing side.</li>
  * </ul>
  * Writing both is safe — clients ignore the field they don't recognise.
+ * <p>
+ * No {@code emissiveTexture} or {@code emissiveFactor} is emitted: CesiumJS
+ * 1.139's I3S loader crashes on emissiveTexture, and a flat
+ * {@code emissiveFactor} floor washed buildings out unacceptably in
+ * testing. Brightness on back-facing walls under {@code --enable-shading}
+ * is instead managed by the encoder's up-normal trick (see
+ * {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder}).
  */
 @JSONType(alphabetic = false)
 public class MaterialDefinition {
@@ -44,8 +51,10 @@ public class MaterialDefinition {
      * X3DMaterial. {@code style.color()} drives {@code baseColorFactor}
      * (linear, glTF/I3S spec), emitted only when it differs from the
      * opaque-white default; an alpha &lt; 1 promotes to {@code BLEND}.
-     * The paired {@link GeometryDefinition.DracoBuffer#untextured()} carries
-     * NORMAL so the plain path renders shaded (PBR + Lambertian).
+     * Paired with {@link GeometryDefinition.DracoBuffer#untextured()} when
+     * {@code --enable-shading} is on (PBR + Lambertian) and with
+     * {@link GeometryDefinition.DracoBuffer#untexturedNoNormal()} otherwise
+     * (unlit).
      */
     public static MaterialDefinition untextured(DefaultObjectStyle style) {
         MaterialDefinition material = pbr(null);
@@ -60,17 +69,26 @@ public class MaterialDefinition {
         return material;
     }
 
+    /**
+     * Textured material backed by texture set 0. Lambertian darkening on
+     * back-facing walls is mitigated on the encoder side via the up-normal
+     * trick in {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder}
+     * (truly-textured vertices share one ECEF up direction so walls and
+     * roofs end up at the same brightness within a node).
+     */
     public static MaterialDefinition textured() {
         return pbr(new BaseColorTexture(0, 0));
     }
 
     /**
-     * Untextured material that consumes per-vertex COLOR_0. The paired
-     * Draco buffer ({@link GeometryDefinition.DracoBuffer#colored()})
-     * omits NORMAL — X3DMaterial in this project is used for thematic /
-     * heat-map colours where Lambertian darkening is undesirable.
-     * {@code blend=true} emits {@code alphaMode=blend}; opaque colored
-     * nodes rely on I3S's default opaque.
+     * Untextured material that consumes per-vertex COLOR_0. Paired with
+     * {@link GeometryDefinition.DracoBuffer#colored()} when
+     * {@code --enable-shading} is off (no NORMAL → unlit, authored
+     * thematic / heat-map colours render at full intensity) or with
+     * {@link GeometryDefinition.DracoBuffer#coloredShaded()} when on
+     * (NORMAL present → PBR + Lambertian, authored colours pick up face
+     * shading). {@code blend=true} emits {@code alphaMode=blend}; opaque
+     * colored nodes rely on I3S's default opaque.
      */
     public static MaterialDefinition colored(boolean blend) {
         MaterialDefinition material = pbr(null);
