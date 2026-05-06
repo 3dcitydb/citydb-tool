@@ -122,9 +122,10 @@ public class I3SWriter extends VisWriter {
         // camera angles when OBB is present. SLPK always emits it (ArcGIS
         // Pro requirement); folder mode emits it only when --obb is passed.
         boolean includeObb = slpk || options.isObb();
+        boolean enableShading = options.isEnableShading();
         SceneLayer sceneLayer = buildSceneLayer(extent);
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices,
-                hasTextures, hasColors, includeObb, styleRegistry);
+                hasTextures, hasColors, includeObb, enableShading, styleRegistry);
 
         if (slpk) {
             try {
@@ -192,6 +193,7 @@ public class I3SWriter extends VisWriter {
                                 boolean hasTextures,
                                 boolean hasColors,
                                 boolean includeObb,
+                                boolean enableShading,
                                 ObjectStyleRegistry styleRegistry) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
         Path layerDir = outputDir.resolve("layers").resolve("0");
@@ -201,14 +203,16 @@ public class I3SWriter extends VisWriter {
         try {
             Files.createDirectories(layerDir);
             jsonSerializer.writeSceneLayerJson(layerDir, sceneLayer, attrFields,
-                    hasTextures, hasColors, hasStyleOverrides, styleRegistry.defaultStyle());
+                    hasTextures, hasColors, hasStyleOverrides, enableShading,
+                    styleRegistry.defaultStyle());
         } catch (IOException e) {
             throw new VisExportException("Failed to write I3S scene layer JSON.", e);
         }
 
         // Parallel: encode geometry + write features/attributes per node.
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
-                node -> writeNodeOutput(node, layerDir, attrFields, hasColors, styleRegistry));
+                node -> writeNodeOutput(node, layerDir, attrFields, hasColors, enableShading,
+                        styleRegistry));
 
         if (hasStyleOverrides && logger.isDebugEnabled()) {
             int textured = geometryEncoder.getTexturedNodesWithStyleConfig();
@@ -219,8 +223,9 @@ public class I3SWriter extends VisWriter {
                         "untextured / white-pixel triangles).", textured);
             }
             if (x3d > 0) {
+                String shading = enableShading ? "PBR-shaded" : "unlit";
                 logger.debug("--feature-type-style: {} X3DMaterial node(s) bake overrides into " +
-                        "COLOR_0 but render unlit (X3DMaterial precedence forces no NORMAL).", x3d);
+                        "COLOR_0 and render {}.", x3d, shading);
             }
         }
 
@@ -241,6 +246,7 @@ public class I3SWriter extends VisWriter {
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
                                     List<AttrField> attrFields,
                                     boolean layerHasColors,
+                                    boolean enableShading,
                                     ObjectStyleRegistry styleRegistry) throws VisExportException {
         PreparedNode prepared = prepareNodeMesh(node, AtlasMode.SINGLE_ATLAS);
         List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
@@ -249,7 +255,8 @@ public class I3SWriter extends VisWriter {
         try {
             node.setMesh(prepared.mesh());
             I3SGeometryEncoder.NodeGeometryResult geomResult =
-                    geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors, styleRegistry);
+                    geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors,
+                            enableShading, styleRegistry);
             if (geomResult == null) {
                 return false;
             }

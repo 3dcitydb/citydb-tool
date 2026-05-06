@@ -57,6 +57,14 @@ final class GltfJsonBuilder {
     private List<AttrField> attrFields;
     private List<PropertyTableBufferViews> propBvs;
 
+    // Mirrors --enable-shading at the writer level. When false, every
+    // material carries KHR_materials_unlit alongside its primitives'
+    // missing NORMAL attribute (so CesiumJS doesn't auto-derive flat
+    // normals); when true every material renders PBR-shaded. Textured
+    // primitives use the up-direction normal trick to keep walls and roofs
+    // equally lit (see GlbEncoder javadoc), matching the I3S writer.
+    private boolean enableShading;
+
     // Set by writeMaterials when any material gets KHR_materials_unlit applied;
     // consumed by writeExtensions to declare it in extensionsUsed.
     private boolean unlitUsed;
@@ -82,6 +90,11 @@ final class GltfJsonBuilder {
         this.featureCount = featureCount;
         this.attrFields = attrFields;
         this.propBvs = propBvs;
+        return this;
+    }
+
+    GltfJsonBuilder enableShading(boolean enableShading) {
+        this.enableShading = enableShading;
         return this;
     }
 
@@ -194,29 +207,33 @@ final class GltfJsonBuilder {
     /**
      * Emit one textured material per referenced atlas page (each with a
      * baseColorTexture pointing at its own atlas), plus up to two untextured
-     * materials. The texturing/X3DMaterial paths are unlit; only the
-     * no-appearance plain path is shaded:
+     * materials. All three material flavours follow {@code --enable-shading}:
      * <ul>
-     *   <li><b>textured</b> — PBR + {@code KHR_materials_unlit}. Unlit so
-     *       the texture renders at authored intensity; matches the I3S
-     *       textured material (which has no NORMAL and renders unlit).</li>
-     *   <li><b>plain</b> — default PBR, used by untextured primitives without
-     *       X3DMaterial vertex colors. The only shaded path: surfaces get
-     *       Lambertian shading from NORMAL so a default-colored building
-     *       still shows 3D form. One material is emitted per distinct
-     *       {@link DefaultObjectStyle} carried by the plain primitives in
-     *       the node — this is how per-feature-type color overrides reach
-     *       the GLB. Each material receives {@code baseColorFactor} from
-     *       its style (omitted when the style still has the opaque-white
-     *       default) and {@code alphaMode=BLEND} when the style's color
-     *       carries alpha &lt; 1.</li>
-     *   <li><b>colored</b> — PBR + {@code KHR_materials_unlit}, used by
-     *       untextured primitives carrying X3DMaterial {@code COLOR_0}.
-     *       Unlit because X3DMaterial in this project is used for thematic /
-     *       heat-map colors where Lambertian darkening is undesirable.
-     *       Flipped to {@code alphaMode=BLEND} when any colored primitive
-     *       has alpha below 1 — vertex {@code COLOR_0} multiplies into
-     *       baseColor so BLEND is required for transparency to render.</li>
+     *   <li><b>textured</b> — PBR-shaded under {@code --enable-shading};
+     *       otherwise carries {@code KHR_materials_unlit}. With NORMAL on,
+     *       the encoder emits the local up direction (constant +Y) per
+     *       vertex so Lambertian gives every textured triangle in the node
+     *       the same brightness — no per-face dimming on back-facing walls.
+     *       Without NORMAL the unlit extension prevents CesiumJS from
+     *       auto-deriving flat normals (which would dim the texture).
+     *       Matches the I3S textured slot's NORMAL toggle.</li>
+     *   <li><b>plain</b> — used by untextured primitives without X3DMaterial
+     *       vertex colors. Renders PBR-shaded with NORMAL when
+     *       {@code --enable-shading} is on; otherwise carries
+     *       {@code KHR_materials_unlit} alongside the missing NORMAL so
+     *       Cesium doesn't auto-derive flat normals. One material is
+     *       emitted per distinct {@link DefaultObjectStyle} carried by the
+     *       plain primitives in the node — this is how per-feature-type
+     *       color overrides reach the GLB. Each material receives
+     *       {@code baseColorFactor} from its style (omitted when the style
+     *       still has the opaque-white default) and {@code alphaMode=BLEND}
+     *       when the style's color carries alpha &lt; 1.</li>
+     *   <li><b>colored</b> — used by untextured primitives carrying
+     *       X3DMaterial {@code COLOR_0}. PBR-shaded under
+     *       {@code --enable-shading}; otherwise unlit. Flipped to
+     *       {@code alphaMode=BLEND} when any colored primitive has alpha
+     *       below 1 — vertex {@code COLOR_0} multiplies into baseColor so
+     *       BLEND is required for transparency to render.</li>
      * </ul>
      * All three materials carry {@code doubleSided: true}. CityGML imports
      * routinely have inconsistent triangle winding on walls; the glTF default
@@ -271,10 +288,14 @@ final class GltfJsonBuilder {
             pbr.put("roughnessFactor", 1.0);
             material.put("pbrMetallicRoughness", pbr);
             material.put("doubleSided", true);
-            JSONObject extensions = new JSONObject();
-            extensions.put("KHR_materials_unlit", new JSONObject());
-            material.put("extensions", extensions);
-            unlitUsed = true;
+            // Without NORMAL the unlit extension prevents CesiumJS from
+            // auto-deriving flat normals (which would dim the texture).
+            // With NORMAL the textured primitive carries the local
+            // up-direction normal (see GlbEncoder), so PBR + Lambertian
+            // gives every textured triangle the same brightness.
+            if (!enableShading) {
+                addUnlitExtension(material);
+            }
             texturedIdx[p] = materials.size();
             materials.add(material);
         }
@@ -298,6 +319,12 @@ final class GltfJsonBuilder {
             }
             material.put("pbrMetallicRoughness", pbr);
             material.put("doubleSided", true);
+            // Plain primitives drop NORMAL when --enable-shading is off; the
+            // unlit extension prevents CesiumJS from auto-deriving flat
+            // normals (which would dim the geometry).
+            if (!enableShading) {
+                addUnlitExtension(material);
+            }
             plainIdxByStyle.put(style, materials.size());
             materials.add(material);
         }
@@ -312,16 +339,25 @@ final class GltfJsonBuilder {
                 material.put("alphaMode", "BLEND");
             }
             material.put("doubleSided", true);
-            JSONObject extensions = new JSONObject();
-            extensions.put("KHR_materials_unlit", new JSONObject());
-            material.put("extensions", extensions);
-            unlitUsed = true;
+            // X3DMaterial colored primitives are unlit only when NORMAL is
+            // absent; with --enable-shading the material renders PBR-shaded
+            // and authored thematic colours pick up Lambertian darkening.
+            if (!enableShading) {
+                addUnlitExtension(material);
+            }
             untexturedColoredIdx = materials.size();
             materials.add(material);
         }
 
         root.put("materials", materials);
         return new MaterialIndices(texturedIdx, plainIdxByStyle, untexturedColoredIdx);
+    }
+
+    private void addUnlitExtension(JSONObject material) {
+        JSONObject extensions = new JSONObject();
+        extensions.put("KHR_materials_unlit", new JSONObject());
+        material.put("extensions", extensions);
+        unlitUsed = true;
     }
 
     /**

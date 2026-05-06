@@ -84,14 +84,25 @@ public class SceneOptions implements Option {
                     "globally on every overflowing cell).")
     private AtlasFallbackStrategy atlasFallbackStrategy;
 
+    @CommandLine.Option(names = "--enable-shading",
+            description = "Emit per-vertex NORMAL so plain, X3DMaterial-coloured, and " +
+                    "per-feature-type-styled surfaces render shaded (PBR + Lambertian) " +
+                    "and pick up 3D form. Textured surfaces also receive NORMAL but " +
+                    "with the local up-direction in place of the geometric normal, so " +
+                    "walls and roofs stay at the same brightness within a node while " +
+                    "still responding to time-of-day sun changes. Both 3D Tiles and " +
+                    "I3S follow this behaviour. When omitted, every primitive renders " +
+                    "unlit — smaller files, no shading.")
+    private boolean enableShading;
+
     @CommandLine.Option(names = "--default-color", paramLabel = "<#rrggbb[aa]>",
             description = "Default sRGB color applied to features that have neither a " +
                     "texture nor an X3DMaterial (default: opaque white). Form: '#rrggbb' " +
                     "or '#rrggbbaa'. Applies uniformly to every feature class on the " +
                     "no-appearance path (Building, Bridge, Tunnel, ...). Surfaces with an " +
                     "explicit texture or X3DMaterial keep their authored color and are " +
-                    "not affected. Default-colored surfaces always render with PBR + " +
-                    "per-face Lambertian shading so 3D form is visible.")
+                    "not affected. Pair with --enable-shading to render these surfaces " +
+                    "PBR-shaded; without it they are unlit.")
     private String defaultColor;
 
     @CommandLine.Option(names = "--feature-type-style", split = ",",
@@ -133,6 +144,10 @@ public class SceneOptions implements Option {
 
     public AtlasFallbackStrategy getAtlasFallbackStrategy() {
         return atlasFallbackStrategy;
+    }
+
+    public boolean isEnableShading() {
+        return enableShading;
     }
 
     /**
