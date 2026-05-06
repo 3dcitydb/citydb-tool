@@ -47,6 +47,12 @@ public final class PartitioningStage implements Stage {
     }
 
     private static int computeGridDim(double[] extent, double edgeLengthMeters) {
+        // edgeLengthMeters <= 0 is the "auto" sentinel: size one cell to the
+        // dataset's longest side so the whole dataset lands in a single root
+        // cell. Equivalent to gridDim = 1 — no spatial subdivision.
+        if (edgeLengthMeters <= 0) {
+            return 1;
+        }
         double centerLat = (extent[1] + extent[4]) / 2;
         double rangeXMeters = (extent[3] - extent[0]) * GeoTransform.metersPerDegreeLon(centerLat);
         double rangeYMeters = (extent[4] - extent[1]) * GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
