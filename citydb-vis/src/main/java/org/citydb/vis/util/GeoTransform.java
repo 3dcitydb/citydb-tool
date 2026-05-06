@@ -41,6 +41,19 @@ public class GeoTransform {
             out[1] = (float) (cosLon * ne - sinLat * sinLon * nn + cosLat * sinLon * nu);
             out[2] = (float) (cosLat * nn + sinLat * nu);
         }
+
+        /**
+         * Write the ECEF unit vector pointing along the ENU "up" axis at this
+         * basis's reference point — i.e. the local vertical (radially outward
+         * from the WGS84 ellipsoid center). Specialised form of
+         * {@link #rotateNormalToEcef} with input {@code (0, 0, 1)}; precomputed
+         * to avoid the redundant multiplications.
+         */
+        public void fillUpInEcef(float[] out) {
+            out[0] = (float) (cosLat * cosLon);
+            out[1] = (float) (cosLat * sinLon);
+            out[2] = (float) sinLat;
+        }
     }
 
     public static double[] enuToEcefMatrix(double[] center) {
