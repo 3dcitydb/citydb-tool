@@ -35,9 +35,10 @@ public class I3SJsonSerializer {
                                     boolean hasTextures,
                                     boolean hasColors,
                                     boolean hasStyleOverrides,
+                                    boolean enableShading,
                                     DefaultObjectStyle defaultStyle) throws IOException {
         SceneLayerDescriptor descriptor = SceneLayerDescriptor.of(sceneLayer, attrFields,
-                hasTextures, hasColors, hasStyleOverrides, defaultStyle);
+                hasTextures, hasColors, hasStyleOverrides, enableShading, defaultStyle);
         JsonHelper.writePojo(layerDir.resolve("index.json"), descriptor);
     }
 

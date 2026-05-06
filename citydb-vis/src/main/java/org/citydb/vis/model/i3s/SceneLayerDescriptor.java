@@ -61,6 +61,7 @@ public class SceneLayerDescriptor {
                                           boolean hasTextures,
                                           boolean hasColors,
                                           boolean hasStyleOverrides,
+                                          boolean enableShading,
                                           DefaultObjectStyle defaultStyle) {
         SceneLayerDescriptor descriptor = new SceneLayerDescriptor();
         descriptor.id = 0;
@@ -77,7 +78,7 @@ public class SceneLayerDescriptor {
         descriptor.spatialReference = SpatialReference.of(sceneLayer.getWkid());
         descriptor.store = Store.of(sceneLayer, hasTextures);
         descriptor.geometryDefinitions = buildGeometryDefinitions(hasTextures, hasColors,
-                hasStyleOverrides);
+                hasStyleOverrides, enableShading);
 
         if (hasTextures) {
             descriptor.textureSetDefinitions = List.of(TextureSetDefinition.jpeg());
@@ -99,31 +100,52 @@ public class SceneLayerDescriptor {
 
     private static List<GeometryDefinition> buildGeometryDefinitions(boolean hasTextures,
                                                                      boolean hasColors,
-                                                                     boolean hasStyleOverrides) {
+                                                                     boolean hasStyleOverrides,
+                                                                     boolean enableShading) {
         // The textured slot (index 1) is filled with a placeholder untextured
         // definition when the layer has colors but no textures, so that the
         // OPAQUE/BLEND colored definitions stay at fixed indices 2/3.
         // In a pure-styling layer (overrides but no X3DMaterial) slots 2/3
         // are unreferenced placeholders held for index stability; in a
         // mixed layer they're the active X3DMaterial slots.
-        List<GeometryDefinition> definitions = new ArrayList<>(6);
-        definitions.add(GeometryDefinition.untextured());
+        // --enable-shading toggles the NORMAL attribute on every slot in
+        // lock-step with the encoder; declared compressedAttributes must
+        // match the actual Draco buffer or CesiumJS silently drops nodes.
+        GeometryDefinition plain = enableShading
+                ? GeometryDefinition.untextured()
+                : GeometryDefinition.untexturedNoNormal();
+        List<GeometryDefinition> definitions = new ArrayList<>(7);
+        definitions.add(plain);
         if (hasTextures) {
-            definitions.add(hasColors
-                    ? GeometryDefinition.texturedColored()
-                    : GeometryDefinition.textured());
+            GeometryDefinition textured;
+            if (enableShading) {
+                textured = hasColors
+                        ? GeometryDefinition.texturedColoredShaded()
+                        : GeometryDefinition.texturedShaded();
+            } else {
+                textured = hasColors
+                        ? GeometryDefinition.texturedColored()
+                        : GeometryDefinition.textured();
+            }
+            definitions.add(textured);
         } else if (hasColors || hasStyleOverrides) {
-            definitions.add(GeometryDefinition.untextured());
+            definitions.add(plain);
         }
         if (hasColors || hasStyleOverrides) {
             // OPAQUE and BLEND share the same Draco layout; alphaMode is set
-            // on the paired MaterialDefinition, not here.
-            GeometryDefinition colored = GeometryDefinition.colored();
+            // on the paired MaterialDefinition, not here. With --enable-shading
+            // the X3DMaterial slot picks up NORMAL via the coloredShaded
+            // buffer so authored colours render PBR-shaded.
+            GeometryDefinition colored = enableShading
+                    ? GeometryDefinition.coloredShaded()
+                    : GeometryDefinition.colored();
             definitions.add(colored);
             definitions.add(colored);
         }
         if (hasStyleOverrides) {
-            GeometryDefinition styled = GeometryDefinition.coloredShaded();
+            GeometryDefinition styled = enableShading
+                    ? GeometryDefinition.coloredShaded()
+                    : GeometryDefinition.colored();
             definitions.add(styled);
             definitions.add(styled);
         }
@@ -134,7 +156,7 @@ public class SceneLayerDescriptor {
                                                                     boolean hasColors,
                                                                     boolean hasStyleOverrides,
                                                                     DefaultObjectStyle defaultStyle) {
-        List<MaterialDefinition> materials = new ArrayList<>(6);
+        List<MaterialDefinition> materials = new ArrayList<>(7);
         materials.add(MaterialDefinition.untextured(defaultStyle));
         if (hasTextures) {
             materials.add(MaterialDefinition.textured());
@@ -142,9 +164,12 @@ public class SceneLayerDescriptor {
             materials.add(MaterialDefinition.untextured(defaultStyle));
         }
         if (hasColors || hasStyleOverrides) {
-            // X3DMaterial unlit slots — used when the layer has X3DMaterial.
-            // Allocated as placeholders in a pure-styling layer so the
-            // styled-colored slots stay at fixed indices 4/5.
+            // X3DMaterial slots — used when the layer has X3DMaterial.
+            // Material is pure PBR; whether the node renders unlit or
+            // shaded is decided by the paired GeometryDefinition (NORMAL
+            // present iff --enable-shading). Allocated as placeholders in
+            // a pure-styling layer so the styled-colored slots stay at
+            // fixed indices 4/5.
             materials.add(MaterialDefinition.colored(false));
             materials.add(MaterialDefinition.colored(true));
         }

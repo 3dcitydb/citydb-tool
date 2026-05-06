@@ -38,29 +38,38 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Encodes I3S node meshes into a single Draco-compressed geometry buffer
- * ({@code geometries/0}). Attribute layout per node category:
+ * ({@code geometries/0}). Attribute layout per node category (NORMAL on
+ * every slot is toggled via {@code --enable-shading}):
  * <ul>
- *   <li>untextured (no appearance):     {@code position, normal, feature-index}</li>
- *   <li>textured:                       {@code position, uv0, feature-index}</li>
- *   <li>textured-colored:               {@code position, uv0, color, feature-index}</li>
- *   <li>colored (X3DMaterial only):     {@code position, color, feature-index}</li>
- *   <li>colored-shaded (per-type style): {@code position, normal, color, feature-index}</li>
+ *   <li>untextured (no appearance):     {@code position, [normal,] feature-index}</li>
+ *   <li>textured:                       {@code position, [normal,] uv0, feature-index}</li>
+ *   <li>textured-colored:               {@code position, [normal,] uv0, color, feature-index}</li>
+ *   <li>colored (X3DMaterial):          {@code position, [normal,] color, feature-index}</li>
+ *   <li>styled-colored (per-type style): {@code position, [normal,] color, feature-index}</li>
  * </ul>
- * NORMAL is emitted on the shaded paths only — the plain path (no
- * appearance, no styling override) and the styled-colored path (styling
- * override on a node that has NO X3DMaterial). Textured nodes and any
- * node containing X3DMaterial skip NORMAL: X3DMaterial wins over styling
- * per-polygon and forces the whole node unlit so authored thematic /
- * heat-map colours are not dimmed by Lambertian. On a mixed node
- * (X3DMaterial on some triangles, plain on others) the plain triangles
- * still get a colour baked into COLOR_0 — from the matching
+ * NORMAL emission is gated by {@code --enable-shading}: when on, every
+ * slot — including textured — carries NORMAL and renders PBR-shaded;
+ * when off, no slot carries NORMAL and they all render unlit. The slot a
+ * node lands in is independent of the flag — only the declared
+ * compressedAttributes (and the Draco buffer the encoder writes) change.
+ * <p>
+ * <b>Textured-slot up-normal trick:</b> truly-textured vertices in the
+ * textured slot get the local ENU "up" direction (in ECEF) instead of
+ * their real geometric normal. Lambertian then yields the same brightness
+ * for every textured triangle in the node — walls and roofs are equally
+ * lit, no per-face dimming on back-facing walls. White-pixel sentinel
+ * triangles inside intra-feature-mixed nodes keep their real geometric
+ * normal so they still pick up PBR shading (which is the reason this slot
+ * carries NORMAL at all). The 3D Tiles GLB writer follows the same
+ * pattern (see {@link org.citydb.vis.encoder.tiles3d.GlbEncoder}). On a
+ * mixed node (X3DMaterial on some triangles, plain on others) the plain
+ * triangles still get a colour baked into COLOR_0 — from the matching
  * {@code --feature-type-style} override if any, otherwise from
- * {@code --default-color}, otherwise white. They render unlit alongside
- * the X3DMaterial triangles because the colored slot has no NORMAL. On a
- * pure-styling node (no X3DMaterial) the styled-colored slot (NORMAL +
- * COLOR_0) lets a uniform-colour surface — e.g. all of a building's
+ * {@code --default-color}, otherwise white. On a pure-styling node
+ * (no X3DMaterial) the styled-colored slot (COLOR_0, plus NORMAL when the
+ * flag is on) lets a uniform-colour surface — e.g. all of a building's
  * RoofSurface triangles painted red via
- * {@code --feature-type-style con:RoofSurface=#ff0000} — still pick up
+ * {@code --feature-type-style con:RoofSurface=#ff0000} — pick up
  * Lambertian shading. Pure-plain nodes with only {@code --default-color}
  * skip COLOR_0 entirely: the default colour rides on the untextured
  * material's {@code baseColorFactor}.
@@ -133,6 +142,7 @@ public class I3SGeometryEncoder {
      */
     public NodeGeometryResult writeNodeGeometry(Path layerDir, SceneNode node,
                                                 boolean layerHasColors,
+                                                boolean enableShading,
                                                 ObjectStyleRegistry styleRegistry) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasTexCoords = mesh.hasTexCoords();
@@ -253,11 +263,13 @@ public class I3SGeometryEncoder {
 
         int vertexCount = weld.vertexCount();
 
-        // NORMAL on the shaded paths only: plain default-white (no styling)
-        // and the styled-colored slot. X3DMaterial in any form forces unlit
-        // by attribute absence so authored thematic colours render at full
-        // intensity.
-        boolean emitNormals = !hasTexCoords && !meshHasColors;
+        // NORMAL on every path when --enable-shading is on (textured included);
+        // off by default to keep nodes unlit (smaller Draco buffers and no
+        // Lambertian darkening on authored colours / textures). Must stay in
+        // lock-step with the slot's declared compressedAttributes (see
+        // SceneLayerDescriptor) — if the two diverge, CesiumJS silently drops
+        // the node.
+        boolean emitNormals = enableShading;
         // COLOR_0 must mirror the layer's compressedAttributes for the
         // chosen slot — CesiumJS drops the node otherwise. Emit when:
         //  - textured layer that also has colors (white padding),
@@ -289,7 +301,23 @@ public class I3SGeometryEncoder {
         VertexWelder.iterateOutputVertices(weld, mesh, (idx, weldedPos, srcIdx) -> {
             outPositions[idx] = weldedPos;
             if (outNormals != null) {
-                enu.rotateNormalToEcef(mesh.getNormals().get(srcIdx), outNormals[idx]);
+                int normalTriIdx = validTriIndices.get(idx / 3);
+                boolean trulyTextured = hasTexCoords && triTexIdsFinal.get(normalTriIdx) >= 0;
+                if (trulyTextured) {
+                    // Up-normal trick: assign every truly-textured vertex the
+                    // local ENU "up" axis (in ECEF) instead of the polygon's
+                    // real geometric normal. Lambertian then evaluates against
+                    // a single direction across all textured triangles in the
+                    // node — walls and roofs equally lit, no per-face dimming
+                    // on back-facing walls. White-pixel sentinel triangles in
+                    // mixed-feature nodes keep their real geometric normal
+                    // (next branch) so they pick up proper PBR shading; this
+                    // is the reason the textured slot carries NORMAL at all
+                    // under --enable-shading.
+                    enu.fillUpInEcef(outNormals[idx]);
+                } else {
+                    enu.rotateNormalToEcef(mesh.getNormals().get(srcIdx), outNormals[idx]);
+                }
             }
             if (outUVs != null) {
                 outUVs[idx] = mesh.getTexCoords().get(srcIdx);
@@ -449,7 +477,8 @@ public class I3SGeometryEncoder {
         }
         dracoMesh.addAttribute(PointAttribute.wrap(AttributeType.POSITION, posVectors));
 
-        // NORMAL only on the no-appearance path. See class Javadoc.
+        // NORMAL is gated by --enable-shading across every slot. See
+        // class Javadoc.
         boolean hasNormal = normals != null;
         if (hasNormal) {
             Vector3[] normVectors = new Vector3[numVertices];
