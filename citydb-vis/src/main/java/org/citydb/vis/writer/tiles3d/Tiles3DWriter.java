@@ -151,7 +151,12 @@ public class Tiles3DWriter extends VisWriter {
             // same projected MBS radius as I3S: both formats refine when the
             // on-screen MBS radius exceeds lodRefineRadius pixels (assuming
             // Cesium's default runtime maximumScreenSpaceError = 16).
-            double geRatio = 16.0 / getFormatOptions().getLodRefineRadius();
+            // lodRefineRadius == 0 is the "always refine" sentinel: pass
+            // POSITIVE_INFINITY so TileNode.computeGeometricError emits a
+            // finite "always-refine" geometric error (Infinity is not valid
+            // JSON) and the runtime always loads the leaves.
+            double refineRadius = getFormatOptions().getLodRefineRadius();
+            double geRatio = refineRadius > 0 ? 16.0 / refineRadius : Double.POSITIVE_INFINITY;
             AtomicInteger subtreeFileCount = new AtomicInteger();
             tilesetSerializer.writeSubTileset(subtreesDir, aggRoot,
                     effectiveMeshIndices, tilePaths, subtreeFileCount, geRatio);
