@@ -26,6 +26,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     private int maxAtlasSize = 1024;
     private AtlasOverflowMode atlasOverflowMode = AtlasOverflowMode.HYBRID;
     private AtlasFallbackStrategy atlasFallbackStrategy = AtlasFallbackStrategy.EXPAND;
+    private boolean enableShading;
     private ObjectStyleRegistry styleRegistry = ObjectStyleRegistry.empty();
 
     public double getGridEdgeLength() {
@@ -99,6 +100,31 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
 
     public VisFormatOptions setAtlasFallbackStrategy(AtlasFallbackStrategy atlasFallbackStrategy) {
         this.atlasFallbackStrategy = atlasFallbackStrategy != null ? atlasFallbackStrategy : AtlasFallbackStrategy.EXPAND;
+        return this;
+    }
+
+    /**
+     * When {@code true}, every primitive carries a NORMAL attribute and
+     * renders PBR-shaded — both 3D Tiles GLB and I3S behave identically.
+     * Plain, X3DMaterial-colored, and per-feature-type-styled paths use
+     * the polygon's real geometric normal so Lambertian darkening provides
+     * 3D form. Textured paths use the local "up" direction instead of the
+     * geometric normal so walls and roofs in the same node end up equally
+     * lit (no per-face dimming on back-facing walls), while still
+     * responding to time-of-day sun changes as a group. On I3S, white-pixel
+     * sentinel triangles in mixed-feature textured nodes keep their real
+     * geometric normal so they pick up proper PBR shading.
+     * <p>
+     * When {@code false} (default), NORMAL is dropped on every path and
+     * primitives render unlit ({@code KHR_materials_unlit} on the GLB
+     * side; NORMAL absence on the I3S side).
+     */
+    public boolean isEnableShading() {
+        return enableShading;
+    }
+
+    public VisFormatOptions setEnableShading(boolean enableShading) {
+        this.enableShading = enableShading;
         return this;
     }
 
