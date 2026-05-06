@@ -5,7 +5,6 @@
 
 package org.citydb.vis.geometry;
 
-import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.common.Matrix4x4;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Geometry;
@@ -13,7 +12,6 @@ import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.geometry.Polygon;
 import org.citydb.model.walker.ModelWalker;
-import org.citydb.vis.appearance.AppearanceExtractor;
 import org.citydb.vis.util.GeoTransform;
 
 import java.util.ArrayList;
@@ -24,8 +22,9 @@ import java.util.Map;
 /**
  * Materializes a CityGML implicit-geometry instance into world-space (EPSG:4326)
  * by deep-copying the prototype geometry, applying the per-instance 4×4
- * transformation matrix and reference point, and remapping the prototype's
- * appearance maps onto the fresh ring identities of the copy.
+ * transformation matrix and reference point, and exposing the prototype-to-
+ * instance ring identity bridge so callers can remap any per-ring side data
+ * (e.g. appearance maps) onto the copy's ring identities.
  *
  * <p><b>Coordinate model:</b>
  * <ul>
@@ -48,14 +47,21 @@ import java.util.Map;
  *
  * <p><b>Why pre-transform instead of mesh-side transform:</b> placing the
  * prototype into 4326 before triangulation lets every downstream stage
- * (PolygonTriangulator, T-junction resolution, AppearanceExtractor consumers,
- * styling) reuse the existing explicit-geometry pipeline unchanged. The
- * trade-off is one prototype copy + N coordinate transforms per instance.
+ * (PolygonTriangulator, T-junction resolution, appearance consumers, styling)
+ * reuse the existing explicit-geometry pipeline unchanged. The trade-off is
+ * one prototype copy + N coordinate transforms per instance.
+ *
+ * <p><b>Appearance remap</b> is the caller's job: the result exposes the
+ * {@code Map<LinearRing, LinearRing>} bridge built during the deep-copy walk;
+ * callers with prototype-ring-keyed data (e.g. {@code RingAppearance} from
+ * {@code AppearanceExtractor}) translate it through that bridge themselves.
+ * Keeping the transformer free of any appearance type lets the
+ * {@code geometry} package stay below {@code appearance} in the layering.
  */
 public final class ImplicitInstanceTransformer {
 
     public record Result(Geometry<?> geometry,
-                         AppearanceExtractor.Result appearance) {
+                         Map<LinearRing, LinearRing> ringMap) {
     }
 
     private ImplicitInstanceTransformer() {
@@ -63,13 +69,12 @@ public final class ImplicitInstanceTransformer {
 
     /**
      * Build a per-instance copy of the prototype geometry placed at the given
-     * reference point with the given transformation matrix, plus an appearance
-     * result whose ring keys point at the copy's rings (not the prototype's).
+     * reference point with the given transformation matrix, plus the
+     * prototype-ring → instance-ring identity bridge.
      */
     public static Result transform(Geometry<?> prototype,
                                    Matrix4x4 transformationMatrix,
-                                   Point referencePoint,
-                                   AppearanceExtractor.Result prototypeAppearance) {
+                                   Point referencePoint) {
         Geometry<?> copy = deepCopy(prototype);
 
         // Build prototype-ring → copy-ring identity map by parallel walks.
@@ -88,8 +93,7 @@ public final class ImplicitInstanceTransformer {
 
         applyTransform(newRings, transformationMatrix, referencePoint);
 
-        AppearanceExtractor.Result remapped = remapAppearance(prototypeAppearance, ringMap);
-        return new Result(copy, remapped);
+        return new Result(copy, ringMap);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -137,32 +141,5 @@ public final class ImplicitInstanceTransformer {
                         .setZ(refZ + mz);
             }
         }
-    }
-
-    private static AppearanceExtractor.Result remapAppearance(
-            AppearanceExtractor.Result source,
-            Map<LinearRing, LinearRing> ringMap) {
-        if (source.isEmpty()) {
-            return AppearanceExtractor.Result.empty();
-        }
-        return new AppearanceExtractor.Result(
-                remapKeys(source.texCoords(), ringMap),
-                remapKeys(source.ringTextureIds(), ringMap),
-                remapKeys(source.ringColors(), ringMap));
-    }
-
-    private static <V> Map<LinearRing, V> remapKeys(Map<LinearRing, V> source,
-                                                    Map<LinearRing, LinearRing> ringMap) {
-        if (source == null) {
-            return null;
-        }
-        Map<LinearRing, V> out = new IdentityHashMap<>(source.size());
-        for (Map.Entry<LinearRing, V> e : source.entrySet()) {
-            LinearRing target = ringMap.get(e.getKey());
-            if (target != null) {
-                out.put(target, e.getValue());
-            }
-        }
-        return out;
     }
 }
