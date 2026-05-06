@@ -71,48 +71,12 @@ import java.util.Map;
  * {@code PolygonTriangulator}'s hole-bridging interpolates correctly.
  */
 public final class AppearanceExtractor {
-    /**
-     * Per-feature appearance extraction result. All three maps are
-     * format-neutral and meant to be consumed by any visualization writer:
-     * the 3D Tiles GLB encoder reads {@code ringColors} into per-vertex
-     * {@code COLOR_0}; the I3S encoder reads it into a Draco {@code COLOR}
-     * attribute. Each map is {@code null} rather than empty when the feature
-     * carries no data of that kind, so consumers can branch with a single
-     * null check.
-     * <p>
-     * {@code ringColors} RGBA values are kept in their authored
-     * <strong>sRGB display space</strong> — the two writers handle gamma
-     * differently, so the conversion is left to each consumer:
-     * <ul>
-     *   <li>The 3D Tiles GLB encoder applies sRGB→linear before baking into
-     *       {@code COLOR_0}, since glTF mandates linear color space and
-     *       CesiumJS does linear→sRGB on output.</li>
-     *   <li>The I3S encoder writes the raw sRGB values straight into the
-     *       Draco {@code COLOR} attribute, since CesiumJS's I3S loader
-     *       treats {@code COLOR_0} as already-sRGB and skips that
-     *       conversion.</li>
-     * </ul>
-     * Alpha is treated as a numeric scalar (not a color channel) and is
-     * left as authored regardless.
-     */
-    public record Result(Map<LinearRing, List<TextureCoordinate>> texCoords,
-                         Map<LinearRing, Integer> ringTextureIds,
-                         Map<LinearRing, float[]> ringColors) {
-        public boolean isEmpty() {
-            return texCoords == null && ringColors == null;
-        }
-
-        public static Result empty() {
-            return new Result(null, null, null);
-        }
-    }
-
     private AppearanceExtractor() {
     }
 
-    public static Result extract(Feature feature, TextureStore textureStore) {
+    public static RingAppearance extract(Feature feature, TextureStore textureStore) {
         if (!feature.hasAppearances()) {
-            return Result.empty();
+            return RingAppearance.empty();
         }
         return extractFrom(feature.getAppearances().getAll(), textureStore);
     }
@@ -125,15 +89,15 @@ public final class AppearanceExtractor {
      * {@link LinearRing} identities — caller must remap to per-instance ring
      * identities when the prototype geometry is deep-copied for placement.
      */
-    public static Result extract(ImplicitGeometry implicitGeometry, TextureStore textureStore) {
+    public static RingAppearance extract(ImplicitGeometry implicitGeometry, TextureStore textureStore) {
         if (!implicitGeometry.hasAppearances()) {
-            return Result.empty();
+            return RingAppearance.empty();
         }
         return extractFrom(implicitGeometry.getAppearances().getAll(), textureStore);
     }
 
-    private static Result extractFrom(Iterable<AppearanceProperty> appearances,
-                                      TextureStore textureStore) {
+    private static RingAppearance extractFrom(Iterable<AppearanceProperty> appearances,
+                                              TextureStore textureStore) {
         Map<LinearRing, List<TextureCoordinate>> texCoordMap = new IdentityHashMap<>();
         Map<LinearRing, Integer> ringTextureMap = new IdentityHashMap<>();
         Map<LinearRing, float[]> ringColorMap = new IdentityHashMap<>();
@@ -204,9 +168,9 @@ public final class AppearanceExtractor {
         boolean noTextures = texCoordMap.isEmpty();
         boolean noColors = ringColorMap.isEmpty();
         if (noTextures && noColors) {
-            return Result.empty();
+            return RingAppearance.empty();
         }
-        return new Result(
+        return new RingAppearance(
                 noTextures ? null : texCoordMap,
                 noTextures ? null : ringTextureMap,
                 noColors ? null : ringColorMap);
@@ -222,7 +186,7 @@ public final class AppearanceExtractor {
         double alpha = 1.0 - material.getTransparency().orElse(0.0);
         // CityGML/X3D diffuseColor is authored as sRGB display values; we
         // pass them through as-is so each writer can apply the gamma
-        // treatment its consumer expects (see {@link Result} javadoc).
+        // treatment its consumer expects (see {@link RingAppearance} javadoc).
         return new float[]{
                 (float) diffuse.getRed(),
                 (float) diffuse.getGreen(),
@@ -386,7 +350,7 @@ public final class AppearanceExtractor {
     /**
      * Build a fresh list of shifted {@link TextureCoordinate} instances. Always
      * allocates a new list so {@code sink} never aliases the model's internal
-     * UV storage — keeps {@code Result.texCoords()}'s ownership contract clean
+     * UV storage — keeps {@code RingAppearance.texCoords()}'s ownership contract clean
      * for any downstream stage that might mutate UVs (none today, but the cost
      * of one extra list allocation is negligible compared to the safety
      * margin).
