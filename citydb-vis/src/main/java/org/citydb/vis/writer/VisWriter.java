@@ -30,6 +30,7 @@ import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AppearanceExtractor;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
+import org.citydb.vis.appearance.RingAppearance;
 import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.encoder.AttributeEncoder;
@@ -243,7 +244,7 @@ public abstract class VisWriter implements FeatureWriter {
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
 
         if (!geometryProperties.isEmpty()) {
-            AppearanceExtractor.Result appearance =
+            RingAppearance appearance =
                     AppearanceExtractor.extract(feature, stores.getTextureStore());
 
             List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
@@ -266,7 +267,7 @@ public abstract class VisWriter implements FeatureWriter {
             // typically reused across features, but caching globally would
             // need a thread-safe map keyed by prototype identity — not worth
             // the complexity unless profiling shows a hot spot.
-            Map<ImplicitGeometry, AppearanceExtractor.Result> protoAppearanceCache =
+            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache =
                     new IdentityHashMap<>();
 
             for (ImplicitGeometryProperty property : implicitProperties) {
@@ -335,7 +336,7 @@ public abstract class VisWriter implements FeatureWriter {
             ImplicitGeometryProperty property,
             String objectId, String featureType, String featureTypeNamespace,
             Map<String, Object> attributes,
-            Map<ImplicitGeometry, AppearanceExtractor.Result> protoAppearanceCache) {
+            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache) {
         ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
         if (implicitGeometry == null) {
             logger.debug("Skipping implicit-geometry-property without inline prototype on feature {}.",
@@ -358,15 +359,16 @@ public abstract class VisWriter implements FeatureWriter {
             return null;
         }
 
-        AppearanceExtractor.Result protoAppearance = protoAppearanceCache.computeIfAbsent(
+        RingAppearance protoAppearance = protoAppearanceCache.computeIfAbsent(
                 implicitGeometry,
                 p -> AppearanceExtractor.extract(p, stores.getTextureStore()));
 
         ImplicitInstanceTransformer.Result placed = ImplicitInstanceTransformer.transform(
-                prototype, transformationMatrix, referencePoint, protoAppearance);
+                prototype, transformationMatrix, referencePoint);
+        RingAppearance instanceAppearance = protoAppearance.remapKeys(placed.ringMap());
 
         long instanceId = featureIdCounter.incrementAndGet();
-        Map<LinearRing, Integer> instanceTextureIds = placed.appearance().ringTextureIds();
+        Map<LinearRing, Integer> instanceTextureIds = instanceAppearance.ringTextureIds();
         if (instanceTextureIds != null && !instanceTextureIds.isEmpty()) {
             stores.setFeatureTextured(instanceId);
         }
@@ -386,9 +388,9 @@ public abstract class VisWriter implements FeatureWriter {
         // single-instance footprint that spatial partitioning needs.
         return dispatchProcessing(instanceId, objectId, featureType, featureTypeNamespace,
                 null, attributes, List.of(wrapped),
-                placed.appearance().texCoords(),
-                placed.appearance().ringTextureIds(),
-                placed.appearance().ringColors());
+                instanceAppearance.texCoords(),
+                instanceAppearance.ringTextureIds(),
+                instanceAppearance.ringColors());
     }
 
     @Override

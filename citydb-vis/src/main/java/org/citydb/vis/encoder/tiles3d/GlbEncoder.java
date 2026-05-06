@@ -395,7 +395,7 @@ public class GlbEncoder {
                     // RGB on the way out. Alpha is not a color channel and
                     // passes through unchanged. The I3S writer keeps raw
                     // sRGB values per Cesium's I3S loader convention; see
-                    // AppearanceExtractor.Result javadoc for rationale.
+                    // RingAppearance javadoc for rationale.
                     float[] c = mesh.getColors().get(srcIdx);
                     colors[idx * 4] = srgbToLinear(c[0]);
                     colors[idx * 4 + 1] = srgbToLinear(c[1]);
