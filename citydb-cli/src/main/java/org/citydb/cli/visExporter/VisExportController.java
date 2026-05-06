@@ -188,6 +188,10 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             options.setAtlasFallbackStrategy(sceneOptions.getAtlasFallbackStrategy());
         }
 
+        if (Command.hasMatchedOption("--enable-shading", commandSpec)) {
+            options.setEnableShading(sceneOptions.isEnableShading());
+        }
+
         // The styling registry combines --default-color (if matched) with
         // any --feature-type-style overrides. Only built when the user
         // actually configured one of them; otherwise the format options
