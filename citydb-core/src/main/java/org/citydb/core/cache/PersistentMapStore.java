@@ -77,6 +77,14 @@ public class PersistentMapStore implements AutoCloseable {
         }
     }
 
+    public void clear() {
+        if (store != null) {
+            for (String name : store.getMapNames()) {
+                store.openMap(name).clear();
+            }
+        }
+    }
+
     public boolean isClosed() {
         return store == null || store.isClosed();
     }
