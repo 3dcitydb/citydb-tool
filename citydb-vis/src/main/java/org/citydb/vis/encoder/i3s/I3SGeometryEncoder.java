@@ -89,13 +89,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * spec-compliant either way.
  */
 public class I3SGeometryEncoder {
-    /**
-     * Unique ID for the feature-index Draco attribute, used to key the
-     * injected metadata block to that attribute. Must not collide with the
-     * positional uniqueIds Drako auto-assigns to POSITION/NORMAL/UV/COLOR
-     * (0..N-1), so we pick a value well above any plausible attribute slot.
-     */
-    private static final short FEATURE_INDEX_UID = 100;
     /** Quantization bits per COLOR channel — 8 matches the browser's 8 bpc
      *  framebuffer; higher just bloats the Draco buffer for no visible gain. */
     private static final int COLOR_QUANT_BITS = 8;
@@ -526,22 +519,26 @@ public class I3SGeometryEncoder {
             dracoMesh.addAttribute(colorAttr);
         }
 
-        // Feature-index attribute (GENERIC, INT32, 1 component per vertex).
-        // setUniqueId must be called AFTER addAttribute: Drako's addAttribute
-        // overwrites uniqueId with the attribute's positional index, so an
-        // earlier call would be silently lost — and the injected metadata
-        // block (keyed by FEATURE_INDEX_UID) would then map to the wrong
-        // attribute slot.
+        // Feature-index attribute (GENERIC, UINT32, 1 component per vertex).
+        // I3S 1.7 spec mandates UInt16/UInt32/UInt64 for feature-index and
+        // ArcGIS validates strictly — wrong-typed attributes are silently
+        // ignored, breaking picking. Byte layout is identical to INT32 for
+        // non-negative values (which feature indices always are).
+        // We let Drako auto-assign the unique_id (sequential 0..N-1 from
+        // addAttribute order). Our previous "well above any plausible slot"
+        // value of 100 left a huge gap between attribute ids; ArcGIS's
+        // validator/loader iterates attributes by sequential id and never
+        // saw the feature-index, breaking picking. Keeping ids dense fixes
+        // that.
         DataBuffer intBuffer = new DataBuffer();
         intBuffer.setCapacity(numVertices * 4);
         for (int i = 0; i < numVertices; i++) {
             intBuffer.write(i * 4, featureIndices[i]);
         }
         PointAttribute featureAttr = new PointAttribute(
-                AttributeType.GENERIC, DataType.INT32, 1, false, 4, 0, intBuffer);
+                AttributeType.GENERIC, DataType.UINT32, 1, false, 4, 0, intBuffer);
         featureAttr.setNumUniqueEntries(numVertices);
-        dracoMesh.addAttribute(featureAttr);
-        featureAttr.setUniqueId(FEATURE_INDEX_UID);
+        int featureAttrUid = dracoMesh.addAttribute(featureAttr);
 
         // Faces: triangle soup — sequential indices (0,1,2), (3,4,5), ...
         for (int t = 0; t < numTriangles; t++) {
@@ -564,7 +561,7 @@ public class I3SGeometryEncoder {
         try {
             byte[] compressed = Draco.encode(dracoMesh, options);
             compressed = injectDracoMetadata(compressed, 1.0 / scaleX, 1.0 / scaleY,
-                    rangeFeatureIds);
+                    rangeFeatureIds, featureAttrUid);
             Path geometryDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
                     .resolve("geometries");
             Files.createDirectories(geometryDir);
@@ -597,8 +594,10 @@ public class I3SGeometryEncoder {
      */
     private static byte[] injectDracoMetadata(byte[] dracoData,
                                               double invScaleX, double invScaleY,
-                                              List<Long> rangeFeatureIds) {
-        byte[] metadataSection = buildMetadataSection(invScaleX, invScaleY, rangeFeatureIds);
+                                              List<Long> rangeFeatureIds,
+                                              int featureAttrUid) {
+        byte[] metadataSection = buildMetadataSection(invScaleX, invScaleY,
+                rangeFeatureIds, featureAttrUid);
 
         // Set the metadata flag in the header (flags field is at offset 9-10, LE)
         short flags = (short) (((dracoData[10] & 0xFF) << 8) | (dracoData[9] & 0xFF));
@@ -635,7 +634,8 @@ public class I3SGeometryEncoder {
      * </pre>
      */
     private static byte[] buildMetadataSection(double invScaleX, double invScaleY,
-                                                List<Long> rangeFeatureIds) {
+                                                List<Long> rangeFeatureIds,
+                                                int featureAttrUid) {
         byte[] attrTypeKey = "i3s-attribute-type".getBytes(StandardCharsets.UTF_8);
         byte[] attrTypeVal = "feature-index".getBytes(StandardCharsets.UTF_8);
         byte[] scaleXKey = "i3s-scale_x".getBytes(StandardCharsets.UTF_8);
@@ -666,7 +666,7 @@ public class I3SGeometryEncoder {
         buf.put(encodeVarint(0)); // 0 sub-metadata
 
         // Attribute N (GENERIC): feature-ids table + attribute-type tag
-        buf.put(encodeVarint(FEATURE_INDEX_UID));
+        buf.put(encodeVarint(featureAttrUid));
         buf.put(encodeVarint(2)); // 2 entries
         buf.put(encodeVarint(featureIdsKey.length));
         buf.put(featureIdsKey);
