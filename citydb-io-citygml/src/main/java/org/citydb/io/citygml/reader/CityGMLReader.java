@@ -146,6 +146,7 @@ public class CityGMLReader implements FeatureReader {
             throw new ReadException("Failed to read input file.", e);
         } finally {
             service.shutdown();
+            store.clear();
         }
     }
 
