@@ -55,19 +55,25 @@ public class DuplicateController implements AutoCloseable {
     public Result processDuplicates(FeatureReader reader, Filter filter) throws ExecutionException {
         Count count = findDuplicates(reader, filter);
         if (count.duplicatesInFile > 0) {
-            if (options.getMode() == ImportMode.SKIP_EXISTING) {
+            ImportMode mode = options.getMode();
+            if (mode == ImportMode.SKIP_EXISTING) {
                 if (count.duplicatesInFile == count.features) {
                     return Result.SKIP_FILE;
                 } else {
                     logger.info("Skipping {} duplicates from input file.", count.duplicatesInFile());
                 }
-            } else if (options.getMode() == ImportMode.DELETE_EXISTING
-                    || options.getMode() == ImportMode.TERMINATE_EXISTING) {
-                logger.info("Deleting {} duplicates from database{}...", count.duplicatesInDatabase,
+            } else if (mode == ImportMode.DELETE_EXISTING
+                    || mode == ImportMode.TERMINATE_EXISTING) {
+                logger.info("{} {} duplicates in the database{}...",
+                        mode == ImportMode.DELETE_EXISTING ? "Deleting" : "Terminating",
+                        count.duplicatesInDatabase,
                         preview ? " in preview mode" : "");
+
                 DuplicateDeleter deleter = new DuplicateDeleter(options, adapter, preview);
                 deleter.deleteDuplicates(store.getOrCreateMap("database-ids"));
-                logger.info("Successfully deleted duplicates. Importing features...");
+
+                logger.info("Successfully {} duplicates. Importing features...",
+                        mode == ImportMode.DELETE_EXISTING ? "deleted" : "terminated");
             }
         }
 
