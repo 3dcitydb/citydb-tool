@@ -11,6 +11,7 @@ import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.tiles3d.MetadataProperty;
+import org.citydb.vis.model.tiles3d.MetadataSchema;
 import org.citydb.vis.styling.DefaultObjectStyle;
 
 import java.nio.charset.StandardCharsets;
@@ -173,7 +174,11 @@ final class GltfJsonBuilder {
                     "SCALAR", null, null));
             int accIndices = accIdx++;
 
-            accessors.add(makeAccessor(p.bvFeatureIds, COMPONENT_TYPE_UNSIGNED_INT, p.vertexCount,
+            // _FEATURE_ID_0 is a vertex attribute, so it must use a glTF-core
+            // vertex-attribute component type (FLOAT here — UNSIGNED_INT is
+            // only legal on indices). Encoded values are still integral row
+            // indices into the property table.
+            accessors.add(makeAccessor(p.bvFeatureIds, COMPONENT_TYPE_FLOAT, p.vertexCount,
                     "SCALAR", null, null));
             int accFeatureId = accIdx++;
 
@@ -191,6 +196,9 @@ final class GltfJsonBuilder {
             bvObj.put("buffer", 0);
             bvObj.put("byteOffset", bv.byteOffset());
             bvObj.put("byteLength", bv.byteLength());
+            if (bv.target() != GltfBufferView.TARGET_NONE) {
+                bvObj.put("target", bv.target());
+            }
             bvArray.add(bvObj);
         }
         root.put("bufferViews", bvArray);
@@ -471,12 +479,17 @@ final class GltfJsonBuilder {
         JSONObject meta = new JSONObject();
 
         JSONObject schema = new JSONObject();
+        schema.put("id", MetadataSchema.SCHEMA_ID);
         JSONObject classes = new JSONObject();
         JSONObject featureClass = new JSONObject();
         JSONObject properties = new JSONObject();
         for (AttrField field : attrFields) {
+            MetadataProperty mp = MetadataProperty.of(field.type());
             JSONObject prop = new JSONObject();
-            prop.put("type", MetadataProperty.tilesType(field.type()));
+            prop.put("type", mp.type());
+            if (mp.componentType() != null) {
+                prop.put("componentType", mp.componentType());
+            }
             properties.put(field.name(), prop);
         }
         featureClass.put("properties", properties);
@@ -493,6 +506,10 @@ final class GltfJsonBuilder {
         for (int i = 0; i < attrFields.size(); i++) {
             AttrField field = attrFields.get(i);
             PropertyTableBufferViews pbv = propBvs.get(i);
+            // Skip all-empty STRING columns — see PropertyTableBufferViews.SKIPPED.
+            if (pbv.valuesBv() < 0) {
+                continue;
+            }
             JSONObject propDef = new JSONObject();
             propDef.put("values", pbv.valuesBv());
             if (field.type() == AttrType.STRING) {
