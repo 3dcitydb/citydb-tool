@@ -101,4 +101,31 @@ public class I3SJsonSerializer {
                 NodeFeatureDocument.of(entries));
     }
 
+    /**
+     * Write a placeholder {@code shared/sharedResource.json} per node. I3S
+     * 1.7+ deprecated sharedResource (materials live in layer-level
+     * {@code materialDefinitions} / {@code geometryDefinitions} now), but the
+     * spec still mandates the file be physically present for backwards
+     * compatibility — Esri's SLPK validator reports {@code NOT_FOUND} for
+     * every node otherwise and finally fails with "Too many resources are
+     * missing". Cesium / ArcGIS JS don't read it.
+     */
+    public void writeNodeSharedResource(Path layerDir, SceneNode node) throws IOException {
+        // Layout matches the project's other JSON resources: an "index.json"
+        // inside a folder named after the resource. The SLPK packager
+        // collapses {res}/index.json → {res}.json.gz; the SLPK spec wants
+        // nodes/{i}/shared/sharedResource.json.gz, so the on-disk path is
+        // nodes/{i}/shared/sharedResource/index.json.
+        Path sharedResourceDir = layerDir.resolve("nodes").resolve(String.valueOf(node.getIndex()))
+                .resolve("shared").resolve("sharedResource");
+        Files.createDirectories(sharedResourceDir);
+        // A non-empty materialDefinitions map is required: Esri's validator
+        // rejects "{}" with "JSON Object is expected for anonymous field".
+        // The placeholder is never read at runtime — actual materials live in
+        // layer-level materialDefinitions (1.7+) — but the SLPK has to carry
+        // it for spec compliance.
+        Files.writeString(sharedResourceDir.resolve("index.json"),
+                "{\"materialDefinitions\":{\"Mat0\":{\"type\":\"standard\",\"params\":{}}}}");
+    }
+
 }
