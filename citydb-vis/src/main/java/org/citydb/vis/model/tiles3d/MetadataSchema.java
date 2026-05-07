@@ -14,15 +14,18 @@ import java.util.Map;
 
 @JSONType(alphabetic = false)
 public class MetadataSchema {
+    public static final String SCHEMA_ID = "citydb_feature_schema";
+
+    private String id;
     private Map<String, MetadataClass> classes;
 
     public static MetadataSchema of(List<AttrField> attrFields) {
         MetadataSchema schema = new MetadataSchema();
+        schema.id = SCHEMA_ID;
 
         Map<String, MetadataProperty> properties = new LinkedHashMap<>();
         for (AttrField field : attrFields) {
-            properties.put(field.name(),
-                    new MetadataProperty(MetadataProperty.tilesType(field.type())));
+            properties.put(field.name(), MetadataProperty.of(field.type()));
         }
 
         schema.classes = new LinkedHashMap<>();
