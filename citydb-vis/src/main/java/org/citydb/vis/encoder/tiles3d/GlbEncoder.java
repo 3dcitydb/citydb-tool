@@ -222,7 +222,13 @@ public class GlbEncoder {
         int bvUvs = p.uvs != null ? bin.addFloat32Array(p.uvs) : -1;
         int bvColors = p.colors != null ? bin.addFloat32Array(p.colors) : -1;
         int bvIndices = bin.addUint32Array(p.indices);
-        int bvFeatureIds = bin.addUint32Array(p.featureIds);
+        // glTF core forbids UNSIGNED_INT on vertex attributes (only allowed on
+        // indices). EXT_mesh_features's _FEATURE_ID_n is a vertex attribute,
+        // so we widen to FLOAT — supports up to 2^24 unique IDs per node, more
+        // than enough for property-table row indices.
+        float[] featureIdsFloat = new float[p.featureIds.length];
+        for (int i = 0; i < p.featureIds.length; i++) featureIdsFloat[i] = p.featureIds[i];
+        int bvFeatureIds = bin.addFloat32Array(featureIdsFloat);
         return new PrimitiveBufferIds(bvPositions, bvNormals, bvUvs, bvColors,
                 bvIndices, bvFeatureIds);
     }
@@ -531,8 +537,17 @@ public class GlbEncoder {
         }
         offsets[utf8.length] = offset;
 
+        // glTF rejects bufferView.byteLength == 0, while EXT_structural_metadata
+        // requires the values bufferView byteLength to equal the last string
+        // offset. When every value is empty there's no way to satisfy both —
+        // skip the property entirely. The schema keeps the column (other GLBs
+        // in the same tileset may populate it); 3D Tiles 1.1 lets a property
+        // table omit non-required properties.
+        if (valuesStream.size() == 0) {
+            return PropertyTableBufferViews.SKIPPED;
+        }
         int valuesBv = bin.addRawBytes(valuesStream.toByteArray());
-        int offsetsBv = bin.addUint32Array(offsets);
+        int offsetsBv = bin.addInt32Array(offsets);
         return new PropertyTableBufferViews(valuesBv, offsetsBv);
     }
 }
