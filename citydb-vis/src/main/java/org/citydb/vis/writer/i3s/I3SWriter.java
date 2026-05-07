@@ -287,6 +287,7 @@ public class I3SWriter extends VisWriter {
             }
 
             jsonSerializer.writeNodeFeatures(layerDir, node, featureDataList, featureAabbs);
+            jsonSerializer.writeNodeSharedResource(layerDir, node);
             i3sAttributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
                     featureDataList);
             return true;
