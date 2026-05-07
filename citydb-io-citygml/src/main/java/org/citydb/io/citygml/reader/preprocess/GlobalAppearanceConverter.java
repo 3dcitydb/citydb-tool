@@ -161,7 +161,7 @@ public class GlobalAppearanceConverter {
         @Override
         public void visit(AbstractGeometry geometry) {
             if (geometry.getId() != null) {
-                List<AbstractSurfaceData> sources = targets.remove(geometry.getId());
+                List<AbstractSurfaceData> sources = targets.get(geometry.getId());
                 if (sources != null) {
                     for (AbstractSurfaceData source : sources) {
                         AbstractGML target = getTargetObject(geometry);
