@@ -7,6 +7,8 @@
 - Fixed the import of implicit geometries and global appearances when `--import-mode` is set to `terminate`.
 - Fixed an issue in the database report where properties of generic feature types were incorrectly counted as
   generic attributes.
+- Fixed a concurrency issue that could lead to a `NullPointerException` when resolving global and cross-LoD geometry
+  references during imports.
 
 ## [1.3.0] - 2026-03-09
 

@@ -129,25 +129,21 @@ public class GeometryReferenceResolver {
                         boolean inline = !session.hasClone(reference.geometry);
                         AbstractGeometry clone = geometryCopier.copy(reference.geometry, session);
 
-                        String target = reference.getTarget(featureId, childIds.get(cityObject));
-                        if (target != null) {
-                            if (inline) {
-                                property.setInlineObjectIfValid(clone);
-                                property.setHref(null);
-                            } else {
-                                property.setReferencedObjectIfValid(clone);
-                                property.setHref("#" + clone.getId());
-                            }
+                        if (inline) {
+                            property.setInlineObjectIfValid(clone);
+                            property.setHref(null);
+                        } else {
+                            property.setReferencedObjectIfValid(clone);
+                            property.setHref("#" + clone.getId());
+                        }
 
-                            if (createCityObjectRelations
-                                    && relatedTos.computeIfAbsent(cityObject, v -> new HashSet<>())
+                        if (createCityObjectRelations) {
+                            String target = reference.getTarget(featureId, childIds.get(cityObject));
+                            if (target != null && relatedTos.computeIfAbsent(cityObject, v -> new HashSet<>())
                                     .add(reference.getOwner())) {
                                 cityObject.setId(target);
                                 addRelatedTo(cityObject, reference.getOwner());
                             }
-                        } else {
-                            property.setReferencedObjectIfValid(clone);
-                            property.setHref("#" + clone.getId());
                         }
                     }
                 }
@@ -228,7 +224,7 @@ public class GeometryReferenceResolver {
     }
 
     private static class GeometryReference {
-        private final Map<String, String> targets = new HashMap<>();
+        private final Map<String, String> targets = new ConcurrentHashMap<>();
         private AbstractGeometry geometry;
         private String owner;
 
