@@ -34,7 +34,7 @@ import java.util.List;
 @JSONType(alphabetic = false)
 public class MaterialDefinition {
     private static final String CULL_FACE = "none";
-    // I3S 1.7 spec uses lowercase alpha-mode values ("opaque", "blend",
+    // I3S 1.9spec uses lowercase alpha-mode values ("opaque", "blend",
     // "mask"); CesiumJS uppercases internally before constructing the glTF
     // material (I3SGeometry.js: gltfMaterial.alphaMode.toUpperCase()), so
     // it accepts either case. ArcGIS Pro 3.x is strict and rejects the
@@ -134,7 +134,7 @@ public class MaterialDefinition {
     }
 
     /**
-     * I3S 1.7 PBR section. {@code baseColorFactor} is a linear-space
+     * I3S 1.9PBR section. {@code baseColorFactor} is a linear-space
      * {@code [r, g, b, a]} multiplier per the I3S spec (mirrors glTF). Stored
      * as a {@code List<Float>} (rather than a fixed array) so fastjson2 can
      * omit it cleanly via the default null-skipping behaviour when the

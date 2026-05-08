@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Root object of a node's {@code features/0/index.json} document per the
- * I3S 1.7 spec. The earlier writer emitted a bare array of feature entries,
+ * I3S 1.9spec. The earlier writer emitted a bare array of feature entries,
  * which the ArcGIS Maps SDK for JavaScript rejects — without a parseable
  * feature document the SDK cannot register the node's mesh in the pick
  * pipeline, so {@code SceneView.hitTest} returns no features even though
@@ -19,7 +19,7 @@ import java.util.List;
  * <p>
  * The {@code geometryData} array references the layer's per-node
  * geometry buffer file; with the single-buffer layout it always points
- * at {@code ./geometries/0} (the uncompressed legacy I3S 1.7 binary).
+ * at {@code ./geometries/0} (the uncompressed legacy I3S 1.9binary).
  */
 @JSONType(alphabetic = false)
 public record NodeFeatureDocument(List<FeatureEntry> featureData,
