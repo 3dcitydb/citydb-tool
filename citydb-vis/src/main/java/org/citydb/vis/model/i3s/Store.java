@@ -77,9 +77,10 @@ public class Store {
                     new HeaderEntry("featureCount", "UInt32"));
             schema.topology = "PerAttributeArray";
             // Declared for ArcGIS Pro compatibility — its loader rejects the
-            // scene layer if defaultGeometrySchema is absent. No uncompressed
-            // buffer is actually written; geometry is emitted as a single
-            // Draco-compressed buffer per GeometryDefinition.
+            // scene layer if defaultGeometrySchema is absent. The actual
+            // per-node binary follows the schema declared on each
+            // {@link GeometryDefinition.LegacyBuffer}; this top-level
+            // schema is a backward-compat placeholder only.
             schema.ordering = List.of("position", "normal", "uv0", "color");
             schema.vertexAttributes = VertexAttributes.full();
             schema.featureAttributeOrder = List.of("id", "faceRange");

@@ -109,8 +109,9 @@ public class SceneLayerDescriptor {
         // are unreferenced placeholders held for index stability; in a
         // mixed layer they're the active X3DMaterial slots.
         // --enable-shading toggles the NORMAL attribute on every slot in
-        // lock-step with the encoder; declared compressedAttributes must
-        // match the actual Draco buffer or CesiumJS silently drops nodes.
+        // lock-step with the encoder; required for ArcGIS Pro / Online
+        // (those clients refuse to load a layer whose legacy buffer omits
+        // NORMAL).
         GeometryDefinition plain = enableShading
                 ? GeometryDefinition.untextured()
                 : GeometryDefinition.untexturedNoNormal();
@@ -132,10 +133,10 @@ public class SceneLayerDescriptor {
             definitions.add(plain);
         }
         if (hasColors || hasStyleOverrides) {
-            // OPAQUE and BLEND share the same Draco layout; alphaMode is set
-            // on the paired MaterialDefinition, not here. With --enable-shading
-            // the X3DMaterial slot picks up NORMAL via the coloredShaded
-            // buffer so authored colours render PBR-shaded.
+            // OPAQUE and BLEND share the same buffer layout; alphaMode is
+            // set on the paired MaterialDefinition, not here. With
+            // --enable-shading the X3DMaterial slot picks up NORMAL via
+            // the coloredShaded buffer so authored colours render PBR-shaded.
             GeometryDefinition colored = enableShading
                     ? GeometryDefinition.coloredShaded()
                     : GeometryDefinition.colored();
