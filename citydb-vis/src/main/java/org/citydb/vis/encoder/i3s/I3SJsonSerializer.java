@@ -5,6 +5,7 @@
 
 package org.citydb.vis.encoder.i3s;
 
+import org.citydb.vis.encoder.AttrStats;
 import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
@@ -14,6 +15,7 @@ import org.citydb.vis.model.i3s.NodeFeatureDocument;
 import org.citydb.vis.model.i3s.NodePage;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.model.i3s.SceneLayerDescriptor;
+import org.citydb.vis.model.i3s.StatisticsResource;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.styling.DefaultObjectStyle;
 
@@ -22,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -126,6 +129,37 @@ public class I3SJsonSerializer {
         // it for spec compliance.
         Files.writeString(sharedResourceDir.resolve("index.json"),
                 "{\"materialDefinitions\":{\"Mat0\":{\"type\":\"standard\",\"params\":{}}}}");
+    }
+
+    /**
+     * Write per-attribute statistics resources to
+     * {@code layers/0/statistics/f_K/0/index.json}, one per declared
+     * attribute field. Required to satisfy the I3S 1.7 SLPK validator's
+     * advisory {@code MISSING_ATTRIBUTE_STATS_DECL} check on every
+     * field that has a corresponding {@code statisticsInfo} entry. If
+     * the layer-level stats accumulator missed an attribute (e.g. all
+     * features had a null value), an empty stats record is emitted —
+     * still satisfies the validator's resource-presence check.
+     */
+    public void writeStatistics(Path layerDir, List<AttrField> attrFields,
+                                Map<String, AttrStats.Result> stats) throws IOException {
+        for (int i = 0; i < attrFields.size(); i++) {
+            AttrField field = attrFields.get(i);
+            AttrStats.Result result = stats.get(field.name());
+            if (result == null) {
+                // Field declared but never observed (e.g. every feature
+                // had null for it). Emit an empty stats record so the
+                // resource still exists and the validator stays quiet.
+                result = field.type() == org.citydb.vis.model.AttrType.STRING
+                        ? AttrStats.forString().toResult()
+                        : AttrStats.forNumeric().toResult();
+            }
+            Path statsDir = layerDir.resolve("statistics")
+                    .resolve("f_" + i).resolve("0");
+            Files.createDirectories(statsDir);
+            JsonHelper.writePojo(statsDir.resolve("index.json"),
+                    StatisticsResource.of(result));
+        }
     }
 
 }
