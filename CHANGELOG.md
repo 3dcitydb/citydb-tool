@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-05-08
+
 ### Fixed
 - Fixed the import of implicit geometries when import filters are applied.
 - Fixed the import of implicit geometries and global appearances when `--import-mode` is set to `terminate`.
@@ -93,7 +95,8 @@
 
 This is the initial release of citydb-tool.
 
-[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.3.0..HEAD
+[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.3.1..HEAD
+[1.3.1]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.1
 [1.3.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.0
 [1.2.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.2.0
 [1.1.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.1.0
