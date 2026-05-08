@@ -37,8 +37,9 @@ import java.util.Set;
  * Writes city model features to the OGC I3S (Indexed 3D Scene Layer) format.
  * <p>
  * Extends the format-agnostic {@link VisWriter} pipeline with I3S-specific
- * output: Draco-compressed geometry, I3S JSON metadata (scene layer descriptor,
- * node pages, per-node features), binary attribute buffers, and texture files.
+ * output: the uncompressed legacy I3S 1.7 binary geometry buffer, I3S JSON
+ * metadata (scene layer descriptor, node pages, per-node features), binary
+ * attribute buffers, and texture files.
  * <p>
  * <b>Coordinate system:</b> the current implementation hard-codes the output
  * CRS to EPSG:4326 (WGS 84, lon/lat/ellipsoid-height). This is a simplification
@@ -52,9 +53,9 @@ import java.util.Set;
  *   <li>All internal math in this module — ENU-to-ECEF normal rotation in
  *       {@link I3SGeometryEncoder}, the {@code 111320·cos(lat)} degree-to-meter
  *       conversions in {@link org.citydb.vis.geometry.PolygonTriangulator} and
- *       {@link org.citydb.vis.scene.BoundingVolume}, and the Draco position
- *       quantization with {@code i3s-scale_x/y} metadata — assumes
- *       {@code X=longitude°, Y=latitude°, Z=meters}.</li>
+ *       {@link org.citydb.vis.scene.BoundingVolume}, and the legacy buffer's
+ *       {@code Float32×3} positions (X/Y in degree-offsets from MBS center,
+ *       Z in meters) — assumes {@code X=longitude°, Y=latitude°, Z=meters}.</li>
  * </ul>
  * Supporting other CRS would require revisiting every site above, not just
  * changing the declared {@code wkid}.
@@ -106,8 +107,8 @@ public class I3SWriter extends VisWriter {
         // their white-pixel-UV triangles bake --default-color / per-type
         // styles into COLOR_0 (texture sample is white, so white × COLOR_0
         // = COLOR_0). Without this widening, the textured slot stays at
-        // GeometryDefinition.textured() with no COLOR_0 in compressedAttributes,
-        // and Cesium ignores any per-vertex colour we encode.
+        // GeometryDefinition.textured() with no color in the legacy buffer
+        // schema, and Cesium ignores any per-vertex colour we encode.
         boolean hasColors = ctx.hasColors()
                 || styleRegistry.defaultStyle().hasNonDefaultColor()
                 || styleRegistry.hasOverrides();
@@ -240,8 +241,8 @@ public class I3SWriter extends VisWriter {
 
     /**
      * Process a single mesh node end-to-end: merge meshes from the sharded
-     * store, build the texture atlas (if any), encode Draco geometry, and
-     * write per-node feature/attribute JSON files.
+     * store, build the texture atlas (if any), encode the legacy geometry
+     * buffer, and write per-node feature/attribute JSON files.
      */
     private boolean writeNodeOutput(SceneNode node, Path layerDir,
                                     List<AttrField> attrFields,
@@ -280,7 +281,7 @@ public class I3SWriter extends VisWriter {
             // Align features with valid face ranges — degenerate filtering may
             // have removed all triangles for some features, causing fewer face
             // ranges than input features. Feature/attribute output must match
-            // the Draco feature-index attribute order.
+            // the legacy buffer's per-feature featureId/faceRange order.
             if (validFeatureIds.size() < featureDataList.size()) {
                 featureDataList = FeatureData.reorderByIds(featureDataList, validFeatureIds);
                 node.setFeatureCount(featureDataList.size());
