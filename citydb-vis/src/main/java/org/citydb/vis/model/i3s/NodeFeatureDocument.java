@@ -16,6 +16,10 @@ import java.util.List;
  * feature document the SDK cannot register the node's mesh in the pick
  * pipeline, so {@code SceneView.hitTest} returns no features even though
  * the buildings render correctly.
+ * <p>
+ * The {@code geometryData} array references the layer's per-node
+ * geometry buffer file; with the single-buffer layout it always points
+ * at {@code ./geometries/0} (the uncompressed legacy I3S 1.7 binary).
  */
 @JSONType(alphabetic = false)
 public record NodeFeatureDocument(List<FeatureEntry> featureData,
