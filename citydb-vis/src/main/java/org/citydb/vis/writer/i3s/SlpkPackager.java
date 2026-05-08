@@ -6,6 +6,7 @@
 package org.citydb.vis.writer.i3s;
 
 import com.alibaba.fastjson2.JSONObject;
+import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.util.BufferUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -55,8 +56,6 @@ public final class SlpkPackager {
     private static final int LOCAL_FILE_HEADER_SIZE = 30;
     /** Size of a single hash index record: 16 bytes MD5 + 8 bytes offset + 4 bytes size. */
     private static final int HASH_RECORD_SIZE = 28;
-    /** I3S SLPK version. */
-    private static final String I3S_VERSION = "1.7";
 
     private SlpkPackager() {
     }
@@ -236,7 +235,7 @@ public final class SlpkPackager {
         meta.put("folderPattern", "BASIC");
         meta.put("archiveCompressionType", "STORE");
         meta.put("resourceCompressionType", "GZIP");
-        meta.put("I3SVersion", I3S_VERSION);
+        meta.put("I3SVersion", SceneLayer.I3S_VERSION);
         meta.put("nodeCount", nodeCount);
         return meta.toJSONString();
     }
