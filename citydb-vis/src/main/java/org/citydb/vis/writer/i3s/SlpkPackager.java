@@ -158,6 +158,23 @@ public final class SlpkPackager {
             }
         }
 
+        // statistics/f_K/0/index.json → statistics/f_K/0.json.gz
+        Path statisticsDir = layerDir.resolve("statistics");
+        if (Files.isDirectory(statisticsDir)) {
+            Files.walkFileTree(statisticsDir, new SimpleFileVisitor<>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    if ("index.json".equals(file.getFileName().toString())) {
+                        String rel = statisticsDir.relativize(file).toString().replace('\\', '/');
+                        String parent = rel.substring(0, rel.lastIndexOf('/'));
+                        entries.add(new Entry(file,
+                                "statistics/" + parent + ".json.gz", true));
+                    }
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+
         // nodes/*/**
         Path nodesDir = layerDir.resolve("nodes");
         if (Files.isDirectory(nodesDir)) {
