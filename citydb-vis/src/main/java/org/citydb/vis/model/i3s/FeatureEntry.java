@@ -9,7 +9,7 @@ import com.alibaba.fastjson2.annotation.JSONType;
 
 /**
  * Single entry of a node's {@code features/0/index.json} {@code featureData}
- * array per the I3S 1.7 spec. The {@code id} is the integer feature index
+ * array per the I3S 1.9spec. The {@code id} is the integer feature index
  * matched by the legacy buffer's {@code featureId} (UInt64 per-feature) and
  * {@code faceRange} (UInt32×2 per-feature) streams; the ArcGIS Maps SDK
  * for JavaScript uses this table to map a picked triangle back to a feature.
