@@ -10,7 +10,7 @@ import com.alibaba.fastjson2.annotation.JSONType;
 import java.util.List;
 
 /**
- * Geometry definition with a single uncompressed legacy I3S 1.7 geometry
+ * Geometry definition with a single uncompressed legacy I3S 1.9geometry
  * buffer. ArcGIS Pro / Online and CesiumJS both consume the same buffer:
  * Float32 positions (X/Y in degree-offsets from the MBS center, Z in
  * meters), optional Float32 normals, Float32 uv0, optional UInt8 RGBA
