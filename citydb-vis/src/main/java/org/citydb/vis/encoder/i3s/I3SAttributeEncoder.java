@@ -44,6 +44,13 @@ public class I3SAttributeEncoder extends AttributeEncoder {
 
         for (int i = 0; i < attrFields.size(); i++) {
             AttrField field = attrFields.get(i);
+            // Feed values into the layer-level stats accumulator first
+            // (single iteration covers both stats + the binary write below).
+            for (FeatureData fd : features) {
+                if (fd != null) {
+                    updateStats(field, fd.getFieldValue(field.name()));
+                }
+            }
             ByteBuffer buffer = switch (field.type()) {
                 // OID: Oid32 / INT: Int32 — ArcGIS requires unique non-null
                 // OIDs to enable single-feature identify/picking.

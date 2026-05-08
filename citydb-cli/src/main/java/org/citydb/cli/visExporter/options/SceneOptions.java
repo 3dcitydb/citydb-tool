@@ -97,10 +97,11 @@ public class SceneOptions implements Option {
                     "still responding to time-of-day sun changes. Both 3D Tiles and " +
                     "I3S follow this behaviour. When omitted, every primitive renders " +
                     "unlit — smaller files, no shading. " +
-                    "Required for ArcGIS Pro / Online I3S export: ArcGIS clients " +
-                    "refuse to load a scene layer whose legacy geometry buffer omits " +
-                    "NORMAL (the per-vertex stream is mis-parsed and the layer fails " +
-                    "with a red error indicator). CesiumJS works either way.")
+                    "Auto-enabled when I3S is exported with --slpk, since ArcGIS " +
+                    "Pro / Online refuse to load a scene layer whose legacy geometry " +
+                    "buffer omits NORMAL (the per-vertex stream is mis-parsed and " +
+                    "the layer fails with a red error indicator). For folder-mode " +
+                    "I3S export targeted at ArcGIS, pass this flag explicitly.")
     private boolean enableShading;
 
     @CommandLine.Option(names = "--default-color", paramLabel = "<#rrggbb[aa]>",
