@@ -37,7 +37,7 @@ import java.util.Set;
  * Writes city model features to the OGC I3S (Indexed 3D Scene Layer) format.
  * <p>
  * Extends the format-agnostic {@link VisWriter} pipeline with I3S-specific
- * output: the uncompressed legacy I3S 1.7 binary geometry buffer, I3S JSON
+ * output: the uncompressed legacy I3S 1.9binary geometry buffer, I3S JSON
  * metadata (scene layer descriptor, node pages, per-node features), binary
  * attribute buffers, and texture files.
  * <p>
