@@ -96,7 +96,11 @@ public class SceneOptions implements Option {
                     "walls and roofs stay at the same brightness within a node while " +
                     "still responding to time-of-day sun changes. Both 3D Tiles and " +
                     "I3S follow this behaviour. When omitted, every primitive renders " +
-                    "unlit — smaller files, no shading.")
+                    "unlit — smaller files, no shading. " +
+                    "Required for ArcGIS Pro / Online I3S export: ArcGIS clients " +
+                    "refuse to load a scene layer whose legacy geometry buffer omits " +
+                    "NORMAL (the per-vertex stream is mis-parsed and the layer fails " +
+                    "with a red error indicator). CesiumJS works either way.")
     private boolean enableShading;
 
     @CommandLine.Option(names = "--default-color", paramLabel = "<#rrggbb[aa]>",

@@ -10,7 +10,8 @@ import com.alibaba.fastjson2.annotation.JSONType;
 /**
  * Single entry of a node's {@code features/0/index.json} {@code featureData}
  * array per the I3S 1.7 spec. The {@code id} is the integer feature index
- * carried by the Draco {@code feature-index} attribute; the ArcGIS Maps SDK
+ * matched by the legacy buffer's {@code featureId} (UInt64 per-feature) and
+ * {@code faceRange} (UInt32×2 per-feature) streams; the ArcGIS Maps SDK
  * for JavaScript uses this table to map a picked triangle back to a feature.
  * <p>
  * {@code mbb} is the exact axis-aligned bounding box of the feature's
