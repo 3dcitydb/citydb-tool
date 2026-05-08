@@ -124,6 +124,20 @@ public class I3SWriter extends VisWriter {
         // Pro requirement); folder mode emits it only when --obb is passed.
         boolean includeObb = slpk || options.isObb();
         boolean enableShading = options.isEnableShading();
+        // Force NORMAL into the legacy buffer when packaging an SLPK:
+        // ArcGIS Pro / Online refuse to load a scene layer whose legacy
+        // geometry buffer omits NORMAL (mis-parses the per-vertex stream
+        // and surfaces a red error indicator). SLPK is overwhelmingly an
+        // ArcGIS-targeted format, so silently flipping the switch saves
+        // the user a hard-to-diagnose failure mode. Log so the change is
+        // visible if anyone wonders why their unlit-mode SLPK still
+        // carries shading.
+        if (slpk && !enableShading) {
+            logger.info("--slpk implies --enable-shading: ArcGIS Pro / Online " +
+                    "require NORMAL in the legacy geometry buffer. Forcing " +
+                    "shading on for this export.");
+            enableShading = true;
+        }
         SceneLayer sceneLayer = buildSceneLayer(extent);
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices,
                 hasTextures, hasColors, includeObb, enableShading, styleRegistry);
@@ -236,6 +250,18 @@ public class I3SWriter extends VisWriter {
                     hasTextures, includeObb);
         } catch (IOException e) {
             throw new VisExportException("Failed to write I3S node pages.", e);
+        }
+
+        try {
+            // Per-attribute statistics resources — populated incrementally
+            // during the parallel attribute write above (see
+            // I3SAttributeEncoder.writeNodeAttributes), now snapshotted
+            // and emitted as JSON files referenced from the layer's
+            // statisticsInfo[] array.
+            jsonSerializer.writeStatistics(layerDir, attrFields,
+                    i3sAttributeEncoder.snapshotStats());
+        } catch (IOException e) {
+            throw new VisExportException("Failed to write I3S statistics.", e);
         }
     }
 
