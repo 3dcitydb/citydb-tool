@@ -37,8 +37,9 @@ public class MaterialDefinition {
     // I3S 1.7 spec uses lowercase alpha-mode values ("opaque", "blend",
     // "mask"); CesiumJS uppercases internally before constructing the glTF
     // material (I3SGeometry.js: gltfMaterial.alphaMode.toUpperCase()), so
-    // it accepts either case. ArcGIS clients are stricter about the spec
-    // form, so emit lowercase.
+    // it accepts either case. ArcGIS Pro 3.x is strict and rejects the
+    // uppercase glTF spelling — refuses to load the SLPK with a red error
+    // — so we emit lowercase to match the I3S spec literal.
     private static final String ALPHA_MODE_BLEND = "blend";
 
     private String cullFace;
@@ -51,10 +52,9 @@ public class MaterialDefinition {
      * X3DMaterial. {@code style.color()} drives {@code baseColorFactor}
      * (linear, glTF/I3S spec), emitted only when it differs from the
      * opaque-white default; an alpha &lt; 1 promotes to {@code BLEND}.
-     * Paired with {@link GeometryDefinition.DracoBuffer#untextured()} when
+     * Paired with {@link GeometryDefinition#untextured()} when
      * {@code --enable-shading} is on (PBR + Lambertian) and with
-     * {@link GeometryDefinition.DracoBuffer#untexturedNoNormal()} otherwise
-     * (unlit).
+     * {@link GeometryDefinition#untexturedNoNormal()} otherwise (unlit).
      */
     public static MaterialDefinition untextured(DefaultObjectStyle style) {
         MaterialDefinition material = pbr(null);
@@ -82,10 +82,10 @@ public class MaterialDefinition {
 
     /**
      * Untextured material that consumes per-vertex COLOR_0. Paired with
-     * {@link GeometryDefinition.DracoBuffer#colored()} when
+     * {@link GeometryDefinition#colored()} when
      * {@code --enable-shading} is off (no NORMAL → unlit, authored
      * thematic / heat-map colours render at full intensity) or with
-     * {@link GeometryDefinition.DracoBuffer#coloredShaded()} when on
+     * {@link GeometryDefinition#coloredShaded()} when on
      * (NORMAL present → PBR + Lambertian, authored colours pick up face
      * shading). {@code blend=true} emits {@code alphaMode=blend}; opaque
      * colored nodes rely on I3S's default opaque.
@@ -101,7 +101,7 @@ public class MaterialDefinition {
     /**
      * Untextured material that consumes per-vertex COLOR_0 <i>and</i>
      * receives Lambertian shading from the paired
-     * {@link GeometryDefinition.DracoBuffer#coloredShaded()} layout (which
+     * {@link GeometryDefinition#coloredShaded()} layout (which
      * carries NORMAL alongside COLOR). Used by the per-feature-type styling
      * pipeline so a uniform-coloured surface — e.g. all of a building's
      * RoofSurface triangles painted red via {@code --feature-type-style} —
