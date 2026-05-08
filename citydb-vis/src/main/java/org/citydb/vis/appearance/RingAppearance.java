@@ -17,8 +17,9 @@ import java.util.Map;
  * {@link AppearanceExtractor} and consumed by the triangulation pipeline plus
  * the format-specific encoders. All three maps are format-neutral and meant to
  * be consumed by any visualization writer: the 3D Tiles GLB encoder reads
- * {@code ringColors} into per-vertex {@code COLOR_0}; the I3S encoder reads it
- * into a Draco {@code COLOR} attribute. Each map is {@code null} rather than
+ * {@code ringColors} into per-vertex {@code COLOR_0}; the I3S encoder reads
+ * it into the legacy buffer's {@code color} attribute (UInt8 RGBA). Each
+ * map is {@code null} rather than
  * empty when the feature carries no data of that kind, so consumers can branch
  * with a single null check.
  * <p>
@@ -30,9 +31,9 @@ import java.util.Map;
  *       {@code COLOR_0}, since glTF mandates linear color space and
  *       CesiumJS does linear→sRGB on output.</li>
  *   <li>The I3S encoder writes the raw sRGB values straight into the
- *       Draco {@code COLOR} attribute, since CesiumJS's I3S loader
- *       treats {@code COLOR_0} as already-sRGB and skips that
- *       conversion.</li>
+ *       legacy buffer's {@code color} attribute (UInt8 RGBA), since
+ *       CesiumJS's I3S loader treats {@code COLOR_0} as already-sRGB
+ *       and skips that conversion.</li>
  * </ul>
  * Alpha is treated as a numeric scalar (not a color channel) and is
  * left as authored regardless.
