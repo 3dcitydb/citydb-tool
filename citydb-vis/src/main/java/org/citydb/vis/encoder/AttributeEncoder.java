@@ -36,6 +36,7 @@ public class AttributeEncoder {
 
     private final ConcurrentHashMap<String, AttrType> trackedTypes = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, AtomicLong> trackedCounts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AttrStats> stats = new ConcurrentHashMap<>();
 
     /**
      * Track attribute field types incrementally during the write phase.
@@ -90,6 +91,31 @@ public class AttributeEncoder {
         List<AttrField> fields = new ArrayList<>();
         result.forEach((name, type) -> fields.add(new AttrField(name, type)));
         return fields;
+    }
+
+    /**
+     * Update per-attribute statistics. Called by writer subclasses for
+     * each (field, value) pair while iterating per-node features —
+     * thread-safe via {@link AttrStats}'s synchronized internals plus
+     * the {@code computeIfAbsent} guard. The accumulator chosen
+     * (numeric vs string) is fixed by the field's resolved
+     * {@link AttrType} after type tracking finalizes.
+     */
+    public void updateStats(AttrField field, Object value) {
+        AttrStats accumulator = stats.computeIfAbsent(field.name(), name ->
+                field.type() == AttrType.STRING ? AttrStats.forString() : AttrStats.forNumeric());
+        accumulator.update(value);
+    }
+
+    /**
+     * Snapshot of all per-attribute statistics gathered during the write
+     * phase. Returned in a fresh map keyed by attribute name; the entries
+     * themselves are immutable {@link AttrStats.Result} records.
+     */
+    public Map<String, AttrStats.Result> snapshotStats() {
+        Map<String, AttrStats.Result> result = new LinkedHashMap<>();
+        stats.forEach((name, s) -> result.put(name, s.toResult()));
+        return result;
     }
 
     // ---- Attribute extraction ----
