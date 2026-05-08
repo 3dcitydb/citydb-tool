@@ -53,6 +53,7 @@ public class SceneLayerDescriptor {
     private List<Field> fields;
     private String objectIdField;
     private List<AttributeStorageInfo> attributeStorageInfo;
+    private List<StatisticsInfo> statisticsInfo;
     private PopupInfo popupInfo;
     private NodePagesInfo nodePages;
 
@@ -93,9 +94,18 @@ public class SceneLayerDescriptor {
         // fail to resolve the OID when the name doesn't match convention.
         descriptor.objectIdField = findOidFieldName(attrFields);
         descriptor.attributeStorageInfo = buildAttributeStorageInfo(attrFields);
+        descriptor.statisticsInfo = buildStatisticsInfo(attrFields);
         descriptor.popupInfo = PopupInfo.of(attrFields);
         descriptor.nodePages = NodePagesInfo.defaults();
         return descriptor;
+    }
+
+    private static List<StatisticsInfo> buildStatisticsInfo(List<AttrField> attrFields) {
+        List<StatisticsInfo> infos = new ArrayList<>(attrFields.size());
+        for (int i = 0; i < attrFields.size(); i++) {
+            infos.add(StatisticsInfo.of(i, attrFields.get(i).name()));
+        }
+        return infos;
     }
 
     private static List<GeometryDefinition> buildGeometryDefinitions(boolean hasTextures,
