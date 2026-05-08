@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Encodes I3S node meshes into the uncompressed legacy I3S 1.7 binary
+ * Encodes I3S node meshes into the uncompressed legacy I3S 1.9binary
  * buffer at {@code nodes/N/geometries/0} — a single buffer per node,
  * consumed by both ArcGIS Pro / Online and CesiumJS. Attribute layout per
  * slot (NORMAL gated by {@code --enable-shading}):
@@ -113,7 +113,7 @@ public class I3SGeometryEncoder {
     }
 
     /**
-     * Encode and write a node's geometry as the uncompressed legacy I3S 1.7
+     * Encode and write a node's geometry as the uncompressed legacy I3S 1.9
      * binary buffer at {@code nodes/N/geometries/0}.
      *
      * @return ordered feature ids and per-feature AABBs if a geometry file
@@ -431,7 +431,7 @@ public class I3SGeometryEncoder {
 
     /**
      * Write the uncompressed legacy geometry buffer ({@code geometries/0}).
-     * Binary layout per the I3S 1.7 defaultGeometrySchema:
+     * Binary layout per the I3S 1.9defaultGeometrySchema:
      * <pre>
      *   UInt32 LE  vertexCount, featureCount
      *   Float32 LE × 3 × vertexCount   positions  (X/Y deg-offset, Z meters)

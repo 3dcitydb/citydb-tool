@@ -10,7 +10,7 @@ package org.citydb.vis.model.i3s;
  * Describes the overall structure and capabilities of the I3S scene layer.
  */
 public class SceneLayer {
-    public static final String I3S_VERSION = "1.7";
+    public static final String I3S_VERSION = "1.9";
     public static final String LAYER_TYPE = "3DObject";
 
     private String name;
