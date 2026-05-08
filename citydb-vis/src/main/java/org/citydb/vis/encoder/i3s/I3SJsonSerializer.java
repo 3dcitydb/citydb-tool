@@ -77,7 +77,7 @@ public class I3SJsonSerializer {
 
     /**
      * Write per-node feature metadata to {@code features/0/index.json} in the
-     * I3S 1.7 {@code NodeFeatureData} schema. Per-feature {@code mbb} is the
+     * I3S 1.9{@code NodeFeatureData} schema. Per-feature {@code mbb} is the
      * exact AABB of the feature's triangles (from
      * {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder.NodeGeometryResult})
      * and {@code position} is its centroid. The ArcGIS Maps SDK for JavaScript
@@ -134,7 +134,7 @@ public class I3SJsonSerializer {
     /**
      * Write per-attribute statistics resources to
      * {@code layers/0/statistics/f_K/0/index.json}, one per declared
-     * attribute field. Required to satisfy the I3S 1.7 SLPK validator's
+     * attribute field. Required to satisfy the I3S 1.9SLPK validator's
      * advisory {@code MISSING_ATTRIBUTE_STATS_DECL} check on every
      * field that has a corresponding {@code statisticsInfo} entry. If
      * the layer-level stats accumulator missed an attribute (e.g. all
