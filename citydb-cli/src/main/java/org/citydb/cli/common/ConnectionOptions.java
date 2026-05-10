@@ -80,9 +80,10 @@ public class ConnectionOptions implements Option {
                 .setSchema(schema)
                 .setUser(user)
                 .setPassword(password)
-                .setProperties(properties != null ? properties.entrySet().stream()
-                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)) :
-                        null);
+                .setProperties(properties != null
+                        ? properties.entrySet().stream()
+                          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                        : null);
     }
 
     @Override
