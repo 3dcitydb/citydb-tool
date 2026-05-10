@@ -17,11 +17,15 @@ public enum RelationType {
     }
 
     public static RelationType of(String name) {
-        return name != null ? switch (name.toLowerCase(Locale.ROOT)) {
-            case "relates" -> RelationType.RELATES;
-            case "contains" -> RelationType.CONTAINS;
-            default -> null;
-        } : null;
+        if (name != null) {
+            return switch (name.toLowerCase(Locale.ROOT)) {
+                case "relates" -> RelationType.RELATES;
+                case "contains" -> RelationType.CONTAINS;
+                default -> null;
+            };
+        }
+
+        return null;
     }
 
     public String getName() {
