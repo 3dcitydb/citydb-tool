@@ -25,7 +25,7 @@ import java.util.zip.ZipEntry;
 
 public class ZipOutputFile extends OutputFile {
     private final String contentFile;
-    private Path tempDir;
+    private final Path tempDir;
     private final ParallelZipCreator zipCreator;
     private final Set<String> entries = Collections.newSetFromMap(new ConcurrentHashMap<>());
 

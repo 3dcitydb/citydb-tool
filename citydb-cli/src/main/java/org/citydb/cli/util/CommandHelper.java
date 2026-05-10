@@ -40,6 +40,7 @@ import org.citydb.query.filter.operation.Operators;
 import org.citydb.sqlbuilder.common.SqlObject;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -229,6 +230,16 @@ public class CommandHelper {
 
     public Path resolveAgainstWorkingDir(Path path) {
         return path != null ? CliConstants.WORKING_DIR.resolve(path).normalize() : null;
+    }
+
+    public void deleteFileIfExists(Path file) throws ExecutionException {
+        if (file != null) {
+            try {
+                Files.deleteIfExists(file);
+            } catch (IOException e) {
+                throw new ExecutionException("Failed to delete file " + file + ".", e);
+            }
+        }
     }
 
     public synchronized void logException(String message, Throwable e) {
