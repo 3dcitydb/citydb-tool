@@ -19,9 +19,9 @@ public class TimeDurationAdapter implements ModelBuilder<TimeDuration, Attribute
 
     @Override
     public void build(TimeDuration source, Attribute target, ModelBuilderHelper helper) throws ModelBuildException {
-        target.setStringValue(source.getValue() != null ?
-                        source.getValue().toString() :
-                        null)
+        target.setStringValue(source.getValue() != null
+                        ? source.getValue().toString()
+                        : null)
                 .setDataType(DataType.DURATION);
     }
 

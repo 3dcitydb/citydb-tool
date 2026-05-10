@@ -51,9 +51,9 @@ public class DWithin implements SpatialPredicate {
 
     @Override
     public DWithin negate() {
-        operator = operator == SpatialOperator.DWITHIN ?
-                SpatialOperator.BEYOND :
-                SpatialOperator.DWITHIN;
+        operator = operator == SpatialOperator.DWITHIN
+                ? SpatialOperator.BEYOND
+                : SpatialOperator.DWITHIN;
         return this;
     }
 

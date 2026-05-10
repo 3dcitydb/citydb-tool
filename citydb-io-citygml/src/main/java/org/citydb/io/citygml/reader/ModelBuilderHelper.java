@@ -160,9 +160,9 @@ public class ModelBuilderHelper {
 
     public String getInheritedSrsName(SRSReference source) {
         SRSReference reference = source.getInheritedSRSReference();
-        return reference.getSrsName() != null ?
-                reference.getSrsName() :
-                rootSrsName;
+        return reference.getSrsName() != null
+                ? reference.getSrsName()
+                : rootSrsName;
     }
 
     public <K, V> Map<K, V> getOrCreatePersistentMap(String name) {
@@ -287,9 +287,9 @@ public class ModelBuilderHelper {
     }
 
     public GeometryProperty getGeometryProperty(Name name, org.xmlobjects.gml.model.geometry.GeometryProperty<?> source, Lod lod, boolean force2D) throws ModelBuildException {
-        return source != null && source.getObject() != null ?
-                getGeometryProperty(name, geometryHelper.getGeometry(source.getObject(), force2D), lod) :
-                null;
+        return source != null && source.getObject() != null
+                ? getGeometryProperty(name, geometryHelper.getGeometry(source.getObject(), force2D), lod)
+                : null;
     }
 
     public GeometryProperty getGeometryProperty(Name name, org.xmlobjects.gml.model.geometry.GeometryProperty<?> source, Lod lod) throws ModelBuildException {
@@ -454,9 +454,9 @@ public class ModelBuilderHelper {
     }
 
     public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometryProperty source, Lod lod, boolean force2D) throws ModelBuildException {
-        return source != null ?
-                getImplicitGeometryProperty(name, source.getObject(), lod, force2D) :
-                null;
+        return source != null
+                ? getImplicitGeometryProperty(name, source.getObject(), lod, force2D)
+                : null;
     }
 
     public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometryProperty source, Lod lod) throws ModelBuildException {
@@ -464,9 +464,9 @@ public class ModelBuilderHelper {
     }
 
     public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometry source, Lod lod, boolean force2D) throws ModelBuildException {
-        return source != null ?
-                getImplicitGeometryProperty(source, geometryHelper.getImplicitGeometry(source, name, force2D), lod) :
-                null;
+        return source != null
+                ? getImplicitGeometryProperty(source, geometryHelper.getImplicitGeometry(source, name, force2D), lod)
+                : null;
     }
 
     public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometry source, Lod lod) throws ModelBuildException {
@@ -646,15 +646,15 @@ public class ModelBuilderHelper {
     }
 
     public String getFeatureReference(ResolvableAssociation<?> association) {
-        return association != null && !AbstractGeometry.class.isAssignableFrom(association.getTargetType()) ?
-                getReference(association) :
-                null;
+        return association != null && !AbstractGeometry.class.isAssignableFrom(association.getTargetType())
+                ? getReference(association)
+                : null;
     }
 
     private String getReference(ResolvableAssociation<?> association) {
-        return association != null && association.getHref() != null ?
-                getIdFromReference(association.getHref()) :
-                null;
+        return association != null && association.getHref() != null
+                ? getIdFromReference(association.getHref())
+                : null;
     }
 
     @SuppressWarnings("unchecked")

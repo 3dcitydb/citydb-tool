@@ -136,9 +136,9 @@ public class AppearanceExporter extends DatabaseExporter {
 
             if (surfaceData != null) {
                 if (surfaceDataByAppearance.computeIfAbsent(id, v -> new HashSet<>()).add(surfaceDataId)) {
-                    appearance.getSurfaceData().add(helper.lookupAndPut(surfaceData) ?
-                            SurfaceDataProperty.of(surfaceData.getOrCreateObjectId()) :
-                            SurfaceDataProperty.of(surfaceData));
+                    appearance.getSurfaceData().add(helper.lookupAndPut(surfaceData)
+                            ? SurfaceDataProperty.of(surfaceData.getOrCreateObjectId())
+                            : SurfaceDataProperty.of(surfaceData));
                 }
 
                 tableHelper.getOrCreateExporter(SurfaceDataMappingExporter.class).doExport(surfaceData, rs);
@@ -159,9 +159,9 @@ public class AppearanceExporter extends DatabaseExporter {
                 BooleanExpression filter = operationHelper.in(appearance.column("theme"), themes.stream()
                         .filter(Objects::nonNull)
                         .toList());
-                return containsNullTheme ?
-                        Operators.or(appearance.column("theme").isNull(), filter) :
-                        filter;
+                return containsNullTheme
+                        ? Operators.or(appearance.column("theme").isNull(), filter)
+                        : filter;
             }
         } else {
             return null;

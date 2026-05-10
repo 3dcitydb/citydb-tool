@@ -31,8 +31,8 @@ public enum TextureType {
     }
 
     public static TextureType fromDatabaseValue(String value) {
-        return value != null ?
-                types.get(value.toLowerCase(Locale.ROOT)) :
-                null;
+        return value != null
+                ? types.get(value.toLowerCase(Locale.ROOT))
+                : null;
     }
 }

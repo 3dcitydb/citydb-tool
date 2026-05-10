@@ -34,9 +34,9 @@ public class ReferenceManager {
         this.adapter = adapter;
         this.store = store;
 
-        service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
-                options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
+        service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0
+                ? options.getNumberOfThreads()
+                : Math.max(2, Runtime.getRuntime().availableProcessors()));
         countLatch = new CountLatch();
         batchSize = Math.min(1000, adapter.getSchemaAdapter().getDefaultBatchSize());
     }

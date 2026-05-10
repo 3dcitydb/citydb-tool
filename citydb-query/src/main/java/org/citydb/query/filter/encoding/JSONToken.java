@@ -103,9 +103,9 @@ public enum JSONToken {
     }
 
     static JSONToken of(String token) {
-        return token != null ?
-                keywords.getOrDefault(token.toUpperCase(Locale.ROOT), UNDEFINED) :
-                UNDEFINED;
+        return token != null
+                ? keywords.getOrDefault(token.toUpperCase(Locale.ROOT), UNDEFINED)
+                : UNDEFINED;
     }
 
     public String value() {

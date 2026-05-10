@@ -41,9 +41,9 @@ public class FileLocator {
 
     public static FileLocator of(String location) {
         URL url = parseURL(location);
-        return url != null ?
-                new FileLocator(url) :
-                new FileLocator(Path.of(location));
+        return url != null
+                ? new FileLocator(url)
+                : new FileLocator(Path.of(location));
     }
 
     public static FileLocator of(InputFile file, String location) throws IOException {
@@ -87,9 +87,9 @@ public class FileLocator {
     }
 
     public InputStream openStream() throws IOException {
-        return new BufferedInputStream(url != null ?
-                url.openStream() :
-                Files.newInputStream(path));
+        return new BufferedInputStream(url != null
+                ? url.openStream()
+                : Files.newInputStream(path));
     }
 
     public String getFileLocation() {
@@ -97,9 +97,9 @@ public class FileLocator {
     }
 
     public String getFileName() {
-        return path != null ?
-                path.getFileName().toString() :
-                Paths.get(url.getPath()).getFileName().toString();
+        return path != null
+                ? path.getFileName().toString()
+                : Paths.get(url.getPath()).getFileName().toString();
     }
 
     private static URL parseURL(String location) {

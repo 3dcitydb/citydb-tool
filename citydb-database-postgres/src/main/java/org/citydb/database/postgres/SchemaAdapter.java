@@ -195,13 +195,13 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
 
     @Override
     protected boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException {
-        String sql = version.compareTo(Version.of(5, 1, 0)) < 0 ?
-                "select coalesce(( " +
-                        "select 1 from information_schema.schemata s " +
-                        "join information_schema.tables t on t.table_schema = s.schema_name " +
-                        "where s.schema_name = ? and t.table_name = 'database_srs' " +
-                        "limit 1), 0)" :
-                "select citydb_pkg.schema_exists(?)";
+        String sql = version.compareTo(Version.of(5, 1, 0)) < 0
+                ? "select coalesce(( " +
+                  "select 1 from information_schema.schemata s " +
+                  "join information_schema.tables t on t.table_schema = s.schema_name " +
+                  "where s.schema_name = ? and t.table_name = 'database_srs' " +
+                  "limit 1), 0)"
+                : "select citydb_pkg.schema_exists(?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, schemaName);
@@ -254,9 +254,9 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
             return reader.lines()
                     .collect(Collectors.joining(" "))
                     .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema())
-                    .replace("@JSON@", adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0 ?
-                            "json" :
-                            "jsonb");
+                    .replace("@JSON@", adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 0)) < 0
+                            ? "json"
+                            : "jsonb");
         }
     }
 

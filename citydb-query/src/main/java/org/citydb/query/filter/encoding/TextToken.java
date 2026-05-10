@@ -125,9 +125,9 @@ public enum TextToken {
     }
 
     static TextToken of(String token, TextToken defaultValue) {
-        return token != null ?
-                tokens.getOrDefault(token.toUpperCase(Locale.ROOT), defaultValue) :
-                defaultValue;
+        return token != null
+                ? tokens.getOrDefault(token.toUpperCase(Locale.ROOT), defaultValue)
+                : defaultValue;
     }
 
     String value() {

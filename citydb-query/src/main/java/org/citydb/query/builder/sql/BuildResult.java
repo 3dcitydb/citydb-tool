@@ -37,12 +37,12 @@ public class BuildResult {
     }
 
     static BuildResult of(Expression expression, Type type, List<BuildResult> operands) {
-        return new BuildResult(null, expression, type, operands != null ?
-                operands.stream()
-                        .map(BuildResult::getAndResetPredicates)
-                        .flatMap(Collection::stream)
-                        .toList() :
-                null);
+        return new BuildResult(null, expression, type, operands != null
+                ? operands.stream()
+                  .map(BuildResult::getAndResetPredicates)
+                  .flatMap(Collection::stream)
+                  .toList()
+                : null);
     }
 
     static BuildResult of(Expression expression, Type type, BuildResult... operands) {
@@ -192,9 +192,9 @@ public class BuildResult {
             throw new QueryBuildException("Failed to build '" + getName() + "' as boolean expression.");
         }
 
-        return predicates == null || predicates.isEmpty() ?
-                predicate :
-                Operators.and(getAndResetPredicates()).add(predicate);
+        return predicates == null || predicates.isEmpty()
+                ? predicate
+                : Operators.and(getAndResetPredicates()).add(predicate);
     }
 
     private void update(Expression expression, Type type) {
@@ -218,9 +218,9 @@ public class BuildResult {
     }
 
     private List<BooleanExpression> getAndResetPredicates() {
-        List<BooleanExpression> predicates = this.predicates != null ?
-                this.predicates :
-                Collections.emptyList();
+        List<BooleanExpression> predicates = this.predicates != null
+                ? this.predicates
+                : Collections.emptyList();
         this.predicates = null;
         return predicates;
     }

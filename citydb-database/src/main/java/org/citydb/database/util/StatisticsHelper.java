@@ -121,9 +121,9 @@ public abstract class StatisticsHelper {
             while (rs.next()) {
                 FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
                 Envelope envelope = adapter.getGeometryAdapter().getEnvelope(rs.getObject(3));
-                featureCount.put(featureType, new FeatureInfo(rs.getLong(2), envelope != null ?
-                        envelope.setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID()) :
-                        Envelope.empty()));
+                featureCount.put(featureType, new FeatureInfo(rs.getLong(2), envelope != null
+                        ? envelope.setSRID(adapter.getDatabaseMetadata().getSpatialReference().getSRID())
+                        : Envelope.empty()));
             }
         } catch (GeometryException e) {
             throw new DatabaseException("Failed to query and aggregate feature extents.", e);
@@ -337,9 +337,9 @@ public abstract class StatisticsHelper {
 
         try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
              ResultSet rs = stmt.executeQuery()) {
-            return rs.next() ?
-                    new SurfaceDataInfo(rs.getBoolean(1), rs.getBoolean(2), rs.getBoolean(3)) :
-                    new SurfaceDataInfo(false, false, false);
+            return rs.next()
+                    ? new SurfaceDataInfo(rs.getBoolean(1), rs.getBoolean(2), rs.getBoolean(3))
+                    : new SurfaceDataInfo(false, false, false);
         }
     }
 

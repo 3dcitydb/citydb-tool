@@ -149,9 +149,9 @@ public class GeometryHelper {
             } else if (source.getLibraryObject() != null) {
                 try {
                     ExternalFile libraryObject = helper.getExternalFile(source.getLibraryObject());
-                    return helper.lookupAndPut(libraryObject) ?
-                            ImplicitGeometryProperty.of(name, libraryObject.getOrCreateObjectId()) :
-                            ImplicitGeometryProperty.of(name, ImplicitGeometry.of(libraryObject));
+                    return helper.lookupAndPut(libraryObject)
+                            ? ImplicitGeometryProperty.of(name, libraryObject.getOrCreateObjectId())
+                            : ImplicitGeometryProperty.of(name, ImplicitGeometry.of(libraryObject));
                 } catch (IOException e) {
                     helper.logOrThrow(Level.ERROR, helper.formatMessage(source, "Failed to read library object file " +
                             source.getLibraryObject() + "."), e);

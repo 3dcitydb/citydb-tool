@@ -57,8 +57,9 @@ public class DatabaseReportBuilder {
         }
 
         DatabaseReport execute() throws DatabaseReportException {
-            service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0 ?
-                    options.getNumberOfThreads() : 4);
+            service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0
+                    ? options.getNumberOfThreads()
+                    : 4);
             countLatch = new CountLatch();
 
             DatabaseReport report = new DatabaseReport(options, adapter);
@@ -69,9 +70,9 @@ public class DatabaseReportBuilder {
                         connection), report::setTerminatedFeatures);
 
                 countLatch.await();
-                scope = options.getFeatureScope() == FeatureScope.ACTIVE && report.hasTerminatedFeatures() ?
-                        StatisticsHelper.FeatureScope.ACTIVE :
-                        StatisticsHelper.FeatureScope.ALL;
+                scope = options.getFeatureScope() == FeatureScope.ACTIVE && report.hasTerminatedFeatures()
+                        ? StatisticsHelper.FeatureScope.ACTIVE
+                        : StatisticsHelper.FeatureScope.ALL;
 
                 execute(connection -> helper.getFeatureCountAndExtent(StatisticsHelper.FeatureScope.ACTIVE,
                         connection), report::setActiveFeatures);

@@ -142,9 +142,9 @@ public class GlobalAppearanceConverter {
     }
 
     private GeometryReference getGeometryReference(TextureAssociationProperty property) {
-        return property.getObject() != null && property.getObject().getTarget() != null ?
-                property.getObject().getTarget() :
-                null;
+        return property.getObject() != null && property.getObject().getTarget() != null
+                ? property.getObject().getTarget()
+                : null;
     }
 
     private class AppearanceProcessor extends ObjectWalker {
@@ -153,9 +153,9 @@ public class GlobalAppearanceConverter {
 
         AppearanceProcessor(VisitableObject object, CopySession session) {
             this.session = session;
-            topLevelFeature = object instanceof AbstractCityObject cityObject ?
-                    cityObject :
-                    object.getParent(AbstractCityObject.class);
+            topLevelFeature = object instanceof AbstractCityObject cityObject
+                    ? cityObject
+                    : object.getParent(AbstractCityObject.class);
         }
 
         @Override
@@ -217,9 +217,9 @@ public class GlobalAppearanceConverter {
                 return appearance;
             }
 
-            List<AbstractAppearanceProperty> appearances = target instanceof AbstractCityObject cityObject ?
-                    cityObject.getAppearances() :
-                    ((ImplicitGeometry) target).getAppearances();
+            List<AbstractAppearanceProperty> appearances = target instanceof AbstractCityObject cityObject
+                    ? cityObject.getAppearances()
+                    : ((ImplicitGeometry) target).getAppearances();
 
             appearance = copier.shallowCopy(globalAppearance, session);
             appearance.setId(target instanceof ImplicitGeometry ? FeatureHelper.createId() : null);

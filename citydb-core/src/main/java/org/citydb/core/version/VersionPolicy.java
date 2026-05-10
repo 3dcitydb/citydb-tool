@@ -80,9 +80,9 @@ public class VersionPolicy {
 
     public boolean matches(Version version) {
         if (lowerBound.equals(upperBound)) {
-            return allowNewerRevisions ?
-                    version.compareTo(lowerBound, true) == 0 && version.getRevision() >= lowerBound.getRevision() :
-                    version.equals(lowerBound);
+            return allowNewerRevisions
+                    ? version.compareTo(lowerBound, true) == 0 && version.getRevision() >= lowerBound.getRevision()
+                    : version.equals(lowerBound);
         } else {
             return version.compareTo(lowerBound) >= 0
                     && version.compareTo(upperBound, true) <= 0
@@ -91,9 +91,9 @@ public class VersionPolicy {
     }
 
     private String toVersionString(Version version) {
-        return allowNewerRevisions ?
-                version.toVersionString() + "+" :
-                version.toVersionString();
+        return allowNewerRevisions
+                ? version.toVersionString() + "+"
+                : version.toVersionString();
     }
 
     @Override
@@ -114,9 +114,9 @@ public class VersionPolicy {
 
     @Override
     public String toString() {
-        return lowerBound.compareTo(upperBound, allowNewerRevisions) == 0 ?
-                toVersionString(lowerBound) :
-                lowerBound.toVersionString() + " - " + toVersionString(upperBound);
+        return lowerBound.compareTo(upperBound, allowNewerRevisions) == 0
+                ? toVersionString(lowerBound)
+                : lowerBound.toVersionString() + " - " + toVersionString(upperBound);
     }
 
     public static class VersionPolicyBuilder {
@@ -127,9 +127,9 @@ public class VersionPolicy {
         }
 
         public VersionPolicy to(int major, int minor) {
-            return lower.getMajor() == major && lower.getMinor() == minor ?
-                    to(Version.of(major, minor, lower.getRevision()), true) :
-                    to(Version.of(major, minor, 0), true);
+            return lower.getMajor() == major && lower.getMinor() == minor
+                    ? to(Version.of(major, minor, lower.getRevision()), true)
+                    : to(Version.of(major, minor, 0), true);
         }
 
         public VersionPolicy to(int major, int minor, int revision) {
@@ -142,9 +142,9 @@ public class VersionPolicy {
                         upper.toVersionString(allowNewerRevision) + ".");
             }
 
-            return allowNewerRevision ?
-                    new VersionPolicy(lower, upper).allowNewerRevisions() :
-                    new VersionPolicy(lower, upper);
+            return allowNewerRevision
+                    ? new VersionPolicy(lower, upper).allowNewerRevisions()
+                    : new VersionPolicy(lower, upper);
         }
     }
 }

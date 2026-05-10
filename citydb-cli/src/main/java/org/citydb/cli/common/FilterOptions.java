@@ -34,9 +34,9 @@ public class FilterOptions {
 
         if (sqlFilter != null) {
             SqlExpression sqlExpression = SqlExpression.of(sqlFilter);
-            filter = filter != null ?
-                    Filter.of(Operators.and(filter.getExpression(), sqlExpression)) :
-                    Filter.of(sqlExpression);
+            filter = filter != null
+                    ? Filter.of(Operators.and(filter.getExpression(), sqlExpression))
+                    : Filter.of(sqlExpression);
         }
 
         return filter;

@@ -83,9 +83,9 @@ public abstract class AbstractPhysicalSpaceAdapter<T extends AbstractPhysicalSpa
 
         if (isCityGML3 || geometrySupport.supportsLod3TerrainIntersectionCurve(version, target)) {
             GeometryProperty lod3TerrainIntersectionCurve = source.getGeometries()
-                    .getFirst(helper.isUseLod4AsLod3() ?
-                            Name.of("lod4TerrainIntersectionCurve", Namespaces.DEPRECATED) :
-                            Name.of("lod3TerrainIntersectionCurve", Namespaces.CORE))
+                    .getFirst(helper.isUseLod4AsLod3()
+                            ? Name.of("lod4TerrainIntersectionCurve", Namespaces.DEPRECATED)
+                            : Name.of("lod3TerrainIntersectionCurve", Namespaces.CORE))
                     .orElse(null);
             if (lod3TerrainIntersectionCurve != null) {
                 target.setLod3TerrainIntersectionCurve(

@@ -285,11 +285,11 @@ public class ReportTextBuilder {
     }
 
     private String join(JSONArray array, Class<?> type, boolean quote) {
-        return !array.isEmpty() ?
-                String.join(", ", array.toList(type).stream()
-                        .map(String::valueOf)
-                        .map(v -> quote ? quote(v) : v)
-                        .toList()) :
-                "none";
+        return !array.isEmpty()
+                ? String.join(", ", array.toList(type).stream()
+                                    .map(String::valueOf)
+                                    .map(v -> quote ? quote(v) : v)
+                                    .toList())
+                : "none";
     }
 }

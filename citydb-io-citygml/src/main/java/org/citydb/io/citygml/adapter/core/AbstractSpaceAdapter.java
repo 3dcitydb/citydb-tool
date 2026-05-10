@@ -253,9 +253,9 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
 
         if (isCityGML3 || geometrySupport.supportsLod3Solid(version, target)) {
             GeometryProperty lod3Solid = source.getGeometries()
-                    .getFirst(useLod4asLod3 ?
-                            Name.of("lod4Solid", Namespaces.DEPRECATED) :
-                            Name.of("lod3Solid", Namespaces.CORE))
+                    .getFirst(useLod4asLod3
+                            ? Name.of("lod4Solid", Namespaces.DEPRECATED)
+                            : Name.of("lod3Solid", Namespaces.CORE))
                     .orElse(null);
             if (lod3Solid != null) {
                 target.setLod3Solid(helper.getGeometryProperty(lod3Solid, SolidPropertyAdapter.class));
@@ -264,9 +264,9 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
 
         if (isCityGML3 || geometrySupport.supportsLod3MultiSurface(version, target)) {
             GeometryProperty lod3MultiSurface = source.getGeometries()
-                    .getFirst(useLod4asLod3 ?
-                            Name.of("lod4MultiSurface", Namespaces.DEPRECATED) :
-                            Name.of("lod3MultiSurface", Namespaces.CORE))
+                    .getFirst(useLod4asLod3
+                            ? Name.of("lod4MultiSurface", Namespaces.DEPRECATED)
+                            : Name.of("lod3MultiSurface", Namespaces.CORE))
                     .orElse(null);
             if (lod3MultiSurface != null) {
                 target.setLod3MultiSurface(helper.getGeometryProperty(lod3MultiSurface, MultiSurfacePropertyAdapter.class));
@@ -275,9 +275,9 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
 
         if (isCityGML3 || geometrySupport.supportsLod3MultiCurve(version, target)) {
             GeometryProperty lod3MultiCurve = source.getGeometries()
-                    .getFirst(useLod4asLod3 ?
-                            Name.of("lod4MultiCurve", Namespaces.DEPRECATED) :
-                            Name.of("lod3MultiCurve", Namespaces.CORE))
+                    .getFirst(useLod4asLod3
+                            ? Name.of("lod4MultiCurve", Namespaces.DEPRECATED)
+                            : Name.of("lod3MultiCurve", Namespaces.CORE))
                     .orElse(null);
             if (lod3MultiCurve != null) {
                 target.setLod3MultiCurve(helper.getGeometryProperty(lod3MultiCurve, MultiCurvePropertyAdapter.class));

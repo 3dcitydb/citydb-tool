@@ -41,9 +41,9 @@ public class DeleteHelper {
 
         tableHelper = new TableHelper(this);
         batchSize = adapter.getSchemaAdapter().getDefaultBatchSize();
-        commitAfter = transactionMode != Deleter.TransactionMode.NO_COMMIT ?
-                options.getCommitAfter() > 0 ? options.getCommitAfter() : DeleteOptions.DEFAULT_COMMIT_AFTER :
-                0;
+        commitAfter = transactionMode != Deleter.TransactionMode.NO_COMMIT
+                ? options.getCommitAfter() > 0 ? options.getCommitAfter() : DeleteOptions.DEFAULT_COMMIT_AFTER
+                : 0;
     }
 
     public DatabaseAdapter getAdapter() {

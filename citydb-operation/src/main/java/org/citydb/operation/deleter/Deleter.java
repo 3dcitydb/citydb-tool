@@ -89,8 +89,9 @@ public class Deleter {
         try {
             connection = adapter.getPool().getConnection(false);
             helpers = ConcurrentHashMap.newKeySet();
-            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
-                    options.getNumberOfThreads() : 1);
+            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+                    ? options.getNumberOfThreads()
+                    : 1);
 
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {

@@ -95,9 +95,9 @@ public class WKTParser {
         boolean nested = lookAheadWord(tokenizer).equals(L_PAREN);
         List<Point> points = new ArrayList<>();
         do {
-            points.add(nested ?
-                    readPoint(tokenizer, is3D) :
-                    Point.of(getCoordinate(tokenizer, is3D)));
+            points.add(nested
+                    ? readPoint(tokenizer, is3D)
+                    : Point.of(getCoordinate(tokenizer, is3D)));
         } while (nextCloserOrComma(tokenizer).equals(COMMA));
 
         return MultiPoint.of(points);
@@ -117,15 +117,15 @@ public class WKTParser {
     }
 
     private MultiSurface readMultiPolygon(StreamTokenizer tokenizer, boolean is3D) throws GeometryException, IOException {
-        return nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY) ?
-                MultiSurface.empty() :
-                MultiSurface.of(readPolygons(tokenizer, is3D));
+        return nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)
+                ? MultiSurface.empty()
+                : MultiSurface.of(readPolygons(tokenizer, is3D));
     }
 
     private Solid readSolid(StreamTokenizer tokenizer, boolean is3D) throws GeometryException, IOException {
-        return nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY) ?
-                Solid.empty() :
-                Solid.of(CompositeSurface.of(readPolygons(tokenizer, is3D)));
+        return nextEmptyOrOpener(tokenizer).equals(WKTConstants.EMPTY)
+                ? Solid.empty()
+                : Solid.of(CompositeSurface.of(readPolygons(tokenizer, is3D)));
     }
 
     private MultiSolid readGeometryCollection(StreamTokenizer tokenizer) throws GeometryException, IOException {
@@ -177,9 +177,9 @@ public class WKTParser {
             return Coordinate.of(x, y, nextNumber(tokenizer));
         } else {
             String word = lookAheadWord(tokenizer);
-            return word.equals(COMMA) || word.equals(R_PAREN) ?
-                    Coordinate.of(x, y) :
-                    Coordinate.of(x, y, nextNumber(tokenizer));
+            return word.equals(COMMA) || word.equals(R_PAREN)
+                    ? Coordinate.of(x, y)
+                    : Coordinate.of(x, y, nextNumber(tokenizer));
         }
     }
 

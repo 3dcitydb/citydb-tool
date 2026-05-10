@@ -35,9 +35,9 @@ public class SolidGeometryBuilder extends GeometryBuilder {
                 } else if (source instanceof org.xmlobjects.gml.model.geometry.complexes.CompositeSolid) {
                     return CompositeSolid.of(processor.solids);
                 } else {
-                    return processor.solids.size() == 1 ?
-                            processor.solids.get(0) :
-                            MultiSolid.of(processor.solids);
+                    return processor.solids.size() == 1
+                            ? processor.solids.get(0)
+                            : MultiSolid.of(processor.solids);
                 }
             } else {
                 return null;

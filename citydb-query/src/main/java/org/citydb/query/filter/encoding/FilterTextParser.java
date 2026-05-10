@@ -22,9 +22,9 @@ public class FilterTextParser {
 
     public <T extends Expression> T parse(String text, Class<T> type) throws FilterParseException {
         Expression expression = parse(text);
-        return type.isInstance(expression) ?
-                type.cast(expression) :
-                null;
+        return type.isInstance(expression)
+                ? type.cast(expression)
+                : null;
     }
 
     public Node parseRaw(String text) throws FilterParseException {
@@ -165,23 +165,23 @@ public class FilterTextParser {
 
     private Node readSpatialExpression(Tokenizer tokenizer) throws FilterParseException {
         Node geometry = readGeometryLiteral(tokenizer);
-        return geometry != Node.EMPTY ?
-                geometry :
-                readTerminal(tokenizer);
+        return geometry != Node.EMPTY
+                ? geometry
+                : readTerminal(tokenizer);
     }
 
     private Node readTemporalExpression(Tokenizer tokenizer) throws FilterParseException {
         Node timeInterval = readTimeIntervalLiteral(tokenizer);
-        return timeInterval != Node.EMPTY ?
-                timeInterval :
-                readTerminal(tokenizer);
+        return timeInterval != Node.EMPTY
+                ? timeInterval
+                : readTerminal(tokenizer);
     }
 
     private Node readArrayExpression(Tokenizer tokenizer) throws FilterParseException {
         Node array = readArray(tokenizer);
-        return array != Node.EMPTY ?
-                array :
-                readTerminal(tokenizer);
+        return array != Node.EMPTY
+                ? array
+                : readTerminal(tokenizer);
     }
 
     private Node readSqlExpression(Token sqlOperator, Tokenizer tokenizer) throws FilterParseException {
@@ -289,9 +289,9 @@ public class FilterTextParser {
 
     private Node readScalarExpression(Tokenizer tokenizer) throws FilterParseException {
         Node scalar = readArithmeticExpression(tokenizer);
-        return scalar != Node.EMPTY ?
-                scalar :
-                readTerminal(tokenizer);
+        return scalar != Node.EMPTY
+                ? scalar
+                : readTerminal(tokenizer);
     }
 
     private Node readArithmeticExpression(Tokenizer tokenizer) throws FilterParseException {
@@ -321,9 +321,9 @@ public class FilterTextParser {
             Token sign = tokenizer.nextToken();
             Node operand = readArithmeticOperand(tokenizer);
             if (operand != Node.EMPTY) {
-                return sign.getType() == TextToken.MINUS ?
-                        operand.setSign(sign.getType()) :
-                        operand;
+                return sign.getType() == TextToken.MINUS
+                        ? operand.setSign(sign.getType())
+                        : operand;
             } else {
                 throw new FilterParseException("Failed to parse signed arithmetic operand '" +
                         tokenizer.substring(sign, true) + "'.");
@@ -408,15 +408,15 @@ public class FilterTextParser {
 
     private Node readNumericLiteral(Tokenizer tokenizer) throws FilterParseException {
         Token sign = tokenizer.lookAhead().getType() == TextToken.PLUS
-                || tokenizer.lookAhead().getType() == TextToken.MINUS ?
-                tokenizer.nextToken() :
-                Token.UNDEFINED;
+                || tokenizer.lookAhead().getType() == TextToken.MINUS
+                ? tokenizer.nextToken()
+                : Token.UNDEFINED;
 
         Node literal = readLiteral(tokenizer);
         if (literal != Node.EMPTY) {
-            return sign.getType() == TextToken.MINUS ?
-                    literal.setSign(sign.getType()) :
-                    literal;
+            return sign.getType() == TextToken.MINUS
+                    ? literal.setSign(sign.getType())
+                    : literal;
         } else {
             throw new FilterParseException("Failed to parse '" + tokenizer.currentToken() + "' as numeric literal.");
         }

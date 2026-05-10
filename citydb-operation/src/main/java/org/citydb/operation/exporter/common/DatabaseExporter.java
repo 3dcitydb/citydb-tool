@@ -76,9 +76,9 @@ public abstract class DatabaseExporter {
         String localName = rs.getString(nameColumn);
         if (!rs.wasNull()) {
             int namespaceId = rs.getInt(namespaceIdColumn);
-            return !rs.wasNull() ?
-                    Name.of(localName, schemaMapping.getNamespace(namespaceId).getURI()) :
-                    Name.of(localName);
+            return !rs.wasNull()
+                    ? Name.of(localName, schemaMapping.getNamespace(namespaceId).getURI())
+                    : Name.of(localName);
         }
 
         return null;
@@ -86,9 +86,9 @@ public abstract class DatabaseExporter {
 
     protected DataType getDataType(String column, ResultSet rs) throws SQLException {
         int dataTypeId = rs.getInt(column);
-        return !rs.wasNull() ?
-                DataType.of(schemaMapping.getDataType(dataTypeId).getName()) :
-                null;
+        return !rs.wasNull()
+                ? DataType.of(schemaMapping.getDataType(dataTypeId).getName())
+                : null;
     }
 
     protected ArrayValue getArrayValue(String content) {
@@ -112,11 +112,11 @@ public abstract class DatabaseExporter {
 
     protected Geometry<?> getGeometry(Object geometryObject) throws ExportException {
         try {
-            return geometryObject != null ?
-                    adapter.getGeometryAdapter().getGeometry(geometryObject)
-                            .setSRID(helper.getSRID())
-                            .setSrsIdentifier(helper.getSrsIdentifier()) :
-                    null;
+            return geometryObject != null
+                    ? adapter.getGeometryAdapter().getGeometry(geometryObject)
+                      .setSRID(helper.getSRID())
+                      .setSrsIdentifier(helper.getSrsIdentifier())
+                    : null;
         } catch (GeometryException e) {
             throw new ExportException("Failed to convert database geometry.", e);
         }

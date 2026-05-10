@@ -98,9 +98,9 @@ public class GeometryBuilder {
                 }
                 yield polygon;
             }
-            case COMPOSITE_SURFACE -> parent instanceof Solid solid ?
-                    solid.getShell() :
-                    CompositeSurface.empty();
+            case COMPOSITE_SURFACE -> parent instanceof Solid solid
+                    ? solid.getShell()
+                    : CompositeSurface.empty();
             case SOLID -> {
                 Solid solid = Solid.empty();
                 if (parent instanceof SolidCollection<?> solidCollection) {
@@ -129,12 +129,12 @@ public class GeometryBuilder {
                 case TRIANGULATED_SURFACE -> TriangulatedSurface.of(getPrimitives(geometry, Polygon.class));
                 case COMPOSITE_SURFACE -> CompositeSurface.of(getPrimitives(geometry, Polygon.class));
                 case SOLID -> Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class)));
-                case MULTI_SOLID -> geometry instanceof SolidCollection<?> solidCollection ?
-                        MultiSolid.of(solidCollection.getSolids()) :
-                        MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
-                case COMPOSITE_SOLID -> geometry instanceof SolidCollection<?> solidCollection ?
-                        CompositeSolid.of(solidCollection.getSolids()) :
-                        CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                case MULTI_SOLID -> geometry instanceof SolidCollection<?> solidCollection
+                        ? MultiSolid.of(solidCollection.getSolids())
+                        : MultiSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
+                case COMPOSITE_SOLID -> geometry instanceof SolidCollection<?> solidCollection
+                        ? CompositeSolid.of(solidCollection.getSolids())
+                        : CompositeSolid.of(Solid.of(CompositeSurface.of(getPrimitives(geometry, Polygon.class))));
             };
         } catch (Exception e) {
             throw new GeometryException("Failed to convert database geometry into a " +

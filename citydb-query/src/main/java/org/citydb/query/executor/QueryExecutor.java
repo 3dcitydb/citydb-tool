@@ -112,9 +112,9 @@ public class QueryExecutor {
 
         public QueryExecutor build(Query query, SqlBuildOptions options) throws QueryBuildException, IOException {
             Select select = builder.build(query, options);
-            Select count = options.isOmitDistinct() ?
-                    builder.build(query, SqlBuildOptions.of(options).omitDistinct(false)) :
-                    select;
+            Select count = options.isOmitDistinct()
+                    ? builder.build(query, SqlBuildOptions.of(options).omitDistinct(false))
+                    : select;
 
             PersistentMapStore store = null;
             if (options.isOmitDistinct() && !select.toSql().equals(count.toSql())) {

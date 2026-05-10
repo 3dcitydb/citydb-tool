@@ -158,9 +158,9 @@ public class WKBParser {
     private Coordinate getCoordinate(ByteBuffer buffer, int dimension) {
         double x = buffer.getDouble();
         double y = buffer.getDouble();
-        return dimension == 2 ?
-                Coordinate.of(x, y) :
-                Coordinate.of(x, y, buffer.getDouble());
+        return dimension == 2
+                ? Coordinate.of(x, y)
+                : Coordinate.of(x, y, buffer.getDouble());
     }
 
     private static abstract class ByteBuffer {

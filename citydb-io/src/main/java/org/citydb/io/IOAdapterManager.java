@@ -89,9 +89,9 @@ public class IOAdapterManager {
 
     public <T extends IOAdapter> T getAdapter(Class<T> type) {
         IOAdapterInfo info = adapters.get(type.getName());
-        return info != null && type.isInstance(info.adapter) ?
-                type.cast(info.adapter) :
-                null;
+        return info != null && type.isInstance(info.adapter)
+                ? type.cast(info.adapter)
+                : null;
     }
 
     public IOAdapter getAdapterForFileFormat(String name) {
@@ -173,9 +173,9 @@ public class IOAdapterManager {
                 fileExtension = fileExtension.substring(1);
             }
 
-            return !fileExtension.isEmpty() ?
-                    fileExtension.toLowerCase(Locale.ROOT) :
-                    null;
+            return !fileExtension.isEmpty()
+                    ? fileExtension.toLowerCase(Locale.ROOT)
+                    : null;
         } else {
             return null;
         }

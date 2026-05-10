@@ -49,9 +49,9 @@ public class LogicalPredicateBuilder {
                 operands.add(operand.build());
             }
 
-            return predicate.getOperator() == BooleanOperator.AND ?
-                    BuildResult.of(Operators.and(operands)) :
-                    BuildResult.of(Operators.or(operands));
+            return predicate.getOperator() == BooleanOperator.AND
+                    ? BuildResult.of(Operators.and(operands))
+                    : BuildResult.of(Operators.or(operands));
         }
     }
 

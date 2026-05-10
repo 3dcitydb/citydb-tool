@@ -62,11 +62,11 @@ public class FilterJSONWriter {
             jsonWriter.startObject();
             jsonWriter.writeName(JSONToken.BBOX.value());
             jsonWriter.writeColon();
-            jsonWriter.write(literal.getValue().getVertexDimension() == 2 ?
-                    List.of(lowerCorner.getX(), lowerCorner.getY(),
-                            upperCorner.getX(), upperCorner.getY()) :
-                    List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
-                            upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
+            jsonWriter.write(literal.getValue().getVertexDimension() == 2
+                    ? List.of(lowerCorner.getX(), lowerCorner.getY(),
+                    upperCorner.getX(), upperCorner.getY())
+                    : List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
+                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
             jsonWriter.endObject();
         }
 

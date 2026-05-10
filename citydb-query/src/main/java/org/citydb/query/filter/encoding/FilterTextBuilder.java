@@ -292,9 +292,9 @@ public class FilterTextBuilder {
     }
 
     private BooleanLiteral buildBooleanLiteral(Node node) {
-        return node.getToken().getType() == TextToken.TRUE ?
-                BooleanLiteral.TRUE :
-                BooleanLiteral.FALSE;
+        return node.getToken().getType() == TextToken.TRUE
+                ? BooleanLiteral.TRUE
+                : BooleanLiteral.FALSE;
     }
 
     private StringLiteral buildStringLiteral(Node node) {

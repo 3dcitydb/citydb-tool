@@ -29,11 +29,11 @@ public class Matrix3x4 extends Matrix {
         Objects.requireNonNull(matrix, "The matrix must not be null.");
         int rows = matrix.getRows();
         int columns = matrix.getColumns();
-        return new Matrix3x4(rows != 3 || columns != 4 ?
-                Matrix.identity(4, 4)
-                        .setSubMatrix(0, Math.min(rows, 3) - 1, 0, Math.min(columns, 4) - 1, matrix)
-                        .getSubMatrix(0, 2, 0, 3) :
-                matrix);
+        return new Matrix3x4(rows != 3 || columns != 4
+                ? Matrix.identity(4, 4)
+                  .setSubMatrix(0, Math.min(rows, 3) - 1, 0, Math.min(columns, 4) - 1, matrix)
+                  .getSubMatrix(0, 2, 0, 3)
+                : matrix);
     }
 
     public static Matrix3x4 ofRowMajor(List<Double> values) {

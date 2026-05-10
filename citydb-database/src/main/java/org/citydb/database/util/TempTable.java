@@ -228,9 +228,9 @@ public class TempTable implements AutoCloseable {
             for (Map.Entry<String, Boolean> entry : indexes.entrySet()) {
                 adapter.getSchemaAdapter().getIndexHelper().create(
                         Index.of("idx_" + createUniqueName(), name, entry.getKey(),
-                                columns.get(entry.getKey()) == DataType.GEOMETRY ?
-                                        Index.Type.SPATIAL :
-                                        Index.Type.NORMAL),
+                                columns.get(entry.getKey()) == DataType.GEOMETRY
+                                        ? Index.Type.SPATIAL
+                                        : Index.Type.NORMAL),
                         entry.getValue(), connection);
             }
 

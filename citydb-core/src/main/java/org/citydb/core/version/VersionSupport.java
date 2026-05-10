@@ -60,12 +60,11 @@ public class VersionSupport {
     private Map<Version, Set<VersionPolicy>> sorted() {
         Map<Version, Set<VersionPolicy>> sorted = new TreeMap<>(Comparator.reverseOrder());
         for (VersionPolicy policy : policies) {
-            sorted.computeIfAbsent(policy.isAllowNewerRevisions() ?
-                            Version.of(policy.getUpperBound().getMajor(),
-                                    policy.getUpperBound().getMinor(),
-                                    Integer.MAX_VALUE) :
-                            policy.getUpperBound(), v ->
-                            new TreeSet<>(Comparator.comparing(VersionPolicy::getLowerBound).reversed()))
+            Version upperBound = policy.getUpperBound();
+            sorted.computeIfAbsent(policy.isAllowNewerRevisions()
+                                    ? Version.of(upperBound.getMajor(), upperBound.getMinor(), Integer.MAX_VALUE)
+                                    : upperBound,
+                            v -> new TreeSet<>(Comparator.comparing(VersionPolicy::getLowerBound).reversed()))
                     .add(policy);
         }
 

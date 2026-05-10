@@ -59,9 +59,9 @@ public class QueryBuilder {
                 .select(result.first().columns("id", "feature_id", "objectclass_id", "objectid",
                         "identifier", "identifier_codespace", "transaction_type", "transaction_date",
                         "db_user", "reason_for_update"))
-                .select(databaseSrs.getSRID() == targetSrs.getSRID() ?
-                        envelope :
-                        spatialOperationHelper.transform(envelope, targetSrs.getSRID()).as("envelope"));
+                .select(databaseSrs.getSRID() == targetSrs.getSRID()
+                        ? envelope
+                        : spatialOperationHelper.transform(envelope, targetSrs.getSRID()).as("envelope"));
     }
 
     public Select buildForRegions(ChangelogQuery query) throws QueryBuildException {
@@ -71,9 +71,9 @@ public class QueryBuilder {
         Select select = result.second().select(envelope);
 
         org.citydb.database.util.ChangelogHelper changelogHelper = adapter.getSchemaAdapter().getChangelogHelper();
-        return databaseSrs.getSRID() == targetSrs.getSRID() ?
-                changelogHelper.getChangeRegions(select, envelope) :
-                changelogHelper.getAndTransformChangeRegions(select, envelope, targetSrs.getSRID());
+        return databaseSrs.getSRID() == targetSrs.getSRID()
+                ? changelogHelper.getChangeRegions(select, envelope)
+                : changelogHelper.getAndTransformChangeRegions(select, envelope, targetSrs.getSRID());
     }
 
     private Pair<Table, Select> build(ChangelogQuery query) throws QueryBuildException {

@@ -53,9 +53,9 @@ public class LodFilter {
     }
 
     public Optional<Integer> getSearchDepth() {
-        return searchDepth != null && searchDepth >= 0 ?
-                Optional.of(searchDepth) :
-                Optional.empty();
+        return searchDepth != null && searchDepth >= 0
+                ? Optional.of(searchDepth)
+                : Optional.empty();
     }
 
     public LodFilter setSearchDepth(Integer searchDepth) {

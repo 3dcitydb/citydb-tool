@@ -327,9 +327,9 @@ public class Matrix implements Serializable {
     }
 
     public Matrix solve(Matrix matrix) {
-        return rows == columns ?
-                new LUDecomposition(this).solve(matrix) :
-                new QRDecomposition(this).solve(matrix);
+        return rows == columns
+                ? new LUDecomposition(this).solve(matrix)
+                : new QRDecomposition(this).solve(matrix);
     }
 
     public Matrix invert() {

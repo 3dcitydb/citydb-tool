@@ -77,9 +77,9 @@ public class Tiling {
         try {
             SpatialReference reference = adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(this.extent)
                     .orElse(adapter.getDatabaseMetadata().getSpatialReference());
-            extent = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID() ?
-                    adapter.getGeometryAdapter().transform(this.extent) :
-                    this.extent;
+            extent = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID()
+                    ? adapter.getGeometryAdapter().transform(this.extent)
+                    : this.extent;
         } catch (GeometryException | SrsException | SQLException e) {
             throw new TilingException("Failed to transform the tiling extent to the database SRS.", e);
         }

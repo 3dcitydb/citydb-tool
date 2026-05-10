@@ -41,9 +41,9 @@ public class AddressAdapter implements ModelBuilder<org.citygml4j.core.model.cor
             if (helper.isIncludeXALSource()) {
                 target.setGenericContentMimeType(MimeTypes.XML)
                         .setGenericContent(helper.toXML(source.getXALAddress().getObject(),
-                                helper.getCityGMLVersion() == CityGMLVersion.v3_0 ?
-                                        new Module[]{XALCoreModule.v3_0, XALCommonTypesModule.v3_0} :
-                                        new Module[]{XALCoreModule.v2_0}));
+                                helper.getCityGMLVersion() == CityGMLVersion.v3_0
+                                        ? new Module[]{XALCoreModule.v3_0, XALCommonTypesModule.v3_0}
+                                        : new Module[]{XALCoreModule.v2_0}));
             }
         }
 
@@ -81,9 +81,9 @@ public class AddressAdapter implements ModelBuilder<org.citygml4j.core.model.cor
             }
         }
 
-        target.setXALAddress(new XALAddressProperty(address != null ?
-                address :
-                new org.xmlobjects.xal.model.Address()));
+        target.setXALAddress(new XALAddressProperty(address != null
+                ? address
+                : new org.xmlobjects.xal.model.Address()));
 
         source.getMultiPoint().ifPresent(multiPoint ->
                 target.setMultiPoint(new MultiPointProperty(helper.getMultiPoint(multiPoint))));

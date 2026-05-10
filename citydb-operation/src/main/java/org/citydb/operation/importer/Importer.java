@@ -105,9 +105,9 @@ public class Importer {
         try {
             referenceManager = ReferenceManager.newInstance(adapter, store, options);
             helpers = ConcurrentHashMap.newKeySet();
-            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
-                    options.getNumberOfThreads() :
-                    Math.max(2, Runtime.getRuntime().availableProcessors()));
+            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+                    ? options.getNumberOfThreads()
+                    : Math.max(2, Runtime.getRuntime().availableProcessors()));
 
             countLatch = new CountLatch();
             contexts = ThreadLocal.withInitial(() -> {

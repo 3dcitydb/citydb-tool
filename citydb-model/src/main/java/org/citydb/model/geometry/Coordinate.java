@@ -50,9 +50,9 @@ public class Coordinate implements Serializable {
 
         List<Coordinate> coordinateList = new ArrayList<>(coordinates.size() / dimension);
         for (int i = 0; i < coordinates.size(); i += dimension) {
-            coordinateList.add(dimension == 3 ?
-                    new Coordinate(coordinates.get(i), coordinates.get(i + 1), coordinates.get(i + 2)) :
-                    new Coordinate(coordinates.get(i), coordinates.get(i + 1)));
+            coordinateList.add(dimension == 3
+                    ? new Coordinate(coordinates.get(i), coordinates.get(i + 1), coordinates.get(i + 2))
+                    : new Coordinate(coordinates.get(i), coordinates.get(i + 1)));
         }
 
         return coordinateList;
@@ -97,8 +97,8 @@ public class Coordinate implements Serializable {
     }
 
     public Coordinate copy() {
-        return dimension == 2 ?
-                new Coordinate(x, y) :
-                new Coordinate(x, y, z);
+        return dimension == 2
+                ? new Coordinate(x, y)
+                : new Coordinate(x, y, z);
     }
 }

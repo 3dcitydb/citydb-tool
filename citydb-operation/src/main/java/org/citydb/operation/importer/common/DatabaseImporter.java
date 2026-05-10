@@ -195,9 +195,9 @@ public abstract class DatabaseImporter {
 
     protected String getJson(JSONArray jsonArray, JSONWriter.Feature... features) {
         if (jsonArray != null) {
-            return features == null || features.length == 0 ?
-                    jsonArray.toString() :
-                    jsonArray.toString(features);
+            return features == null || features.length == 0
+                    ? jsonArray.toString()
+                    : jsonArray.toString(features);
         } else {
             return null;
         }
@@ -205,9 +205,9 @@ public abstract class DatabaseImporter {
 
     protected String getJson(JSONObject jsonObject, JSONWriter.Feature... features) {
         if (jsonObject != null) {
-            return features == null || features.length == 0 ?
-                    jsonObject.toString() :
-                    jsonObject.toString(features);
+            return features == null || features.length == 0
+                    ? jsonObject.toString()
+                    : jsonObject.toString(features);
         } else {
             return null;
         }

@@ -34,9 +34,9 @@ public class CurveGeometryBuilder extends GeometryBuilder {
                 if (source instanceof MultiCurve) {
                     return MultiLineString.of(processor.lineStrings);
                 } else {
-                    return processor.lineStrings.size() == 1 ?
-                            processor.lineStrings.get(0) :
-                            MultiLineString.of(processor.lineStrings);
+                    return processor.lineStrings.size() == 1
+                            ? processor.lineStrings.get(0)
+                            : MultiLineString.of(processor.lineStrings);
                 }
             } else {
                 return null;

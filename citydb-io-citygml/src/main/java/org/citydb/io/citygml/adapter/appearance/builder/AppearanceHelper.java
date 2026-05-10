@@ -210,9 +210,9 @@ public class AppearanceHelper {
         private void addMapping(GeometryReference reference, TexCoordList texCoordList, ParameterizedTexture target) {
             if (texCoordList.isSetTextureCoordinates()) {
                 for (TextureCoordinates textureCoordinates : texCoordList.getTextureCoordinates()) {
-                    GMLObject source = textureCoordinates.getRing().isSetReferencedObject() ?
-                            textureCoordinates.getRing().getReferencedObject() :
-                            reference.getReferencedObject();
+                    GMLObject source = textureCoordinates.getRing().isSetReferencedObject()
+                            ? textureCoordinates.getRing().getReferencedObject()
+                            : reference.getReferencedObject();
 
                     rings.getOrDefault(source, Collections.emptyList()).stream()
                             .filter(this::isValidContext)

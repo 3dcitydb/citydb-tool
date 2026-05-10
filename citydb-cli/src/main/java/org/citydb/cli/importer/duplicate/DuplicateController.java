@@ -95,9 +95,9 @@ public class DuplicateController implements AutoCloseable {
         Map<Long, Boolean> databaseIds = store.getOrCreateMap("database-ids");
 
         Deque<DuplicateFinder> finders = new ConcurrentLinkedDeque<>();
-        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0 ?
-                options.getNumberOfThreads() :
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
+        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+                ? options.getNumberOfThreads()
+                : Math.max(2, Runtime.getRuntime().availableProcessors()));
 
         CountLatch countLatch = new CountLatch();
         ThreadLocal<DuplicateFinder> contexts = ThreadLocal.withInitial(() -> {

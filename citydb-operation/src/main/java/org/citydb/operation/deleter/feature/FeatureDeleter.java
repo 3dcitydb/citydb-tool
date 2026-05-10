@@ -32,9 +32,9 @@ public class FeatureDeleter extends DatabaseDeleter {
 
     @Override
     protected PreparedStatement getDeleteStatement(Connection connection) throws SQLException {
-        return helper.getOptions().getMode() == DeleteMode.TERMINATE ?
-                connection.prepareCall("{call citydb_pkg.terminate_feature(?, ?, ?, ?)}") :
-                connection.prepareCall("{call citydb_pkg.delete_feature(?, ?)}");
+        return helper.getOptions().getMode() == DeleteMode.TERMINATE
+                ? connection.prepareCall("{call citydb_pkg.terminate_feature(?, ?, ?, ?)}")
+                : connection.prepareCall("{call citydb_pkg.delete_feature(?, ?)}");
     }
 
     public void deleteFeature(long id) throws DeleteException, SQLException {

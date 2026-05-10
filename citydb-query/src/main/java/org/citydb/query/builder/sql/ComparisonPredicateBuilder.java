@@ -153,9 +153,9 @@ public class ComparisonPredicateBuilder {
                 && values.size() == valueExpressions.size()) {
             negate = negate ^ in.getOperator() == ComparisonOperator.NOT_IN;
             values.add(operand);
-            return valueExpressions.size() == 1 ?
-                    BuildResult.of(Operators.eq(operandExpression, valueExpressions.get(0), negate), values) :
-                    BuildResult.of(In.of(operandExpression, valueExpressions, negate), values);
+            return valueExpressions.size() == 1
+                    ? BuildResult.of(Operators.eq(operandExpression, valueExpressions.get(0), negate), values)
+                    : BuildResult.of(In.of(operandExpression, valueExpressions, negate), values);
         } else {
             throw new QueryBuildException("Failed to build in predicate.");
         }
@@ -206,14 +206,14 @@ public class ComparisonPredicateBuilder {
                     org.citydb.sqlbuilder.schema.Table table = propertyContext.getTable();
                     if (joinable.getJoin().isPresent()) {
                         Join join = joinable.getJoin().get();
-                        subQuery.where(helper.matches(join.getTable(), table) ?
-                                table.column(join.getToColumn()).isNull() :
-                                table.column(join.getFromColumn()).isNull());
+                        subQuery.where(helper.matches(join.getTable(), table)
+                                ? table.column(join.getToColumn()).isNull()
+                                : table.column(join.getFromColumn()).isNull());
                     } else if (joinable.getJoinTable().isPresent()) {
                         JoinTable joinTable = joinable.getJoinTable().get();
-                        subQuery.where(helper.matches(joinTable.getTargetJoin().getTable(), table) ?
-                                table.column(joinTable.getTargetJoin().getToColumn()).isNull() :
-                                table.column(joinTable.getSourceJoin().getFromColumn()).isNull());
+                        subQuery.where(helper.matches(joinTable.getTargetJoin().getTable(), table)
+                                ? table.column(joinTable.getTargetJoin().getToColumn()).isNull()
+                                : table.column(joinTable.getSourceJoin().getFromColumn()).isNull());
                     }
                 } else {
                     subQuery.where(propertyContext.getTable().column("id").isNull());
@@ -243,9 +243,9 @@ public class ComparisonPredicateBuilder {
                 && pattern.getExpression() instanceof ScalarExpression patternExpression) {
             negate = negate ^ like.getOperator() == ComparisonOperator.NOT_LIKE;
             return BuildResult.of(Like.of(operand.getExpression(), patternExpression,
-                    containsEscapeCharacter(patternExpression) ?
-                            StringLiteral.of(org.citydb.query.filter.operation.Like.ESCAPE_CHAR) :
-                            null,
+                    containsEscapeCharacter(patternExpression)
+                            ? StringLiteral.of(org.citydb.query.filter.operation.Like.ESCAPE_CHAR)
+                            : null,
                     negate), operand);
         } else {
             throw new QueryBuildException("Failed to build like predicate.");

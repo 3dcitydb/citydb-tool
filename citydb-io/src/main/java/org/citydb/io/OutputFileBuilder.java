@@ -31,9 +31,9 @@ public class OutputFileBuilder {
 
     public OutputFileBuilder defaultFileExtension(String extension) {
         if (extension != null) {
-            defaultFileExtension = extension.startsWith(".") ?
-                    extension.substring(1) :
-                    extension;
+            defaultFileExtension = extension.startsWith(".")
+                    ? extension.substring(1)
+                    : extension;
         }
 
         return this;
@@ -77,9 +77,9 @@ public class OutputFileBuilder {
     private String[] getFileName(Path file) {
         String fileName = file.getFileName().toString();
         int index = fileName.lastIndexOf('.');
-        return index > 0 ?
-                new String[]{fileName.substring(0, index), fileName.substring(index + 1)} :
-                new String[]{fileName, defaultFileExtension};
+        return index > 0
+                ? new String[]{fileName.substring(0, index), fileName.substring(index + 1)}
+                : new String[]{fileName, defaultFileExtension};
     }
 
     private String createFileName(String fileName, String extension) {

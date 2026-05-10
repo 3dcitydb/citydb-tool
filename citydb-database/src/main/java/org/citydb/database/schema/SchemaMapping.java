@@ -46,9 +46,9 @@ public class SchemaMapping {
     }
 
     public Name resolvePrefixedName(PrefixedName name) {
-        return name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
-                Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI()) :
-                Name.of(name.getLocalName(), name.getNamespace());
+        return name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)
+                ? Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI())
+                : Name.of(name.getLocalName(), name.getNamespace());
     }
 
     void addNamespace(Namespace namespace) {
@@ -74,9 +74,9 @@ public class SchemaMapping {
     }
 
     public DataType getDataType(PrefixedName name) {
-        return name != null ?
-                getDataType(resolvePrefixedName(name)) :
-                DataType.UNDEFINED;
+        return name != null
+                ? getDataType(resolvePrefixedName(name))
+                : DataType.UNDEFINED;
     }
 
     void addDataType(DataType dataType) {
@@ -101,9 +101,9 @@ public class SchemaMapping {
     }
 
     public FeatureType getFeatureType(PrefixedName name) {
-        return name != null ?
-                getFeatureType(resolvePrefixedName(name)) :
-                FeatureType.UNDEFINED;
+        return name != null
+                ? getFeatureType(resolvePrefixedName(name))
+                : FeatureType.UNDEFINED;
     }
 
     public FeatureType getFeatureType(PrefixedName name, boolean lenient) {

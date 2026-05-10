@@ -126,9 +126,9 @@ public abstract class AbstractThematicSurfaceAdapter<T extends AbstractThematicS
 
         if (isCityGML3 || geometrySupport.supportsLod3MultiSurface(version, target)) {
             GeometryProperty lod3MultiSurface = source.getGeometries()
-                    .getFirst(useLod4asLod3 ?
-                            Name.of("lod4MultiSurface", Namespaces.DEPRECATED) :
-                            Name.of("lod3MultiSurface", Namespaces.CORE))
+                    .getFirst(useLod4asLod3
+                            ? Name.of("lod4MultiSurface", Namespaces.DEPRECATED)
+                            : Name.of("lod3MultiSurface", Namespaces.CORE))
                     .orElse(null);
             if (lod3MultiSurface != null) {
                 target.setLod3MultiSurface(helper.getGeometryProperty(lod3MultiSurface, MultiSurfacePropertyAdapter.class));

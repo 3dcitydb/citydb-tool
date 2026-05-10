@@ -60,9 +60,9 @@ public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper
                 .select(Function.of("st_force2d", base.column(alias)).as(alias))
                 .from(base)
                 .where(base.column(alias).isNotNull()));
-        Pair<Table, Select> result = adapter.getPostGISVersion().compareTo(Version.of(3, 4, 0)) >= 0 ?
-                buildWithWindowFunction(extents, alias) :
-                buildWithoutWindowFunction(extents, alias);
+        Pair<Table, Select> result = adapter.getPostGISVersion().compareTo(Version.of(3, 4, 0)) >= 0
+                ? buildWithWindowFunction(extents, alias)
+                : buildWithoutWindowFunction(extents, alias);
 
         Selection<?> cluster = Function.of("st_union", result.first().column(alias));
         if (adapter.getDatabaseMetadata().getSpatialReference().getSRID() != srid) {

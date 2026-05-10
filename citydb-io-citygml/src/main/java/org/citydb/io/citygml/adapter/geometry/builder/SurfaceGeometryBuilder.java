@@ -51,9 +51,9 @@ public class SurfaceGeometryBuilder extends GeometryBuilder {
                 } else if (source instanceof org.xmlobjects.gml.model.geometry.primitives.TriangulatedSurface) {
                     surface = TriangulatedSurface.of(processor.polygons);
                 } else if (source instanceof AbstractSurface) {
-                    surface = processor.polygons.size() == 1 ?
-                            processor.polygons.get(0) :
-                            CompositeSurface.of(processor.polygons);
+                    surface = processor.polygons.size() == 1
+                            ? processor.polygons.get(0)
+                            : CompositeSurface.of(processor.polygons);
                 } else {
                     surface = MultiSurface.of(processor.polygons);
                 }
@@ -136,12 +136,12 @@ public class SurfaceGeometryBuilder extends GeometryBuilder {
         private Polygon createPolygon(AbstractRingProperty exterior, List<AbstractRingProperty> interior) {
             LinearRing exteriorRing = createLinearRing(exterior);
             if (exteriorRing != null) {
-                List<LinearRing> interiorRings = interior != null && !interior.isEmpty() ?
-                        interior.stream()
-                                .map(this::createLinearRing)
-                                .filter(Objects::nonNull)
-                                .collect(Collectors.toList()) :
-                        null;
+                List<LinearRing> interiorRings = interior != null && !interior.isEmpty()
+                        ? interior.stream()
+                          .map(this::createLinearRing)
+                          .filter(Objects::nonNull)
+                          .collect(Collectors.toList())
+                        : null;
 
                 return createPolygon(exteriorRing, interiorRings);
             } else {

@@ -48,10 +48,10 @@ public class CityJSONWriterFactory {
             OutputEncoding encoding = getOutputEncoding(options.getEncoding().orElse(null));
             boolean shouldStream = formatOptions.isJsonLines() && formatOptions.getVersion() != CityJSONVersion.v1_0;
 
-            AbstractCityJSONWriter<?> writer = shouldStream ?
-                    factory.createCityJSONFeatureWriter(file.openStream(), encoding) :
-                    factory.createCityJSONWriter(file.openStream(), encoding)
-                            .withIndent(formatOptions.isPrettyPrint() ? "  " : null);
+            AbstractCityJSONWriter<?> writer = shouldStream
+                    ? factory.createCityJSONFeatureWriter(file.openStream(), encoding)
+                    : factory.createCityJSONWriter(file.openStream(), encoding)
+                      .withIndent(formatOptions.isPrettyPrint() ? "  " : null);
 
             return writer.setHtmlSafe(formatOptions.isHtmlSafe());
         } catch (Exception e) {

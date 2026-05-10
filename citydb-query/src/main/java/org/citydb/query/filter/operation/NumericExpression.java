@@ -49,13 +49,13 @@ public interface NumericExpression extends Expression {
     }
 
     default ArithmeticExpression append(ArithmeticOperator operator, Object operand) {
-        NumericExpression rightOperand = operand instanceof NumericExpression expression ?
-                expression :
-                literal(operand);
+        NumericExpression rightOperand = operand instanceof NumericExpression expression
+                ? expression
+                : literal(operand);
 
-        return this instanceof ArithmeticExpression operation ?
-                operation.fluentAppend(operator, rightOperand) :
-                ArithmeticExpression.of(this, operator, rightOperand);
+        return this instanceof ArithmeticExpression operation
+                ? operation.fluentAppend(operator, rightOperand)
+                : ArithmeticExpression.of(this, operator, rightOperand);
     }
 
     default Between between(Object lowerBound, Object upperBound) {

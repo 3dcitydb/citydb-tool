@@ -49,9 +49,9 @@ public abstract class GeometryAdapter {
     }
 
     public Geometry<?> buildGeometry(Object geometryObject, JSONObject properties) throws GeometryException {
-        return geometryObject != null ?
-                geometryBuilder.buildGeometry(getGeometry(geometryObject), properties) :
-                null;
+        return geometryObject != null
+                ? geometryBuilder.buildGeometry(getGeometry(geometryObject), properties)
+                : null;
     }
 
     public JSONObject buildGeometryProperties(Geometry<?> geometry) {

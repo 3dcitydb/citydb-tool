@@ -71,10 +71,10 @@ public class CityJSONReader implements FeatureReader {
     @Override
     public void read(Consumer<Feature> consumer) throws ReadException {
         shouldRun = true;
-        int threads = filter.needsSequentialProcessing() ? 1 :
-                options.getNumberOfThreads() > 0 ?
-                        options.getNumberOfThreads() :
-                        Math.max(2, Runtime.getRuntime().availableProcessors());
+        int threads = filter.needsSequentialProcessing()
+                ? 1 : options.getNumberOfThreads() > 0
+                      ? options.getNumberOfThreads()
+                      : Math.max(2, Runtime.getRuntime().availableProcessors());
         ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
         CountLatch countLatch = new CountLatch();
 

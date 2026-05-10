@@ -62,8 +62,9 @@ public class SpatialReference {
             return definition.get().getCoordinateSystem().getDimension();
         } else {
             return type == SpatialReferenceType.COMPOUND_CRS
-                    || type == SpatialReferenceType.GEOGRAPHIC3D_CRS ?
-                    3 : 2;
+                    || type == SpatialReferenceType.GEOGRAPHIC3D_CRS
+                    ? 3
+                    : 2;
         }
     }
 

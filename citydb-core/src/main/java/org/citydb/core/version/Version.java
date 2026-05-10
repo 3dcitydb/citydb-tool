@@ -26,9 +26,9 @@ public class Version implements Comparable<Version> {
     }
 
     public static Version of(int major, int minor, int revision, String versionString) {
-        return new Version(major, minor, revision, versionString != null ?
-                versionString :
-                major + "." + minor + "." + revision);
+        return new Version(major, minor, revision, versionString != null
+                ? versionString
+                : major + "." + minor + "." + revision);
     }
 
     public static Version of(int major, int minor, int revision) {
@@ -71,9 +71,9 @@ public class Version implements Comparable<Version> {
     }
 
     public String toVersionString(boolean skipRevision) {
-        return skipRevision ?
-                major + "." + minor :
-                major + "." + minor + "." + revision;
+        return skipRevision
+                ? major + "." + minor
+                : major + "." + minor + "." + revision;
     }
 
     public int compareTo(Version other, boolean skipRevision) {

@@ -46,9 +46,9 @@ public class GenericAttribute implements ValueObject, Typeable {
 
     @Override
     public Optional<Value> getValue() {
-        return Optional.ofNullable(type != null ?
-                type.getValue().orElse(null) :
-                null);
+        return Optional.ofNullable(type != null
+                ? type.getValue().orElse(null)
+                : null);
     }
 
     @Override

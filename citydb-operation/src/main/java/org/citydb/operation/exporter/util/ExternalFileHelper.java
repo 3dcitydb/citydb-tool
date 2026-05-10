@@ -57,9 +57,9 @@ public class ExternalFileHelper {
     }
 
     public ExternalFile createExternalFile(long id, String uri, String mimeType) throws ExportException {
-        String fileName = createUniqueFileNames || uri == null ?
-                getFileNamePrefix() + id + getFileExtension(uri, mimeType) :
-                getFileNamePrefix() + uri;
+        String fileName = createUniqueFileNames || uri == null
+                ? getFileNamePrefix() + id + getFileExtension(uri, mimeType)
+                : getFileNamePrefix() + uri;
 
         String path;
         int index;
@@ -81,9 +81,9 @@ public class ExternalFileHelper {
         }
 
         path = (path != null ? path + "/" : "") + fileName;
-        return !useAbsoluteResourcePaths || outputFile.getFileType() == FileType.ARCHIVE ?
-                ExternalFile.of(path) :
-                ExternalFile.of(outputFile.getFile().getParent().resolve(path));
+        return !useAbsoluteResourcePaths || outputFile.getFileType() == FileType.ARCHIVE
+                ? ExternalFile.of(path)
+                : ExternalFile.of(outputFile.getFile().getParent().resolve(path));
     }
 
     private String getFileNamePrefix() {

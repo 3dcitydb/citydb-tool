@@ -63,33 +63,23 @@ public class CommandBuilder {
     }
 
     public CommandBuilder addOption(String option, String value) {
-        return nonEmpty(option) && nonEmpty(value) ?
-                add(option).add(value) :
-                this;
+        return nonEmpty(option) && nonEmpty(value) ? add(option).add(value) : this;
     }
 
     public CommandBuilder addOption(String option, long value) {
-        return nonEmpty(option) ?
-                add(option).add(value) :
-                this;
+        return nonEmpty(option) ? add(option).add(value) : this;
     }
 
     public CommandBuilder addOption(String option, double value) {
-        return nonEmpty(option) ?
-                add(option).add(value) :
-                this;
+        return nonEmpty(option) ? add(option).add(value) : this;
     }
 
     public CommandBuilder addOption(String option, boolean value) {
-        return nonEmpty(option) ?
-                add(option).add(value) :
-                this;
+        return nonEmpty(option) ? add(option).add(value) : this;
     }
 
     public CommandBuilder addOption(String option, Object value) {
-        return nonEmpty(option) && value != null ?
-                add(option).add(value) :
-                this;
+        return nonEmpty(option) && value != null ? add(option).add(value) : this;
     }
 
     public CommandBuilder addOptionIf(boolean condition, String option, String value) {

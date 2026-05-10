@@ -24,11 +24,11 @@ public class EnvelopeWriter implements ObjectWriter<Envelope> {
             jsonWriter.startObject();
             jsonWriter.writeName("coordinates");
             jsonWriter.writeColon();
-            jsonWriter.write(envelope.getVertexDimension() == 2 ?
-                    List.of(lowerCorner.getX(), lowerCorner.getY(),
-                            upperCorner.getX(), upperCorner.getY()) :
-                    List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
-                            upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
+            jsonWriter.write(envelope.getVertexDimension() == 2
+                    ? List.of(lowerCorner.getX(), lowerCorner.getY(),
+                    upperCorner.getX(), upperCorner.getY())
+                    : List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
+                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
 
             if (envelope.getSRID().isPresent() || envelope.getSrsIdentifier().isPresent()) {
                 jsonWriter.writeName("srs");

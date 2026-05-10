@@ -164,9 +164,9 @@ public class CityGMLChunkWriter {
         if (feature instanceof AbstractCityObject) {
             return bufferMember(feature, CoreModule.of(version).getNamespaceURI(), "cityObjectMember");
         } else if (feature instanceof AbstractAppearance) {
-            return bufferMember(feature, version != CityGMLVersion.v3_0 ?
-                    AppearanceModule.of(version).getNamespaceURI() :
-                    CoreModule.of(version).getNamespaceURI(), "appearanceMember");
+            return bufferMember(feature, version != CityGMLVersion.v3_0
+                    ? AppearanceModule.of(version).getNamespaceURI()
+                    : CoreModule.of(version).getNamespaceURI(), "appearanceMember");
         } else if (version == CityGMLVersion.v3_0) {
             if (feature instanceof AbstractVersion) {
                 return bufferMember(feature, CoreModule.v3_0.getNamespaceURI(), "versionMember");

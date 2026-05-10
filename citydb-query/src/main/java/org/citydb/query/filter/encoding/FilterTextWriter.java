@@ -38,9 +38,9 @@ public class FilterTextWriter {
         if (expression != null) {
             WriterVisitor visitor = new WriterVisitor();
             expression.accept(visitor);
-            return stripBrackets ?
-                    stripBrackets(visitor.get()) :
-                    visitor.get();
+            return stripBrackets
+                    ? stripBrackets(visitor.get())
+                    : visitor.get();
         } else {
             return "";
         }
@@ -70,11 +70,11 @@ public class FilterTextWriter {
         public void visit(BBoxLiteral literal) {
             Coordinate lowerCorner = literal.getValue().getLowerCorner();
             Coordinate upperCorner = literal.getValue().getUpperCorner();
-            List<Double> coordinates = literal.getValue().getVertexDimension() == 2 ?
-                    List.of(lowerCorner.getX(), lowerCorner.getY(),
-                            upperCorner.getX(), upperCorner.getY()) :
-                    List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
-                            upperCorner.getX(), upperCorner.getY(), upperCorner.getZ());
+            List<Double> coordinates = literal.getValue().getVertexDimension() == 2
+                    ? List.of(lowerCorner.getX(), lowerCorner.getY(),
+                    upperCorner.getX(), upperCorner.getY())
+                    : List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
+                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ());
 
             builder.append(TextToken.BBOX)
                     .append("(")
@@ -125,9 +125,9 @@ public class FilterTextWriter {
 
         @Override
         public void visit(BooleanLiteral literal) {
-            builder.append(literal == BooleanLiteral.TRUE ?
-                    TextToken.TRUE :
-                    TextToken.FALSE);
+            builder.append(literal == BooleanLiteral.TRUE
+                    ? TextToken.TRUE
+                    : TextToken.FALSE);
         }
 
         @Override

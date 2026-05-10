@@ -29,9 +29,9 @@ public class Matrix2x2 extends Matrix {
         Objects.requireNonNull(matrix, "The matrix must not be null.");
         int rows = matrix.getRows();
         int columns = matrix.getColumns();
-        return new Matrix2x2(rows != 2 || columns != 2 ?
-                Matrix.identity(2, 2).setSubMatrix(0, Math.min(rows, 2) - 1, 0, Math.min(columns, 2) - 1, matrix) :
-                matrix);
+        return new Matrix2x2(rows != 2 || columns != 2
+                ? Matrix.identity(2, 2).setSubMatrix(0, Math.min(rows, 2) - 1, 0, Math.min(columns, 2) - 1, matrix)
+                : matrix);
     }
 
     public static Matrix2x2 ofRowMajor(List<Double> values) {

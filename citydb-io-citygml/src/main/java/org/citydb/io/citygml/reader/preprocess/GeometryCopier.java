@@ -207,9 +207,9 @@ public class GeometryCopier {
         @Override
         protected void deepCopy(GeometryReference src, GeometryReference dest, CopyContext context) {
             context.deepCopyFields(src, dest);
-            dest.setHref(dest.isSetReferencedObject() ?
-                    "#" + dest.getReferencedObject().getId() :
-                    null);
+            dest.setHref(dest.isSetReferencedObject()
+                    ? "#" + dest.getReferencedObject().getId()
+                    : null);
         }
     }
 
@@ -217,9 +217,9 @@ public class GeometryCopier {
         @Override
         protected void deepCopy(RingReference src, RingReference dest, CopyContext context) {
             context.deepCopyFields(src, dest);
-            dest.setHref(dest.isSetReferencedObject() ?
-                    "#" + dest.getReferencedObject().getId() :
-                    null);
+            dest.setHref(dest.isSetReferencedObject()
+                    ? "#" + dest.getReferencedObject().getId()
+                    : null);
         }
     }
 }

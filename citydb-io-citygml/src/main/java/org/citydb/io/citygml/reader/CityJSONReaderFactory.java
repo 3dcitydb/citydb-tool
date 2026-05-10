@@ -51,10 +51,10 @@ public class CityJSONReaderFactory {
                     .withIdCreator(new IdCreator(seed));
 
             String encoding = options.getEncoding().orElse(null);
-            CityJSONReader reader = encoding != null ?
-                    inputFactory.createCityJSONReader(new BufferedReader(
-                            new InputStreamReader(file.openStream(), encoding))) :
-                    inputFactory.createCityJSONReader(file.openStream());
+            CityJSONReader reader = encoding != null
+                    ? inputFactory.createCityJSONReader(new BufferedReader(
+                    new InputStreamReader(file.openStream(), encoding)))
+                    : inputFactory.createCityJSONReader(file.openStream());
             if (filter != null) {
                 reader = inputFactory.createFilteredCityJSONReader(reader, filter);
             }

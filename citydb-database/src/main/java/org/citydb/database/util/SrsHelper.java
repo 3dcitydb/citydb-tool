@@ -56,13 +56,13 @@ public abstract class SrsHelper {
     public SpatialReference getSpatialReference(int srid, String identifier) throws SrsException, SQLException {
         SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
         if (srid == databaseSrs.getSRID()) {
-            return databaseSrs.getIdentifier().equals(identifier) ?
-                    databaseSrs :
-                    SpatialReference.of(srid,
-                            databaseSrs.getType(),
-                            databaseSrs.getName(),
-                            identifier,
-                            databaseSrs.getWKT());
+            return databaseSrs.getIdentifier().equals(identifier)
+                    ? databaseSrs
+                    : SpatialReference.of(srid,
+                    databaseSrs.getType(),
+                    databaseSrs.getName(),
+                    identifier,
+                    databaseSrs.getWKT());
         } else {
             try (Connection connection = adapter.getPool().getConnection()) {
                 SpatialReference srs = getSpatialReference(srid, identifier, connection);
@@ -150,16 +150,16 @@ public abstract class SrsHelper {
 
     private int parseUrnSchema(String identifier) throws SrsException {
         Matcher matcher = URN_PATTERN.matcher(identifier);
-        return matcher.matches() ?
-                parseCode(matcher.group(2), identifier) :
-                0;
+        return matcher.matches()
+                ? parseCode(matcher.group(2), identifier)
+                : 0;
     }
 
     private int parseEpsgSchema(String identifier) throws SrsException {
         Matcher matcher = EPSG_PATTERN.matcher(identifier);
-        return matcher.matches() ?
-                parseCode(matcher.group(1), identifier) :
-                0;
+        return matcher.matches()
+                ? parseCode(matcher.group(1), identifier)
+                : 0;
     }
 
     private int parseCode(String code, String identifier) throws SrsException {

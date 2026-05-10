@@ -36,17 +36,17 @@ public class DuplicateDeleter {
     void deleteDuplicates(Map<Long, Boolean> databaseIds) throws ExecutionException {
         AtomicLong counter = new AtomicLong();
         Deleter deleter = Deleter.newInstance()
-                .setTransactionMode(preview ?
-                        Deleter.TransactionMode.AUTO_ROLLBACK :
-                        Deleter.TransactionMode.AUTO_COMMIT);
+                .setTransactionMode(preview
+                        ? Deleter.TransactionMode.AUTO_ROLLBACK
+                        : Deleter.TransactionMode.AUTO_COMMIT);
 
         try {
             try {
                 deleter.startSession(adapter, new DeleteOptions()
                         .setReasonForUpdate("Duplicate deletion")
-                        .setMode(options.getMode() == ImportMode.TERMINATE_EXISTING ?
-                                DeleteMode.TERMINATE :
-                                DeleteMode.DELETE));
+                        .setMode(options.getMode() == ImportMode.TERMINATE_EXISTING
+                                ? DeleteMode.TERMINATE
+                                : DeleteMode.DELETE));
 
                 Iterator<Long> iterator = databaseIds.keySet().iterator();
                 while (shouldRun && iterator.hasNext()) {

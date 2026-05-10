@@ -51,9 +51,9 @@ public class TimePositionAdapter implements ModelBuilder<TimePosition, Attribute
     @Override
     public void serialize(Attribute source, TimePosition target, ModelSerializerHelper helper) throws ModelSerializeException {
         source.getTimeStamp().ifPresent(timePosition -> target.setValue(
-                timePosition.toLocalDate().isEqual(TimeHelper.LOCAL_TIME_BASE_DATE.toLocalDate()) ?
-                        new ClockTime(timePosition.toOffsetTime()) :
-                        new DateAndTime(timePosition)));
+                timePosition.toLocalDate().isEqual(TimeHelper.LOCAL_TIME_BASE_DATE.toLocalDate())
+                        ? new ClockTime(timePosition.toOffsetTime())
+                        : new DateAndTime(timePosition)));
     }
 
     private void logOrThrowInvalidTimePosition(TimePosition source, Object value, ModelBuilderHelper helper) throws ModelBuildException {

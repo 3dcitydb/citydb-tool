@@ -34,9 +34,9 @@ public class PropertyRef implements GeometryExpression, NumericExpression, Chara
 
     public static PropertyRef of(String name, String namespace) {
         int index = name != null ? name.indexOf("::") : -1;
-        return index != -1 ?
-                new PropertyRef(PrefixedName.of(name.substring(0, index), namespace), name.substring(index + 2)) :
-                new PropertyRef(PrefixedName.of(name, namespace), null);
+        return index != -1
+                ? new PropertyRef(PrefixedName.of(name.substring(0, index), namespace), name.substring(index + 2))
+                : new PropertyRef(PrefixedName.of(name, namespace), null);
     }
 
     public static PropertyRef of(String name) throws FilterParseException {

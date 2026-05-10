@@ -47,9 +47,9 @@ public enum Precedence {
     }
 
     static Precedence of(TextToken token) {
-        return token != null ?
-                values.getOrDefault(token, Precedence.UNDEFINED) :
-                Precedence.UNDEFINED;
+        return token != null
+                ? values.getOrDefault(token, Precedence.UNDEFINED)
+                : Precedence.UNDEFINED;
     }
 
     boolean isHigher(Precedence precedence) {

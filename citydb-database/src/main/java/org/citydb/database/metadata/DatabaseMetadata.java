@@ -92,8 +92,8 @@ public class DatabaseMetadata {
     }
 
     public Optional<DatabaseProperty> getProperty(String id) {
-        return id != null ?
-                Optional.ofNullable(properties.get(id.toLowerCase(Locale.ROOT))) :
-                Optional.empty();
+        return id != null
+                ? Optional.ofNullable(properties.get(id.toLowerCase(Locale.ROOT)))
+                : Optional.empty();
     }
 }

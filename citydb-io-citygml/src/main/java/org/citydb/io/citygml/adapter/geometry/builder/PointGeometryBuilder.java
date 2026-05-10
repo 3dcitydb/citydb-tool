@@ -33,9 +33,9 @@ public class PointGeometryBuilder extends GeometryBuilder {
                         || source instanceof SimpleMultiPoint) {
                     return MultiPoint.of(processor.points);
                 } else {
-                    return processor.points.size() == 1 ?
-                            processor.points.get(0) :
-                            MultiPoint.of(processor.points);
+                    return processor.points.size() == 1
+                            ? processor.points.get(0)
+                            : MultiPoint.of(processor.points);
                 }
             } else {
                 return null;

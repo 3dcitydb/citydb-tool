@@ -59,9 +59,9 @@ public class GeoJSONParser {
         }
 
         if (!rings.isEmpty()) {
-            return rings.size() == 1 ?
-                    Polygon.of(rings.get(0)) :
-                    Polygon.of(rings.get(0), rings.subList(1, rings.size()));
+            return rings.size() == 1
+                    ? Polygon.of(rings.get(0))
+                    : Polygon.of(rings.get(0), rings.subList(1, rings.size()));
         } else {
             throw new FilterParseException("Found empty ring array for polygon geometry.");
         }
@@ -135,9 +135,9 @@ public class GeoJSONParser {
         if (array.size() > 1) {
             double x = readNumber(array.get(0));
             double y = readNumber(array.get(1));
-            return array.size() > 2 ?
-                    Coordinate.of(x, y, readNumber(array.get(2))) :
-                    Coordinate.of(x, y);
+            return array.size() > 2
+                    ? Coordinate.of(x, y, readNumber(array.get(2)))
+                    : Coordinate.of(x, y);
         } else {
             throw new FilterParseException("Found invalid coordinate '" + array + "'.");
         }

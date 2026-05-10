@@ -139,13 +139,13 @@ public class SqlContextBuilder {
     private Table build(GenericAttribute attribute, Select select, Table table, boolean useLateral) throws QueryBuildException {
         String fromColumn = "id";
         Table toTable = helper.getTable(org.citydb.database.schema.Table.PROPERTY);
-        String toColumn = helper.matches(org.citydb.database.schema.Table.PROPERTY, table) ?
-                "parent_id" :
-                "feature_id";
+        String toColumn = helper.matches(org.citydb.database.schema.Table.PROPERTY, table)
+                ? "parent_id"
+                : "feature_id";
 
-        Table joinTable = useLateral ?
-                buildLateralQuery(table, fromColumn, toTable, toColumn) :
-                toTable;
+        Table joinTable = useLateral
+                ? buildLateralQuery(table, fromColumn, toTable, toColumn)
+                : toTable;
 
         Join join = Join.of(joinType, joinTable, toColumn, Operators.EQUAL_TO, table.column(fromColumn));
         List<BooleanExpression> conditions = List.of(
@@ -182,9 +182,9 @@ public class SqlContextBuilder {
     }
 
     private Table build(org.citydb.database.schema.Join source, Table fromTable, Table toTable, Select select, Node node, boolean useLateral, List<BooleanExpression> predicates) throws QueryBuildException {
-        Table joinTable = useLateral ?
-                buildLateralQuery(fromTable, source.getFromColumn(), toTable, source.getToColumn()) :
-                toTable;
+        Table joinTable = useLateral
+                ? buildLateralQuery(fromTable, source.getFromColumn(), toTable, source.getToColumn())
+                : toTable;
 
         Join join = Join.of(joinType, joinTable, source.getToColumn(), Operators.EQUAL_TO,
                 fromTable.column(source.getFromColumn()));
@@ -218,9 +218,9 @@ public class SqlContextBuilder {
                             SchemaMapping.TARGET_OBJECTCLASS_ID + " token.");
                 }
             } else {
-                BooleanExpression expression = condition.getValue().equalsIgnoreCase("null") ?
-                        Operators.isNull(toTable.column(condition.getColumn().getName())) :
-                        Operators.eq(toTable.column(condition.getColumn().getName()), getLiteral(condition));
+                BooleanExpression expression = condition.getValue().equalsIgnoreCase("null")
+                        ? Operators.isNull(toTable.column(condition.getColumn().getName()))
+                        : Operators.eq(toTable.column(condition.getColumn().getName()), getLiteral(condition));
                 if (useLateral) {
                     getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
                 } else {

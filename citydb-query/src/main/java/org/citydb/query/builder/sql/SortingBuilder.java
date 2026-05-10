@@ -48,9 +48,9 @@ public class SortingBuilder {
                 "' cannot be used as sort expression of a sortBy operation.");
 
         if (sortExpression.getExpression() instanceof Selection<?> selection) {
-            return OrderBy.of(selection, sortBy.getSortOrder() == SortOrder.DESC ?
-                    OrderBy.DESCENDING :
-                    OrderBy.ASCENDING);
+            return OrderBy.of(selection, sortBy.getSortOrder() == SortOrder.DESC
+                    ? OrderBy.DESCENDING
+                    : OrderBy.ASCENDING);
         } else {
             throw new QueryBuildException("Failed to build sortBy operation.");
         }

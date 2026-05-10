@@ -82,9 +82,9 @@ public class FilterBuilder {
             return build(literal, negate);
         } else if (expression instanceof PropertyRef propertyRef) {
             BuildResult result = BuildResult.of(propertyRef);
-            return resolveValue ?
-                    result.update(helper.getContextBuilder().build(propertyRef, select, context, true)) :
-                    result;
+            return resolveValue
+                    ? result.update(helper.getContextBuilder().build(propertyRef, select, context, true))
+                    : result;
         } else {
             throw new QueryBuildException("Unsupported filter expression.");
         }
@@ -94,9 +94,9 @@ public class FilterBuilder {
         if (literal instanceof org.citydb.query.filter.literal.BooleanLiteral booleanLiteral) {
             return BuildResult.of(Placeholder.of(booleanLiteral.getValue() ^ negate), Type.BOOLEAN);
         } else if (literal instanceof NumericLiteral numericLiteral) {
-            return numericLiteral.isInteger() ?
-                    BuildResult.of(Placeholder.of(numericLiteral.intValue()), Type.INTEGER) :
-                    BuildResult.of(Placeholder.of(numericLiteral.doubleValue()), Type.DOUBLE);
+            return numericLiteral.isInteger()
+                    ? BuildResult.of(Placeholder.of(numericLiteral.intValue()), Type.INTEGER)
+                    : BuildResult.of(Placeholder.of(numericLiteral.doubleValue()), Type.DOUBLE);
         } else if (literal instanceof StringLiteral stringLiteral) {
             return BuildResult.of(Placeholder.of(stringLiteral.getValue()), Type.STRING);
         } else if (literal instanceof TimestampLiteral timestampLiteral) {

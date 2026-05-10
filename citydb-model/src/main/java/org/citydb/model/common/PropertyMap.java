@@ -103,9 +103,9 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
     @SuppressWarnings("unchecked")
     public <R extends Property<?>> Optional<R> getFirst(Name name, Class<R> type) {
         Optional<T> result = getFirst(name);
-        return result.isPresent() && type.isInstance(result.get()) ?
-                (Optional<R>) result :
-                Optional.empty();
+        return result.isPresent() && type.isInstance(result.get())
+                ? (Optional<R>) result
+                : Optional.empty();
     }
 
     public boolean containsNamespace(String namespace) {
@@ -185,9 +185,9 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
 
     public Optional<T> removeAndGetFirst(Name name) {
         List<T> elements = remove(name);
-        return !elements.isEmpty() ?
-                Optional.ofNullable(elements.get(0)) :
-                Optional.empty();
+        return !elements.isEmpty()
+                ? Optional.ofNullable(elements.get(0))
+                : Optional.empty();
     }
 
     public Optional<T> removeAndGetFirst(Name name, Name dataType) {

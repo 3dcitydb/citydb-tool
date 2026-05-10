@@ -68,9 +68,9 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildSummary(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
-        Set<String> candidates = options.getFeatureScope() == FeatureScope.ACTIVE ?
-                report.getActiveFeatures().keySet() :
-                report.getFeatures();
+        Set<String> candidates = options.getFeatureScope() == FeatureScope.ACTIVE
+                ? report.getActiveFeatures().keySet()
+                : report.getFeatures();
         List<String> topLevelFeatures = candidates.stream()
                 .filter(name -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(name))
                         .isTopLevel())
@@ -244,17 +244,17 @@ public class ReportJsonBuilder {
 
     private List<Double> convertExtent(Envelope extent, int decimalPlaces) {
         if (extent != null && !extent.isEmpty()) {
-            return extent.getVertexDimension() == 2 ?
-                    List.of(round(extent.getLowerCorner().getX(), decimalPlaces),
-                            round(extent.getLowerCorner().getY(), decimalPlaces),
-                            round(extent.getUpperCorner().getX(), decimalPlaces),
-                            round(extent.getUpperCorner().getY(), decimalPlaces)) :
-                    List.of(round(extent.getLowerCorner().getX(), decimalPlaces),
-                            round(extent.getLowerCorner().getY(), decimalPlaces),
-                            round(extent.getLowerCorner().getZ(), decimalPlaces),
-                            round(extent.getUpperCorner().getX(), decimalPlaces),
-                            round(extent.getUpperCorner().getY(), decimalPlaces),
-                            round(extent.getUpperCorner().getZ(), decimalPlaces));
+            return extent.getVertexDimension() == 2
+                    ? List.of(round(extent.getLowerCorner().getX(), decimalPlaces),
+                    round(extent.getLowerCorner().getY(), decimalPlaces),
+                    round(extent.getUpperCorner().getX(), decimalPlaces),
+                    round(extent.getUpperCorner().getY(), decimalPlaces))
+                    : List.of(round(extent.getLowerCorner().getX(), decimalPlaces),
+                    round(extent.getLowerCorner().getY(), decimalPlaces),
+                    round(extent.getLowerCorner().getZ(), decimalPlaces),
+                    round(extent.getUpperCorner().getX(), decimalPlaces),
+                    round(extent.getUpperCorner().getY(), decimalPlaces),
+                    round(extent.getUpperCorner().getZ(), decimalPlaces));
         } else {
             return Collections.emptyList();
         }

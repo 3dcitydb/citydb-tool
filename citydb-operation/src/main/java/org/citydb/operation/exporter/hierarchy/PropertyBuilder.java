@@ -48,10 +48,10 @@ public class PropertyBuilder {
     private FeatureProperty buildFeatureProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         Feature feature = hierarchy.getFeature(propertyStub.getFeatureId());
         if (feature != null) {
-            return propertyStub.getRelationType() == RelationType.RELATES || helper.lookupAndPut(feature) ?
-                    FeatureProperty.of(propertyStub.getName(), feature.getOrCreateObjectId(),
-                            propertyStub.getRelationType()) :
-                    FeatureProperty.of(propertyStub.getName(), feature, propertyStub.getRelationType());
+            return propertyStub.getRelationType() == RelationType.RELATES || helper.lookupAndPut(feature)
+                    ? FeatureProperty.of(propertyStub.getName(), feature.getOrCreateObjectId(),
+                    propertyStub.getRelationType())
+                    : FeatureProperty.of(propertyStub.getName(), feature, propertyStub.getRelationType());
         }
 
         return null;
@@ -59,18 +59,18 @@ public class PropertyBuilder {
 
     private GeometryProperty buildGeometryProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         Geometry<?> geometry = hierarchy.getGeometry(propertyStub.getGeometryId());
-        return geometry != null ?
-                GeometryProperty.of(propertyStub.getName(), geometry)
-                        .setLod(propertyStub.getLod()) :
-                null;
+        return geometry != null
+                ? GeometryProperty.of(propertyStub.getName(), geometry)
+                  .setLod(propertyStub.getLod())
+                : null;
     }
 
     private ImplicitGeometryProperty buildImplicitGeometryProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         ImplicitGeometry implicitGeometry = hierarchy.getImplicitGeometry(propertyStub.getImplicitGeometryId());
         if (implicitGeometry != null) {
-            ImplicitGeometryProperty property = helper.lookupAndPut(implicitGeometry) ?
-                    ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry.getOrCreateObjectId()) :
-                    ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
+            ImplicitGeometryProperty property = helper.lookupAndPut(implicitGeometry)
+                    ? ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry.getOrCreateObjectId())
+                    : ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
 
             if (propertyStub.getArrayValue() != null) {
                 property.setTransformationMatrix(propertyStub.getArrayValue().getValues().stream()
@@ -88,17 +88,17 @@ public class PropertyBuilder {
 
     private AppearanceProperty buildAppearanceProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         Appearance appearance = hierarchy.getAppearance(propertyStub.getAppearanceId());
-        return appearance != null ?
-                AppearanceProperty.of(propertyStub.getName(), appearance) :
-                null;
+        return appearance != null
+                ? AppearanceProperty.of(propertyStub.getName(), appearance)
+                : null;
     }
 
     private AddressProperty buildAddressProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
         Address address = hierarchy.getAddress(propertyStub.getAddressId());
         if (address != null) {
-            return helper.lookupAndPut(address) ?
-                    AddressProperty.of(propertyStub.getName(), address.getOrCreateObjectId()) :
-                    AddressProperty.of(propertyStub.getName(), address);
+            return helper.lookupAndPut(address)
+                    ? AddressProperty.of(propertyStub.getName(), address.getOrCreateObjectId())
+                    : AddressProperty.of(propertyStub.getName(), address);
         }
 
         return null;

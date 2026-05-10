@@ -90,9 +90,9 @@ public class SchemaPathBuilder {
 
                 propertyRef.getFilter().ifPresent(child::setPredicate);
                 parent.child(child);
-                parent = propertyRef.getChild().isPresent() ?
-                        appendTarget(child, propertyRef.getChild().get()) :
-                        child;
+                parent = propertyRef.getChild().isPresent()
+                        ? appendTarget(child, propertyRef.getChild().get())
+                        : child;
             } while ((propertyRef = propertyRef.getChild().orElse(null)) != null);
         }
 
@@ -266,9 +266,9 @@ public class SchemaPathBuilder {
             }
         }
 
-        return target != null && getNode(childRef, parent, false) == null ?
-                parent.child(Node.of(target)) :
-                parent;
+        return target != null && getNode(childRef, parent, false) == null
+                ? parent.child(Node.of(target))
+                : parent;
     }
 
     private boolean isValidTarget(FeatureType featureType, Node node) {

@@ -19,10 +19,9 @@ public class PrefixedName extends Name {
     public static PrefixedName of(String name, String namespace) {
         int index = name != null ? name.indexOf(":") : -1;
         if (index != -1) {
-            return namespace == null
-                    || namespace.equals(Namespaces.EMPTY_NAMESPACE) ?
-                    new PrefixedName(name.substring(index + 1), null, name.substring(0, index)) :
-                    new PrefixedName(name.substring(index + 1), namespace, null);
+            return namespace == null || namespace.equals(Namespaces.EMPTY_NAMESPACE)
+                    ? new PrefixedName(name.substring(index + 1), null, name.substring(0, index))
+                    : new PrefixedName(name.substring(index + 1), namespace, null);
         } else {
             return new PrefixedName(name, namespace, null);
         }
@@ -60,8 +59,8 @@ public class PrefixedName extends Name {
     public String toString() {
         return prefix != null
                 && !prefix.isEmpty()
-                && getNamespace().equals(Namespaces.EMPTY_NAMESPACE) ?
-                prefix + ":" + getLocalName() :
-                super.toString();
+                && getNamespace().equals(Namespaces.EMPTY_NAMESPACE)
+                ? prefix + ":" + getLocalName()
+                : super.toString();
     }
 }

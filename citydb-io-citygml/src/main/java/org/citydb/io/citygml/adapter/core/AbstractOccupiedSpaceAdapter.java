@@ -67,9 +67,9 @@ public abstract class AbstractOccupiedSpaceAdapter<T extends AbstractOccupiedSpa
 
         if (isCityGML3 || geometrySupport.supportsLod3ImplicitRepresentation(version, target)) {
             ImplicitGeometryProperty lod3ImplicitRepresentation = source.getImplicitGeometries()
-                    .getFirst(helper.isUseLod4AsLod3() ?
-                            Name.of("lod4ImplicitRepresentation", Namespaces.DEPRECATED) :
-                            Name.of("lod3ImplicitRepresentation", Namespaces.CORE))
+                    .getFirst(helper.isUseLod4AsLod3()
+                            ? Name.of("lod4ImplicitRepresentation", Namespaces.DEPRECATED)
+                            : Name.of("lod3ImplicitRepresentation", Namespaces.CORE))
                     .orElse(null);
             if (lod3ImplicitRepresentation != null) {
                 target.setLod3ImplicitRepresentation(helper.getImplicitGeometryProperty(lod3ImplicitRepresentation,

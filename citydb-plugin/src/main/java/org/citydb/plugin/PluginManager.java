@@ -61,9 +61,9 @@ public class PluginManager {
             }
         }
 
-        return !urls.isEmpty() ?
-                load(URLClassLoader.newInstance(urls.toArray(URL[]::new), loader)) :
-                load(loader);
+        return !urls.isEmpty()
+                ? load(URLClassLoader.newInstance(urls.toArray(URL[]::new), loader))
+                : load(loader);
     }
 
     public PluginManager load(ClassLoader loader) {

@@ -99,9 +99,9 @@ public class DimensionScheme extends TilingScheme {
             try {
                 SpatialReference reference = adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(gridPoint)
                         .orElse(adapter.getDatabaseMetadata().getSpatialReference());
-                Point point = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID() ?
-                        adapter.getGeometryAdapter().transform(gridPoint) :
-                        gridPoint;
+                Point point = reference.getSRID() != adapter.getDatabaseMetadata().getSpatialReference().getSRID()
+                        ? adapter.getGeometryAdapter().transform(gridPoint)
+                        : gridPoint;
                 gridX = point.getCoordinate().getX();
                 gridY = point.getCoordinate().getY();
             } catch (GeometryException | SrsException | SQLException e) {
@@ -122,8 +122,8 @@ public class DimensionScheme extends TilingScheme {
     }
 
     private double getNearestNeighbor(double gridValue, double candidate, double offset) {
-        return gridValue >= candidate ?
-                gridValue - Math.ceil((gridValue - candidate) / offset) * offset :
-                gridValue + Math.floor((candidate - gridValue) / offset) * offset;
+        return gridValue >= candidate
+                ? gridValue - Math.ceil((gridValue - candidate) / offset) * offset
+                : gridValue + Math.floor((candidate - gridValue) / offset) * offset;
     }
 }

@@ -234,9 +234,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         LoggerManager manager = LoggerManager.getInstance();
         manager.logConsole()
                 .setLogLevel(logLevel.level)
-                .setLogPattern(logLevel.level.isMoreSpecificThan(Level.INFO) ?
-                        manager.logConsole().getLogPattern() + "%ex{0}" :
-                        manager.logConsole().getLogPattern())
+                .setLogPattern(logLevel.level.isMoreSpecificThan(Level.INFO)
+                        ? manager.logConsole().getLogPattern() + "%ex{0}"
+                        : manager.logConsole().getLogPattern())
                 .setEnabled(!quiet)
                 .reconfigure();
 
@@ -307,9 +307,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             }
         }
 
-        return pluginsDirectory != null ?
-                CliConstants.WORKING_DIR.resolve(pluginsDirectory) :
-                CliConstants.APP_HOME.resolve(CliConstants.PLUGINS_DIR);
+        return pluginsDirectory != null
+                ? CliConstants.WORKING_DIR.resolve(pluginsDirectory)
+                : CliConstants.APP_HOME.resolve(CliConstants.PLUGINS_DIR);
     }
 
     private void logException(Throwable e) {

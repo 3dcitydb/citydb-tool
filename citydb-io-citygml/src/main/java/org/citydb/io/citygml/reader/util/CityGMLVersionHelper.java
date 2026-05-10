@@ -39,12 +39,12 @@ public class CityGMLVersionHelper {
     }
 
     public CityGMLVersion getCityGMLVersion(Namespaces namespaces) {
-        return namespaces != null ?
-                namespaces.get().stream()
-                        .filter(CityGMLModules::isCityGMLNamespace)
-                        .map(versions::get)
-                        .filter(Objects::nonNull)
-                        .findFirst().orElse(null) :
-                null;
+        return namespaces != null
+                ? namespaces.get().stream()
+                  .filter(CityGMLModules::isCityGMLNamespace)
+                  .map(versions::get)
+                  .filter(Objects::nonNull)
+                  .findFirst().orElse(null)
+                : null;
     }
 }

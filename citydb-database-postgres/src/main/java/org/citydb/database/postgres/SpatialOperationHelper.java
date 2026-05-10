@@ -64,9 +64,9 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression intersects(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return adapter.hasSFCGALSupport() ?
-                Operators.eq(Function.of("st_3dintersects", cast(leftOperand), cast(rightOperand)), TRUE) :
-                build("st_intersects", leftOperand, rightOperand);
+        return adapter.hasSFCGALSupport()
+                ? Operators.eq(Function.of("st_3dintersects", cast(leftOperand), cast(rightOperand)), TRUE)
+                : build("st_intersects", leftOperand, rightOperand);
     }
 
     @Override
@@ -86,9 +86,9 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression dWithin(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
-        return adapter.hasSFCGALSupport() ?
-                Operators.eq(Function.of("st_3ddwithin", cast(leftOperand), cast(rightOperand), distance), TRUE) :
-                build(leftOperand, rightOperand, distance);
+        return adapter.hasSFCGALSupport()
+                ? Operators.eq(Function.of("st_3ddwithin", cast(leftOperand), cast(rightOperand), distance), TRUE)
+                : build(leftOperand, rightOperand, distance);
     }
 
     @Override
@@ -99,18 +99,18 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     private BooleanExpression build(String operationName, ScalarExpression leftOperand, ScalarExpression rightOperand) {
         BooleanExpression expression = Operators.eq(Function.of(operationName,
                 prepare(leftOperand), prepare(rightOperand)), TRUE);
-        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand) ?
-                Operators.and(bbox(leftOperand, rightOperand), expression) :
-                expression;
+        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand)
+                ? Operators.and(bbox(leftOperand, rightOperand), expression)
+                : expression;
     }
 
     private BooleanExpression build(ScalarExpression leftOperand, ScalarExpression rightOperand, ScalarExpression distance) {
         BooleanExpression dWithin = Operators.eq(Function.of("st_dwithin",
                 prepare(leftOperand), prepare(rightOperand), distance), TRUE);
-        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand) ?
-                Operators.and(bbox(leftOperand,
-                        Function.of("st_expand", Function.of("box2d", cast(rightOperand)), distance)), dWithin) :
-                dWithin;
+        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand)
+                ? Operators.and(bbox(leftOperand,
+                Function.of("st_expand", Function.of("box2d", cast(rightOperand)), distance)), dWithin)
+                : dWithin;
     }
 
     private ScalarExpression prepare(ScalarExpression expression) {
@@ -118,16 +118,16 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     }
 
     private ScalarExpression cast(ScalarExpression expression) {
-        return expression instanceof Placeholder ?
-                Cast.of(expression, "geometry") :
-                expression;
+        return expression instanceof Placeholder
+                ? Cast.of(expression, "geometry")
+                : expression;
     }
 
     private ScalarExpression normalize(ScalarExpression expression) {
         if (requiresNormalization(expression)) {
-            return adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 1)) < 0 ?
-                    Function.of("st_forcecollection", expression) :
-                    Function.of("citydb_pkg.normalize_polyhedral", expression);
+            return adapter.getDatabaseMetadata().getVersion().compareTo(Version.of(5, 1, 1)) < 0
+                    ? Function.of("st_forcecollection", expression)
+                    : Function.of("citydb_pkg.normalize_polyhedral", expression);
         } else {
             return expression;
         }

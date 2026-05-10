@@ -44,9 +44,9 @@ public class BoxParser {
         if (parts.length == dimension) {
             double x = getNumber(parts[0]);
             double y = getNumber(parts[1]);
-            return parts.length == 2 ?
-                    Coordinate.of(x, y) :
-                    Coordinate.of(x, y, getNumber(parts[2]));
+            return parts.length == 2
+                    ? Coordinate.of(x, y)
+                    : Coordinate.of(x, y, getNumber(parts[2]));
         } else {
             throw new GeometryException("Invalid dimension of box coordinate.");
         }

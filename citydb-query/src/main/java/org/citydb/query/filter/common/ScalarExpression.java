@@ -17,63 +17,63 @@ import java.util.List;
 public interface ScalarExpression extends Argument {
 
     default BinaryComparisonPredicate eq(Object operand) {
-        return Operators.eq(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.eq(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate ne(Object operand) {
-        return Operators.ne(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.ne(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate lt(Object operand) {
-        return Operators.lt(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.lt(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate nl(Object operand) {
-        return Operators.nl(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.nl(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate le(Object operand) {
-        return Operators.le(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.le(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate nle(Object operand) {
-        return Operators.nle(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.nle(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate gt(Object operand) {
-        return Operators.gt(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.gt(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate ng(Object operand) {
-        return Operators.ng(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.ng(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate ge(Object operand) {
-        return Operators.ge(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.ge(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default BinaryComparisonPredicate nge(Object operand) {
-        return Operators.nge(this, operand instanceof ScalarExpression expression ?
-                expression :
-                Literal.ofScalar(operand));
+        return Operators.nge(this, operand instanceof ScalarExpression expression
+                ? expression
+                : Literal.ofScalar(operand));
     }
 
     default In in(List<ScalarExpression> values) {
@@ -81,11 +81,11 @@ public interface ScalarExpression extends Argument {
     }
 
     default In in(Object... values) {
-        return in(values != null ?
-                Arrays.stream(values)
-                        .map(Literal::ofScalar)
-                        .toList() :
-                null);
+        return in(values != null
+                ? Arrays.stream(values)
+                  .map(Literal::ofScalar)
+                  .toList()
+                : null);
     }
 
     default In notIn(List<ScalarExpression> values) {
@@ -93,11 +93,11 @@ public interface ScalarExpression extends Argument {
     }
 
     default In notIn(Object... values) {
-        return notIn(values != null ?
-                Arrays.stream(values)
-                        .map(Literal::ofScalar)
-                        .toList() :
-                null);
+        return notIn(values != null
+                ? Arrays.stream(values)
+                  .map(Literal::ofScalar)
+                  .toList()
+                : null);
     }
 
     default IsNull isNull() {

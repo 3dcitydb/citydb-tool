@@ -144,13 +144,13 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
             }
         });
 
-        Envelope envelope = getVertexDimension() == 2 ?
-                Envelope.of(
-                        Coordinate.of(coordinates[0], coordinates[1]),
-                        Coordinate.of(coordinates[3], coordinates[4])) :
-                Envelope.of(
-                        Coordinate.of(coordinates[0], coordinates[1], coordinates[2]),
-                        Coordinate.of(coordinates[3], coordinates[4], coordinates[5]));
+        Envelope envelope = getVertexDimension() == 2
+                ? Envelope.of(
+                Coordinate.of(coordinates[0], coordinates[1]),
+                Coordinate.of(coordinates[3], coordinates[4]))
+                : Envelope.of(
+                Coordinate.of(coordinates[0], coordinates[1], coordinates[2]),
+                Coordinate.of(coordinates[3], coordinates[4], coordinates[5]));
 
         return envelope
                 .setSRID(srid)

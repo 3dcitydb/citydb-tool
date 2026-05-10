@@ -67,9 +67,9 @@ public class SqlContext {
     }
 
     List<BooleanExpression> getAndResetPredicates() {
-        List<BooleanExpression> predicates = this.predicates != null ?
-                this.predicates :
-                Collections.emptyList();
+        List<BooleanExpression> predicates = this.predicates != null
+                ? this.predicates
+                : Collections.emptyList();
         this.predicates = null;
         return predicates;
     }

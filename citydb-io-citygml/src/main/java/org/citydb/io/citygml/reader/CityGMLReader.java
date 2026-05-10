@@ -86,10 +86,10 @@ public class CityGMLReader implements FeatureReader {
         }
 
         CityGMLInputFactory inputFactory = factory.createInputFactory();
-        int threads = filter.needsSequentialProcessing() ? 1 :
-                options.getNumberOfThreads() > 0 ?
-                        options.getNumberOfThreads() :
-                        Math.max(2, Runtime.getRuntime().availableProcessors());
+        int threads = filter.needsSequentialProcessing()
+                ? 1 : options.getNumberOfThreads() > 0
+                      ? options.getNumberOfThreads()
+                      : Math.max(2, Runtime.getRuntime().availableProcessors());
         ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
         CountLatch countLatch = new CountLatch();
 

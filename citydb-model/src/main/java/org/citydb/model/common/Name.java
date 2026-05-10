@@ -51,8 +51,8 @@ public class Name implements Serializable {
 
     @Override
     public String toString() {
-        return namespace.equals(Namespaces.EMPTY_NAMESPACE) ?
-                localName :
-                "{" + namespace + "}" + localName;
+        return namespace.equals(Namespaces.EMPTY_NAMESPACE)
+                ? localName
+                : "{" + namespace + "}" + localName;
     }
 }

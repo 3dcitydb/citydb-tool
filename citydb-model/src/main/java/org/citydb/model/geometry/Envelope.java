@@ -192,9 +192,9 @@ public class Envelope extends Child implements SpatialObject {
     }
 
     public Envelope include(Coordinate coordinate) {
-        return coordinate.getDimension() == 2 ?
-                include(coordinate.getX(), coordinate.getY()) :
-                include(coordinate.getX(), coordinate.getY(), coordinate.getZ());
+        return coordinate.getDimension() == 2
+                ? include(coordinate.getX(), coordinate.getY())
+                : include(coordinate.getX(), coordinate.getY(), coordinate.getZ());
     }
 
     public Envelope include(Envelope envelope) {

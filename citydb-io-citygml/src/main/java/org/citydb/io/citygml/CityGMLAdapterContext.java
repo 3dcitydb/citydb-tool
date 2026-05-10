@@ -51,16 +51,16 @@ public class CityGMLAdapterContext {
     @SuppressWarnings("unchecked")
     public <T, R extends Child> ModelBuilder<T, R> getBuilder(Class<T> sourceType, Class<R> targetType) {
         BuilderInfo info = builders.get(sourceType.getName());
-        return info != null && targetType.isAssignableFrom(info.targetType) ?
-                (ModelBuilder<T, R>) info.builder :
-                null;
+        return info != null && targetType.isAssignableFrom(info.targetType)
+                ? (ModelBuilder<T, R>) info.builder
+                : null;
     }
 
     public <T, R extends ModelBuilder<T, ? extends Child>> R getBuilderByType(Class<T> sourceType, Class<R> builderType) {
         BuilderInfo info = builders.get(sourceType.getName());
-        return info != null && builderType.isInstance(info.builder) ?
-                builderType.cast(info.builder) :
-                null;
+        return info != null && builderType.isInstance(info.builder)
+                ? builderType.cast(info.builder)
+                : null;
     }
 
     @SuppressWarnings("unchecked")
@@ -70,9 +70,9 @@ public class CityGMLAdapterContext {
                 .get(name.getLocalName());
         return info != null
                 && sourceType.isAssignableFrom(info.sourceType)
-                && targetType.isAssignableFrom(info.targetType) ?
-                (ModelSerializer<T, R>) info.serializer :
-                null;
+                && targetType.isAssignableFrom(info.targetType)
+                ? (ModelSerializer<T, R>) info.serializer
+                : null;
     }
 
     public <T, R extends ModelSerializer<?, T>> R getSerializerByType(Name name, Class<T> sourceType, Class<R> serializerType) {
@@ -81,9 +81,9 @@ public class CityGMLAdapterContext {
                 .get(name.getLocalName());
         return info != null
                 && sourceType.isAssignableFrom(info.targetType)
-                && serializerType.isInstance(info.serializer) ?
-                serializerType.cast(info.serializer) :
-                null;
+                && serializerType.isInstance(info.serializer)
+                ? serializerType.cast(info.serializer)
+                : null;
     }
 
     @SuppressWarnings("rawtypes")

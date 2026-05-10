@@ -105,9 +105,9 @@ public class InputFiles {
 
     public List<InputFile> find() throws IOException {
         List<InputFile> inputFiles = new ArrayList<>();
-        String defaultPattern = !extensions.isEmpty() ?
-                "regex:(?i).*\\.((" + String.join(")|(", extensions) + ")|(zip)|(gz)|(gzip))$" :
-                "regex:.*";
+        String defaultPattern = !extensions.isEmpty()
+                ? "regex:(?i).*\\.((" + String.join(")|(", extensions) + ")|(zip)|(gz)|(gzip))$"
+                : "regex:.*";
 
         for (String pathOrGlobPattern : pathsOrGlobPatterns) {
             LinkedList<String> elements = parse(pathOrGlobPattern);
@@ -117,10 +117,10 @@ public class InputFiles {
                 detect(path, inputFiles, defaultPattern, true);
             } else {
                 // construct a pattern from the path and the truncated elements
-                String pattern = !elements.isEmpty() ?
-                        ("glob:" + path.toAbsolutePath().normalize() + File.separator +
-                                String.join(File.separator, elements)).replace("\\", "\\\\") :
-                        defaultPattern;
+                String pattern = !elements.isEmpty()
+                        ? ("glob:" + path.toAbsolutePath().normalize() + File.separator
+                           + String.join(File.separator, elements)).replace("\\", "\\\\")
+                        : defaultPattern;
 
                 // find files matching the pattern
                 PathMatcher matcher = FileSystems.getDefault().getPathMatcher(pattern);
@@ -174,9 +174,9 @@ public class InputFiles {
         } while (path == null && !file.isEmpty());
 
         // resolve path against the base directory
-        path = path == null ?
-                baseDirectory :
-                baseDirectory.resolve(path);
+        path = path == null
+                ? baseDirectory
+                : baseDirectory.resolve(path);
 
         elements.addFirst(path.toAbsolutePath().toString());
         return elements;

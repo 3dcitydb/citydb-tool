@@ -66,9 +66,9 @@ public enum Type {
             default -> null;
         };
 
-        return dataType != null ?
-                schemaMapping.getDataType(dataType.getName()) :
-                DataType.UNDEFINED;
+        return dataType != null
+                ? schemaMapping.getDataType(dataType.getName())
+                : DataType.UNDEFINED;
     }
 
     @Override

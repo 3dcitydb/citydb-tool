@@ -161,8 +161,8 @@ public class TilingHelper {
     private String getDefaultOutputFile(String file, Tile tile) {
         String suffix = "_" + tile.getColumn() + "_" + tile.getRow();
         int index = file.lastIndexOf('.');
-        return index > 0 ?
-                file.substring(0, index) + suffix + "." + file.substring(index + 1) :
-                file + suffix;
+        return index > 0
+                ? file.substring(0, index) + suffix + "." + file.substring(index + 1)
+                : file + suffix;
     }
 }

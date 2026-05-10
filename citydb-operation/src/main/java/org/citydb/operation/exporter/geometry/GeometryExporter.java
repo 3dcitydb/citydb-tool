@@ -77,9 +77,9 @@ public class GeometryExporter extends DatabaseExporter {
     }
 
     Geometry<?> doExport(long id, boolean isImplicit, ResultSet rs) throws ExportException, SQLException {
-        Object geometryObject = isImplicit ?
-                rs.getObject("implicit_geometry") :
-                rs.getObject("geometry");
+        Object geometryObject = isImplicit
+                ? rs.getObject("implicit_geometry")
+                : rs.getObject("geometry");
         JSONObject properties = getJSONObject(rs.getString("geometry_properties"));
         if (geometryObject != null && properties != null) {
             try {

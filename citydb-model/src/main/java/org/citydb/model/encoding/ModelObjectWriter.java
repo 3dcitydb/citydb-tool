@@ -146,9 +146,9 @@ public class ModelObjectWriter {
             }
 
             long id = counter.incrementAndGet();
-            Path targetFolder = useBuckets ?
-                    outputFolder.resolve(String.valueOf(Math.abs((id - 1) % buckets) + 1)) :
-                    outputFolder;
+            Path targetFolder = useBuckets
+                    ? outputFolder.resolve(String.valueOf(Math.abs((id - 1) % buckets) + 1))
+                    : outputFolder;
 
             try {
                 ensureCreated(targetFolder);

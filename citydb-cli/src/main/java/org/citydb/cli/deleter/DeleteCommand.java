@@ -174,16 +174,16 @@ public class DeleteCommand implements Command {
             }
         }
 
-        return shouldRun ?
-                CommandLine.ExitCode.OK :
-                CommandLine.ExitCode.SOFTWARE;
+        return shouldRun
+                ? CommandLine.ExitCode.OK
+                : CommandLine.ExitCode.SOFTWARE;
     }
 
     private Query getQuery(DeleteOptions deleteOptions) throws ExecutionException {
         try {
-            Query query = queryOptions != null ?
-                    queryOptions.getQuery() :
-                    deleteOptions.getQuery().orElseGet(Query::new);
+            Query query = queryOptions != null
+                    ? queryOptions.getQuery()
+                    : deleteOptions.getQuery().orElseGet(Query::new);
 
             return helper.setValidityFilter(query, deleteOptions.getValidityOptions().orElse(null));
         } catch (FilterParseException e) {

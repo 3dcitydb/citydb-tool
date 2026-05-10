@@ -84,16 +84,16 @@ public class NumericLiteral extends Literal<Number> implements NumericExpression
 
     @Override
     public Sign getSign() {
-        return value.doubleValue() < 0 ?
-                Sign.MINUS :
-                Sign.PLUS;
+        return value.doubleValue() < 0
+                ? Sign.MINUS
+                : Sign.PLUS;
     }
 
     @Override
     public NumericExpression negate() {
-        value = isInteger ?
-                -value.intValue() :
-                -value.doubleValue();
+        value = isInteger
+                ? -value.intValue()
+                : -value.doubleValue();
         return this;
     }
 

@@ -172,9 +172,9 @@ public class ModelSerializerHelper {
     public boolean isSupportedByCityGMLVersion(FeatureProperty property) {
         if (property != null) {
             Feature feature = property.getObject().orElse(null);
-            return feature != null ?
-                    isSupportedByCityGMLVersion(feature) :
-                    property.getReference().isPresent();
+            return feature != null
+                    ? isSupportedByCityGMLVersion(feature)
+                    : property.getReference().isPresent();
         } else {
             return false;
         }
@@ -417,9 +417,9 @@ public class ModelSerializerHelper {
 
     public ImplicitGeometry getImplicitGeometry(ImplicitGeometryProperty source, boolean force3D) throws ModelSerializeException {
         ImplicitGeometry target = geometryHelper.getImplicitGeometry(source, force3D);
-        return target != null ?
-                buildObject(source, target, getOrCreateSerializer(ImplicitGeometryAdapter.class)) :
-                null;
+        return target != null
+                ? buildObject(source, target, getOrCreateSerializer(ImplicitGeometryAdapter.class))
+                : null;
     }
 
     public ImplicitGeometry getImplicitGeometry(ImplicitGeometryProperty source) throws ModelSerializeException {

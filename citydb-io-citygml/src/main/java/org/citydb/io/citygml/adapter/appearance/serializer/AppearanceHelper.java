@@ -114,9 +114,9 @@ public class AppearanceHelper {
             if (geometries.contains(ringId)) {
                 Surface<?> parent = k.getParent(Surface.class);
                 Geometry<?> root = parent.getRootGeometry();
-                String surfaceId = root instanceof TriangulatedSurface ?
-                        root.getOrCreateObjectId() :
-                        parent.getOrCreateObjectId();
+                String surfaceId = root instanceof TriangulatedSurface
+                        ? root.getOrCreateObjectId()
+                        : parent.getOrCreateObjectId();
                 textureCoordinates.computeIfAbsent(surfaceId, t -> new TexCoordList())
                         .getTextureCoordinates()
                         .add(new TextureCoordinates(getTextureCoordinates(v), "#" + ringId));

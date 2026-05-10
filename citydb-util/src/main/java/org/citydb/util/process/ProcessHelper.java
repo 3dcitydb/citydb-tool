@@ -217,9 +217,9 @@ public class ProcessHelper {
                 inTask.cancel(true);
             }
 
-            return exitCodeMapper != null ?
-                    exitCodeMapper.applyAsInt(process.exitValue()) :
-                    process.exitValue();
+            return exitCodeMapper != null
+                    ? exitCodeMapper.applyAsInt(process.exitValue())
+                    : process.exitValue();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ProcessException("Process helper was interrupted while running process.", e);

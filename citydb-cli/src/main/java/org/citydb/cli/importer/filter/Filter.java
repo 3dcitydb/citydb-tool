@@ -67,9 +67,9 @@ public class Filter implements org.citydb.io.reader.filter.Filter {
         long startIndex = options.getCountLimit().flatMap(CountLimit::getStartIndex).orElse(0L);
         long limit = options.getCountLimit().flatMap(CountLimit::getLimit).orElse(Long.MAX_VALUE);
 
-        return !predicates.isEmpty() || startIndex > 0 || limit < Long.MAX_VALUE ?
-                new Filter(predicates, startIndex, limit) :
-                Filter.ACCEPT_ALL;
+        return !predicates.isEmpty() || startIndex > 0 || limit < Long.MAX_VALUE
+                ? new Filter(predicates, startIndex, limit)
+                : Filter.ACCEPT_ALL;
     }
 
     public boolean isCountWithinLimit() {

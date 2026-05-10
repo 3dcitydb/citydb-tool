@@ -18,11 +18,11 @@ public class CountLimitOptions implements Option {
     private Long startIndex;
 
     public CountLimit getCountLimit() {
-        return limit != null || startIndex != null ?
-                new CountLimit()
-                        .setLimit(limit)
-                        .setStartIndex(startIndex) :
-                null;
+        return limit != null || startIndex != null
+                ? new CountLimit()
+                  .setLimit(limit)
+                  .setStartIndex(startIndex)
+                : null;
     }
 
     @Override

@@ -28,9 +28,9 @@ public class WKBWriter {
     }
 
     public String write(Geometry<?> geometry, boolean force3D) {
-        return geometry != null ?
-                write(geometry, force3D, new StringBuffer()).build() :
-                null;
+        return geometry != null
+                ? write(geometry, force3D, new StringBuffer()).build()
+                : null;
     }
 
     public byte[] writeBinary(Geometry<?> geometry) {
@@ -38,9 +38,9 @@ public class WKBWriter {
     }
 
     public byte[] writeBinary(Geometry<?> geometry, boolean force3D) {
-        return geometry != null ?
-                write(geometry, force3D, new ArrayBuffer()).build() :
-                null;
+        return geometry != null
+                ? write(geometry, force3D, new ArrayBuffer()).build()
+                : null;
     }
 
     private <T extends ByteBuffer> T write(Geometry<?> geometry, boolean force3D, T buffer) {
@@ -260,9 +260,9 @@ public class WKBWriter {
         int pos;
 
         ByteBuffer() {
-            indexes = WKBWriter.this.useBigEndian ?
-                    new int[]{0, 2, 0, 1, 2, 3, 4, 5, 6, 7} :
-                    new int[]{1, 6, 7, 6, 5, 4, 3, 2, 1, 0};
+            indexes = WKBWriter.this.useBigEndian
+                    ? new int[]{0, 2, 0, 1, 2, 3, 4, 5, 6, 7}
+                    : new int[]{1, 6, 7, 6, 5, 4, 3, 2, 1, 0};
         }
 
         abstract void allocate(int length);

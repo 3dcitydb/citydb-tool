@@ -81,9 +81,9 @@ public class BlobExporter {
 
     private OutputStream openStream(ExternalFile target) throws IOException {
         Optional<Path> path = target.getPath();
-        return path.isPresent() ?
-                Files.newOutputStream(path.get()) :
-                outputFile.newOutputStream(outputFile.resolve(target.getFileLocation()));
+        return path.isPresent()
+                ? Files.newOutputStream(path.get())
+                : outputFile.newOutputStream(outputFile.resolve(target.getFileLocation()));
     }
 
     public void close() throws ExportException, SQLException {

@@ -57,9 +57,9 @@ public class ChangelogHelper {
 
     public Geometry<?> getGeometry(Object geometryObject) throws ChangelogException {
         try {
-            return geometryObject != null ?
-                    adapter.getGeometryAdapter().getGeometry(geometryObject) :
-                    null;
+            return geometryObject != null
+                    ? adapter.getGeometryAdapter().getGeometry(geometryObject)
+                    : null;
         } catch (GeometryException e) {
             throw new ChangelogException("Failed to convert database geometry.", e);
         }

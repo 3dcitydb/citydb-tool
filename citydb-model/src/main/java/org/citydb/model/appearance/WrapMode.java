@@ -33,8 +33,8 @@ public enum WrapMode {
     }
 
     public static WrapMode fromDatabaseValue(String value) {
-        return value != null ?
-                modes.get(value.toLowerCase(Locale.ROOT)) :
-                null;
+        return value != null
+                ? modes.get(value.toLowerCase(Locale.ROOT))
+                : null;
     }
 }

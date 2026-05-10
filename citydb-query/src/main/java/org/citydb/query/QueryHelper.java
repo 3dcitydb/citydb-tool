@@ -35,9 +35,9 @@ public class QueryHelper {
     public static BooleanExpression validAt(OffsetDateTime timestamp, ValidityReference reference, boolean lenient) {
         PropertyRef from = PropertyRef.of(reference.from());
         PropertyRef to = PropertyRef.of(reference.to());
-        return Operators.and(lenient ?
-                        from.isNull().or(from.le(TimestampLiteral.of(timestamp))) :
-                        from.le(TimestampLiteral.of(timestamp)),
+        return Operators.and(lenient
+                        ? from.isNull().or(from.le(TimestampLiteral.of(timestamp)))
+                        : from.le(TimestampLiteral.of(timestamp)),
                 isValid(reference).or(to.gt(TimestampLiteral.of(timestamp))));
     }
 

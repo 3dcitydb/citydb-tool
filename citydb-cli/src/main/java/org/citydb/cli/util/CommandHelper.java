@@ -100,9 +100,9 @@ public class CommandHelper {
     }
 
     public ConnectionDetails getConnectionDetails(ConnectionOptions options, Config config) throws ExecutionException {
-        ConnectionDetails connectionDetails = options != null ?
-                options.toConnectionDetails() :
-                new ConnectionDetails();
+        ConnectionDetails connectionDetails = options != null
+                ? options.toConnectionDetails()
+                : new ConnectionDetails();
 
         if (config != null) {
             try {
@@ -153,11 +153,11 @@ public class CommandHelper {
             validity = QueryHelper.isValid(ValidityReference.DATABASE);
         }
 
-        return validity != null ?
-                query.setFilter(query.getFilter()
-                        .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
-                        .orElseGet(() -> Filter.of(validity))) :
-                query;
+        return validity != null
+                ? query.setFilter(query.getFilter()
+                                  .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
+                                  .orElseGet(() -> Filter.of(validity)))
+                : query;
     }
 
     public String getFormattedSql(SqlObject object, DatabaseAdapter adapter) {
@@ -249,9 +249,9 @@ public class CommandHelper {
 
     public synchronized void logException(Throwable e) {
         if (e instanceof ExecutionException) {
-            String message = e.getMessage() != null ?
-                    e.getMessage() :
-                    "An unexpected error has occurred during execution.";
+            String message = e.getMessage() != null
+                    ? e.getMessage()
+                    : "An unexpected error has occurred during execution.";
             logException(message, e.getCause());
         } else {
             logException("An unexpected " + e.getClass().getName() + " error has occurred during execution.", e);

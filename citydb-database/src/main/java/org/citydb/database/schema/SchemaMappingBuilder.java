@@ -272,9 +272,9 @@ public class SchemaMappingBuilder {
             }
         }
 
-        RelationType relationType = "core:FeatureProperty".equals(typeIdentifier) ?
-                getRelationType(propertyName, namespace, relationTypeName, adapter) :
-                null;
+        RelationType relationType = "core:FeatureProperty".equals(typeIdentifier)
+                ? getRelationType(propertyName, namespace, relationTypeName, adapter)
+                : null;
 
         return new Property(Name.of(propertyName, namespace), description, parentIndex,
                 valueObject != null ? buildValue(valueObject) : null,
@@ -394,9 +394,9 @@ public class SchemaMappingBuilder {
                     case "generalizesTo", "relatedTo" -> RelationType.RELATES;
                     default -> RelationType.CONTAINS;
                 };
-                case Namespaces.DYNAMIZER -> name.equals("sensorLocation") ?
-                        RelationType.RELATES :
-                        RelationType.CONTAINS;
+                case Namespaces.DYNAMIZER -> name.equals("sensorLocation")
+                        ? RelationType.RELATES
+                        : RelationType.CONTAINS;
                 case Namespaces.TRANSPORTATION -> switch (name) {
                     case "predecessor", "successor" -> RelationType.RELATES;
                     default -> RelationType.CONTAINS;

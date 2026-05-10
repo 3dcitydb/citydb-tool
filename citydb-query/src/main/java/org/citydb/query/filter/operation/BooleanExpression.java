@@ -10,9 +10,9 @@ import org.citydb.query.filter.common.Argument;
 public interface BooleanExpression extends Argument {
 
     default BinaryBooleanPredicate and(BooleanExpression operand) {
-        return this instanceof BinaryBooleanPredicate predicate ?
-                predicate.fluentAnd(operand) :
-                Operators.and(this, operand);
+        return this instanceof BinaryBooleanPredicate predicate
+                ? predicate.fluentAnd(operand)
+                : Operators.and(this, operand);
     }
 
     default BinaryBooleanPredicate andNot(BooleanExpression operand) {
@@ -20,9 +20,9 @@ public interface BooleanExpression extends Argument {
     }
 
     default BinaryBooleanPredicate or(BooleanExpression operand) {
-        return this instanceof BinaryBooleanPredicate predicate ?
-                predicate.fluentOr(operand) :
-                Operators.or(this, operand);
+        return this instanceof BinaryBooleanPredicate predicate
+                ? predicate.fluentOr(operand)
+                : Operators.or(this, operand);
     }
 
     default BinaryBooleanPredicate orNot(BooleanExpression operand) {

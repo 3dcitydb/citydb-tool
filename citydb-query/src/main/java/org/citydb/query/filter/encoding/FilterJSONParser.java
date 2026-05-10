@@ -39,9 +39,9 @@ public class FilterJSONParser {
 
     public Expression parse(Object json) throws FilterParseException {
         if (json != null) {
-            return json instanceof String text && JSON.isValid(text) ?
-                    readExpression(JSON.parse(text)) :
-                    readExpression(json);
+            return json instanceof String text && JSON.isValid(text)
+                    ? readExpression(JSON.parse(text))
+                    : readExpression(json);
         } else {
             return null;
         }
@@ -49,9 +49,9 @@ public class FilterJSONParser {
 
     public <T extends Expression> T parse(Object json, Class<T> type) throws FilterParseException {
         Expression expression = parse(json);
-        return type.isInstance(expression) ?
-                type.cast(expression) :
-                null;
+        return type.isInstance(expression)
+                ? type.cast(expression)
+                : null;
     }
 
     private Expression readExpression(Object json) throws FilterParseException {
@@ -91,9 +91,9 @@ public class FilterJSONParser {
             String property = object.getString(JSONToken.PROPERTY.value());
 
             if (op != null) {
-                return readOperation(op, args instanceof JSONArray array ?
-                        array :
-                        new JSONArray());
+                return readOperation(op, args instanceof JSONArray array
+                        ? array
+                        : new JSONArray());
             } else if (date != null) {
                 return readDateLiteral(date);
             } else if (timestamp != null) {
@@ -170,9 +170,9 @@ public class FilterJSONParser {
     private BooleanExpression readNotPredicate(JSONArray args) throws FilterParseException {
         if (args.size() == 1) {
             BooleanExpression booleanExpression = readExpression(args.get(0), BooleanExpression.class);
-            return booleanExpression instanceof Predicate predicate ?
-                    predicate.negate() :
-                    Not.of(booleanExpression);
+            return booleanExpression instanceof Predicate predicate
+                    ? predicate.negate()
+                    : Not.of(booleanExpression);
         } else {
             throw new FilterParseException("A NOT predicate requires one operand.");
         }

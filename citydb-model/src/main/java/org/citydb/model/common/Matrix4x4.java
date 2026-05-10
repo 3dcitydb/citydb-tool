@@ -29,9 +29,9 @@ public class Matrix4x4 extends Matrix {
         Objects.requireNonNull(matrix, "The matrix must not be null.");
         int rows = matrix.getRows();
         int columns = matrix.getColumns();
-        return new Matrix4x4(rows != 4 || columns != 4 ?
-                Matrix.identity(4, 4).setSubMatrix(0, Math.min(rows, 4) - 1, 0, Math.min(columns, 4) - 1, matrix) :
-                matrix);
+        return new Matrix4x4(rows != 4 || columns != 4
+                ? Matrix.identity(4, 4).setSubMatrix(0, Math.min(rows, 4) - 1, 0, Math.min(columns, 4) - 1, matrix)
+                : matrix);
     }
 
     public static Matrix4x4 ofRowMajor(List<Double> values) {

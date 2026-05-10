@@ -76,9 +76,9 @@ public class CityGMLPreprocessor {
 
     public CityGMLPreprocessor resolveCrossLodReferences(boolean resolveCrossLodReferences) {
         this.resolveCrossLodReferences = resolveCrossLodReferences;
-        crossLodResolver.setMode(resolveCrossLodReferences ?
-                CrossLodReferenceResolver.Mode.RESOLVE :
-                CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
+        crossLodResolver.setMode(resolveCrossLodReferences
+                ? CrossLodReferenceResolver.Mode.RESOLVE
+                : CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
         return this;
     }
 
@@ -98,9 +98,9 @@ public class CityGMLPreprocessor {
 
     public void processGlobalObjects(InputFile file, CityGMLReaderFactory factory) throws ReadException {
         CityGMLInputFactory inputFactory = factory.createInputFactory();
-        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(numberOfThreads > 0 ?
-                numberOfThreads :
-                Math.max(2, Runtime.getRuntime().availableProcessors()));
+        ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(numberOfThreads > 0
+                ? numberOfThreads
+                : Math.max(2, Runtime.getRuntime().availableProcessors()));
         CountLatch countLatch = new CountLatch();
 
         try {

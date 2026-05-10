@@ -80,9 +80,9 @@ public class Tokenizer {
     }
 
     private Token getToken(int index) {
-        return index >= 0 && index < tokens.size() ?
-                tokens.get(index) :
-                Token.EOF;
+        return index >= 0 && index < tokens.size()
+                ? tokens.get(index)
+                : Token.EOF;
     }
 
     private int indexOf(Token token) {
@@ -276,12 +276,12 @@ public class Tokenizer {
         try {
             int token = tokenizer.nextToken();
             if (token != StreamTokenizer.TT_EOF) {
-                TextToken textToken = tokenizer.ttype == StreamTokenizer.TT_WORD ?
-                        TextToken.of(tokenizer.sval, TextToken.IDENTIFIER) :
-                        TextToken.of(String.valueOf((char) token), TextToken.IDENTIFIER);
-                String value = tokenizer.sval != null ?
-                        tokenizer.sval :
-                        textToken.value();
+                TextToken textToken = tokenizer.ttype == StreamTokenizer.TT_WORD
+                        ? TextToken.of(tokenizer.sval, TextToken.IDENTIFIER)
+                        : TextToken.of(String.valueOf((char) token), TextToken.IDENTIFIER);
+                String value = tokenizer.sval != null
+                        ? tokenizer.sval
+                        : textToken.value();
 
                 return Token.of(textToken, value);
             } else {

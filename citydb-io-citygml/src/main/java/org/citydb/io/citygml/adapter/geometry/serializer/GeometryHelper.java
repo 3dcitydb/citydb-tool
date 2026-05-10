@@ -245,9 +245,9 @@ public class GeometryHelper {
                 ImplicitGeometry target = new ImplicitGeometry();
                 Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
                 if (geometry != null) {
-                    target.setRelativeGeometry(helper.lookupAndPut(implicitGeometry) ?
-                            new GeometryProperty<>("#" + geometry.getOrCreateObjectId()) :
-                            new GeometryProperty<>(getGeometry(geometry, force3D)));
+                    target.setRelativeGeometry(helper.lookupAndPut(implicitGeometry)
+                            ? new GeometryProperty<>("#" + geometry.getOrCreateObjectId())
+                            : new GeometryProperty<>(getGeometry(geometry, force3D)));
                 } else {
                     target.setLibraryObject(implicitGeometry.getLibraryObject()
                             .map(ExternalFile::getFileLocation)
@@ -262,21 +262,21 @@ public class GeometryHelper {
     }
 
     private PointProperty getPointProperty(org.citydb.model.geometry.Point source, int dimension) {
-        return helper.lookupAndPut(source) ?
-                new PointProperty("#" + source.getOrCreateObjectId()) :
-                new PointProperty(getPoint(source, dimension));
+        return helper.lookupAndPut(source)
+                ? new PointProperty("#" + source.getOrCreateObjectId())
+                : new PointProperty(getPoint(source, dimension));
     }
 
     private CurveProperty getCurveProperty(org.citydb.model.geometry.LineString source, int dimension) {
-        return helper.lookupAndPut(source) ?
-                new CurveProperty("#" + source.getOrCreateObjectId()) :
-                new CurveProperty(getLineString(source, dimension));
+        return helper.lookupAndPut(source)
+                ? new CurveProperty("#" + source.getOrCreateObjectId())
+                : new CurveProperty(getLineString(source, dimension));
     }
 
     private SurfaceProperty getSurfaceProperty(org.citydb.model.geometry.Polygon source, int dimension) {
-        SurfaceProperty property = helper.lookupAndPut(source) ?
-                new SurfaceProperty("#" + source.getOrCreateObjectId()) :
-                new SurfaceProperty(getPolygon(source, dimension));
+        SurfaceProperty property = helper.lookupAndPut(source)
+                ? new SurfaceProperty("#" + source.getOrCreateObjectId())
+                : new SurfaceProperty(getPolygon(source, dimension));
 
         if (source.isReversed()) {
             OrientableSurface surface = new OrientableSurface(property);
@@ -288,9 +288,9 @@ public class GeometryHelper {
     }
 
     private SolidProperty getSolidProperty(org.citydb.model.geometry.Solid solid) {
-        return helper.lookupAndPut(solid) ?
-                new SolidProperty("#" + solid.getOrCreateObjectId()) :
-                new SolidProperty(getSolid(solid));
+        return helper.lookupAndPut(solid)
+                ? new SolidProperty("#" + solid.getOrCreateObjectId())
+                : new SolidProperty(getSolid(solid));
     }
 
     private Shell getShell(org.citydb.model.geometry.CompositeSurface source) {
@@ -304,9 +304,9 @@ public class GeometryHelper {
     }
 
     private Triangle getTriangle(org.citydb.model.geometry.Polygon source, int dimension) {
-        List<Coordinate> points = source.getExteriorRing().getPoints().size() > 4 ?
-                source.getExteriorRing().getPoints().subList(0, 4) :
-                source.getExteriorRing().getPoints();
+        List<Coordinate> points = source.getExteriorRing().getPoints().size() > 4
+                ? source.getExteriorRing().getPoints().subList(0, 4)
+                : source.getExteriorRing().getPoints();
 
         LinearRing ring = getLinearRing(points, dimension);
         source.getExteriorRing().getObjectId().ifPresent(ring::setId);

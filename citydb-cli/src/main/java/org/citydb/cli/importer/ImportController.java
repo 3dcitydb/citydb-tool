@@ -106,9 +106,9 @@ public abstract class ImportController implements Command {
 
     @Override
     public Integer call() throws ExecutionException {
-        return doImport() ?
-                CommandLine.ExitCode.OK :
-                CommandLine.ExitCode.SOFTWARE;
+        return doImport()
+                ? CommandLine.ExitCode.OK
+                : CommandLine.ExitCode.SOFTWARE;
     }
 
     protected boolean doImport() throws ExecutionException {
@@ -130,9 +130,9 @@ public abstract class ImportController implements Command {
 
         Filter filter = getFilter(importOptions, databaseManager.getAdapter());
         readOptions.setFilter(filter)
-                .setImplicitGeometryScope(filter == Filter.ACCEPT_ALL ?
-                        ImplicitGeometryScope.GLOBAL :
-                        ImplicitGeometryScope.TOP_LEVEL_FEATURE);
+                .setImplicitGeometryScope(filter == Filter.ACCEPT_ALL
+                        ? ImplicitGeometryScope.GLOBAL
+                        : ImplicitGeometryScope.TOP_LEVEL_FEATURE);
 
         ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
         ImportMode importMode = importOptions.getMode();
@@ -152,9 +152,9 @@ public abstract class ImportController implements Command {
         try (DuplicateController duplicateController = DuplicateController.of(importOptions,
                 databaseManager.getAdapter(), preview)) {
             Importer importer = Importer.newInstance()
-                    .setTransactionMode(preview ?
-                            Importer.TransactionMode.AUTO_ROLLBACK :
-                            Importer.TransactionMode.AUTO_COMMIT)
+                    .setTransactionMode(preview
+                            ? Importer.TransactionMode.AUTO_ROLLBACK
+                            : Importer.TransactionMode.AUTO_COMMIT)
                     .setImportLogger(importLogger);
 
             AtomicLong counter = new AtomicLong();
@@ -239,9 +239,9 @@ public abstract class ImportController implements Command {
     protected Filter getFilter(ImportOptions importOptions, DatabaseAdapter adapter) throws ExecutionException {
         try {
             org.citydb.io.reader.options.FilterOptions filterOptions = importOptions.getFilterOptions().orElse(null);
-            return filterOptions != null && !filterOptions.isEmpty() ?
-                    Filter.of(filterOptions, adapter) :
-                    Filter.ACCEPT_ALL;
+            return filterOptions != null && !filterOptions.isEmpty()
+                    ? Filter.of(filterOptions, adapter)
+                    : Filter.ACCEPT_ALL;
         } catch (FilterException e) {
             throw new ExecutionException("Failed to build import filter.", e);
         }

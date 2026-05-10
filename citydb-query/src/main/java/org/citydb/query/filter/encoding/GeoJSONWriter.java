@@ -111,9 +111,9 @@ public class GeoJSONWriter {
     }
 
     private void writeCoordinate(Coordinate coordinate) {
-        jsonWriter.write(coordinate.getDimension() == 2 ?
-                List.of(coordinate.getX(), coordinate.getY()) :
-                List.of(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
+        jsonWriter.write(coordinate.getDimension() == 2
+                ? List.of(coordinate.getX(), coordinate.getY())
+                : List.of(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
     }
 
 

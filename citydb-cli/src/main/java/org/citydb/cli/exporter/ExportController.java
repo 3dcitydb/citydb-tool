@@ -102,9 +102,9 @@ public abstract class ExportController implements Command {
 
     @Override
     public Integer call() throws ExecutionException {
-        return doExport() ?
-                CommandLine.ExitCode.OK :
-                CommandLine.ExitCode.SOFTWARE;
+        return doExport()
+                ? CommandLine.ExitCode.OK
+                : CommandLine.ExitCode.SOFTWARE;
     }
 
     protected boolean doExport() throws ExecutionException {
@@ -217,16 +217,16 @@ public abstract class ExportController implements Command {
 
     private FeatureWriter createWriter(OutputFile file, WriteOptions options, Query query, IOAdapter ioAdapter) throws WriteException {
         FeatureWriter writer = ioAdapter.createWriter(file, options);
-        return query.getSorting().isPresent() ?
-                SequentialWriter.of(writer) :
-                writer;
+        return query.getSorting().isPresent()
+                ? SequentialWriter.of(writer)
+                : writer;
     }
 
     protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
         try {
-            Query query = queryOptions != null && queryOptions.getQuery() != null ?
-                    queryOptions.getQuery() :
-                    exportOptions.getQuery().orElseGet(Query::new);
+            Query query = queryOptions != null && queryOptions.getQuery() != null
+                    ? queryOptions.getQuery()
+                    : exportOptions.getQuery().orElseGet(Query::new);
 
             return helper.setValidityFilter(query, exportOptions.getValidityOptions().orElse(null));
         } catch (FilterParseException e) {
@@ -235,9 +235,9 @@ public abstract class ExportController implements Command {
     }
 
     protected Tiling getTiling(ExportOptions exportOptions) throws ExecutionException {
-        return tilingOptions != null ?
-                tilingOptions.getTiling() :
-                exportOptions.getTiling().orElseGet(TilingHelper::noTiling);
+        return tilingOptions != null
+                ? tilingOptions.getTiling()
+                : exportOptions.getTiling().orElseGet(TilingHelper::noTiling);
     }
 
     protected ExportOptions getExportOptions() throws ExecutionException {
@@ -328,10 +328,10 @@ public abstract class ExportController implements Command {
     }
 
     private String getTileCounter(TilingHelper helper, Tile tile) {
-        return helper.isUseTiling() ?
-                "[" + (tile.getRow() * helper.getTileMatrix().getColumns() + tile.getColumn() + 1) + "|" +
-                        helper.getTileMatrix().size() + "] " :
-                "";
+        return helper.isUseTiling()
+                ? "[" + (tile.getRow() * helper.getTileMatrix().getColumns() + tile.getColumn() + 1) + "|"
+                  + helper.getTileMatrix().size() + "] "
+                : "";
     }
 
     private void logStatistics(FeatureStatistics statistics, String title, Level level) {
@@ -348,11 +348,11 @@ public abstract class ExportController implements Command {
             if (shouldRun) {
                 shouldRun = false;
                 logger.warn("Database export aborted due to an error.");
-                helper.logException(feature == null ?
-                        "Failed to export feature (ID: " + id + ")." :
-                        "Failed to export " + feature.getFeatureType().getLocalName() +
-                                feature.getObjectId().map(objectId -> " '" + objectId + "'").orElse("") +
-                                " (ID: " + id + ").", e);
+                helper.logException(feature == null
+                        ? "Failed to export feature (ID: " + id + ")."
+                        : "Failed to export " + feature.getFeatureType().getLocalName()
+                          + feature.getObjectId().map(objectId -> " '" + objectId + "'").orElse("") +
+                          " (ID: " + id + ").", e);
             }
         }
     }

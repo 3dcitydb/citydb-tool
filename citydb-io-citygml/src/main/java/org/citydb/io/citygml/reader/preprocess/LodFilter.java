@@ -125,9 +125,9 @@ public class LodFilter {
             }
 
             if (!keepEmptyObjects) {
-                featureInfo.add(child instanceof AbstractFeature feature ?
-                        feature :
-                        geometry.getParent(AbstractFeature.class));
+                featureInfo.add(child instanceof AbstractFeature feature
+                        ? feature
+                        : geometry.getParent(AbstractFeature.class));
             }
         }
     }

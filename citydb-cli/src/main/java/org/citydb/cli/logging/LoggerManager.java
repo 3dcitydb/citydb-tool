@@ -142,9 +142,9 @@ public class LoggerManager {
     private String buildRollingFilePattern(String fileName) {
         String suffix = logFile.getRollingFileSuffix();
         int index = fileName.lastIndexOf('.');
-        return index != -1 ?
-                fileName.substring(0, index) + suffix + fileName.substring(index) + ".gz" :
-                fileName + suffix + ".gz";
+        return index != -1
+                ? fileName.substring(0, index) + suffix + fileName.substring(index) + ".gz"
+                : fileName + suffix + ".gz";
     }
 
     private Map<String, Level> loadLogLevels() {
