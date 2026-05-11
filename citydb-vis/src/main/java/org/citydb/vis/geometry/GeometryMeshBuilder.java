@@ -97,6 +97,13 @@ public final class GeometryMeshBuilder {
         }
 
         if (!mesh.isEmpty()) {
+            // Single global T-junction pass with an internal triangle-count
+            // ceiling: catches cracks between adjacent polygons within and
+            // across GeometryProperty boundaries for normal-sized features,
+            // and skips with a warning on BIM-scale meshes where the dense
+            // overlapping geometry would either explode the algorithm's
+            // split-application loop or weld topologically independent
+            // components into shared edges (the wrong thing to do).
             double[] center = mesh.computeCenter();
             double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
             double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
