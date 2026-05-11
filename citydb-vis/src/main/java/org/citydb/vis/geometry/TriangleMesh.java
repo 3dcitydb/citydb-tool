@@ -7,6 +7,8 @@ package org.citydb.vis.geometry;
 
 import org.citydb.model.common.Name;
 import org.citydb.vis.util.BoundingBoxUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -18,7 +20,17 @@ import java.util.Map;
 import java.util.Set;
 
 public class TriangleMesh {
+    private static final Logger logger = LoggerFactory.getLogger(TriangleMesh.class);
     private static final float[] WHITE_RGBA = {1f, 1f, 1f, 1f};
+
+    // Ceiling on triangle count for the T-junction pass. Below it the
+    // spatial-index detection plus the split-application loop finish in
+    // milliseconds for normal city-scale features. Above it (BIM-scale
+    // meshes from deeply nested feature trees) the dense overlapping
+    // geometry both makes detection scan minutes long and produces splits
+    // that would weld topologically independent components — the wrong
+    // thing to do. Skip with a warning.
+    private static final int T_JUNCTION_MAX_TRIANGLES = 100_000;
 
     private final List<double[]> positions;
     private final List<float[]> normals;
@@ -273,18 +285,34 @@ public class TriangleMesh {
      * A T-junction occurs when a vertex lies on an edge of another triangle
      * without being a vertex of that triangle, causing sub-pixel rendering cracks.
      * <p>
-     * <b>Performance:</b> this implementation is O(V * T) per iteration and is
-     * intended to run only on per-feature meshes (typically &lt;1000 vertices
-     * and &lt;1000 triangles). Do NOT call it on merged node-level meshes
-     * without first adding a spatial index — the naive scan does not scale to
-     * Bayern-sized nodes.
+     * Uses a uniform 3D hash grid over triangle edges so each vertex tests only
+     * the candidate edges in its local cell rather than every triangle in the
+     * mesh. Complexity is O(T) to build the index plus O(V·k) for the scan,
+     * where k is the average bucket size — small for typical building geometry.
+     * <p>
+     * Above {@value #T_JUNCTION_MAX_TRIANGLES} triangles the pass is skipped
+     * with a warning. At that scale (deeply nested BIM features merged into a
+     * single mesh) the split-application loop becomes a runaway cost, and the
+     * resulting topology changes would weld topologically independent
+     * components into shared edges — more harmful than the sub-pixel cracks
+     * the pass is meant to fix.
      *
      * @param scaleX degrees-to-meters scale for X (longitude)
      * @param scaleY degrees-to-meters scale for Y (latitude)
-     * @param toleranceMeters distance threshold in meters
+     * @param toleranceMeters distance threshold in meters; the grid cell size
+     *                        is tuned for tolerance values in the few-centimetre
+     *                        range
      */
     public void resolveTJunctions(double scaleX, double scaleY, double toleranceMeters) {
         if (positions.size() < 3 || triangles.isEmpty()) return;
+
+        if (triangles.size() > T_JUNCTION_MAX_TRIANGLES) {
+            logger.warn("Skipping T-junction resolution for oversized feature "
+                    + "mesh (triangles={} > {}). Sub-pixel cracks at shared "
+                    + "edges (if any) will not be resolved.",
+                    triangles.size(), T_JUNCTION_MAX_TRIANGLES);
+            return;
+        }
 
         double tol2 = toleranceMeters * toleranceMeters;
         int maxIterations = 5;
@@ -299,45 +327,73 @@ public class TriangleMesh {
                 mPos[i][2] = p[2];
             }
 
+            int triCount = triangles.size();
+            TJunctionEdgeGrid edgeGrid = TJunctionEdgeGrid.build(mPos, triangles, triCount);
+
             // Find all T-junctions: vertex vi lies on edge of triangle ti.
             // Store the parametric position t along the edge for correct UV interpolation.
             List<int[]> splits = new ArrayList<>();   // {triIndex, edgeSlot, tJunctionVertex}
             List<Double> splitParams = new ArrayList<>(); // parametric t for each split
-            int triCount = triangles.size();
+
+            // Per-vertex dedup of edges already tested in this vertex's cell
+            // sweep (the same edge can appear in multiple adjacent cells, and
+            // shared edges across triangles appear under different edgeIds).
+            // Stamping (increment the marker once per vertex, compare against
+            // it) costs O(1) per check and avoids the per-vertex clear that
+            // dominates BitSet/HashSet alternatives on BIM-scale meshes.
+            int[] visitedStamp = new int[triCount * 3];
+            int currentStamp = 0;
 
             for (int vi = 0; vi < vertexCount; vi++) {
                 double vx = mPos[vi][0], vy = mPos[vi][1], vz = mPos[vi][2];
+                int cxMin = TJunctionEdgeGrid.cellOf(vx - toleranceMeters);
+                int cxMax = TJunctionEdgeGrid.cellOf(vx + toleranceMeters);
+                int cyMin = TJunctionEdgeGrid.cellOf(vy - toleranceMeters);
+                int cyMax = TJunctionEdgeGrid.cellOf(vy + toleranceMeters);
+                int czMin = TJunctionEdgeGrid.cellOf(vz - toleranceMeters);
+                int czMax = TJunctionEdgeGrid.cellOf(vz + toleranceMeters);
 
-                for (int ti = 0; ti < triCount; ti++) {
-                    int[] tri = triangles.get(ti);
-                    if (vi == tri[0] || vi == tri[1] || vi == tri[2]) continue;
+                currentStamp++;
+                for (int cx = cxMin; cx <= cxMax; cx++) {
+                    for (int cy = cyMin; cy <= cyMax; cy++) {
+                        for (int cz = czMin; cz <= czMax; cz++) {
+                            TJunctionEdgeGrid.IntList bucket = edgeGrid.bucket(cx, cy, cz);
+                            if (bucket == null) continue;
+                            for (int bi = 0; bi < bucket.size; bi++) {
+                                int edgeId = bucket.data[bi];
+                                if (visitedStamp[edgeId] == currentStamp) continue;
+                                visitedStamp[edgeId] = currentStamp;
 
-                    for (int e = 0; e < 3; e++) {
-                        int ei1 = tri[e];
-                        int ei2 = tri[(e + 1) % 3];
+                                int ti = edgeId / 3;
+                                int e = edgeId % 3;
+                                int[] tri = triangles.get(ti);
+                                if (vi == tri[0] || vi == tri[1] || vi == tri[2]) continue;
 
-                        double dx = mPos[ei2][0] - mPos[ei1][0];
-                        double dy = mPos[ei2][1] - mPos[ei1][1];
-                        double dz = mPos[ei2][2] - mPos[ei1][2];
-                        double edgeLen2 = dx * dx + dy * dy + dz * dz;
-                        if (edgeLen2 < 1e-10) continue;
+                                int ei1 = tri[e];
+                                int ei2 = tri[(e + 1) % 3];
+                                double dx = mPos[ei2][0] - mPos[ei1][0];
+                                double dy = mPos[ei2][1] - mPos[ei1][1];
+                                double dz = mPos[ei2][2] - mPos[ei1][2];
+                                double edgeLen2 = dx * dx + dy * dy + dz * dz;
+                                if (edgeLen2 < 1e-10) continue;
 
-                        double t = ((vx - mPos[ei1][0]) * dx
-                                + (vy - mPos[ei1][1]) * dy
-                                + (vz - mPos[ei1][2]) * dz) / edgeLen2;
-                        if (t <= 0.001 || t >= 0.999) continue;
+                                double t = ((vx - mPos[ei1][0]) * dx
+                                        + (vy - mPos[ei1][1]) * dy
+                                        + (vz - mPos[ei1][2]) * dz) / edgeLen2;
+                                if (t <= 0.001 || t >= 0.999) continue;
 
-                        double px = mPos[ei1][0] + t * dx;
-                        double py = mPos[ei1][1] + t * dy;
-                        double pz = mPos[ei1][2] + t * dz;
-                        double dist2 = (vx - px) * (vx - px)
-                                + (vy - py) * (vy - py)
-                                + (vz - pz) * (vz - pz);
+                                double px = mPos[ei1][0] + t * dx;
+                                double py = mPos[ei1][1] + t * dy;
+                                double pz = mPos[ei1][2] + t * dz;
+                                double dist2 = (vx - px) * (vx - px)
+                                        + (vy - py) * (vy - py)
+                                        + (vz - pz) * (vz - pz);
 
-                        if (dist2 < tol2) {
-                            splits.add(new int[]{ti, e, vi});
-                            splitParams.add(t);
-                            break;
+                                if (dist2 < tol2) {
+                                    splits.add(new int[]{ti, e, vi});
+                                    splitParams.add(t);
+                                }
+                            }
                         }
                     }
                 }
@@ -345,7 +401,11 @@ public class TriangleMesh {
 
             if (splits.isEmpty()) break;
 
-            Set<Integer> removed = new HashSet<>();
+            // BitSet (primitive bit-per-triangle) rather than HashSet<Integer>
+            // — splits can hold millions of entries on dense meshes near the
+            // size threshold, and the per-entry Integer.box + HashMap.contains
+            // cost dominated the loop in profiling.
+            BitSet removed = new BitSet(triCount);
             List<int[]> newTriangles = new ArrayList<>();
             List<Long> newFeatureIds = new ArrayList<>();
             List<Integer> newTriTexIds = new ArrayList<>();
@@ -359,7 +419,7 @@ public class TriangleMesh {
             for (int s = 0; s < splits.size(); s++) {
                 int[] split = splits.get(s);
                 int ti = split[0], edgeSlot = split[1], vi = split[2];
-                if (removed.contains(ti)) continue;
+                if (removed.get(ti)) continue;
 
                 int[] tri = triangles.get(ti);
                 int ei1 = tri[edgeSlot];
@@ -409,7 +469,7 @@ public class TriangleMesh {
                             triNormal[0], triNormal[1], triNormal[2]);
                 }
 
-                removed.add(ti);
+                removed.set(ti);
                 newTriangles.add(new int[]{ei1, newVi, ei3});
                 newFeatureIds.add(fid);
                 newTriTexIds.add(texId);
@@ -429,7 +489,7 @@ public class TriangleMesh {
             List<Name> updatedSurfaceTypes = new ArrayList<>();
             int outIdx = 0;
             for (int ti = 0; ti < triCount; ti++) {
-                if (!removed.contains(ti)) {
+                if (!removed.get(ti)) {
                     updatedTri.add(triangles.get(ti));
                     updatedFid.add(featureIds.get(ti));
                     updatedTexId.add(triangleTextureIds.get(ti));
