@@ -16,6 +16,7 @@ import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.TextureAtlas;
+import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
@@ -72,13 +73,13 @@ public class Tiles3DWriter extends VisWriter {
         this(validateOutputFile(outputFile, "3D Tiles"),
                 loadFormatOptions(options, Tiles3DFormatOptions.class,
                         Tiles3DFormatOptions::new, "3D Tiles"),
-                new org.citydb.vis.encoder.AttributeEncoder(),
+                new AttributeEncoder(),
                 options);
     }
 
     private Tiles3DWriter(OutputFile outputFile,
                           Tiles3DFormatOptions formatOptions,
-                          org.citydb.vis.encoder.AttributeEncoder attributeEncoder,
+                          AttributeEncoder attributeEncoder,
                           WriteOptions writeOptions) throws WriteException {
         super(outputFile, formatOptions, attributeEncoder, writeOptions);
         this.glbEncoder = new GlbEncoder();
