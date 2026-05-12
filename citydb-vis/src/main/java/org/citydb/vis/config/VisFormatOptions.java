@@ -8,6 +8,7 @@ package org.citydb.vis.config;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
+import org.citydb.vis.attribute.AttributeProjection;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 
@@ -36,6 +37,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     private AtlasFallbackStrategy atlasFallbackStrategy = AtlasFallbackStrategy.EXPAND;
     private boolean enableShading;
     private ObjectStyleRegistry styleRegistry = ObjectStyleRegistry.empty();
+    private AttributeProjection attributeProjection;
 
     public double getGridEdgeLength() {
         return gridEdgeLength;
@@ -153,6 +155,21 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
 
     public VisFormatOptions setStyleRegistry(ObjectStyleRegistry styleRegistry) {
         this.styleRegistry = styleRegistry != null ? styleRegistry : ObjectStyleRegistry.empty();
+        return this;
+    }
+
+    /**
+     * Optional declarative whitelist of columns emitted to the
+     * per-feature attribute table (CLI {@code --attributes}).
+     * {@code null} means "no projection, export every top-level
+     * attribute" — the default behaviour.
+     */
+    public AttributeProjection getAttributeProjection() {
+        return attributeProjection;
+    }
+
+    public VisFormatOptions setAttributeProjection(AttributeProjection attributeProjection) {
+        this.attributeProjection = attributeProjection;
         return this;
     }
 }

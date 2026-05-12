@@ -5,8 +5,8 @@
 
 package org.citydb.vis.encoder.i3s;
 
-import org.citydb.vis.encoder.AttrValueCoercer;
-import org.citydb.vis.encoder.AttributeEncoder;
+import org.citydb.vis.attribute.AttributeEncoder;
+import org.citydb.vis.attribute.AttributeValueCoercer;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
@@ -55,11 +55,11 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                 // OID: Oid32 / INT: Int32 — ArcGIS requires unique non-null
                 // OIDs to enable single-feature identify/picking.
                 case OID, INT -> writeInt32Attribute(count,
-                        AttrValueCoercer.extractInts(features, field.name()));
+                        AttributeValueCoercer.extractInts(features, field.name()));
                 case DOUBLE -> writeDoubleAttribute(count,
-                        AttrValueCoercer.extractDoubles(features, field.name()));
+                        AttributeValueCoercer.extractDoubles(features, field.name()));
                 case STRING -> writeStringAttribute(count,
-                        AttrValueCoercer.extractUtf8(features, field.name()));
+                        AttributeValueCoercer.extractUtf8(features, field.name()));
             };
             Files.write(attributesDir.resolve("f_" + i).resolve("0"), buffer.array());
         }
