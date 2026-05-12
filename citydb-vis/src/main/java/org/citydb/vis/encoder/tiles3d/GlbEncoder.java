@@ -5,7 +5,7 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import org.citydb.vis.encoder.AttrValueCoercer;
+import org.citydb.vis.attribute.AttributeValueCoercer;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.model.AttrField;
@@ -517,16 +517,16 @@ public class GlbEncoder {
         String name = field.name();
         return switch (field.type()) {
             case OID, INT -> new PropertyTableBufferViews(
-                    bin.addInt32Array(AttrValueCoercer.extractInts(features, name)), -1);
+                    bin.addInt32Array(AttributeValueCoercer.extractInts(features, name)), -1);
             case DOUBLE -> new PropertyTableBufferViews(
-                    bin.addFloat64Array(AttrValueCoercer.extractDoubles(features, name)), -1);
+                    bin.addFloat64Array(AttributeValueCoercer.extractDoubles(features, name)), -1);
             case STRING -> encodeStringProperty(bin, name, features);
         };
     }
 
     private static PropertyTableBufferViews encodeStringProperty(
             BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
-        byte[][] utf8 = AttrValueCoercer.extractUtf8(features, fieldName);
+        byte[][] utf8 = AttributeValueCoercer.extractUtf8(features, fieldName);
         ByteArrayOutputStream valuesStream = new ByteArrayOutputStream();
         int[] offsets = new int[utf8.length + 1];
         int offset = 0;

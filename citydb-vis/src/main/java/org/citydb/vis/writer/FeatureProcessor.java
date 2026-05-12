@@ -13,7 +13,7 @@ import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.config.VisFormatOptions;
-import org.citydb.vis.encoder.AttributeEncoder;
+import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.geometry.GeometryMeshBuilder;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.SpatialEntry;
