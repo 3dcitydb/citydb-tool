@@ -51,6 +51,7 @@ import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.attribute.AttributeProjection;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 import picocli.CommandLine;
@@ -59,6 +60,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -192,6 +194,8 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             options.setEnableShading(sceneOptions.isEnableShading());
         }
 
+        applyAttributeProjection(options);
+
         // The styling registry combines --default-color (if matched) with
         // any --feature-type-style overrides. Only built when the user
         // actually configured one of them; otherwise the format options
@@ -226,6 +230,24 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             builder.override(ft.getName(), style);
         }
         options.setStyleRegistry(builder.build());
+    }
+
+    /**
+     * Parse the {@code --attributes} CLI tokens (if any) and install
+     * the resulting projection on the format options. Any parse error
+     * becomes an {@link ExecutionException} preserving the original
+     * message so the user sees the token index that failed.
+     */
+    private void applyAttributeProjection(VisFormatOptions options) throws ExecutionException {
+        List<String> tokens = sceneOptions.getAttributes();
+        if (tokens.isEmpty()) {
+            return;
+        }
+        try {
+            options.setAttributeProjection(AttributeProjection.parse(tokens));
+        } catch (IllegalArgumentException e) {
+            throw new ExecutionException("Error: --attributes " + e.getMessage(), e);
+        }
     }
 
     private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,

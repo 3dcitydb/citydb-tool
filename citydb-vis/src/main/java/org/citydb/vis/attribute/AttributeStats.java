@@ -3,7 +3,7 @@
  * Copyright Stuttgart University of Applied Sciences <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.encoder;
+package org.citydb.vis.attribute;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,7 +26,7 @@ import java.util.Map;
  * Pro reads these to drive its attribute-filter UI (range sliders for
  * numeric, value drop-downs for strings).
  */
-public abstract class AttrStats {
+public abstract class AttributeStats {
     /** Frequency-table size cap on string attributes: high-cardinality
      *  strings (e.g. unique identifiers like OBJECTID / gml:id) would
      *  otherwise blow up to the full feature count. The first
@@ -39,11 +39,11 @@ public abstract class AttrStats {
 
     public abstract Result toResult();
 
-    public static AttrStats forNumeric() {
+    public static AttributeStats forNumeric() {
         return new Numeric();
     }
 
-    public static AttrStats forString() {
+    public static AttributeStats forString() {
         return new StringFreq();
     }
 
@@ -63,7 +63,7 @@ public abstract class AttrStats {
     public record FrequencyEntry(String value, long count) {
     }
 
-    private static final class Numeric extends AttrStats {
+    private static final class Numeric extends AttributeStats {
         private long count;
         private double sum;
         private double sumOfSquares;
@@ -100,7 +100,7 @@ public abstract class AttrStats {
         }
     }
 
-    private static final class StringFreq extends AttrStats {
+    private static final class StringFreq extends AttributeStats {
         private long totalCount;
         private final Map<String, Long> frequency = new HashMap<>();
 

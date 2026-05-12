@@ -5,7 +5,7 @@
 
 package org.citydb.vis.pipeline;
 
-import org.citydb.vis.encoder.AttributeEncoder;
+import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.PartitionedEntryStore;
