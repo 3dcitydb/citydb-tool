@@ -3,17 +3,17 @@
  * Copyright Stuttgart University of Applied Sciences <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.encoder;
+package org.citydb.vis.attribute;
 
 import org.citydb.vis.model.FeatureData;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-public class AttrValueCoercer {
+public class AttributeValueCoercer {
     private static final byte[] EMPTY = new byte[0];
 
-    private AttrValueCoercer() {
+    private AttributeValueCoercer() {
     }
 
     public static int toInt(Object value) {

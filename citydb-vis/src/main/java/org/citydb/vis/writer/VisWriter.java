@@ -33,7 +33,7 @@ import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.RingAppearance;
 import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.config.VisFormatOptions;
-import org.citydb.vis.encoder.AttributeEncoder;
+import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.geometry.ImplicitInstanceTransformer;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
@@ -156,6 +156,11 @@ public abstract class VisWriter implements FeatureWriter {
         this.outputFile = outputFile;
         this.formatOptions = formatOptions;
         this.attributeEncoder = attributeEncoder;
+        // Forward the user-specified attribute projection (--attributes) to
+        // the shared encoder so both I3S and 3D Tiles paths see the same
+        // column whitelist. Null means "no projection installed" → default
+        // extract-everything behaviour.
+        attributeEncoder.setProjection(formatOptions.getAttributeProjection());
         this.featureIdCounter = new AtomicLong(0);
         // Matches the project-wide default used by Exporter and CityGML/CityJSON
         // readers: fall back to all available cores with a floor of 2 so
