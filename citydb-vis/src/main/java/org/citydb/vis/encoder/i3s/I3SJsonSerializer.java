@@ -5,7 +5,7 @@
 
 package org.citydb.vis.encoder.i3s;
 
-import org.citydb.vis.encoder.AttrStats;
+import org.citydb.vis.attribute.AttributeStats;
 import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
@@ -142,17 +142,17 @@ public class I3SJsonSerializer {
      * still satisfies the validator's resource-presence check.
      */
     public void writeStatistics(Path layerDir, List<AttrField> attrFields,
-                                Map<String, AttrStats.Result> stats) throws IOException {
+                                Map<String, AttributeStats.Result> stats) throws IOException {
         for (int i = 0; i < attrFields.size(); i++) {
             AttrField field = attrFields.get(i);
-            AttrStats.Result result = stats.get(field.name());
+            AttributeStats.Result result = stats.get(field.name());
             if (result == null) {
                 // Field declared but never observed (e.g. every feature
                 // had null for it). Emit an empty stats record so the
                 // resource still exists and the validator stays quiet.
                 result = field.type() == org.citydb.vis.model.AttrType.STRING
-                        ? AttrStats.forString().toResult()
-                        : AttrStats.forNumeric().toResult();
+                        ? AttributeStats.forString().toResult()
+                        : AttributeStats.forNumeric().toResult();
             }
             Path statsDir = layerDir.resolve("statistics")
                     .resolve("f_" + i).resolve("0");
