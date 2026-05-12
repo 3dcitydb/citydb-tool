@@ -6,7 +6,7 @@
 package org.citydb.vis.model.i3s;
 
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.encoder.AttrStats;
+import org.citydb.vis.attribute.AttributeStats;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,13 +16,13 @@ import java.util.List;
  * {@code layers/0/statistics/f_K/0/index.json}. The numeric flavour
  * carries {@code min} / {@code max} / {@code avg} / {@code stddev} /
  * {@code sum} / {@code variance}; the string flavour carries
- * {@code mostFrequentValues}. Built from an {@link AttrStats.Result}
+ * {@code mostFrequentValues}. Built from an {@link AttributeStats.Result}
  * snapshot.
  */
 @JSONType(alphabetic = false)
 public record StatisticsResource(Stats stats) {
 
-    public static StatisticsResource of(AttrStats.Result result) {
+    public static StatisticsResource of(AttributeStats.Result result) {
         return new StatisticsResource(Stats.from(result));
     }
 
@@ -32,7 +32,7 @@ public record StatisticsResource(Stats stats) {
                         Double sum, Double variance,
                         List<MostFrequentValue> mostFrequentValues) {
 
-        static Stats from(AttrStats.Result r) {
+        static Stats from(AttributeStats.Result r) {
             if (r.isNumeric()) {
                 return new Stats(r.totalValuesCount(),
                         r.numericCount() == 0 ? null : r.min(),
@@ -44,7 +44,7 @@ public record StatisticsResource(Stats stats) {
                         null);
             }
             List<MostFrequentValue> entries = new ArrayList<>(r.frequency().size());
-            for (AttrStats.FrequencyEntry e : r.frequency()) {
+            for (AttributeStats.FrequencyEntry e : r.frequency()) {
                 entries.add(new MostFrequentValue(e.value(), e.count()));
             }
             return new Stats(r.totalValuesCount(), null, null, null, null, null, null, entries);
