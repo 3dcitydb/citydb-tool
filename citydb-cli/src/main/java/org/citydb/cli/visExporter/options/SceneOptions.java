@@ -68,25 +68,29 @@ public class SceneOptions implements Option {
                     "quadtree leaves (one fewer LOD level, faster export, sharper LOD " +
                     "transition). The few cells that cannot be subdivided further " +
                     "(single-feature / depth-cap residuals) are handled per " +
-                    "--atlas-fallback in both quadtree-based modes. 'rescale' disables " +
-                    "the split stage entirely and shrinks textures uniformly to fit " +
-                    "one atlas page on every overflowing cell — implies " +
-                    "--atlas-fallback=rescale regardless of an explicit value " +
-                    "(legacy / debugging).")
+                    "--atlas-fallback in both quadtree-based modes. 'preview' disables " +
+                    "the split stage entirely: every overflowing cell is processed in " +
+                    "place as a single-page preview, with the outcome controlled by " +
+                    "--atlas-fallback ('rescale' shrinks textures uniformly to fit " +
+                    "--max-atlas-size; 'expand' grows the single I3S atlas up to 16K / " +
+                    "spills onto multi-page 3D Tiles atlases).")
     private AtlasOverflowMode atlasOverflowMode;
 
     @CommandLine.Option(names = "--atlas-fallback", paramLabel = "<strategy>",
             defaultValue = "expand",
-            description = "How to resolve texture overflow on residual cells the " +
-                    "quadtree stage could not subdivide further (single-feature or " +
-                    "depth-cap fallback): ${COMPLETION-CANDIDATES} (default: " +
-                    "${DEFAULT-VALUE}). 'expand' preserves source-resolution textures: " +
-                    "3D Tiles spills onto additional atlas pages (multi-page GLB), I3S " +
-                    "grows the single atlas page up to the WebGL 16K cap. 'rescale' " +
-                    "honors --max-atlas-size by shrinking textures uniformly, accepting " +
-                    "silent quality loss; 3D Tiles forces single-atlas mode (no multi-page). " +
-                    "Ignored when --atlas-overflow-mode=rescale (which forces 'rescale' " +
-                    "globally on every overflowing cell).")
+            description = "How to resolve texture overflow on cells the quadtree " +
+                    "stage could not (or did not) subdivide further — single-feature " +
+                    "and depth-cap residuals under --atlas-overflow-mode=hybrid/quadtree, " +
+                    "or every overflowing cell under --atlas-overflow-mode=preview: " +
+                    "${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). 'expand' " +
+                    "preserves source-resolution textures: 3D Tiles spills onto " +
+                    "additional atlas pages (multi-page GLB), I3S grows the single " +
+                    "atlas page up to the WebGL 16K cap. 'rescale' honors " +
+                    "--max-atlas-size by shrinking textures uniformly, accepting " +
+                    "silent quality loss; 3D Tiles forces single-atlas mode (no " +
+                    "multi-page). Under --atlas-overflow-mode=hybrid the per-cell-root " +
+                    "LOD preview always uses 'rescale' regardless of this flag, so " +
+                    "the preview stays within --max-atlas-size.")
     private AtlasFallbackStrategy atlasFallbackStrategy;
 
     @CommandLine.Option(names = "--enable-shading",
