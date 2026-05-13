@@ -8,7 +8,7 @@ package org.citydb.vis.appearance;
 /**
  * Strategy used when residual cells (single-feature or depth-cap fallback
  * after the quadtree split, or any cell when {@link AtlasOverflowMode}
- * {@code = RESCALE}) cannot fit their textures into the user's
+ * {@code = FLAT}) cannot fit their textures into the user's
  * {@code --max-atlas-size} budget.
  * <p>
  * {@link #RESCALE} shrinks textures uniformly via the iterative rescale
