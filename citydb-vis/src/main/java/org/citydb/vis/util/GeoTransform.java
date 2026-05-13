@@ -54,6 +54,58 @@ public class GeoTransform {
             out[1] = (float) (cosLat * sinLon);
             out[2] = (float) sinLat;
         }
+
+        /**
+         * Unit quaternion (x, y, z, w) representing the rotation that maps an
+         * ENU-aligned local frame at this basis's reference point into ECEF
+         * world coordinates. Used by the I3S OBB encoder so that a box with
+         * half-extents along ENU (east / north / up) is correctly oriented
+         * in ECEF for all I3S clients (Cesium, ArcGIS Pro, ArcGIS Maps SDK).
+         * <p>
+         * Derived by matrix→quaternion conversion of the 3×3 rotation whose
+         * columns are the ENU basis vectors in ECEF (same convention as
+         * {@link GeoTransform#enuToEcefMatrix}; the rotation matches Esri's
+         * own samples like NYC where every per-node OBB quaternion is non-
+         * identity even though the box is axis-aligned with local ENU).
+         */
+        public double[] enuToEcefQuaternion() {
+            // M = [east | north | up] (columns) in ECEF.
+            double m00 = -sinLon,            m01 = -sinLat * cosLon, m02 = cosLat * cosLon;
+            double m10 =  cosLon,            m11 = -sinLat * sinLon, m12 = cosLat * sinLon;
+            double m20 =  0,                 m21 =  cosLat,          m22 = sinLat;
+            // Shepperd / Shoemake matrix-to-quaternion: pick the branch that
+            // maximises the divisor so the result stays well-conditioned at
+            // all latitudes (the trace-positive branch alone collapses near
+            // the equator / poles for this particular rotation family).
+            double qx, qy, qz, qw;
+            double trace = m00 + m11 + m22;
+            if (trace > 0) {
+                double s = Math.sqrt(trace + 1.0) * 2;
+                qw = 0.25 * s;
+                qx = (m21 - m12) / s;
+                qy = (m02 - m20) / s;
+                qz = (m10 - m01) / s;
+            } else if (m00 > m11 && m00 > m22) {
+                double s = Math.sqrt(1.0 + m00 - m11 - m22) * 2;
+                qw = (m21 - m12) / s;
+                qx = 0.25 * s;
+                qy = (m01 + m10) / s;
+                qz = (m02 + m20) / s;
+            } else if (m11 > m22) {
+                double s = Math.sqrt(1.0 + m11 - m00 - m22) * 2;
+                qw = (m02 - m20) / s;
+                qx = (m01 + m10) / s;
+                qy = 0.25 * s;
+                qz = (m12 + m21) / s;
+            } else {
+                double s = Math.sqrt(1.0 + m22 - m00 - m11) * 2;
+                qw = (m10 - m01) / s;
+                qx = (m02 + m20) / s;
+                qy = (m12 + m21) / s;
+                qz = 0.25 * s;
+            }
+            return new double[]{qx, qy, qz, qw};
+        }
     }
 
     public static double[] enuToEcefMatrix(double[] center) {
