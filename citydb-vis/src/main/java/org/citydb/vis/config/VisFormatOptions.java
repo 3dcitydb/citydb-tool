@@ -94,17 +94,6 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     }
 
     public AtlasFallbackStrategy getAtlasFallbackStrategy() {
-        // When the quadtree stage is disabled (--atlas-overflow-mode=rescale)
-        // the user has chosen the "rescale everything" mode: no spatial split
-        // and shrink textures uniformly when an unsplit cell's atlas would
-        // overflow. Force the fallback to RESCALE here so downstream logic
-        // (Tiles3DWriter's AtlasMode selection, TextureAtlas.build Phase 1)
-        // sees a single coherent strategy without needing to consult both
-        // flags. The stored atlasFallbackStrategy is preserved verbatim;
-        // only the effective value seen at runtime is overridden.
-        if (atlasOverflowMode == AtlasOverflowMode.RESCALE) {
-            return AtlasFallbackStrategy.RESCALE;
-        }
         return atlasFallbackStrategy;
     }
 
