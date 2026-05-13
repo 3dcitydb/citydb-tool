@@ -13,7 +13,6 @@ import org.citydb.config.SerializableConfig;
 @SerializableConfig(name = "I3S")
 public class I3SFormatOptions extends VisFormatOptions {
     private boolean slpk;
-    private boolean obb;
 
     public boolean isSlpk() {
         return slpk;
@@ -21,15 +20,6 @@ public class I3SFormatOptions extends VisFormatOptions {
 
     public I3SFormatOptions setSlpk(boolean slpk) {
         this.slpk = slpk;
-        return this;
-    }
-
-    public boolean isObb() {
-        return obb;
-    }
-
-    public I3SFormatOptions setObb(boolean obb) {
-        this.obb = obb;
         return this;
     }
 }

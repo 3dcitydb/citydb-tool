@@ -48,17 +48,10 @@ public class I3SJsonSerializer {
     /**
      * Write node pages. Uses a {@code Set<Integer>} to determine which nodes
      * have geometry (instead of the full nodeFeatureMap).
-     *
-     * @param includeObb emit {@code obb} (and suppress {@code mbs}); required
-     *                   for ArcGIS consumers (Pro / Maps SDK JS / Online
-     *                   Scene Viewer). When {@code false}, only {@code mbs}
-     *                   is emitted (CesiumJS default — mis-culls when OBB is
-     *                   present). Gated upstream via {@code --slpk || --obb}.
      */
     public void writeNodePages(Path layerDir, List<SceneNode> nodes,
                                Set<Integer> meshNodeIndices,
-                               boolean hasTextures,
-                               boolean includeObb) throws IOException {
+                               boolean hasTextures) throws IOException {
         int nodesPerPage = I3SConstants.NODES_PER_PAGE;
         int pageCount = (nodes.size() + nodesPerPage - 1) / nodesPerPage;
 
@@ -67,7 +60,7 @@ public class I3SJsonSerializer {
             int end = Math.min(start + nodesPerPage, nodes.size());
             List<SceneNode> pageNodes = nodes.subList(start, end);
 
-            NodePage nodePage = NodePage.of(pageNodes, meshNodeIndices, hasTextures, includeObb);
+            NodePage nodePage = NodePage.of(pageNodes, meshNodeIndices, hasTextures);
 
             Path nodePageDir = layerDir.resolve("nodepages").resolve(String.valueOf(page));
             Files.createDirectories(nodePageDir);
