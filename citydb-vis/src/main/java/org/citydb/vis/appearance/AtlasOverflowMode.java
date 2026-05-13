@@ -27,15 +27,15 @@ package org.citydb.vis.appearance;
  * uses {@link AtlasFallbackStrategy#RESCALE} regardless of
  * {@code --atlas-fallback}, so it stays within {@code --max-atlas-size}.
  * <p>
- * {@link #PREVIEW} disables the split stage entirely: every overflowing
- * cell is processed in place, with the outcome controlled by the user's
- * {@link AtlasFallbackStrategy}. {@code rescale} shrinks textures
- * uniformly to fit a single {@code --max-atlas-size} page (legacy
- * behavior, size-strict deployments); {@code expand} preserves
- * source-resolution textures — I3S grows its single atlas up to the
- * 16K cap, 3D Tiles spills onto multi-page atlases — at the cost of
- * larger node payloads.
+ * {@link #FLAT} disables the split stage entirely: every overflowing
+ * cell is processed in place (no tree hierarchy introduced), with the
+ * outcome controlled by the user's {@link AtlasFallbackStrategy}.
+ * {@code rescale} shrinks textures uniformly to fit a single
+ * {@code --max-atlas-size} page (legacy behavior, size-strict
+ * deployments); {@code expand} preserves source-resolution textures —
+ * I3S grows its single atlas up to the 16K cap, 3D Tiles spills onto
+ * multi-page atlases — at the cost of larger node payloads.
  */
 public enum AtlasOverflowMode {
-    PREVIEW, QUADTREE, HYBRID
+    FLAT, QUADTREE, HYBRID
 }
