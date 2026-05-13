@@ -68,9 +68,9 @@ public class SceneOptions implements Option {
                     "quadtree leaves (one fewer LOD level, faster export, sharper LOD " +
                     "transition). The few cells that cannot be subdivided further " +
                     "(single-feature / depth-cap residuals) are handled per " +
-                    "--atlas-fallback in both quadtree-based modes. 'preview' disables " +
+                    "--atlas-fallback in both quadtree-based modes. 'flat' disables " +
                     "the split stage entirely: every overflowing cell is processed in " +
-                    "place as a single-page preview, with the outcome controlled by " +
+                    "place (no tree hierarchy introduced), with the outcome controlled by " +
                     "--atlas-fallback ('rescale' shrinks textures uniformly to fit " +
                     "--max-atlas-size; 'expand' grows the single I3S atlas up to 16K / " +
                     "spills onto multi-page 3D Tiles atlases).")
@@ -81,7 +81,7 @@ public class SceneOptions implements Option {
             description = "How to resolve texture overflow on cells the quadtree " +
                     "stage could not (or did not) subdivide further — single-feature " +
                     "and depth-cap residuals under --atlas-overflow-mode=hybrid/quadtree, " +
-                    "or every overflowing cell under --atlas-overflow-mode=preview: " +
+                    "or every overflowing cell under --atlas-overflow-mode=flat: " +
                     "${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). 'expand' " +
                     "preserves source-resolution textures: 3D Tiles spills onto " +
                     "additional atlas pages (multi-page GLB), I3S grows the single " +
