@@ -182,14 +182,17 @@ public class Tiles3DWriter extends VisWriter {
      * <ul>
      *   <li>{@code expand} → {@link AtlasMode#AUTO}: the GLB encoder spills
      *       overflow onto additional atlas pages
-     *       ({@link TextureAtlas#buildMulti}) on residual cells the
+     *       ({@link TextureAtlas#buildMulti}) on every overflowing cell,
+     *       preserving source-resolution textures. Under
+     *       {@code --atlas-overflow-mode=quadtree}/{@code hybrid} this only
+     *       affects residual cells the
      *       {@link org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
-     *       could not subdivide further, preserving source-resolution
-     *       textures.</li>
+     *       could not subdivide further; under {@code flat} it applies to
+     *       every overflowing cell (no spatial subdivision).</li>
      *   <li>{@code rescale} → {@link AtlasMode#SINGLE_ATLAS}: every node
-     *       gets exactly one atlas page; overflow on residual cells is
-     *       resolved by shrinking textures to fit
-     *       {@code --max-atlas-size}, matching the I3S behavior.</li>
+     *       gets exactly one atlas page; overflow is resolved by shrinking
+     *       textures to fit {@code --max-atlas-size}, matching the I3S
+     *       behavior.</li>
      * </ul>
      * I3S cannot offer the {@code AUTO} path because its spec mandates one
      * material per node, but the fallback strategy itself is symmetric:
