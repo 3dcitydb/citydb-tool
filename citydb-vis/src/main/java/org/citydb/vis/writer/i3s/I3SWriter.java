@@ -117,12 +117,6 @@ public class I3SWriter extends VisWriter {
         setLodThresholds(allNodes, lodThreshold);
 
         boolean slpk = options.isSlpk();
-        // OBB policy is target-dependent and the two consumers are mutually
-        // incompatible: ArcGIS (Pro, Maps SDK JS, Online Scene Viewer) needs
-        // OBB to render anything, while CesiumJS mis-culls buildings at some
-        // camera angles when OBB is present. SLPK always emits it (ArcGIS
-        // Pro requirement); folder mode emits it only when --obb is passed.
-        boolean includeObb = slpk || options.isObb();
         boolean enableShading = options.isEnableShading();
         // Force NORMAL into the legacy buffer when packaging an SLPK:
         // ArcGIS Pro / Online refuse to load a scene layer whose legacy
@@ -140,7 +134,7 @@ public class I3SWriter extends VisWriter {
         }
         SceneLayer sceneLayer = buildSceneLayer(extent);
         writeI3SFolder(sceneLayer, allNodes, attrFields, meshNodeIndices,
-                hasTextures, hasColors, includeObb, enableShading, styleRegistry);
+                hasTextures, hasColors, enableShading, styleRegistry);
 
         if (slpk) {
             try {
@@ -207,7 +201,6 @@ public class I3SWriter extends VisWriter {
                                 Set<Integer> meshNodeIndices,
                                 boolean hasTextures,
                                 boolean hasColors,
-                                boolean includeObb,
                                 boolean enableShading,
                                 ObjectStyleRegistry styleRegistry) throws VisExportException {
         Path outputDir = FileHelper.stripExtension(getOutputFile().getFile());
@@ -247,7 +240,7 @@ public class I3SWriter extends VisWriter {
         try {
             // Node pages AFTER geometry so vertex counts are accurate
             jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices,
-                    hasTextures, includeObb);
+                    hasTextures);
         } catch (IOException e) {
             throw new VisExportException("Failed to write I3S node pages.", e);
         }
