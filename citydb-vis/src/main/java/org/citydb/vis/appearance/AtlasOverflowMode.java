@@ -23,16 +23,19 @@ package org.citydb.vis.appearance;
  * replaced at runtime by the quadtree-leaf children once they cross
  * the LOD threshold. Trades a small extra encode cost (one rescaled
  * atlas per split root) for a smoother LOD cascade in viewers that
- * have to wait for leaf data to load.
+ * have to wait for leaf data to load. The cell-root preview always
+ * uses {@link AtlasFallbackStrategy#RESCALE} regardless of
+ * {@code --atlas-fallback}, so it stays within {@code --max-atlas-size}.
  * <p>
- * {@link #RESCALE} disables the split stage entirely: every overflowing
- * cell is processed in place, with textures shrunk uniformly to fit one
- * atlas page (legacy behavior, kept for debugging / size-strict
- * deployments). Implies {@link AtlasFallbackStrategy#RESCALE} regardless
- * of any explicit {@code --atlas-fallback} value — the two flags are
- * coupled here because "rescale mode" is a self-contained semantic
- * (no split + shrink to fit).
+ * {@link #PREVIEW} disables the split stage entirely: every overflowing
+ * cell is processed in place, with the outcome controlled by the user's
+ * {@link AtlasFallbackStrategy}. {@code rescale} shrinks textures
+ * uniformly to fit a single {@code --max-atlas-size} page (legacy
+ * behavior, size-strict deployments); {@code expand} preserves
+ * source-resolution textures — I3S grows its single atlas up to the
+ * 16K cap, 3D Tiles spills onto multi-page atlases — at the cost of
+ * larger node payloads.
  */
 public enum AtlasOverflowMode {
-    RESCALE, QUADTREE, HYBRID
+    PREVIEW, QUADTREE, HYBRID
 }
