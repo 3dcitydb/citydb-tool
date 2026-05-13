@@ -16,18 +16,11 @@ import java.util.Set;
 /**
  * Single entry in an I3S node page, serialized to {@code nodepages/N/index.json}.
  * <p>
- * Bounding volume choice is target-dependent and mutually exclusive between
- * the two I3S 1.9runtime families:
- * <ul>
- *   <li>ArcGIS (Pro via SLPK, Maps SDK for JavaScript and Online Scene Viewer
- *       via folder with {@code --obb}): {@code obb} is required — without it
- *       the layer loads but renders nothing in the web SDKs, and ArcGIS Pro
- *       rejects the SLPK outright (I3S 1.9schema requirement).</li>
- *   <li>CesiumJS (folder, default): only {@code mbs} — CesiumJS's I3S OBB
- *       handling mis-culls buildings at certain camera angles, so OBB is
- *       suppressed unless the user opts in via {@code --obb}.</li>
- * </ul>
- * Gating lives in {@code I3SWriter.writeOutput()} as {@code slpk || --obb}.
+ * Bounding volume is OBB only — never co-emit {@code mbs}, or ArcGIS JS
+ * picks misfire at oblique angles (uses MBS for broad-phase, OBB for LOD,
+ * and the disagreement drops pick rays). OBB quaternion comes from
+ * {@link BoundingVolume#toObbQuaternion()}.
+ * <p>
  * Other quirks:
  * <ul>
  *   <li>{@code parentIndex} must be omitted for the root node (value {@code -1}
@@ -40,7 +33,6 @@ import java.util.Set;
 public class NodePageEntry {
     private int index;
     private Obb obb;
-    private double[] mbs;
     private int lodThreshold;
     private List<Integer> children;
     private Integer parentIndex;
@@ -48,22 +40,13 @@ public class NodePageEntry {
     private int featureCount;
 
     public static NodePageEntry of(SceneNode node, Set<Integer> meshNodeIndices,
-                                   boolean hasTextures, boolean includeObb) {
+                                   boolean hasTextures) {
         NodePageEntry entry = new NodePageEntry();
         entry.index = node.getIndex();
 
         BoundingVolume bv = node.getBoundingVolume();
         if (bv != null) {
-            // MBS and OBB are mutually exclusive: emitting both makes the
-            // ArcGIS Maps SDK for JavaScript use MBS for broad-phase culling
-            // but OBB for LOD selection, and the slight disagreement between
-            // the two volumes causes feature pick rays to miss at oblique
-            // camera angles even though rendering is fine.
-            if (includeObb) {
-                entry.obb = new Obb(bv.toObbCenter(), bv.toObbHalfSize(), bv.toObbQuaternion());
-            } else {
-                entry.mbs = bv.toMbs();
-            }
+            entry.obb = new Obb(bv.toObbCenter(), bv.toObbHalfSize(), bv.toObbQuaternion());
         }
 
         entry.lodThreshold = node.getLodThreshold();
@@ -95,8 +78,10 @@ public class NodePageEntry {
     }
 
     /**
-     * I3S Oriented Bounding Box. For axis-aligned bounding boxes the
-     * quaternion is the identity {@code [0, 0, 0, 1]}.
+     * I3S Oriented Bounding Box. {@code center} is {@code (lon°, lat°, alt m)};
+     * {@code halfSize} is meters along the box's local ENU axes
+     * (east / north / up); {@code quaternion} is the ENU→ECEF rotation at
+     * {@code center}, supplied by {@link BoundingVolume#toObbQuaternion()}.
      */
     @JSONType(alphabetic = false)
     public record Obb(double[] center, double[] halfSize, double[] quaternion) {

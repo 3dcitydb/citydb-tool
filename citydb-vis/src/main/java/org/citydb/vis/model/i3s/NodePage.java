@@ -15,11 +15,11 @@ public class NodePage {
     private List<NodePageEntry> nodes;
 
     public static NodePage of(List<SceneNode> pageNodes, Set<Integer> meshNodeIndices,
-                              boolean hasTextures, boolean includeObb) {
+                              boolean hasTextures) {
         NodePage page = new NodePage();
         page.nodes = new ArrayList<>(pageNodes.size());
         for (SceneNode node : pageNodes) {
-            page.nodes.add(NodePageEntry.of(node, meshNodeIndices, hasTextures, includeObb));
+            page.nodes.add(NodePageEntry.of(node, meshNodeIndices, hasTextures));
         }
         return page;
     }

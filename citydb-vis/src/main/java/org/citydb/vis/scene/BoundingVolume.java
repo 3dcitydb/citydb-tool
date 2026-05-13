@@ -12,11 +12,13 @@ import org.citydb.vis.util.GeoTransform;
  * <p>
  * Stores the source AABB (min/max in degrees/meters) and derives both
  * MBS (Minimum Bounding Sphere) and OBB (Oriented Bounding Box) on demand.
- * OBB emission is gated by the caller (see {@code I3SWriter.writeOutput}
- * and {@code NodePageEntry}): required by every ArcGIS consumer (Pro via
- * SLPK, Maps SDK for JavaScript and Online Scene Viewer via folder with
- * {@code --obb}), and suppressed for CesiumJS because its I3S OBB handling
- * mis-culls buildings at some camera angles.
+ * The I3S writer emits OBB on every node; the OBB is encoded as (center in
+ * geographic, half-size in meters along local ENU east/north/up, quaternion
+ * = ENU→ECEF rotation at center). All I3S clients (Cesium, ArcGIS Pro /
+ * Maps SDK / Online) interpret the half-size axes via the quaternion, so
+ * an identity quaternion would only be correct at (0°N, 0°E); everywhere
+ * else it leaves the box misoriented in ECEF, which breaks frustum culling
+ * and pick-ray broad-phase.
  * <p>
  * For EPSG:4326 the center is in (longitude, latitude, altitude) but
  * sizes and radii are in meters. Degree-to-meter conversion uses:
@@ -83,11 +85,6 @@ public class BoundingVolume {
     public double getCenterZ() { return centerZ; }
     public double getRadius() { return radius; }
 
-    /** MBS array: [centerX (lon), centerY (lat), centerZ (alt m), radius (m)]. */
-    public double[] toMbs() {
-        return new double[]{centerX, centerY, centerZ, radius};
-    }
-
     // ---- OBB accessors -----------------------------------------------------
 
     /** OBB center: [lon°, lat°, alt m]. */
@@ -107,9 +104,18 @@ public class BoundingVolume {
         return new double[]{halfX, halfY, halfZ};
     }
 
-    /** OBB quaternion: identity — the box is axis-aligned with local ENU. */
+    /**
+     * OBB quaternion (x, y, z, w): rotation from the box's local ENU frame
+     * at {@link #toObbCenter()} into ECEF. With {@link #toObbHalfSize()}
+     * expressed along east / north / up, applying this quaternion is what
+     * actually places the box in world coordinates — an identity quaternion
+     * would only be correct at (0°N, 0°E) and leaves geometry mis-bounded
+     * everywhere else (frustum culling drops visible buildings; pick rays
+     * miss). Verified against Esri's NYC reference dataset, which emits a
+     * non-identity per-node quaternion of the same form.
+     */
     public double[] toObbQuaternion() {
-        return new double[]{0, 0, 0, 1};
+        return GeoTransform.EnuBasis.at(centerX, centerY).enuToEcefQuaternion();
     }
 
     // ---- Merge -------------------------------------------------------------
