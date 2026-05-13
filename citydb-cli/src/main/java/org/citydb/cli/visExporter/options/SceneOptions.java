@@ -149,9 +149,9 @@ public class SceneOptions implements Option {
                     "value type (int → double → string → timestamp → uri, with fallback into " +
                     "a 'value' sub-attribute). Examples: " +
                     "'OBJECTID:FEATURE/objectid', 'HEIGHT:ATTRIBUTES/measuredHeight', " +
-                    "'STREET:ADDRESS/[FIRST]street', " +
-                    "'EXT_URI:ATTRIBUTES/externalReference[informationSystem=''SysA''].externalObject.uri::uri', " +
-                    "'ROOF_AREA:ATTRIBUTES/boundarySurface[surfaceType=''Roof''].area'. " +
+                    "'CITY:ADDRESS/[FIRST]city', 'STREET:ADDRESS/[FIRST]street', " +
+                    "'HOUSE_NUMBER:ADDRESS/[FIRST]houseNumber', " +
+                    "'TARGET_RESOURCE:ATTRIBUTES/[FIRST]externalReference::uri'. " +
                     "Use picocli's '@file' syntax for long lists, e.g. --attributes @cols.txt " +
                     "(each non-blank line of <cols.txt> is one entry; '#' comments are NOT " +
                     "supported in @file mode). Case rules: TABLE, AGG, the '::type' cast, and " +
