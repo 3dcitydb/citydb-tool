@@ -14,6 +14,7 @@ import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
+import org.citydb.vis.util.ColorUtils;
 import org.citydb.vis.util.GeoTransform;
 
 import java.io.ByteArrayOutputStream;
@@ -428,9 +429,9 @@ public class GlbEncoder {
                     // sRGB values per Cesium's I3S loader convention; see
                     // RingAppearance javadoc for rationale.
                     float[] c = mesh.getColors().get(srcIdx);
-                    colors[idx * 4] = srgbToLinear(c[0]);
-                    colors[idx * 4 + 1] = srgbToLinear(c[1]);
-                    colors[idx * 4 + 2] = srgbToLinear(c[2]);
+                    colors[idx * 4] = ColorUtils.srgbToLinear(c[0]);
+                    colors[idx * 4 + 1] = ColorUtils.srgbToLinear(c[1]);
+                    colors[idx * 4 + 2] = ColorUtils.srgbToLinear(c[2]);
                     colors[idx * 4 + 3] = c[3];
                     if (c[3] < 0.999f) {
                         anyAlphaBelowOne = true;
@@ -497,17 +498,6 @@ public class GlbEncoder {
 
     private record PrimitiveBufferIds(int positions, int normals, int uvs, int colors,
                                       int indices, int featureIds) {
-    }
-
-    /**
-     * IEC 61966-2-1 sRGB → linear, applied per RGB channel when baking
-     * X3DMaterial colors into glTF {@code COLOR_0}.
-     */
-    private static float srgbToLinear(float c) {
-        if (c <= 0.04045f) {
-            return c / 12.92f;
-        }
-        return (float) Math.pow((c + 0.055f) / 1.055f, 2.4);
     }
 
     // ---- Property table encoding ----------------------------------------
