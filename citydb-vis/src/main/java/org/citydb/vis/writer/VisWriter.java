@@ -41,7 +41,7 @@ import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.pipeline.ExportPipeline;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.stages.AggregationStage;
-import org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage;
+import org.citydb.vis.pipeline.stages.AtlasOverflowSplitStage;
 import org.citydb.vis.pipeline.stages.ExtentComputationStage;
 import org.citydb.vis.pipeline.stages.MixedNodeSplitStage;
 import org.citydb.vis.pipeline.stages.PartitioningStage;
@@ -425,7 +425,7 @@ public abstract class VisWriter implements FeatureWriter {
                     new PartitioningStage(),
                     new TreeBuildingStage(),
                     new MixedNodeSplitStage(),
-                    new AtlasOverflowQuadtreeStage(),
+                    new AtlasOverflowSplitStage(),
                     new AggregationStage()
             ).run(ctx);
 
@@ -499,7 +499,7 @@ public abstract class VisWriter implements FeatureWriter {
                 Map<Integer, float[]> uvExtents = merged.computeUVExtents();
                 // LOD-preview nodes are split-cell parents that need a
                 // low-resolution single-atlas preview (replaced at runtime
-                // by the high-resolution quadtree children). Force
+                // by the high-resolution split children). Force
                 // single-atlas + RESCALE strategy regardless of the user's
                 // --atlas-fallback so the preview always fits one page and
                 // stays within the user's --max-atlas-size budget.

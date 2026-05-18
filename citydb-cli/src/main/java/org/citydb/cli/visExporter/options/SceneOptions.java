@@ -61,14 +61,14 @@ public class SceneOptions implements Option {
                     "'hybrid' subdivides the offending cell spatially (2x2 push-down) " +
                     "until each leaf fits one atlas page AND retains a low-resolution " +
                     "rescaled preview on each split cell root, replaced at runtime by " +
-                    "the quadtree leaves once they cross the LOD threshold — smoothest " +
-                    "LOD cascade. 'quadtree' runs the same split but drops the preview: " +
+                    "the split leaves once they cross the LOD threshold — smoothest " +
+                    "LOD cascade. 'split' runs the same subdivision but drops the preview: " +
                     "the split cell root becomes a content-less intermediate, the " +
                     "runtime refines straight from the parent aggregation to the " +
-                    "quadtree leaves (one fewer LOD level, faster export, sharper LOD " +
+                    "split leaves (one fewer LOD level, faster export, sharper LOD " +
                     "transition). The few cells that cannot be subdivided further " +
                     "(single-feature / depth-cap residuals) are handled per " +
-                    "--atlas-fallback in both quadtree-based modes. 'flat' disables " +
+                    "--atlas-fallback in both split-based modes. 'flat' disables " +
                     "the split stage entirely: every overflowing cell is processed in " +
                     "place (no tree hierarchy introduced), with the outcome controlled by " +
                     "--atlas-fallback ('rescale' shrinks textures uniformly to fit " +
@@ -78,9 +78,9 @@ public class SceneOptions implements Option {
 
     @CommandLine.Option(names = "--atlas-fallback", paramLabel = "<strategy>",
             defaultValue = "expand",
-            description = "How to resolve texture overflow on cells the quadtree " +
+            description = "How to resolve texture overflow on cells the split " +
                     "stage could not (or did not) subdivide further — single-feature " +
-                    "and depth-cap residuals under --atlas-overflow-mode=hybrid/quadtree, " +
+                    "and depth-cap residuals under --atlas-overflow-mode=hybrid/split, " +
                     "or every overflowing cell under --atlas-overflow-mode=flat: " +
                     "${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}). 'expand' " +
                     "preserves source-resolution textures: 3D Tiles spills onto " +

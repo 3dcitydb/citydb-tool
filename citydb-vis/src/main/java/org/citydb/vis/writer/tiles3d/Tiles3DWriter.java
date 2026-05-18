@@ -184,9 +184,9 @@ public class Tiles3DWriter extends VisWriter {
      *       overflow onto additional atlas pages
      *       ({@link TextureAtlas#buildMulti}) on every overflowing cell,
      *       preserving source-resolution textures. Under
-     *       {@code --atlas-overflow-mode=quadtree}/{@code hybrid} this only
+     *       {@code --atlas-overflow-mode=split}/{@code hybrid} this only
      *       affects residual cells the
-     *       {@link org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
+     *       {@link org.citydb.vis.pipeline.stages.AtlasOverflowSplitStage}
      *       could not subdivide further; under {@code flat} it applies to
      *       every overflowing cell (no spatial subdivision).</li>
      *   <li>{@code rescale} → {@link AtlasMode#SINGLE_ATLAS}: every node
