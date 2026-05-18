@@ -5,6 +5,8 @@
 
 package org.citydb.vis.styling;
 
+import org.citydb.vis.util.ColorUtils;
+
 import java.util.Arrays;
 
 /**
@@ -97,7 +99,12 @@ public final class DefaultObjectStyle {
     }
 
     public DefaultObjectStyle setColor(float r, float g, float b, float a) {
-        this.color = new float[]{clampUnit(r), clampUnit(g), clampUnit(b), clampUnit(a)};
+        this.color = new float[]{
+                ColorUtils.clampUnit(r),
+                ColorUtils.clampUnit(g),
+                ColorUtils.clampUnit(b),
+                ColorUtils.clampUnit(a)
+        };
         return this;
     }
 
@@ -129,22 +136,11 @@ public final class DefaultObjectStyle {
      */
     public float[] toLinearRgba() {
         return new float[]{
-                srgbToLinear(color[0]),
-                srgbToLinear(color[1]),
-                srgbToLinear(color[2]),
+                ColorUtils.srgbToLinear(color[0]),
+                ColorUtils.srgbToLinear(color[1]),
+                ColorUtils.srgbToLinear(color[2]),
                 color[3]
         };
-    }
-
-    private static float srgbToLinear(float c) {
-        if (c <= 0.04045f) {
-            return c / 12.92f;
-        }
-        return (float) Math.pow((c + 0.055f) / 1.055f, 2.4);
-    }
-
-    private static float clampUnit(float v) {
-        return v < 0f ? 0f : (v > 1f ? 1f : v);
     }
 
     /**
