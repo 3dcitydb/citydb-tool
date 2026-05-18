@@ -8,6 +8,7 @@ package org.citydb.vis.pipeline.stages;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.store.SpatialEntry;
+import org.citydb.vis.util.BoundingBoxUtils;
 
 import java.util.Iterator;
 
@@ -20,22 +21,13 @@ import java.util.Iterator;
 public final class ExtentComputationStage implements Stage {
     @Override
     public void execute(PipelineContext ctx) {
-        double minX = Double.MAX_VALUE, minY = Double.MAX_VALUE, minZ = Double.MAX_VALUE;
-        double maxX = -Double.MAX_VALUE, maxY = -Double.MAX_VALUE, maxZ = -Double.MAX_VALUE;
-
+        double[] extent = BoundingBoxUtils.emptyAabb();
         Iterator<SpatialEntry> it = ctx.stores().getSpatialEntryStore().iterator();
         while (it.hasNext()) {
-            SpatialEntry e = it.next();
-            double[] bb = e.bbox();
-            if (bb[0] < minX) minX = bb[0];
-            if (bb[1] < minY) minY = bb[1];
-            if (bb[2] < minZ) minZ = bb[2];
-            if (bb[3] > maxX) maxX = bb[3];
-            if (bb[4] > maxY) maxY = bb[4];
-            if (bb[5] > maxZ) maxZ = bb[5];
+            BoundingBoxUtils.expandToBox(extent, it.next().bbox());
         }
 
-        ctx.setExtent(new double[]{minX, minY, minZ, maxX, maxY, maxZ});
+        ctx.setExtent(extent);
         ctx.setAttrFields(ctx.attributeEncoder().finalizeFields(ctx.totalFeatures()));
     }
 }
