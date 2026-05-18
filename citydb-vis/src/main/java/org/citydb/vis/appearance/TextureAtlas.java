@@ -129,7 +129,7 @@ public class TextureAtlas {
      * a single {@code maxAtlasSize}² page overflow onto a higher BSP level?
      * <p>
      * Mirrors the first packing pass of {@link #buildSingleAtlas} (no rescale
-     * retry, no compositing). Used by the atlas-overflow quadtree stage to
+     * retry, no compositing). Used by the atlas-overflow split stage to
      * decide whether a node should be spatially subdivided <i>before</i> the
      * silent global rescale would otherwise kick in.
      * <p>
