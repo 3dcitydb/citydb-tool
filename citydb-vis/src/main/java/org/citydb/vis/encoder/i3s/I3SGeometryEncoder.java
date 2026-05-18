@@ -12,6 +12,7 @@ import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.citydb.vis.util.BufferUtils;
+import org.citydb.vis.util.ColorUtils;
 import org.citydb.vis.util.GeoTransform;
 
 import java.io.IOException;
@@ -482,10 +483,10 @@ public class I3SGeometryEncoder {
         }
         if (colors != null) {
             for (float[] c : colors) {
-                buf.put((byte) Math.round(clampUnit(c[0]) * 255f));
-                buf.put((byte) Math.round(clampUnit(c[1]) * 255f));
-                buf.put((byte) Math.round(clampUnit(c[2]) * 255f));
-                buf.put((byte) Math.round(clampUnit(c[3]) * 255f));
+                buf.put((byte) Math.round(ColorUtils.clampUnit(c[0]) * 255f));
+                buf.put((byte) Math.round(ColorUtils.clampUnit(c[1]) * 255f));
+                buf.put((byte) Math.round(ColorUtils.clampUnit(c[2]) * 255f));
+                buf.put((byte) Math.round(ColorUtils.clampUnit(c[3]) * 255f));
             }
         }
         for (long id : rangeFeatureIds) {
@@ -497,10 +498,6 @@ public class I3SGeometryEncoder {
         }
 
         Files.write(geometryDir.resolve("0"), buf.array());
-    }
-
-    private static float clampUnit(float v) {
-        return v < 0f ? 0f : (v > 1f ? 1f : v);
     }
 
     public int getTexturedNodesWithStyleConfig() {
