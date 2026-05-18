@@ -27,9 +27,9 @@ public enum AtlasMode {
      * only when the BSP packer would otherwise overflow even after
      * per-texture clamping. Preserves source resolution on every
      * overflowing cell — under
-     * {@code --atlas-overflow-mode=quadtree}/{@code hybrid} only the
+     * {@code --atlas-overflow-mode=split}/{@code hybrid} only the
      * residual cells the
-     * {@link org.citydb.vis.pipeline.stages.AtlasOverflowQuadtreeStage}
+     * {@link org.citydb.vis.pipeline.stages.AtlasOverflowSplitStage}
      * could not subdivide further reach this path (single-feature or
      * depth-cap fallback); under {@code flat} every overflowing cell
      * does. Used by 3D Tiles, whose GLB supports multiple primitives
