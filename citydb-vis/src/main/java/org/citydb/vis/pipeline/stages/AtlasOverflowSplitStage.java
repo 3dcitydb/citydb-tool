@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
  * cannot be subdivided further. Intermediate nodes lose their mesh data
  * (push-down split), with new mesh leaves attached as descendants.
  * <p>
- * Runs for {@link AtlasOverflowMode#QUADTREE} (pure split:
+ * Runs for {@link AtlasOverflowMode#SPLIT} (pure split:
  * the cell root becomes a content-less intermediate) and for
  * {@link AtlasOverflowMode#HYBRID} (split plus a
  * low-resolution rescaled preview retained on each split cell root,
@@ -84,8 +84,8 @@ import java.util.concurrent.TimeUnit;
  * {@code allNodes} writes serial (the store's writes are not thread-safe and
  * the deterministic index sequence keeps tile/file naming reproducible).
  */
-public final class AtlasOverflowQuadtreeStage implements Stage {
-    private static final Logger logger = LoggerFactory.getLogger(AtlasOverflowQuadtreeStage.class);
+public final class AtlasOverflowSplitStage implements Stage {
+    private static final Logger logger = LoggerFactory.getLogger(AtlasOverflowSplitStage.class);
     private static final int MAX_DEPTH = 8;
 
     /**
@@ -117,7 +117,7 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
     public void execute(PipelineContext ctx) throws VisExportException {
         VisFormatOptions opts = ctx.formatOptions();
         AtlasOverflowMode mode = opts.getAtlasOverflowMode();
-        if (mode != AtlasOverflowMode.QUADTREE
+        if (mode != AtlasOverflowMode.SPLIT
                 && mode != AtlasOverflowMode.HYBRID) {
             return;
         }
@@ -207,7 +207,7 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
                         // mark it as an LOD preview. The writer will emit a
                         // low-resolution single-atlas (RESCALE strategy) for
                         // fast distant view, replaced at runtime by the
-                        // quadtree-leaf children once they cross the LOD
+                        // split-leaf children once they cross the LOD
                         // threshold. For 3D Tiles the serializer emits
                         // refine=REPLACE on this tile so children replace it
                         // once loaded; I3S handles refinement automatically
@@ -217,10 +217,10 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
                         // updatedMeshIndices already contains plan.rootIndex
                         // from the initial copy; intentionally not removed.
                     } else {
-                        // QUADTREE (pure split): the split root becomes a
+                        // SPLIT (pure split): the split root becomes a
                         // content-less intermediate. The runtime refines from
                         // the cell's parent aggregation directly to the
-                        // quadtree leaves, with no extra preview level. Drop
+                        // split leaves, with no extra preview level. Drop
                         // the root from meshNodeIndices so the writer skips
                         // geometry/atlas emission for it; its on-disk
                         // NodeEntry list is orphaned (same trade-off as
@@ -431,7 +431,7 @@ public final class AtlasOverflowQuadtreeStage implements Stage {
 
     /**
      * Load a per-feature {@link TriangleMesh}, hitting the cache first so that
-     * a feature appearing in both a parent and one of its quadtree children
+     * a feature appearing in both a parent and one of its split children
      * (always the case after a split) reads from disk only once. Cache is
      * scoped to one cell-root subtree (one worker), so peak memory is bounded
      * by that subtree's per-feature mesh footprint.
