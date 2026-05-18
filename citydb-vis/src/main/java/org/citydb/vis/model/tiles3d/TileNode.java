@@ -36,8 +36,8 @@ public class TileNode {
      * Refinement is {@code REPLACE} for every tile: children take over from
      * the parent once their content meets the screen-space error. LOD-preview
      * cell roots ({@code node.isLodPreview()}) need this so the low-resolution
-     * preview is hidden when the high-resolution quadtree leaves load;
-     * content-less intermediates (aggregation, mixed-split, quadtree depth>1)
+     * preview is hidden when the high-resolution split leaves load;
+     * content-less intermediates (aggregation, mixed-split, split depth>1)
      * also use REPLACE so the runtime never renders them alongside their
      * descendants.
      */
