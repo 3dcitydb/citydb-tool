@@ -9,18 +9,18 @@ package org.citydb.vis.appearance;
  * Top-level strategy for handling cells whose textures don't fit a
  * single {@code maxAtlasSize}² atlas page.
  * <p>
- * {@link #QUADTREE} runs the spatial subdivision stage in pure-split
+ * {@link #SPLIT} runs the spatial subdivision stage in pure-split
  * mode: the offending cell is split 2×2 push-down until each leaf
  * fits one atlas page or cannot be subdivided further (single-feature
  * / depth-cap residuals). The original cell root becomes a
  * content-less intermediate — the runtime refines from the cell's
- * parent aggregation directly to the quadtree leaves. Residuals are
+ * parent aggregation directly to the split leaves. Residuals are
  * handled per {@link AtlasFallbackStrategy}.
  * <p>
- * {@link #HYBRID} combines the two strategies: runs the same quadtree
- * subdivision as {@link #QUADTREE} and additionally retains a
+ * {@link #HYBRID} combines the two strategies: runs the same spatial
+ * subdivision as {@link #SPLIT} and additionally retains a
  * low-resolution rescaled (RESCALE) preview on each split cell root,
- * replaced at runtime by the quadtree-leaf children once they cross
+ * replaced at runtime by the split-leaf children once they cross
  * the LOD threshold. Trades a small extra encode cost (one rescaled
  * atlas per split root) for a smoother LOD cascade in viewers that
  * have to wait for leaf data to load. The cell-root preview always
@@ -37,5 +37,5 @@ package org.citydb.vis.appearance;
  * multi-page atlases — at the cost of larger node payloads.
  */
 public enum AtlasOverflowMode {
-    FLAT, QUADTREE, HYBRID
+    FLAT, SPLIT, HYBRID
 }
