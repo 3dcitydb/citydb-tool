@@ -1,6 +1,7 @@
 @SuppressWarnings("requires-transitive-automatic")
 module org.citydb.database {
-    requires org.apache.tomcat.jdbc;
+    requires tomcat.jdbc;
+    requires org.apache.tomcat.juli;
     requires transitive org.citydb.core;
     requires transitive org.citydb.config;
     requires transitive org.citydb.model;
