@@ -6,21 +6,26 @@
 package org.citydb.plugin.metadata;
 
 import com.alibaba.fastjson2.annotation.JSONField;
+import org.citydb.core.version.Version;
+import org.citydb.core.version.encoding.VersionReader;
+import org.citydb.core.version.encoding.VersionWriter;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 public class PluginMetadata {
     private String name;
-    private String version;
+    @JSONField(serializeUsing = VersionWriter.class, deserializeUsing = VersionReader.class)
+    private Version version;
     private String url;
     @JSONField(name = "description")
     private final Map<String, String> descriptions = new HashMap<>();
     private PluginVendor vendor;
     private boolean startEnabled = true;
 
-    public String getName() {
-        return name;
+    public Optional<String> getName() {
+        return Optional.ofNullable(name);
     }
 
     public PluginMetadata setName(String name) {
@@ -28,17 +33,17 @@ public class PluginMetadata {
         return this;
     }
 
-    public String getVersion() {
-        return version;
+    public Optional<Version> getVersion() {
+        return Optional.ofNullable(version);
     }
 
-    public PluginMetadata setVersion(String version) {
+    public PluginMetadata setVersion(Version version) {
         this.version = version;
         return this;
     }
 
-    public String getUrl() {
-        return url;
+    public Optional<String> getUrl() {
+        return Optional.ofNullable(url);
     }
 
     public PluginMetadata setUrl(String url) {
@@ -55,8 +60,8 @@ public class PluginMetadata {
         return this;
     }
 
-    public PluginVendor getVendor() {
-        return vendor;
+    public Optional<PluginVendor> getVendor() {
+        return Optional.ofNullable(vendor);
     }
 
     public PluginMetadata setVendor(PluginVendor vendor) {

@@ -277,12 +277,11 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         logger.info("Loading plugins...");
         if (!pluginManager.hasExceptions()) {
             for (Plugin plugin : pluginManager.getPlugins()) {
-                String name = "\"" + plugin.getMetadata().getName() + "\" (" + plugin.getClass().getName() + ")";
-                if (plugin.isEnabled()) {
-                    logger.info("Loaded plugin {}.", name);
-                } else {
-                    logger.debug("Disabling plugin {}.", name);
-                }
+                logger.info("{} plugin: {}{} ({})",
+                        plugin.isEnabled() ? "Loaded" : "Disabled",
+                        plugin.getMetadata().getName().orElse(plugin.getClass().getName()),
+                        plugin.getMetadata().getVersion().map(version -> " version " + version).orElse(""),
+                        plugin.getClass().getName());
             }
         } else {
             pluginManager.getExceptions().values().stream()

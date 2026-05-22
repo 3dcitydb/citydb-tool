@@ -5,12 +5,14 @@
 
 package org.citydb.plugin.metadata;
 
+import java.util.Optional;
+
 public class PluginVendor {
     private String name;
     private String url;
 
-    public String getName() {
-        return name;
+    public Optional<String> getName() {
+        return Optional.ofNullable(name);
     }
 
     public PluginVendor setName(String name) {
@@ -18,8 +20,8 @@ public class PluginVendor {
         return this;
     }
 
-    public String getUrl() {
-        return url;
+    public Optional<String> getUrl() {
+        return Optional.ofNullable(url);
     }
 
     public PluginVendor setUrl(String url) {

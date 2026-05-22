@@ -17,4 +17,5 @@ module org.citydb.core {
     exports org.citydb.core.time;
     exports org.citydb.core.tuple;
     exports org.citydb.core.version;
+    exports org.citydb.core.version.encoding;
 }
