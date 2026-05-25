@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fixed a regression that prevented textures assigned to implicit geometries through global appearances from
+  being imported.
+
 ## [1.3.1] - 2026-05-08
 
 ### Fixed
