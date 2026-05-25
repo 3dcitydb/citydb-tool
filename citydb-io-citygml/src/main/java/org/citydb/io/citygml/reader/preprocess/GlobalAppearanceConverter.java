@@ -134,9 +134,17 @@ public class GlobalAppearanceConverter {
     }
 
     void convertGlobalAppearance(VisitableObject object) {
+        process(object, false);
+    }
+
+    void convertAndRemoveGlobalAppearance(VisitableObject object) {
+        process(object, true);
+    }
+
+    private void process(VisitableObject object, boolean removeTargets) {
         if (!targets.isEmpty()) {
             try (CopySession session = copier.createSession()) {
-                object.accept(new AppearanceProcessor(object, session));
+                object.accept(new AppearanceProcessor(object, session, removeTargets));
             }
         }
     }
@@ -148,11 +156,13 @@ public class GlobalAppearanceConverter {
     }
 
     private class AppearanceProcessor extends ObjectWalker {
-        private final AbstractCityObject topLevelFeature;
         private final CopySession session;
+        private final boolean removeTargets;
+        private final AbstractCityObject topLevelFeature;
 
-        AppearanceProcessor(VisitableObject object, CopySession session) {
+        AppearanceProcessor(VisitableObject object, CopySession session, boolean removeTargets) {
             this.session = session;
+            this.removeTargets = removeTargets;
             topLevelFeature = object instanceof AbstractCityObject cityObject ?
                     cityObject :
                     object.getParent(AbstractCityObject.class);
@@ -161,7 +171,9 @@ public class GlobalAppearanceConverter {
         @Override
         public void visit(AbstractGeometry geometry) {
             if (geometry.getId() != null) {
-                List<AbstractSurfaceData> sources = targets.get(geometry.getId());
+                List<AbstractSurfaceData> sources = removeTargets
+                        ? targets.remove(geometry.getId())
+                        : targets.get(geometry.getId());
                 if (sources != null) {
                     for (AbstractSurfaceData source : sources) {
                         AbstractGML target = getTargetObject(geometry);

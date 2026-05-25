@@ -151,7 +151,7 @@ public class CityGMLPreprocessor {
                     countLatch.increment();
                     service.execute(() -> {
                         try {
-                            appearanceConverter.convertGlobalAppearance(implicitGeometry);
+                            appearanceConverter.convertAndRemoveGlobalAppearance(implicitGeometry);
                             referenceResolver.resolveReferences(implicitGeometry);
                         } finally {
                             countLatch.decrement();
