@@ -56,22 +56,27 @@ public class ImplicitGeometryResolver {
     private class ResolverProcessor extends ObjectWalker {
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
-            if (implicitGeometry.getRelativeGeometry() != null) {
-                GeometryProperty<?> property = implicitGeometry.getRelativeGeometry();
-                if (property.isSetInlineObject() && property.getObject().getId() != null) {
-                    ImplicitGeometry template = implicitGeometries.get(property.getObject().getId());
-                    if (template != null) {
+            GeometryProperty<?> property = implicitGeometry.getRelativeGeometry();
+            if (property != null) {
+                boolean inline = property.isSetInlineObject() && property.getObject().getId() != null;
+                String id = inline
+                        ? property.getObject().getId()
+                        : FeatureHelper.getIdFromReference(property.getHref());
+
+                ImplicitGeometry template = id != null ? implicitGeometries.get(id) : null;
+                if (template != null) {
+                    if (inline) {
                         property.setInlineObjectIfValid(template.getRelativeGeometry().getObject());
-                        implicitGeometry.setAppearances(template.getAppearances());
-                    }
-                } else if (property.getHref() != null) {
-                    ImplicitGeometry template = implicitGeometries.get(FeatureHelper.getIdFromReference(
-                            property.getHref()));
-                    if (template != null) {
+                        if (template.isSetAppearances()) {
+                            implicitGeometry.setAppearances(template.getAppearances());
+                        }
+                    } else {
                         property.setReferencedObjectIfValid(template.getRelativeGeometry().getObject());
-                        implicitGeometry.setAppearances(template.getAppearances().stream()
-                                .map(copier::shallowCopy)
-                                .toList());
+                        if (template.isSetAppearances()) {
+                            implicitGeometry.setAppearances(template.getAppearances().stream()
+                                    .map(copier::shallowCopy)
+                                    .toList());
+                        }
                     }
                 }
             }
