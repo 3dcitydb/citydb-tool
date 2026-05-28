@@ -205,7 +205,7 @@ public abstract class ExportController implements Command {
                     statistics.merge(tileStatistics);
                     if (tilingHelper.isUseTiling()) {
                         logStatistics(tileStatistics, "Tile export summary:", Level.DEBUG);
-                        if (tileStatistics.isEmpty() && writeOptions.isDeleteEmptyTiles()) {
+                        if (tileStatistics.isEmpty() && writeOptions.isSkipEmptyTiles()) {
                             logger.debug("Deleting empty tile file {}.", file);
                             helper.deleteFileIfExists(file);
                         }
@@ -240,8 +240,8 @@ public abstract class ExportController implements Command {
 
     protected Tiling getTiling(ExportOptions exportOptions, WriteOptions writeOptions) throws ExecutionException {
         if (tilingOptions != null) {
-            if (tilingOptions.isDeleteEmptyTiles()) {
-                writeOptions.setDeleteEmptyTiles(true);
+            if (tilingOptions.isSkipEmptyTiles()) {
+                writeOptions.setSkipEmptyTiles(true);
             }
 
             return tilingOptions.getTiling();

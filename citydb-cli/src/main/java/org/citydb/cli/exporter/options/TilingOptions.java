@@ -40,14 +40,14 @@ public class TilingOptions implements Option {
             description = "Tile indexes origin: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
     private Origin origin;
 
-    @CommandLine.Option(names = "--delete-empty-tiles",
-            description = "Delete tile files containing no exported features.")
-    private Boolean deleteEmptyTiles;
+    @CommandLine.Option(names = "--skip-empty-tiles",
+            description = "Skip tile files containing no exported features.")
+    private Boolean skipEmptyTiles;
 
     private Tiling tiling;
 
-    public boolean isDeleteEmptyTiles() {
-        return deleteEmptyTiles != null && deleteEmptyTiles;
+    public boolean isSkipEmptyTiles() {
+        return skipEmptyTiles != null && skipEmptyTiles;
     }
 
     public Tiling getTiling() {
