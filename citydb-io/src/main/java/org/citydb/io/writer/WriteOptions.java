@@ -19,6 +19,7 @@ public class WriteOptions {
     private int numberOfThreads;
     private String encoding;
     private String srsName;
+    private boolean skipEmptyTiles;
     private ConfigObject<OutputFormatOptions> formatOptions;
 
     public boolean isFailFast() {
@@ -67,6 +68,15 @@ public class WriteOptions {
 
     public WriteOptions setSrsName(String srsName) {
         this.srsName = srsName;
+        return this;
+    }
+
+    public boolean isSkipEmptyTiles() {
+        return skipEmptyTiles;
+    }
+
+    public WriteOptions setSkipEmptyTiles(boolean skipEmptyTiles) {
+        this.skipEmptyTiles = skipEmptyTiles;
         return this;
     }
 

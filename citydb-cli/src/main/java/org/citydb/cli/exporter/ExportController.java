@@ -125,14 +125,14 @@ public abstract class ExportController implements Command {
         initialize(exportOptions, writeOptions, databaseManager);
 
         Query query = getQuery(exportOptions);
-        Tiling tiling = getTiling(exportOptions);
+        Tiling tiling = getTiling(exportOptions, writeOptions);
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         AtomicLong counter = new AtomicLong();
 
         try {
             TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseManager.getAdapter());
             if (tilingHelper.isUseTiling()) {
-                logger.info("Creating {} tile(s) based on provided tiling scheme.",
+                logger.info("Processing {} tile(s) based on provided tiling scheme.",
                         tilingHelper.getTileMatrix().size());
             }
 
@@ -205,6 +205,10 @@ public abstract class ExportController implements Command {
                     statistics.merge(tileStatistics);
                     if (tilingHelper.isUseTiling()) {
                         logStatistics(tileStatistics, "Tile export summary:", Level.DEBUG);
+                        if (tileStatistics.isEmpty() && writeOptions.isSkipEmptyTiles()) {
+                            logger.debug("Deleting empty tile file {}.", file);
+                            helper.deleteFileIfExists(file);
+                        }
                     }
                 }
             }
@@ -234,10 +238,16 @@ public abstract class ExportController implements Command {
         }
     }
 
-    protected Tiling getTiling(ExportOptions exportOptions) throws ExecutionException {
-        return tilingOptions != null
-                ? tilingOptions.getTiling()
-                : exportOptions.getTiling().orElseGet(TilingHelper::noTiling);
+    protected Tiling getTiling(ExportOptions exportOptions, WriteOptions writeOptions) throws ExecutionException {
+        if (tilingOptions != null) {
+            if (tilingOptions.isSkipEmptyTiles()) {
+                writeOptions.setSkipEmptyTiles(true);
+            }
+
+            return tilingOptions.getTiling();
+        }
+
+        return exportOptions.getTiling().orElseGet(TilingHelper::noTiling);
     }
 
     protected ExportOptions getExportOptions() throws ExecutionException {
