@@ -39,9 +39,9 @@ public class BuildResult {
     static BuildResult of(Expression expression, Type type, List<BuildResult> operands) {
         return new BuildResult(null, expression, type, operands != null
                 ? operands.stream()
-                  .map(BuildResult::getAndResetPredicates)
-                  .flatMap(Collection::stream)
-                  .toList()
+                .map(BuildResult::getAndResetPredicates)
+                .flatMap(Collection::stream)
+                .toList()
                 : null);
     }
 

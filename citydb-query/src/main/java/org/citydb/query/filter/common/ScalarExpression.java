@@ -83,8 +83,8 @@ public interface ScalarExpression extends Argument {
     default In in(Object... values) {
         return in(values != null
                 ? Arrays.stream(values)
-                  .map(Literal::ofScalar)
-                  .toList()
+                .map(Literal::ofScalar)
+                .toList()
                 : null);
     }
 
@@ -95,8 +95,8 @@ public interface ScalarExpression extends Argument {
     default In notIn(Object... values) {
         return notIn(values != null
                 ? Arrays.stream(values)
-                  .map(Literal::ofScalar)
-                  .toList()
+                .map(Literal::ofScalar)
+                .toList()
                 : null);
     }
 

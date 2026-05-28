@@ -114,8 +114,8 @@ public abstract class DatabaseExporter {
         try {
             return geometryObject != null
                     ? adapter.getGeometryAdapter().getGeometry(geometryObject)
-                      .setSRID(helper.getSRID())
-                      .setSrsIdentifier(helper.getSrsIdentifier())
+                    .setSRID(helper.getSRID())
+                    .setSrsIdentifier(helper.getSrsIdentifier())
                     : null;
         } catch (GeometryException e) {
             throw new ExportException("Failed to convert database geometry.", e);

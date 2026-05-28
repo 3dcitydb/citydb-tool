@@ -156,8 +156,8 @@ public class CommandHelper {
 
         return validity != null
                 ? query.setFilter(query.getFilter()
-                                  .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
-                                  .orElseGet(() -> Filter.of(validity)))
+                .map(filter -> Filter.of(Operators.and(validity, filter.getExpression())))
+                .orElseGet(() -> Filter.of(validity)))
                 : query;
     }
 

@@ -137,8 +137,8 @@ public class ExportHelper {
         return adapter.getDatabaseMetadata().getSpatialReference().getSRID() == getSRID()
                 ? column
                 : adapter.getGeometryAdapter().getSpatialOperationHelper()
-                  .transform(column, getSRID())
-                  .as(column.getName());
+                .transform(column, getSRID())
+                .as(column.getName());
     }
 
     Feature exportFeature(long id, long sequenceId) throws ExportException {

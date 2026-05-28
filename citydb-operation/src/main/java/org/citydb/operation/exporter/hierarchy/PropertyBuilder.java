@@ -61,7 +61,7 @@ public class PropertyBuilder {
         Geometry<?> geometry = hierarchy.getGeometry(propertyStub.getGeometryId());
         return geometry != null
                 ? GeometryProperty.of(propertyStub.getName(), geometry)
-                  .setLod(propertyStub.getLod())
+                .setLod(propertyStub.getLod())
                 : null;
     }
 

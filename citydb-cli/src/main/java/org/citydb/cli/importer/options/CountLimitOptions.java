@@ -21,8 +21,8 @@ public class CountLimitOptions implements Option {
     public CountLimit getCountLimit() {
         return limit != null || startIndex != null
                 ? new CountLimit()
-                  .setLimit(limit)
-                  .setStartIndex(startIndex)
+                .setLimit(limit)
+                .setStartIndex(startIndex)
                 : null;
     }
 

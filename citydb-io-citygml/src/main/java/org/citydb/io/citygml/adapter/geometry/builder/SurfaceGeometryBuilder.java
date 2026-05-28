@@ -138,9 +138,9 @@ public class SurfaceGeometryBuilder extends GeometryBuilder {
             if (exteriorRing != null) {
                 List<LinearRing> interiorRings = interior != null && !interior.isEmpty()
                         ? interior.stream()
-                          .map(this::createLinearRing)
-                          .filter(Objects::nonNull)
-                          .collect(Collectors.toList())
+                        .map(this::createLinearRing)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList())
                         : null;
 
                 return createPolygon(exteriorRing, interiorRings);

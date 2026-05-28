@@ -91,10 +91,10 @@ public class BuilderHelper {
     boolean matches(org.citydb.database.schema.Table schemaTable, Table table) throws QueryBuildException {
         Table candidate = table.isLateral()
                 ? table.getQueryExpression()
-                  .filter(Select.class::isInstance)
-                  .map(Select.class::cast)
-                  .map(select -> select.getFrom().get(0))
-                  .orElseThrow(() -> new QueryBuildException("Failed to access inner table of lateral query."))
+                .filter(Select.class::isInstance)
+                .map(Select.class::cast)
+                .map(select -> select.getFrom().get(0))
+                .orElseThrow(() -> new QueryBuildException("Failed to access inner table of lateral query."))
                 : table;
 
         return schemaTable.getName().equals(candidate.getName());
@@ -135,9 +135,9 @@ public class BuilderHelper {
     SpatialObject getSpatialLiteral(BuildResult operand) {
         return operand.getExpression() instanceof Placeholder placeholder
                 ? placeholder.getValue()
-                  .filter(SpatialObject.class::isInstance)
-                  .map(SpatialObject.class::cast)
-                  .orElse(null)
+                .filter(SpatialObject.class::isInstance)
+                .map(SpatialObject.class::cast)
+                .orElse(null)
                 : null;
     }
 

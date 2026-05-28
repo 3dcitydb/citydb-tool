@@ -117,8 +117,8 @@ public class Polygon extends Surface<Polygon> {
         return new Polygon(exteriorRing.copy(),
                 interiorRings != null
                         ? interiorRings.stream()
-                          .map(LinearRing::copy)
-                          .toArray(LinearRing[]::new)
+                        .map(LinearRing::copy)
+                        .toArray(LinearRing[]::new)
                         : null,
                 reversed)
                 .copyPropertiesFrom(this);

@@ -51,7 +51,7 @@ public class CityJSONWriterFactory {
             AbstractCityJSONWriter<?> writer = shouldStream
                     ? factory.createCityJSONFeatureWriter(file.openStream(), encoding)
                     : factory.createCityJSONWriter(file.openStream(), encoding)
-                      .withIndent(formatOptions.isPrettyPrint() ? "  " : null);
+                    .withIndent(formatOptions.isPrettyPrint() ? "  " : null);
 
             return writer.setHtmlSafe(formatOptions.isHtmlSafe());
         } catch (Exception e) {

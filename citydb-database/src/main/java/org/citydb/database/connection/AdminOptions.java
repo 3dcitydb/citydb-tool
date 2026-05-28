@@ -61,8 +61,8 @@ public class AdminOptions {
     public AdminOptions fillAbsentValuesFrom(AdminOptions other) {
         return other != null
                 ? setUserIfAbsent(other.user)
-                  .setPasswordIfAbsent(other.password)
-                  .setDatabaseIfAbsent(other.database)
+                .setPasswordIfAbsent(other.password)
+                .setDatabaseIfAbsent(other.database)
                 : this;
     }
 

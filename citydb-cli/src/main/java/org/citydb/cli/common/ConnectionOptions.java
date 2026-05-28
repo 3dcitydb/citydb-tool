@@ -82,7 +82,7 @@ public class ConnectionOptions implements Option {
                 .setPassword(password)
                 .setProperties(properties != null
                         ? properties.entrySet().stream()
-                          .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                         : null);
     }
 
