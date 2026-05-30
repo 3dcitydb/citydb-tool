@@ -177,6 +177,11 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
     }
 
     @Override
+    public void flush() {
+        countLatch.await();
+    }
+
+    @Override
     public void close() throws WriteException {
         try {
             countLatch.await();

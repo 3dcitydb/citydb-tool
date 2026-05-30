@@ -19,6 +19,8 @@ public interface FeatureWriter extends AutoCloseable {
 
     void cancel();
 
+    void flush() throws WriteException;
+
     @Override
     void close() throws WriteException;
 }
