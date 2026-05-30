@@ -9,80 +9,48 @@ import com.alibaba.fastjson2.JSON;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.plugin.metadata.PluginMetadata;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Stream;
 
-public class PluginManager {
-    private static final PluginManager instance = new PluginManager();
+public class PluginManager implements AutoCloseable {
+    private final PluginClassLoader loader;
     private final Map<String, Plugin> plugins = new HashMap<>();
     private final Map<Class<? extends Extension>, ExtensionInfo> extensions = new HashMap<>();
-    private Map<String, List<PluginException>> exceptions;
-    private ClassLoader loader;
 
     private record ExtensionInfo(LazyCheckedInitializer<Extension, PluginException> extension, Plugin plugin) {
     }
 
-    private PluginManager() {
+    private PluginManager(ClassLoader parent) {
+        loader = new PluginClassLoader(parent);
     }
 
-    public static PluginManager getInstance() {
-        return instance;
+    public static PluginManager newInstance() {
+        return new PluginManager(Thread.currentThread().getContextClassLoader());
     }
 
-    public PluginManager load() {
-        return load(Thread.currentThread().getContextClassLoader());
+    public static PluginManager of(ClassLoader parent) {
+        return new PluginManager(parent);
     }
 
-    public PluginManager load(Path pluginsDirectory) throws PluginException {
-        return load(pluginsDirectory, Thread.currentThread().getContextClassLoader());
-    }
+    public List<PluginException> load(Path pluginsDirectory) throws PluginException {
+        loader.addPath(pluginsDirectory);
+        List<PluginException> failures = new ArrayList<>();
 
-    public PluginManager load(Path pluginsDirectory, ClassLoader loader) throws PluginException {
-        List<URL> urls = new ArrayList<>();
-        if (Files.exists(pluginsDirectory)) {
-            try (Stream<Path> stream = Files.walk(pluginsDirectory, FileVisitOption.FOLLOW_LINKS)
-                    .filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".jar"))) {
-                stream.forEach(path -> {
-                    try {
-                        urls.add(path.toUri().toURL());
-                    } catch (MalformedURLException e) {
-                        //
-                    }
-                });
-            } catch (Exception e) {
-                throw new PluginException("Failed to load plugins from " + pluginsDirectory + ".", e);
-            }
-        }
-
-        return !urls.isEmpty()
-                ? load(URLClassLoader.newInstance(urls.toArray(URL[]::new), loader))
-                : load(loader);
-    }
-
-    public PluginManager load(ClassLoader loader) {
         for (Plugin plugin : ServiceLoader.load(Plugin.class, loader)) {
-            if ((exceptions != null
-                    && exceptions.containsKey(plugin.getClass().getName()))
-                    || plugins.containsKey(plugin.getClass().getName())) {
+            if (plugins.containsKey(plugin.getClass().getName())) {
                 continue;
             }
 
             try {
                 register(plugin, false);
             } catch (PluginException e) {
-                addException(plugin, "Failed to load the plugin " + plugin.getClass().getName() + ".", e);
+                failures.add(new PluginException("Failed to load plugin " +
+                        plugin.getClass().getName() + ".", e));
             }
         }
 
-        this.loader = loader;
-        return this;
+        return failures;
     }
 
     public PluginManager register(Plugin plugin) throws PluginException {
@@ -122,7 +90,7 @@ public class PluginManager {
     }
 
     public ClassLoader getClassLoader() {
-        return loader != null ? loader : Thread.currentThread().getContextClassLoader();
+        return loader;
     }
 
     public List<Plugin> getPlugins() {
@@ -153,20 +121,8 @@ public class PluginManager {
         return extensions;
     }
 
-    public boolean hasExceptions() {
-        return exceptions != null && !exceptions.isEmpty();
-    }
-
-    public Map<String, List<PluginException>> getExceptions() {
-        return exceptions != null ? exceptions : Collections.emptyMap();
-    }
-
-    private void addException(Plugin plugin, String message, Exception cause) {
-        if (exceptions == null) {
-            exceptions = new HashMap<>();
-        }
-
-        exceptions.computeIfAbsent(plugin.getClass().getName(), v -> new ArrayList<>())
-                .add(new PluginException(message, cause));
+    @Override
+    public void close() throws IOException {
+        loader.close();
     }
 }

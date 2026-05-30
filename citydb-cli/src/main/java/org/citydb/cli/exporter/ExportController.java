@@ -7,6 +7,7 @@ package org.citydb.cli.exporter;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.exporter.options.OutputFileOptions;
@@ -15,9 +16,7 @@ import org.citydb.cli.exporter.options.TilingOptions;
 import org.citydb.cli.exporter.util.SequentialWriter;
 import org.citydb.cli.exporter.util.TilingHelper;
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.FeatureStatistics;
-import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
@@ -84,12 +83,11 @@ public abstract class ExportController implements Command {
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
 
-    @ConfigOption
-    private Config config;
+    @Inject
+    protected CommandHelper helper;
 
     protected static final int ARG_GROUP_ORDER = 1;
     protected final Logger logger = LoggerManager.getInstance().getLogger(ExportController.class);
-    protected final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -116,7 +114,7 @@ public abstract class ExportController implements Command {
                         .findFirst()
                         .orElse(null));
 
-        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        DatabaseManager databaseManager = helper.connect(connectionOptions);
         ExportOptions exportOptions = getExportOptions();
         WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
@@ -253,7 +251,7 @@ public abstract class ExportController implements Command {
     protected ExportOptions getExportOptions() throws ExecutionException {
         ExportOptions exportOptions;
         try {
-            exportOptions = config.getOrElse(ExportOptions.class, ExportOptions::new);
+            exportOptions = helper.getConfig().getOrElse(ExportOptions.class, ExportOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get export options from config.", e);
         }
@@ -292,7 +290,7 @@ public abstract class ExportController implements Command {
     protected WriteOptions getWriteOptions(ExportOptions exportOptions, DatabaseAdapter adapter) throws ExecutionException {
         WriteOptions writeOptions;
         try {
-            writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
+            writeOptions = helper.getConfig().getOrElse(WriteOptions.class, WriteOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get write options from config.", e);
         }

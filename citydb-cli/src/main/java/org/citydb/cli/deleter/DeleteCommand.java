@@ -7,13 +7,12 @@ package org.citydb.cli.deleter;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.deleter.options.MetadataOptions;
 import org.citydb.cli.deleter.options.QueryOptions;
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.operation.deleter.Deleter;
@@ -76,17 +75,16 @@ public class DeleteCommand implements Command {
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
-    @ConfigOption
-    private Config config;
+    @Inject
+    private CommandHelper helper;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(DeleteCommand.class);
-    private final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        DatabaseManager databaseManager = helper.connect(connectionOptions);
 
         DeleteOptions deleteOptions = getDeleteOptions();
         int commitAfter = deleteOptions.getCommitAfter();
@@ -194,7 +192,7 @@ public class DeleteCommand implements Command {
     private DeleteOptions getDeleteOptions() throws ExecutionException {
         DeleteOptions deleteOptions;
         try {
-            deleteOptions = config.getOrElse(DeleteOptions.class, DeleteOptions::new);
+            deleteOptions = helper.getConfig().getOrElse(DeleteOptions.class, DeleteOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get delete options from config.", e);
         }

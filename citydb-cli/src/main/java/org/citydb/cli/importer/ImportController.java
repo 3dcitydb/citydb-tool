@@ -8,6 +8,7 @@ package org.citydb.cli.importer;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CliConstants;
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.importer.duplicate.DuplicateController;
@@ -17,8 +18,6 @@ import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.cli.importer.options.MetadataOptions;
 import org.citydb.cli.importer.util.ImportOptionsHelper;
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.core.file.InputFile;
@@ -91,12 +90,11 @@ public abstract class ImportController implements Command {
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
-    @ConfigOption
-    private Config config;
+    @Inject
+    protected CommandHelper helper;
 
     protected static final int ARG_GROUP_ORDER = 2;
     protected final Logger logger = LoggerManager.getInstance().getLogger(ImportController.class);
-    protected final CommandHelper helper = CommandHelper.getInstance();
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -123,7 +121,7 @@ public abstract class ImportController implements Command {
             logger.info("Found {} file(s) at {}.", inputFiles.size(), inputFileOptions.joinFiles());
         }
 
-        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        DatabaseManager databaseManager = helper.connect(connectionOptions);
         ImportOptions importOptions = getImportOptions();
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
@@ -250,7 +248,7 @@ public abstract class ImportController implements Command {
     protected ReadOptions getReadOptions() throws ExecutionException {
         ReadOptions readOptions;
         try {
-            readOptions = config.getOrElse(ReadOptions.class, ReadOptions::new);
+            readOptions = helper.getConfig().getOrElse(ReadOptions.class, ReadOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get read options from config.", e);
         }
@@ -281,7 +279,7 @@ public abstract class ImportController implements Command {
     protected ImportOptions getImportOptions() throws ExecutionException {
         ImportOptions importOptions;
         try {
-            importOptions = config.getOrElse(ImportOptions.class, ImportOptions::new);
+            importOptions = helper.getConfig().getOrElse(ImportOptions.class, ImportOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get import options from config.", e);
         }

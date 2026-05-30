@@ -3,12 +3,10 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.cli.util;
+package org.citydb.cli;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.citydb.cli.CliConstants;
-import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.Config;
@@ -47,7 +45,6 @@ import java.util.Collection;
 import java.util.function.Consumer;
 
 public class CommandHelper {
-    private static final CommandHelper instance = new CommandHelper();
     private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
     private final LazyCheckedInitializer<DatabaseAdapterManager, ExecutionException> databaseAdapterManager =
@@ -55,11 +52,10 @@ public class CommandHelper {
     private final LazyCheckedInitializer<IOAdapterManager, ExecutionException> ioAdapterManager =
             LazyCheckedInitializer.of(this::createIOAdapterManager);
 
-    private CommandHelper() {
-    }
+    private PluginManager pluginManager;
+    private Config config;
 
-    public static CommandHelper getInstance() {
-        return instance;
+    CommandHelper() {
     }
 
     public DatabaseManager getDatabaseManager() {
@@ -70,12 +66,24 @@ public class CommandHelper {
         return databaseAdapterManager.get();
     }
 
-    public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
-        return connect(options, null);
+    public Config getConfig() {
+        return config;
     }
 
-    public DatabaseManager connect(ConnectionOptions options, Config config) throws ExecutionException {
-        ConnectionDetails connectionDetails = getConnectionDetails(options, config);
+    void setConfig(Config config) {
+        this.config = config;
+    }
+
+    public PluginManager getPluginManager() {
+        return pluginManager;
+    }
+
+    void setPluginManager(PluginManager pluginManager) {
+        this.pluginManager = pluginManager;
+    }
+
+    public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
+        ConnectionDetails connectionDetails = getConnectionDetails(options);
         return connect(connectionDetails);
     }
 
@@ -97,10 +105,6 @@ public class CommandHelper {
     }
 
     public ConnectionDetails getConnectionDetails(ConnectionOptions options) throws ExecutionException {
-        return getConnectionDetails(options, null);
-    }
-
-    public ConnectionDetails getConnectionDetails(ConnectionOptions options, Config config) throws ExecutionException {
         ConnectionDetails connectionDetails = options != null
                 ? options.toConnectionDetails()
                 : new ConnectionDetails();
@@ -271,14 +275,14 @@ public class CommandHelper {
 
     private DatabaseAdapterManager createDatabaseAdapterManager() throws ExecutionException {
         try {
-            return DatabaseAdapterManager.newInstance().load(PluginManager.getInstance().getClassLoader());
+            return DatabaseAdapterManager.newInstance().load(pluginManager.getClassLoader());
         } catch (DatabaseAdapterException e) {
             throw new ExecutionException("Failed to load database adapters.", e);
         }
     }
 
     private IOAdapterManager createIOAdapterManager() throws ExecutionException {
-        IOAdapterManager manager = IOAdapterManager.newInstance().load(PluginManager.getInstance().getClassLoader());
+        IOAdapterManager manager = IOAdapterManager.newInstance().load(pluginManager.getClassLoader());
         if (manager.hasExceptions()) {
             throw new ExecutionException("Failed to load IO adapters.",
                     manager.getExceptions().values().stream()

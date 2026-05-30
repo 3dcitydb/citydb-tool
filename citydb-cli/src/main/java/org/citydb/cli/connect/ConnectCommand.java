@@ -8,14 +8,13 @@ package org.citydb.cli.connect;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
+import org.citydb.cli.common.Inject;
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.ConnectionInfoBuilder;
-import org.citydb.config.Config;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
@@ -34,14 +33,13 @@ public class ConnectCommand implements Command {
             heading = "Database connection options:%n")
     private ConnectionOptions connectionOptions;
 
-    @ConfigOption
-    private Config config;
+    @Inject
+    private CommandHelper helper;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(ConnectCommand.class);
-    private final CommandHelper helper = CommandHelper.getInstance();
 
     public Integer call() throws ExecutionException {
-        ConnectionDetails connectionDetails = helper.getConnectionDetails(connectionOptions, config);
+        ConnectionDetails connectionDetails = helper.getConnectionDetails(connectionOptions);
         DatabaseManager databaseManager = helper.getDatabaseManager();
         DatabaseAdapterManager databaseAdapterManager = helper.getDatabaseAdapterManager();
 

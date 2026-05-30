@@ -8,7 +8,7 @@ package org.citydb.cli;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
+import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.Option;
 import org.citydb.cli.connect.ConnectCommand;
 import org.citydb.cli.deleter.DeleteCommand;
@@ -18,23 +18,23 @@ import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
 import org.citydb.cli.info.InfoCommand;
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
+import org.citydb.plugin.PluginException;
 import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -85,11 +85,14 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     private Map<String, Boolean> usePlugins;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
-    private final PluginManager pluginManager = PluginManager.getInstance();
-    private final CommandHelper helper = CommandHelper.getInstance();
-    private final Config config = new Config();
+    private CommandHelper helper;
     private String commandLine;
     private String subCommandName;
+    private List<PluginException> pluginFailures = List.of();
+
+    static {
+        System.setProperty("picocli.disable.closures", "true");
+    }
 
     public static void main(String[] args) {
         Launcher launcher = new Launcher();
@@ -104,22 +107,23 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     public int execute(String[] args) throws Exception {
         Instant start = Instant.now();
         int exitCode = CommandLine.ExitCode.SOFTWARE;
-
-        System.setProperty("picocli.disable.closures", "true");
         CommandLine cmd = new CommandLine(this);
 
-        pluginManager.load(parsePluginsDirectory(args));
-        Command.addSubcommand(new ConnectCommand(), cmd, pluginManager);
-        Command.addSubcommand(new InfoCommand(), cmd, pluginManager);
-        Command.addSubcommand(new ImportCommand(), cmd, pluginManager);
-        Command.addSubcommand(new ExportCommand(), cmd, pluginManager);
-        Command.addSubcommand(new DeleteCommand(), cmd, pluginManager);
-        Command.addSubcommand(new IndexCommand(), cmd, pluginManager);
-        for (MainCommand mainCommand : pluginManager.getAllExtensions(MainCommand.class)) {
-            Command.addSubcommand(mainCommand, cmd, pluginManager);
-        }
+        try (PluginManager pluginManager = PluginManager.newInstance()) {
+            helper = new CommandHelper();
+            helper.setPluginManager(pluginManager);
 
-        try {
+            pluginFailures = pluginManager.load(parsePluginsDirectory(args));
+            Command.addSubcommand(new ConnectCommand(), cmd, pluginManager);
+            Command.addSubcommand(new InfoCommand(), cmd, pluginManager);
+            Command.addSubcommand(new ImportCommand(), cmd, pluginManager);
+            Command.addSubcommand(new ExportCommand(), cmd, pluginManager);
+            Command.addSubcommand(new DeleteCommand(), cmd, pluginManager);
+            Command.addSubcommand(new IndexCommand(), cmd, pluginManager);
+            for (MainCommand mainCommand : pluginManager.getAllExtensions(MainCommand.class)) {
+                Command.addSubcommand(mainCommand, cmd, pluginManager);
+            }
+
             CommandLine.ParseResult parseResult = cmd.setCaseInsensitiveEnumValuesAllowed(true)
                     .setAbbreviatedOptionsAllowed(true)
                     .setAbbreviatedSubcommandsAllowed(true)
@@ -159,27 +163,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     }
                 }
 
-                Class<?> type = command.getClass();
-                do {
-                    for (Field field : type.getDeclaredFields()) {
-                        field.setAccessible(true);
-                        if (Option.class.isAssignableFrom(field.getType())) {
-                            Option option = (Option) field.get(command);
-                            if (option != null) {
-                                option.preprocess(commandLine);
-                            }
-                        }
-
-                        if (field.isAnnotationPresent(ConfigOption.class)
-                                && Config.class.isAssignableFrom(field.getType())) {
-                            field.set(command, config);
-                        }
-                    }
-                } while ((type = type.getSuperclass()) != Object.class);
-
-                if (command instanceof Command) {
-                    ((Command) command).preprocess(commandLine);
-                }
+                preprocessCommand(command, commandLine);
             }
 
             commandLine = CliConstants.APP_COMMAND + " " + String.join(" ", args);
@@ -207,6 +191,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             logException(e.getCause());
         } catch (Throwable e) {
             logException(e);
+        } finally {
+            helper.disconnect();
         }
 
         return exitCode;
@@ -220,9 +206,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             createPidFile(helper.resolveAgainstWorkingDir(pidFile));
         }
 
-        if (configFile != null) {
-            loadConfig(helper.resolveAgainstWorkingDir(configFile));
-        }
+        helper.setConfig(configFile != null
+                ? loadConfig(helper.resolveAgainstWorkingDir(configFile))
+                : new Config());
 
         loadPlugins();
 
@@ -264,10 +250,10 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
-    private void loadConfig(Path file) throws ExecutionException {
+    private Config loadConfig(Path file) throws ExecutionException {
         try {
             logger.info("Loading configuration from file {}...", file);
-            config.putAll(ConfigManager.newInstance().read(file, Config.class, Config::new));
+            return ConfigManager.newInstance().read(file, Config.class, Config::new);
         } catch (Exception e) {
             throw new ExecutionException("Failed to load config file.", e);
         }
@@ -275,8 +261,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     private void loadPlugins() throws ExecutionException {
         logger.info("Loading plugins...");
-        if (!pluginManager.hasExceptions()) {
-            for (Plugin plugin : pluginManager.getPlugins()) {
+        if (pluginFailures.isEmpty()) {
+            for (Plugin plugin : helper.getPluginManager().getPlugins()) {
                 logger.info("{} plugin: {}{} ({})",
                         plugin.isEnabled() ? "Loaded" : "Disabled",
                         plugin.getMetadata().getName().orElse(plugin.getClass().getName()),
@@ -284,10 +270,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                         plugin.getClass().getName());
             }
         } else {
-            pluginManager.getExceptions().values().stream()
-                    .flatMap(Collection::stream)
-                    .forEach(e -> logger.error(e.getMessage(), e.getCause()));
-
+            pluginFailures.forEach(e -> logger.error(e.getMessage(), e.getCause()));
             throw new ExecutionException("Failed to load plugins.");
         }
     }
@@ -330,6 +313,46 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             return String.format("%02d m, %02d s", m, s);
         } else {
             return String.format("%02d s", s);
+        }
+    }
+
+    private void preprocessCommand(Object command, CommandLine commandLine) throws Exception {
+        Class<?> type = command.getClass();
+        do {
+            for (Field field : type.getDeclaredFields()) {
+                if (Modifier.isStatic(field.getModifiers())) {
+                    continue;
+                }
+
+                boolean isOption = Option.class.isAssignableFrom(field.getType());
+                boolean isInjectable = !Modifier.isFinal(field.getModifiers())
+                        && field.isAnnotationPresent(Inject.class);
+                if (!isOption && !isInjectable) {
+                    continue;
+                }
+
+                field.setAccessible(true);
+
+                if (isOption) {
+                    Option option = (Option) field.get(command);
+                    if (option != null) {
+                        option.preprocess(commandLine);
+                    }
+                }
+
+                if (isInjectable) {
+                    if (CommandHelper.class.isAssignableFrom(field.getType())) {
+                        field.set(command, helper);
+                    } else {
+                        logger.debug("Ignoring @Inject on unsupported type {} in {}.",
+                                field.getType().getName(), type.getName());
+                    }
+                }
+            }
+        } while ((type = type.getSuperclass()) != Object.class);
+
+        if (command instanceof Command preprocessor) {
+            preprocessor.preprocess(commandLine);
         }
     }
 

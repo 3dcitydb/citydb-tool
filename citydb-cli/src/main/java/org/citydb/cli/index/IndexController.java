@@ -5,11 +5,10 @@
 
 package org.citydb.cli.index;
 
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
+import org.citydb.cli.common.Inject;
 import picocli.CommandLine;
 
 public abstract class IndexController implements Command {
@@ -17,8 +16,6 @@ public abstract class IndexController implements Command {
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
 
-    @ConfigOption
-    protected Config config;
-
-    protected final CommandHelper helper = CommandHelper.getInstance();
+    @Inject
+    protected CommandHelper helper;
 }

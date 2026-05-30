@@ -9,14 +9,13 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
 import org.citydb.cli.common.ConnectionOptions;
+import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.ThreadsOptions;
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
-import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.util.IndexHelper;
@@ -64,15 +63,14 @@ public class InfoCommand implements Command {
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
-    @ConfigOption
-    private Config config;
+    @Inject
+    private CommandHelper helper;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(InfoCommand.class);
-    private final CommandHelper helper = CommandHelper.getInstance();
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        DatabaseManager databaseManager = helper.connect(connectionOptions);
         ReportOptions reportOptions = getReportOptions();
 
         IndexHelper.Status status = helper.getIndexStatus(databaseManager.getAdapter());
@@ -109,7 +107,7 @@ public class InfoCommand implements Command {
     private ReportOptions getReportOptions() throws ExecutionException {
         ReportOptions reportOptions;
         try {
-            reportOptions = config.getOrElse(ReportOptions.class, ReportOptions::new);
+            reportOptions = helper.getConfig().getOrElse(ReportOptions.class, ReportOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get report options from config.", e);
         }

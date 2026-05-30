@@ -25,7 +25,7 @@ public class DropIndexCommand extends IndexController {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        DatabaseManager databaseManager = helper.connect(connectionOptions);
         IndexHelper indexHelper = databaseManager.getAdapter().getSchemaAdapter().getIndexHelper();
 
         logger.info("Dropping database indexes.");
