@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -85,22 +86,35 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     private Map<String, Boolean> usePlugins;
 
     private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
+    private final List<Plugin> pluginsToRegister = new ArrayList<>();
     private CommandHelper helper;
+    private List<PluginException> pluginFailures;
     private String commandLine;
     private String subCommandName;
-    private List<PluginException> pluginFailures = List.of();
 
     static {
         System.setProperty("picocli.disable.closures", "true");
     }
 
+    public static Launcher newInstance() {
+        return new Launcher();
+    }
+
     public static void main(String[] args) {
-        Launcher launcher = new Launcher();
+        System.exit(new Launcher().run(args));
+    }
+
+    public Launcher withPlugin(Plugin plugin) {
+        pluginsToRegister.add(plugin);
+        return this;
+    }
+
+    public int run(String[] args) {
         try {
-            System.exit(launcher.execute(args));
+            return execute(args);
         } catch (Throwable e) {
-            launcher.logException(e);
-            System.exit(CommandLine.ExitCode.SOFTWARE);
+            logException(e);
+            return CommandLine.ExitCode.SOFTWARE;
         }
     }
 
@@ -112,6 +126,10 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         try (PluginManager pluginManager = PluginManager.newInstance()) {
             helper = new CommandHelper();
             helper.setPluginManager(pluginManager);
+
+            for (Plugin plugin : pluginsToRegister) {
+                pluginManager.register(plugin, true);
+            }
 
             pluginFailures = pluginManager.load(parsePluginsDirectory(args));
             Command.addSubcommand(new ConnectCommand(), cmd, pluginManager);
@@ -189,8 +207,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             exitCode = CommandLine.ExitCode.USAGE;
         } catch (CommandLine.ExecutionException e) {
             logException(e.getCause());
-        } catch (Throwable e) {
-            logException(e);
         } finally {
             helper.disconnect();
         }

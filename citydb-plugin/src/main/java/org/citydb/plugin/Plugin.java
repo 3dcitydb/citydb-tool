@@ -7,26 +7,26 @@ package org.citydb.plugin;
 
 import org.citydb.plugin.metadata.PluginMetadata;
 
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class Plugin {
     private PluginMetadata metadata;
+    private Path basePath;
     private boolean enabled;
 
-    public abstract List<Class<? extends Extension>> getExtensions();
+    public abstract List<Extension> getExtensions();
 
-    Plugin initialize(PluginMetadata metadata) {
-        if (metadata == null) {
-            metadata = new PluginMetadata();
-        }
+    public void initialize() throws PluginException {
+    }
 
-        if (metadata.getName() == null) {
-            metadata.setName(getClass().getName());
-        }
-
-        this.metadata = metadata;
+    void initialize(PluginMetadata metadata, Path basePath) throws PluginException {
+        this.metadata = Objects.requireNonNull(metadata, "The plugin metadata must not be null.");
+        this.basePath = basePath;
         enabled = metadata.isStartEnabled();
-        return this;
+
+        initialize();
     }
 
     public PluginMetadata getMetadata() {
@@ -35,6 +35,15 @@ public abstract class Plugin {
 
     Plugin setMetadata(PluginMetadata metadata) {
         this.metadata = metadata;
+        return this;
+    }
+
+    public Path getBasePath() {
+        return basePath;
+    }
+
+    protected Plugin setBasePath(Path basePath) {
+        this.basePath = basePath;
         return this;
     }
 

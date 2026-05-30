@@ -6,11 +6,13 @@
 package org.citydb.plugin;
 
 import com.alibaba.fastjson2.JSON;
-import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.plugin.metadata.PluginMetadata;
 
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class PluginManager implements AutoCloseable {
@@ -18,7 +20,7 @@ public class PluginManager implements AutoCloseable {
     private final Map<String, Plugin> plugins = new HashMap<>();
     private final Map<Class<? extends Extension>, ExtensionInfo> extensions = new HashMap<>();
 
-    private record ExtensionInfo(LazyCheckedInitializer<Extension, PluginException> extension, Plugin plugin) {
+    private record ExtensionInfo(Extension extension, Plugin plugin) {
     }
 
     private PluginManager(ClassLoader parent) {
@@ -53,40 +55,35 @@ public class PluginManager implements AutoCloseable {
         return failures;
     }
 
-    public PluginManager register(Plugin plugin) throws PluginException {
-        return register(plugin, false);
+    public void register(Plugin plugin) throws PluginException {
+        register(plugin, false);
     }
 
-    public PluginManager register(Plugin plugin, boolean overwriteExisting) throws PluginException {
+    public void register(Plugin plugin, boolean overwriteExisting) throws PluginException {
         if (!overwriteExisting && plugins.containsKey(plugin.getClass().getName())) {
             throw new PluginException("A plugin of type " + plugin.getClass().getName() +
                     " has already been registered.");
         }
 
-        PluginMetadata metadata;
-        try {
-            metadata = JSON.parseObject(plugin.getClass().getResource("plugin.json"), PluginMetadata.class);
-        } catch (Exception e) {
-            throw new PluginException("Failed to load plugin metadata from plugin.json.", e);
-        }
+        deregisterPlugin(plugin);
 
-        List<Class<? extends Extension>> types = plugin.getExtensions();
-        if (types != null) {
-            types.forEach(type -> extensions.put(type, new ExtensionInfo(
-                    LazyCheckedInitializer.of(() -> {
-                        try {
-                            return type.getDeclaredConstructor().newInstance();
-                        } catch (Exception e) {
-                            throw new PluginException("Failed to initialize extension " +
-                                    type.getName() + ".", e);
-                        }
-                    }),
-                    plugin
-            )));
-        }
+        PluginMetadata metadata = loadOrCreateMetadata(plugin);
+        plugin.initialize(metadata, plugin.getBasePath() == null
+                ? findBasePath(plugin)
+                : plugin.getBasePath());
 
-        plugins.put(plugin.getClass().getName(), plugin.initialize(metadata));
-        return this;
+        plugin.getExtensions().stream()
+                .filter(Objects::nonNull)
+                .forEach(extension -> extensions.put(extension.getClass(), new ExtensionInfo(extension, plugin)));
+
+        plugins.put(plugin.getClass().getName(), plugin);
+    }
+
+    public void deregisterPlugin(Plugin plugin) {
+        Plugin registered = plugins.remove(plugin.getClass().getName());
+        if (registered != null) {
+            extensions.entrySet().removeIf(e -> e.getValue().plugin() == registered);
+        }
     }
 
     public ClassLoader getClassLoader() {
@@ -99,26 +96,87 @@ public class PluginManager implements AutoCloseable {
 
     public Plugin getPlugin(Extension extension) {
         ExtensionInfo extensionInfo = extensions.get(extension.getClass());
-        return extensionInfo != null ? extensionInfo.plugin : null;
+        return extensionInfo != null ? extensionInfo.plugin() : null;
     }
 
-    public <T extends Extension> List<T> getExtensionsIfEnabled(Class<T> type) throws PluginException {
+    public <T extends Extension> List<T> getExtensionsIfEnabled(Class<T> type) {
         return getExtensions(type, true);
     }
 
-    public <T extends Extension> List<T> getAllExtensions(Class<T> type) throws PluginException {
+    public <T extends Extension> List<T> getAllExtensions(Class<T> type) {
         return getExtensions(type, false);
     }
 
-    private <T extends Extension> List<T> getExtensions(Class<T> type, boolean onlyEnabled) throws PluginException {
+    private <T extends Extension> List<T> getExtensions(Class<T> type, boolean onlyEnabled) {
         List<T> extensions = new ArrayList<>();
         for (Map.Entry<Class<? extends Extension>, ExtensionInfo> entry : this.extensions.entrySet()) {
-            if ((!onlyEnabled || entry.getValue().plugin.isEnabled()) && type.isAssignableFrom(entry.getKey())) {
-                extensions.add(type.cast(entry.getValue().extension.get()));
+            if ((!onlyEnabled || entry.getValue().plugin().isEnabled()) && type.isAssignableFrom(entry.getKey())) {
+                extensions.add(type.cast(entry.getValue().extension()));
             }
         }
 
         return extensions;
+    }
+
+    private PluginMetadata loadOrCreateMetadata(Plugin plugin) throws PluginException {
+        Class<?> type = plugin.getClass();
+        try {
+            PluginMetadata metadata = JSON.parseObject(type.getResource("plugin.json"), PluginMetadata.class);
+            if (metadata == null) {
+                metadata = new PluginMetadata();
+            }
+
+            if (metadata.getName().isEmpty()) {
+                metadata.setName(type.getName());
+            }
+
+            return metadata;
+        } catch (Exception e) {
+            throw new PluginException("Failed to load plugin metadata from plugin.json.", e);
+        }
+    }
+
+    private Path findBasePath(Plugin plugin) {
+        Class<?> type = plugin.getClass();
+        try {
+            URL location = type.getProtectionDomain()
+                    .getCodeSource()
+                    .getLocation();
+            if (location != null) {
+                Path path = Paths.get(location.toURI());
+                return Files.isRegularFile(path) ? path.getParent() : path;
+            }
+        } catch (Exception e) {
+            //
+        }
+
+        try {
+            URL resource = type.getResource(type.getSimpleName() + ".class");
+            if (resource != null) {
+                String classFile = type.getName().replace('.', '/') + ".class";
+                String location = resource.toString();
+                if (!location.endsWith(classFile)) {
+                    return null;
+                }
+
+                String base = location.substring(0, location.length() - classFile.length());
+                if (base.startsWith("jar:")) {
+                    int separator = base.indexOf("!/");
+                    if (separator < 0) {
+                        return null;
+                    }
+
+                    base = base.substring(4, separator);
+                }
+
+                Path path = Paths.get(new URL(base).toURI());
+                return Files.isRegularFile(path) ? path.getParent() : path;
+            }
+        } catch (Exception e) {
+            //
+        }
+
+        return null;
     }
 
     @Override
