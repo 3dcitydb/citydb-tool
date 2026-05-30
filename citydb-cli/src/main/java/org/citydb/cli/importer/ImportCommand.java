@@ -6,9 +6,9 @@
 package org.citydb.cli.importer;
 
 import org.citydb.cli.common.Command;
-import org.citydb.cli.extension.ImportFormatCommand;
 import org.citydb.cli.importer.citygml.CityGMLImportCommand;
 import org.citydb.cli.importer.cityjson.CityJSONImportCommand;
+import org.citydb.cli.importer.extension.ImportFormatCommand;
 import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
 

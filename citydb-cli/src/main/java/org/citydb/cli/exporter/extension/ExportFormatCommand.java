@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.cli.extension;
+package org.citydb.cli.exporter.extension;
 
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.plugin.Extension;

@@ -22,6 +22,7 @@ module org.citydb.cli {
     exports org.citydb.cli.exporter;
     exports org.citydb.cli.exporter.citygml;
     exports org.citydb.cli.exporter.cityjson;
+    exports org.citydb.cli.exporter.extension;
     exports org.citydb.cli.exporter.options;
     exports org.citydb.cli.exporter.util;
     exports org.citydb.cli.extension;
@@ -29,6 +30,7 @@ module org.citydb.cli {
     exports org.citydb.cli.importer.citygml;
     exports org.citydb.cli.importer.cityjson;
     exports org.citydb.cli.importer.duplicate;
+    exports org.citydb.cli.importer.extension;
     exports org.citydb.cli.importer.filter;
     exports org.citydb.cli.importer.options;
     exports org.citydb.cli.importer.util;
