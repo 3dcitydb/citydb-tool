@@ -119,12 +119,11 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     }
 
     public int execute(String[] args) throws Exception {
-        Instant start = Instant.now();
-        int exitCode = CommandLine.ExitCode.SOFTWARE;
         CommandLine cmd = new CommandLine(this);
+        helper = new CommandHelper();
+        int exitCode = CommandLine.ExitCode.SOFTWARE;
 
         try (PluginManager pluginManager = PluginManager.newInstance()) {
-            helper = new CommandHelper();
             helper.setPluginManager(pluginManager);
 
             for (Plugin plugin : pluginsToRegister) {
@@ -189,6 +188,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     .map(CommandLine::getCommandName)
                     .collect(Collectors.joining(" "));
 
+            Instant start = Instant.now();
             try {
                 exitCode = cmd.getExecutionStrategy().execute(parseResult);
             } finally {
