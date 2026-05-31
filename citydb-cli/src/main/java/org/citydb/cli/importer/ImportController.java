@@ -175,20 +175,23 @@ public abstract class ImportController implements Command {
                     importer.startSession(databaseManager.getAdapter(), optionsHelper.update(importOptions, inputFile));
 
                     reader.read(feature -> {
-                        if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
-                            importer.importFeature(feature).whenComplete((descriptor, e) -> {
-                                if (descriptor != null) {
-                                    importLogger.add(feature);
-                                    long count = counter.incrementAndGet();
-                                    if (count % 1000 == 0) {
-                                        logger.info("{} features processed.", count);
-                                    }
-                                } else {
-                                    abort(feature, e);
-                                    reader.cancel();
-                                }
-                            });
+                        if (importMode == ImportMode.SKIP_EXISTING && duplicateController.isDuplicate(feature)) {
+                            return;
                         }
+
+                        importer.importFeature(feature).whenComplete((descriptor, e) -> {
+                            if (descriptor == null) {
+                                abort(feature, e);
+                                reader.cancel();
+                                return;
+                            }
+
+                            importLogger.add(feature);
+                            long count = counter.incrementAndGet();
+                            if (count % 1000 == 0) {
+                                logger.info("{} features processed.", count);
+                            }
+                        });
                     });
                 } catch (Throwable e) {
                     shouldRun = false;

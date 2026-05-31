@@ -137,13 +137,14 @@ public class DeleteCommand implements Command {
                     deleteLogger.add(id, result.getObjectClassId());
 
                     deleter.deleteFeature(id).whenComplete((success, t) -> {
-                        if (success == Boolean.TRUE) {
-                            long count = counter.incrementAndGet();
-                            if (count % 1000 == 0) {
-                                logger.info("{} features processed.", count);
-                            }
-                        } else {
+                        if (success != Boolean.TRUE) {
                             abort(id, t);
+                            return;
+                        }
+
+                        long count = counter.incrementAndGet();
+                        if (count % 1000 == 0) {
+                            logger.info("{} features processed.", count);
                         }
                     });
                 }

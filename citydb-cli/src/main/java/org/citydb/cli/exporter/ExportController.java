@@ -172,24 +172,26 @@ public abstract class ExportController implements Command {
                             }
 
                             exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
-                                if (feature != null) {
-                                    try {
-                                        writer.write(feature, (success, e) -> {
-                                            if (success == Boolean.TRUE) {
-                                                tileStatistics.add(feature);
-                                                long count = counter.incrementAndGet();
-                                                if (count % 1000 == 0) {
-                                                    logger.info("{} features exported.", count);
-                                                }
-                                            } else {
-                                                abort(feature, id, e);
-                                            }
-                                        });
-                                    } catch (Throwable e) {
-                                        abort(feature, id, e);
-                                    }
-                                } else {
+                                if (feature == null) {
                                     abort(null, id, t);
+                                    return;
+                                }
+
+                                try {
+                                    writer.write(feature, (success, e) -> {
+                                        if (success != Boolean.TRUE) {
+                                            abort(feature, id, e);
+                                            return;
+                                        }
+
+                                        tileStatistics.add(feature);
+                                        long count = counter.incrementAndGet();
+                                        if (count % 1000 == 0) {
+                                            logger.info("{} features exported.", count);
+                                        }
+                                    });
+                                } catch (Throwable e) {
+                                    abort(feature, id, e);
                                 }
                             });
                         }
