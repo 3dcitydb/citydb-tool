@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-05-31
+
 ### Fixed
 - Fixed a regression that prevented textures assigned to implicit geometries through global appearances from
   being imported.
@@ -99,7 +101,8 @@
 
 This is the initial release of citydb-tool.
 
-[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.3.1..HEAD
+[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.3.2..HEAD
+[1.3.2]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.2
 [1.3.1]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.1
 [1.3.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.0
 [1.2.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.2.0
