@@ -13,7 +13,7 @@ See the `LICENSE` file for more details.
 
 ## Latest release
 
-The latest stable release of citydb-tool is `1.3.1`.
+The latest stable release of citydb-tool is `1.3.2`.
 
 Download the latest citydb-tool release as ZIP package
 [here](https://github.com/3dcitydb/citydb-tool/releases/latest). Previous releases are available from the
