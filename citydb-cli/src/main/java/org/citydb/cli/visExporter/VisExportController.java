@@ -160,8 +160,8 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             options.setGridEdgeLength(sceneOptions.getGridEdgeLength());
         }
 
-        if (Command.hasMatchedOption("--lod-refine-radius", commandSpec)) {
-            options.setLodRefineRadius(sceneOptions.getLodRefineRadius());
+        if (Command.hasMatchedOption("--screen-pixel-threshold", commandSpec)) {
+            options.setScreenPixelThreshold(sceneOptions.getScreenPixelThreshold());
         }
 
         if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {

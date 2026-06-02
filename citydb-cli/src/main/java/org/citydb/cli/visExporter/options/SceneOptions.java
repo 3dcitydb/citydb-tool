@@ -23,17 +23,16 @@ public class SceneOptions implements Option {
                     "value to produce a finer grid and shorter camera load distances.")
     private double gridEdgeLength;
 
-    @CommandLine.Option(names = "--lod-refine-radius", paramLabel = "<pixels>",
+    @CommandLine.Option(names = "--screen-pixel-threshold", paramLabel = "<pixels>",
             defaultValue = "56",
             description = "Projected MBS radius (pixels) above which a tile refines to its " +
                     "children (default: ${DEFAULT-VALUE}). Applied uniformly to both 3D Tiles " +
                     "(via geometric error) and I3S (via LOD threshold) so both formats load " +
                     "the same level of detail at any given camera distance. Lower values load " +
                     "more detail (heavier viewer), higher values defer refinement (lighter " +
-                    "viewer). Pass 0 to disable LOD entirely and always refine to the leaves; " +
-                    "this can crash the viewer on city-scale datasets and is intended for " +
-                    "small exports or debugging.")
-    private double lodRefineRadius;
+                    "viewer). Pass 0 to always refine to the leaves; this can crash the viewer " +
+                    "on city-scale datasets and is intended for small exports or debugging.")
+    private double screenPixelThreshold;
 
     @CommandLine.Option(names = "--clamp-to-ground",
             description = "Place each building on the ellipsoid surface (height 0). " +
@@ -169,8 +168,8 @@ public class SceneOptions implements Option {
         return gridEdgeLength;
     }
 
-    public double getLodRefineRadius() {
-        return lodRefineRadius;
+    public double getScreenPixelThreshold() {
+        return screenPixelThreshold;
     }
 
     public boolean isClampToGround() {
@@ -240,10 +239,10 @@ public class SceneOptions implements Option {
                             gridEdgeLength + "'");
         }
 
-        if (lodRefineRadius < 0) {
+        if (screenPixelThreshold < 0) {
             throw new CommandLine.ParameterException(commandLine,
-                    "Error: --lod-refine-radius must be a non-negative number of pixels but was '" +
-                            lodRefineRadius + "'");
+                    "Error: --screen-pixel-threshold must be a non-negative number of pixels but was '" +
+                            screenPixelThreshold + "'");
         }
 
         if (textureScale < 0.01 || textureScale > 1.0) {
