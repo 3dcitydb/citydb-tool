@@ -114,13 +114,13 @@ public class TileNode {
      * intermediate nodes, {@code 0} for leaf nodes.
      * <p>
      * {@code geRatio} ties the geometric error to the unified
-     * {@code --lod-refine-radius} target via
-     * {@code geRatio = 16 / lodRefineRadius}. At Cesium's default runtime
+     * {@code --screen-pixel-threshold} target via
+     * {@code geRatio = 16 / screenPixelThreshold}. At Cesium's default runtime
      * {@code maximumScreenSpaceError = 16}, this makes a tile refine when
-     * its projected MBS radius exceeds {@code lodRefineRadius} pixels —
+     * its projected MBS radius exceeds {@code screenPixelThreshold} pixels —
      * identical to the I3S refine point at the same parameter.
      * <p>
-     * When {@code lodRefineRadius == 0} the caller passes
+     * When {@code screenPixelThreshold == 0} the caller passes
      * {@code POSITIVE_INFINITY} as {@code geRatio}; we collapse that to
      * {@link #ALWAYS_REFINE_GE} (a finite, JSON-safe huge value) so Cesium
      * always sees SSE above its threshold and refines into the leaves.

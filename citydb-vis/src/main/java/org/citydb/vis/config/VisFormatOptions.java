@@ -28,8 +28,8 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     // city-scale data. 0 is a sentinel both writers translate into an
     // always-refine policy (every leaf loads immediately); useful for
     // small exports / debugging but easily crashes the viewer on large
-    // datasets, so users must opt in explicitly with --lod-refine-radius=0.
-    private double lodRefineRadius = 56.0;
+    // datasets, so users must opt in explicitly with --screen-pixel-threshold=0.
+    private double screenPixelThreshold = 56.0;
     private boolean clampToGround;
     private double textureScale = 1.0;
     private int maxAtlasSize = 1024;
@@ -48,12 +48,12 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
         return this;
     }
 
-    public double getLodRefineRadius() {
-        return lodRefineRadius;
+    public double getScreenPixelThreshold() {
+        return screenPixelThreshold;
     }
 
-    public VisFormatOptions setLodRefineRadius(double lodRefineRadius) {
-        this.lodRefineRadius = lodRefineRadius;
+    public VisFormatOptions setScreenPixelThreshold(double screenPixelThreshold) {
+        this.screenPixelThreshold = screenPixelThreshold;
         return this;
     }
 
