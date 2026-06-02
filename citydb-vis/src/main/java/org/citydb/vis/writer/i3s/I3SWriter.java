@@ -63,9 +63,9 @@ import java.util.Set;
 public class I3SWriter extends VisWriter {
     private static final int EPSG_4326 = 4326;
 
-    // LOD threshold derives from VisFormatOptions.lodRefineRadius via
+    // LOD threshold derives from VisFormatOptions.screenPixelThreshold via
     // lodThresholdFor(r) to align the I3S refine boundary with the 3D Tiles
-    // one — both refine at projected MBS radius > lodRefineRadius pixels.
+    // one — both refine at projected MBS radius > screenPixelThreshold pixels.
     // See lodThresholdFor below. Must be an integer — ArcGIS rejects float
     // values in node pages.
 
@@ -113,7 +113,7 @@ public class I3SWriter extends VisWriter {
                 || styleRegistry.defaultStyle().hasNonDefaultColor()
                 || styleRegistry.hasOverrides();
         // Set I3S LOD thresholds on the tree
-        int lodThreshold = lodThresholdFor(getFormatOptions().getLodRefineRadius());
+        int lodThreshold = lodThresholdFor(getFormatOptions().getScreenPixelThreshold());
         setLodThresholds(allNodes, lodThreshold);
 
         boolean slpk = options.isSlpk();
@@ -173,15 +173,15 @@ public class I3SWriter extends VisWriter {
 
     /**
      * Derive the I3S {@code lodThreshold} (pixels²) from the unified
-     * {@code lodRefineRadius} parameter so I3S refines at the same
+     * {@code screenPixelThreshold} parameter so I3S refines at the same
      * projected MBS radius as 3D Tiles.
      * <p>
      * Both formats refine when the projected MBS radius exceeds
-     * {@code lodRefineRadius} pixels. The projected disk's area is
+     * {@code screenPixelThreshold} pixels. The projected disk's area is
      * {@code π × r²}, which is what I3S compares against.
      */
-    private static int lodThresholdFor(double refineRadiusPx) {
-        return (int) Math.round(Math.PI * refineRadiusPx * refineRadiusPx);
+    private static int lodThresholdFor(double pixelThreshold) {
+        return (int) Math.round(Math.PI * pixelThreshold * pixelThreshold);
     }
 
     private static SceneLayer buildSceneLayer(double[] extent) {

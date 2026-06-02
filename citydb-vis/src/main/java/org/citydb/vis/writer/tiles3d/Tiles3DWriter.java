@@ -148,16 +148,16 @@ public class Tiles3DWriter extends VisWriter {
             // Write sub-tilesets (tree-based spatial split) starting at the
             // aggregation root; the writer recurses through the aggregation
             // layer and cell leaves uniformly.
-            // geRatio = 16/R_refine ties the 3D Tiles refine decision to the
+            // geRatio = 16/threshold ties the 3D Tiles refine decision to the
             // same projected MBS radius as I3S: both formats refine when the
-            // on-screen MBS radius exceeds lodRefineRadius pixels (assuming
+            // on-screen MBS radius exceeds screenPixelThreshold pixels (assuming
             // Cesium's default runtime maximumScreenSpaceError = 16).
-            // lodRefineRadius == 0 is the "always refine" sentinel: pass
+            // screenPixelThreshold == 0 is the "always refine" sentinel: pass
             // POSITIVE_INFINITY so TileNode.computeGeometricError emits a
             // finite "always-refine" geometric error (Infinity is not valid
             // JSON) and the runtime always loads the leaves.
-            double refineRadius = getFormatOptions().getLodRefineRadius();
-            double geRatio = refineRadius > 0 ? 16.0 / refineRadius : Double.POSITIVE_INFINITY;
+            double pixelThreshold = getFormatOptions().getScreenPixelThreshold();
+            double geRatio = pixelThreshold > 0 ? 16.0 / pixelThreshold : Double.POSITIVE_INFINITY;
             AtomicInteger subtreeFileCount = new AtomicInteger();
             tilesetSerializer.writeSubTileset(subtreesDir, aggRoot,
                     effectiveMeshIndices, tilePaths, subtreeFileCount, geRatio);
