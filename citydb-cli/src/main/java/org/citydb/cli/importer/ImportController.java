@@ -382,19 +382,18 @@ public abstract class ImportController implements Command {
         ExecutionException exception = null;
         try {
             afterImport(success, statistics);
-        } catch (Throwable e) {
+        } catch (ExecutionException e) {
             if (success) {
-                exception = new ExecutionException("Failed to complete import operation.", e);
+                exception = e;
             }
         }
 
         for (FeatureImportProcessor processor : processors) {
             try {
                 processor.afterImport(success, statistics);
-            } catch (Throwable e) {
+            } catch (ExecutionException e) {
                 if (success && exception == null) {
-                    exception = new ExecutionException("An unexpected error has occurred in feature processor " +
-                            processor.getClass().getName() + ".", e);
+                    exception = e;
                 }
             }
         }

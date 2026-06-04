@@ -365,19 +365,18 @@ public abstract class ExportController implements Command {
         ExecutionException exception = null;
         try {
             afterExport(success, statistics);
-        } catch (Throwable e) {
+        } catch (ExecutionException e) {
             if (success) {
-                exception = new ExecutionException("Failed to complete export operation.", e);
+                exception = e;
             }
         }
 
         for (FeatureExportProcessor processor : processors) {
             try {
                 processor.afterExport(success, statistics);
-            } catch (Throwable e) {
+            } catch (ExecutionException e) {
                 if (success && exception == null) {
-                    exception = new ExecutionException("An unexpected error has occurred in feature processor " +
-                            processor.getClass().getName() + ".", e);
+                    exception = e;
                 }
             }
         }
