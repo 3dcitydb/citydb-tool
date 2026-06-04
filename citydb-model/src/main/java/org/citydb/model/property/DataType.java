@@ -55,7 +55,7 @@ public enum DataType implements DataTypeProvider {
     TRANSACTION("Transaction", Namespaces.VERSIONING),
     URI("URI", Namespaces.CORE);
 
-    private final static Map<Name, DataType> types = new HashMap<>();
+    private static final Map<Name, DataType> types = new HashMap<>();
     private final Name name;
 
     static {

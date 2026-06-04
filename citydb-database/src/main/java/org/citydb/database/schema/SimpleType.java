@@ -21,7 +21,7 @@ public enum SimpleType implements ColumnType {
 
     public static final EnumSet<SimpleType> JOIN_CONDITION_TYPES = EnumSet.of(INTEGER, DOUBLE, STRING);
 
-    private final static Map<String, SimpleType> types = new HashMap<>();
+    private static final Map<String, SimpleType> types = new HashMap<>();
     private final String identifier;
 
     static {

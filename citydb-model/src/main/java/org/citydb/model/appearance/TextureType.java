@@ -15,7 +15,7 @@ public enum TextureType {
     TYPICAL("typical"),
     UNKNOWN("unknown");
 
-    private final static Map<String, TextureType> types = new HashMap<>();
+    private static final Map<String, TextureType> types = new HashMap<>();
     private final String value;
 
     static {

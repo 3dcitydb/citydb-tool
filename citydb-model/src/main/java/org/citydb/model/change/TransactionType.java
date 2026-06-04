@@ -16,7 +16,7 @@ public enum TransactionType {
     TERMINATE("terminate"),
     DELETE("delete");
 
-    private final static Map<String, TransactionType> types = new HashMap<>();
+    private static final Map<String, TransactionType> types = new HashMap<>();
     private final String value;
 
     static {

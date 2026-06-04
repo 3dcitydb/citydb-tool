@@ -22,7 +22,7 @@ public enum GeometryType {
     COMPOSITE_SOLID(10, "CompositeSolid"),
     MULTI_SOLID(11, "MultiSolid");
 
-    private final static Map<Integer, GeometryType> types = new HashMap<>();
+    private static final Map<Integer, GeometryType> types = new HashMap<>();
     private final int value;
     private final String typeName;
 

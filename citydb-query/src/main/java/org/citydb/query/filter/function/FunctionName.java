@@ -12,7 +12,7 @@ public enum FunctionName {
     CASEI("casei", "CASEI"),
     INDEX("index", "INDEX");
 
-    private final static Map<String, FunctionName> identifiers = new HashMap<>();
+    private static final Map<String, FunctionName> identifiers = new HashMap<>();
     private final String jsonToken;
     private final String textToken;
 

@@ -17,7 +17,7 @@ public enum WrapMode {
     CLAMP("clamp"),
     BORDER("border");
 
-    private final static Map<String, WrapMode> modes = new HashMap<>();
+    private static final Map<String, WrapMode> modes = new HashMap<>();
     private final String value;
 
     static {

@@ -22,7 +22,7 @@ public enum TypeCast {
     IMPLICIT_GEOMETRY(List.of("implicitGeometry", "implicitGeometryProperty"), DataType.IMPLICIT_GEOMETRY_PROPERTY),
     FEATURE_PROPERTY(List.of("feature", "featureProperty"), DataType.FEATURE_PROPERTY);
 
-    private final static Map<String, TypeCast> types = new HashMap<>();
+    private static final Map<String, TypeCast> types = new HashMap<>();
     private final List<String> identifiers;
     private final DataType type;
 

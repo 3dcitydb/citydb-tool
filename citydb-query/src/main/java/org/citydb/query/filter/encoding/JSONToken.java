@@ -91,7 +91,7 @@ public enum JSONToken {
     static final EnumSet<JSONToken> GEOMETRIES = EnumSet.of(BBOX, POINT, LINESTRING, POLYGON, MULTIPOINT,
             MULTILINESTRING, MULTIPOLYGON, GEOMETRYCOLLECTION);
 
-    private final static Map<String, JSONToken> keywords = new HashMap<>();
+    private static final Map<String, JSONToken> keywords = new HashMap<>();
     private final String token;
 
     JSONToken(String token) {

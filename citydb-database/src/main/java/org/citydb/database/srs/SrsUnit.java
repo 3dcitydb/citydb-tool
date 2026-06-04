@@ -29,7 +29,7 @@ public enum SrsUnit {
     RADIAN(SI.RADIAN, "rad", "radian", "radians"),
     YARD(USCustomary.YARD, "yd", "yard", "yards");
 
-    private final static Map<String, SrsUnit> units = new HashMap<>();
+    private static final Map<String, SrsUnit> units = new HashMap<>();
     private final Unit<?> unit;
     private final String[] symbols;
 

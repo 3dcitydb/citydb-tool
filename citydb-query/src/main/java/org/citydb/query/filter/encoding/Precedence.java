@@ -33,7 +33,7 @@ public enum Precedence {
     OR(TextToken.OR, 8),
     UNDEFINED(null, Integer.MAX_VALUE);
 
-    private final static Map<TextToken, Precedence> values = new HashMap<>();
+    private static final Map<TextToken, Precedence> values = new HashMap<>();
     private final TextToken token;
     private final int level;
 

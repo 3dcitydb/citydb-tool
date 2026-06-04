@@ -25,7 +25,7 @@ public enum Sequence {
     APPEAR_TO_SURFACE_DATA("appear_to_surface_data_seq"),
     TEX_IMAGE("tex_image_seq");
 
-    private final static Map<String, Sequence> sequences = new HashMap<>();
+    private static final Map<String, Sequence> sequences = new HashMap<>();
     private final String name;
 
     static {

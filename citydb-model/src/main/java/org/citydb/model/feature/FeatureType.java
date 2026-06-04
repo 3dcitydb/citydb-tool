@@ -90,7 +90,7 @@ public enum FeatureType implements FeatureTypeProvider {
     WINDOW("Window", Namespaces.CONSTRUCTION),
     WINDOW_SURFACE("WindowSurface", Namespaces.CONSTRUCTION);
 
-    private final static Map<Name, FeatureType> types = new HashMap<>();
+    private static final Map<Name, FeatureType> types = new HashMap<>();
     private final Name name;
 
     static {

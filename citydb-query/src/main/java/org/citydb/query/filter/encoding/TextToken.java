@@ -109,7 +109,7 @@ public enum TextToken {
     static final EnumSet<TextToken> GEOMETRIES = EnumSet.of(BBOX, POINT, LINESTRING, POLYGON, MULTIPOINT,
             MULTILINESTRING, MULTIPOLYGON, GEOMETRYCOLLECTION);
 
-    private final static Map<String, TextToken> tokens = new HashMap<>();
+    private static final Map<String, TextToken> tokens = new HashMap<>();
     private final String token;
 
     TextToken(String token) {

@@ -256,8 +256,8 @@ public class WKBWriter {
     }
 
     private abstract class ByteBuffer {
-        final int[] indexes;
-        int pos;
+        private final int[] indexes;
+        private int pos;
 
         ByteBuffer() {
             indexes = WKBWriter.this.useBigEndian
@@ -304,8 +304,8 @@ public class WKBWriter {
     }
 
     private class StringBuffer extends ByteBuffer {
-        final static char[] hexArray = "0123456789ABCDEF".toCharArray();
-        char[] data;
+        private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
+        private char[] data;
 
         @Override
         void allocate(int length) {
@@ -325,7 +325,7 @@ public class WKBWriter {
     }
 
     private class ArrayBuffer extends ByteBuffer {
-        byte[] data;
+        private byte[] data;
 
         @Override
         void allocate(int length) {

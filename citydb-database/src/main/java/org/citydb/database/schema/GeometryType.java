@@ -30,7 +30,7 @@ public enum GeometryType implements ColumnType {
     COMPOSITE_SOLID("core:CompositeSolid", Name.of("CompositeSolid", Namespaces.CORE)),
     MULTI_SOLID("core:MultiSolid", Name.of("MultiSolid", Namespaces.CORE));
 
-    private final static Map<String, GeometryType> types = new HashMap<>();
+    private static final Map<String, GeometryType> types = new HashMap<>();
     private final String identifier;
     private final Name name;
 
