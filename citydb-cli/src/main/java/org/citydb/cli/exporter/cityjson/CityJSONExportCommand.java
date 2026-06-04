@@ -154,7 +154,7 @@ public class CityJSONExportCommand extends ExportController {
     }
 
     @Override
-    protected void initialize(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
+    protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
         try {
             if (databaseManager.getAdapter().getGeometryAdapter().hasImplicitGeometries()) {
                 logger.info("Retrieving global template geometries...");

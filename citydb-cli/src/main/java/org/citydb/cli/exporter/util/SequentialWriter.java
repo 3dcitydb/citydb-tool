@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
 public class SequentialWriter implements FeatureWriter {
+    private static final String SKIPPED = SequentialWriter.class.getName() + ".skipped";
     private final Logger logger = LoggerManager.getInstance().getLogger(SequentialWriter.class);
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition condition = lock.newCondition();
@@ -42,6 +43,12 @@ public class SequentialWriter implements FeatureWriter {
         return new SequentialWriter(writer);
     }
 
+    public void skip(Feature feature) throws WriteException {
+        feature.getUserProperties().set(SKIPPED, true);
+        write(feature, (success, t) -> {
+        });
+    }
+
     @Override
     public void write(Feature feature, BiConsumer<Boolean, Throwable> onCompletion) throws WriteException {
         long sequenceId = feature.getDescriptor()
@@ -51,13 +58,19 @@ public class SequentialWriter implements FeatureWriter {
             lock.lock();
             try {
                 if (currentId == sequenceId) {
-                    writer.write(feature).whenComplete(onCompletion);
+                    if (shouldWrite(feature)) {
+                        writer.write(feature).whenComplete(onCompletion);
+                    }
+
                     currentId++;
 
                     CacheEntry entry;
                     while ((entry = cache.remove(currentId)) != null) {
                         condition.signal();
-                        writer.write(entry.feature).whenComplete(entry.onCompletion);
+                        if (shouldWrite(entry.feature)) {
+                            writer.write(entry.feature).whenComplete(entry.onCompletion);
+                        }
+
                         currentId++;
                     }
                 } else {
@@ -110,7 +123,9 @@ public class SequentialWriter implements FeatureWriter {
                         .map(Map.Entry::getValue)
                         .toList();
                 for (CacheEntry entry : entries) {
-                    writer.write(entry.feature).whenComplete(entry.onCompletion);
+                    if (shouldWrite(entry.feature)) {
+                        writer.write(entry.feature).whenComplete(entry.onCompletion);
+                    }
                 }
             }
 
@@ -118,5 +133,10 @@ public class SequentialWriter implements FeatureWriter {
         } finally {
             cache.clear();
         }
+    }
+
+    private boolean shouldWrite(Feature feature) {
+        return !feature.hasUserProperties()
+                || !feature.getUserProperties().getAndCompare(SKIPPED, true);
     }
 }

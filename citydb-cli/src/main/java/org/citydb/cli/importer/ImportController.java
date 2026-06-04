@@ -12,12 +12,14 @@ import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.importer.duplicate.DuplicateController;
+import org.citydb.cli.importer.extension.FeatureImportProcessor;
 import org.citydb.cli.importer.filter.Filter;
 import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.cli.importer.options.MetadataOptions;
 import org.citydb.cli.importer.util.ImportOptionsHelper;
 import org.citydb.cli.logging.LoggerManager;
+import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.core.file.InputFile;
@@ -102,6 +104,12 @@ public abstract class ImportController implements Command {
 
     protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
 
+    protected void beforeImport(ImportOptions importOptions, ReadOptions readOptions, DatabaseManager databaseManager) throws ExecutionException {
+    }
+
+    protected void afterImport(boolean success, FeatureStatistics statistics) throws ExecutionException {
+    }
+
     @Override
     public Integer call() throws ExecutionException {
         return doImport()
@@ -125,6 +133,9 @@ public abstract class ImportController implements Command {
         ImportOptions importOptions = getImportOptions();
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
+
+        List<FeatureImportProcessor> featureProcessors = helper.getExtensions(FeatureImportProcessor.class);
+        beforeImport(importOptions, readOptions, featureProcessors, databaseManager);
 
         Filter filter = getFilter(importOptions, databaseManager.getAdapter());
         readOptions.setFilter(filter)
@@ -174,7 +185,18 @@ public abstract class ImportController implements Command {
 
                     importer.startSession(databaseManager.getAdapter(), optionsHelper.update(importOptions, inputFile));
 
-                    reader.read(feature -> {
+                    reader.read(candidate -> {
+                        Feature feature;
+                        try {
+                            feature = processFeature(candidate, featureProcessors);
+                            if (feature == null) {
+                                return;
+                            }
+                        } catch (Throwable e) {
+                            abort(candidate, reader, e);
+                            return;
+                        }
+
                         if (importMode == ImportMode.SKIP_EXISTING && duplicateController.isDuplicate(feature)) {
                             return;
                         }
@@ -209,9 +231,11 @@ public abstract class ImportController implements Command {
                 helper.createIndexes(databaseManager.getAdapter());
             }
         } catch (Throwable e) {
+            shouldRun = false;
             logger.warn("Database import aborted due to an error.");
             throw new ExecutionException("A fatal error has occurred during import.", e);
         } finally {
+            afterImport(shouldRun, importLogger.getStatistics(), featureProcessors);
             if (!importLogger.getStatistics().isEmpty()) {
                 logger.info(!preview ? "Import summary:" : "Preview of features to be imported:");
                 importLogger.getStatistics().logFeatureSummary(Level.INFO);
@@ -345,6 +369,50 @@ public abstract class ImportController implements Command {
         }
 
         return importOptions;
+    }
+
+    private void beforeImport(ImportOptions importOptions, ReadOptions readOptions, List<FeatureImportProcessor> processors, DatabaseManager databaseManager) throws ExecutionException {
+        beforeImport(importOptions, readOptions, databaseManager);
+        for (FeatureImportProcessor processor : processors) {
+            processor.beforeImport(importOptions, readOptions, databaseManager);
+        }
+    }
+
+    private void afterImport(boolean success, FeatureStatistics statistics, List<FeatureImportProcessor> processors) throws ExecutionException {
+        ExecutionException exception = null;
+        try {
+            afterImport(success, statistics);
+        } catch (Throwable e) {
+            if (success) {
+                exception = new ExecutionException("Failed to complete import operation.", e);
+            }
+        }
+
+        for (FeatureImportProcessor processor : processors) {
+            try {
+                processor.afterImport(success, statistics);
+            } catch (Throwable e) {
+                if (success && exception == null) {
+                    exception = new ExecutionException("An unexpected error has occurred in feature processor " +
+                            processor.getClass().getName() + ".", e);
+                }
+            }
+        }
+
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
+    private Feature processFeature(Feature feature, List<FeatureImportProcessor> processors) throws ExecutionException {
+        for (FeatureImportProcessor processor : processors) {
+            feature = processor.process(feature);
+            if (feature == null) {
+                return null;
+            }
+        }
+
+        return feature;
     }
 
     private void abort(Feature feature, FeatureReader reader, Throwable e) {

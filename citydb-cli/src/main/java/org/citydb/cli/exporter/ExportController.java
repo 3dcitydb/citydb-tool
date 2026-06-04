@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
+import org.citydb.cli.exporter.extension.FeatureExportProcessor;
 import org.citydb.cli.exporter.options.OutputFileOptions;
 import org.citydb.cli.exporter.options.QueryOptions;
 import org.citydb.cli.exporter.options.TilingOptions;
@@ -44,6 +45,7 @@ import org.citydb.util.tiling.Tiling;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ExportController implements Command {
@@ -95,7 +97,16 @@ public abstract class ExportController implements Command {
 
     protected abstract OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException;
 
-    protected void initialize(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
+    protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
+    }
+
+    protected void afterExport(boolean success, FeatureStatistics statistics) throws ExecutionException {
+    }
+
+    protected void beforeWrite(QueryExecutor executor, FeatureWriter writer) throws ExecutionException {
+    }
+
+    protected void afterWrite(QueryExecutor executor, FeatureWriter writer) throws ExecutionException {
     }
 
     @Override
@@ -120,7 +131,9 @@ public abstract class ExportController implements Command {
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
-        initialize(exportOptions, writeOptions, databaseManager);
+
+        List<FeatureExportProcessor> featureProcessors = helper.getExtensions(FeatureExportProcessor.class);
+        beforeExport(exportOptions, writeOptions, featureProcessors, databaseManager);
 
         Query query = getQuery(exportOptions);
         Tiling tiling = getTiling(exportOptions, writeOptions);
@@ -149,6 +162,8 @@ public abstract class ExportController implements Command {
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
                      FeatureWriter writer = createWriter(outputFile, writeOptions, query, ioAdapter)) {
+                    beforeWrite(executor, writer);
+
                     Exporter exporter = Exporter.newInstance();
                     exportOptions.setOutputFile(outputFile);
 
@@ -171,13 +186,22 @@ public abstract class ExportController implements Command {
                                 continue;
                             }
 
-                            exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
-                                if (feature == null) {
+                            exporter.exportFeature(id, sequenceId++).whenComplete((candidate, t) -> {
+                                if (candidate == null) {
                                     abort(null, id, writer, t);
                                     return;
                                 }
 
                                 try {
+                                    Feature feature = processFeature(candidate, featureProcessors);
+                                    if (feature == null) {
+                                        if (writer instanceof SequentialWriter sequentialWriter) {
+                                            sequentialWriter.skip(candidate);
+                                        }
+
+                                        return;
+                                    }
+
                                     writer.write(feature, (success, e) -> {
                                         if (success != Boolean.TRUE) {
                                             abort(feature, id, writer, e);
@@ -191,13 +215,16 @@ public abstract class ExportController implements Command {
                                         }
                                     });
                                 } catch (Throwable e) {
-                                    abort(feature, id, writer, e);
+                                    abort(candidate, id, writer, e);
                                 }
                             });
                         }
                     } finally {
                         exporter.closeSession();
                     }
+
+                    writer.flush();
+                    afterWrite(executor, writer);
                 } catch (Throwable e) {
                     logger.warn("Database export aborted due to an error.");
                     throw new ExecutionException("A fatal error has occurred during export.", e);
@@ -212,18 +239,15 @@ public abstract class ExportController implements Command {
                     }
                 }
             }
+        } catch (Throwable e) {
+            shouldRun = false;
+            throw e;
         } finally {
+            afterExport(shouldRun, statistics, featureProcessors);
             logStatistics(statistics, "Export summary:", Level.INFO);
         }
 
         return shouldRun;
-    }
-
-    private FeatureWriter createWriter(OutputFile file, WriteOptions options, Query query, IOAdapter ioAdapter) throws WriteException {
-        FeatureWriter writer = ioAdapter.createWriter(file, options);
-        return query.getSorting().isPresent()
-                ? SequentialWriter.of(writer)
-                : writer;
     }
 
     protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
@@ -328,6 +352,57 @@ public abstract class ExportController implements Command {
         }
 
         return writeOptions;
+    }
+
+    private void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, List<FeatureExportProcessor> processors, DatabaseManager databaseManager) throws ExecutionException {
+        beforeExport(exportOptions, writeOptions, databaseManager);
+        for (FeatureExportProcessor processor : processors) {
+            processor.beforeExport(exportOptions, writeOptions, databaseManager);
+        }
+    }
+
+    private void afterExport(boolean success, FeatureStatistics statistics, List<FeatureExportProcessor> processors) throws ExecutionException {
+        ExecutionException exception = null;
+        try {
+            afterExport(success, statistics);
+        } catch (Throwable e) {
+            if (success) {
+                exception = new ExecutionException("Failed to complete export operation.", e);
+            }
+        }
+
+        for (FeatureExportProcessor processor : processors) {
+            try {
+                processor.afterExport(success, statistics);
+            } catch (Throwable e) {
+                if (success && exception == null) {
+                    exception = new ExecutionException("An unexpected error has occurred in feature processor " +
+                            processor.getClass().getName() + ".", e);
+                }
+            }
+        }
+
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
+    private Feature processFeature(Feature feature, List<FeatureExportProcessor> processors) throws ExecutionException {
+        for (FeatureExportProcessor processor : processors) {
+            feature = processor.process(feature);
+            if (feature == null) {
+                return null;
+            }
+        }
+
+        return feature;
+    }
+
+    private FeatureWriter createWriter(OutputFile file, WriteOptions options, Query query, IOAdapter ioAdapter) throws WriteException {
+        FeatureWriter writer = ioAdapter.createWriter(file, options);
+        return query.getSorting().isPresent()
+                ? SequentialWriter.of(writer)
+                : writer;
     }
 
     private AppearanceOptions getAppearanceOptions(ExportOptions exportOptions) {
