@@ -181,8 +181,7 @@ public abstract class ImportController implements Command {
 
                         importer.importFeature(feature).whenComplete((descriptor, e) -> {
                             if (descriptor == null) {
-                                abort(feature, e);
-                                reader.cancel();
+                                abort(feature, reader, e);
                                 return;
                             }
 
@@ -348,13 +347,14 @@ public abstract class ImportController implements Command {
         return importOptions;
     }
 
-    private void abort(Feature feature, Throwable e) {
+    private void abort(Feature feature, FeatureReader reader, Throwable e) {
         synchronized (lock) {
             if (shouldRun) {
                 shouldRun = false;
                 logger.warn("Database import aborted due to an error.");
                 helper.logException("Failed to import " + feature.getFeatureType().getLocalName() +
                         " '" + feature.getObjectId().orElse("unknown ID") + "'.", e);
+                reader.cancel();
             }
         }
     }

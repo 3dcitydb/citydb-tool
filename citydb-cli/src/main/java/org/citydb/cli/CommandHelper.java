@@ -26,6 +26,7 @@ import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.operation.exporter.options.ValidityOptions;
+import org.citydb.plugin.Extension;
 import org.citydb.plugin.PluginManager;
 import org.citydb.query.Query;
 import org.citydb.query.QueryHelper;
@@ -42,6 +43,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class CommandHelper {
@@ -80,6 +82,10 @@ public class CommandHelper {
 
     void setPluginManager(PluginManager pluginManager) {
         this.pluginManager = pluginManager;
+    }
+
+    public <T extends Extension> List<T> getExtensions(Class<T> type) {
+        return pluginManager.getExtensionsIfEnabled(type);
     }
 
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
