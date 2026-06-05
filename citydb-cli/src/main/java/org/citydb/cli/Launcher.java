@@ -13,6 +13,7 @@ import org.citydb.cli.common.Option;
 import org.citydb.cli.connect.ConnectCommand;
 import org.citydb.cli.deleter.DeleteCommand;
 import org.citydb.cli.exporter.ExportCommand;
+import org.citydb.cli.extension.ConfigListener;
 import org.citydb.cli.extension.MainCommand;
 import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
@@ -222,10 +223,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             createPidFile(helper.resolveAgainstWorkingDir(pidFile));
         }
 
-        helper.setConfig(configFile != null
-                ? loadConfig(helper.resolveAgainstWorkingDir(configFile))
-                : new Config());
-
+        helper.setConfig(loadOrCreateConfig(configFile));
         loadPlugins();
 
         logger.info("Executing '{}' command.", subCommandName);
@@ -266,13 +264,25 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
-    private Config loadConfig(Path file) throws ExecutionException {
-        try {
-            logger.info("Loading configuration from file {}...", file);
-            return ConfigManager.newInstance().read(file, Config.class, Config::new);
-        } catch (Exception e) {
-            throw new ExecutionException("Failed to load config file.", e);
+    private Config loadOrCreateConfig(Path file) throws ExecutionException {
+        Config config;
+        if (file != null) {
+            try {
+                file = helper.resolveAgainstWorkingDir(file);
+                logger.info("Loading configuration from file {}...", file);
+                config = ConfigManager.newInstance().read(file, Config.class, Config::new);
+            } catch (Exception e) {
+                throw new ExecutionException("Failed to load config file.", e);
+            }
+        } else {
+            config = new Config();
         }
+
+        for (ConfigListener listener : helper.getExtensions(ConfigListener.class)) {
+            listener.onLoad(config);
+        }
+
+        return config;
     }
 
     private void loadPlugins() throws ExecutionException {
