@@ -110,6 +110,10 @@ public abstract class ImportController implements Command {
     protected void afterImport(boolean success, FeatureStatistics statistics) throws ExecutionException {
     }
 
+    protected Feature processFeature(Feature feature) throws ExecutionException {
+        return feature;
+    }
+
     @Override
     public Integer call() throws ExecutionException {
         return doImport()
@@ -404,6 +408,11 @@ public abstract class ImportController implements Command {
     }
 
     private Feature processFeature(Feature feature, List<FeatureImportProcessor> processors) throws ExecutionException {
+        feature = processFeature(feature);
+        if (feature == null) {
+            return null;
+        }
+
         for (FeatureImportProcessor processor : processors) {
             feature = processor.process(feature);
             if (feature == null) {

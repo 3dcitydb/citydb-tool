@@ -109,6 +109,10 @@ public abstract class ExportController implements Command {
     protected void afterWrite(QueryExecutor executor, FeatureWriter writer) throws ExecutionException {
     }
 
+    protected Feature processFeature(Feature feature) throws ExecutionException {
+        return feature;
+    }
+
     @Override
     public Integer call() throws ExecutionException {
         return doExport()
@@ -387,6 +391,11 @@ public abstract class ExportController implements Command {
     }
 
     private Feature processFeature(Feature feature, List<FeatureExportProcessor> processors) throws ExecutionException {
+        feature = processFeature(feature);
+        if (feature == null) {
+            return null;
+        }
+
         for (FeatureExportProcessor processor : processors) {
             feature = processor.process(feature);
             if (feature == null) {
