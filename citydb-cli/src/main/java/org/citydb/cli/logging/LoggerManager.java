@@ -46,7 +46,7 @@ public class LoggerManager {
         logConsole = new LogConsole(this).setEnabled(true);
         logFile = new LogFile(this).setEnabled(false);
         logLevels = LazyInitializer.of(this::loadLogLevels);
-        withLogPattern(LoggerManager.PLAIN_MARKER, "%m%n").reconfigure();
+        withLogPattern(LoggerManager.PLAIN_MARKER, "%m%n");
     }
 
     public static LoggerManager getInstance() {

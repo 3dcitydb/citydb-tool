@@ -12,7 +12,6 @@ module org.citydb.cli {
     requires transitive org.citydb.query;
     requires transitive org.citydb.util;
     requires transitive info.picocli;
-    requires org.citydb.core;
 
     exports org.citydb.cli;
     exports org.citydb.cli.common;
@@ -40,7 +39,6 @@ module org.citydb.cli {
     exports org.citydb.cli.index.options;
     exports org.citydb.cli.index.status;
     exports org.citydb.cli.info;
-    exports org.citydb.cli.logging;
     exports org.citydb.cli.util;
 
     opens org.citydb.cli to info.picocli;
