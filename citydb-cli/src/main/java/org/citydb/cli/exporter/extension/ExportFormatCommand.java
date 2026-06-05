@@ -5,8 +5,8 @@
 
 package org.citydb.cli.exporter.extension;
 
-import org.citydb.cli.exporter.ExportController;
+import org.citydb.cli.common.Command;
 import org.citydb.plugin.Extension;
 
-public abstract class ExportFormatCommand extends ExportController implements Extension {
+public interface ExportFormatCommand extends Command, Extension {
 }
