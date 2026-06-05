@@ -19,7 +19,7 @@ import picocli.CommandLine;
         subcommands = {
                 CommandLine.HelpCommand.class
         })
-public class ImportCommand implements Command {
+public final class ImportCommand implements Command {
 
     @Override
     public Integer call() {
