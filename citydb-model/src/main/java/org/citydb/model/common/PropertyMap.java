@@ -33,7 +33,7 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
 
     public PropertyMap(Child parent, Collection<T> c) {
         this(parent);
-        putAll(c);
+        addAll(c);
     }
 
     public Child getParent() {
@@ -208,7 +208,7 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         return result;
     }
 
-    public void put(T element) {
+    public void add(T element) {
         if (element != null) {
             elements.computeIfAbsent(element.getName().getNamespace(), v -> new LinkedHashMap<>())
                     .computeIfAbsent(element.getName().getLocalName(), v -> new ChildList<>(parent))
@@ -216,11 +216,39 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
     }
 
-    public void putAll(Collection<T> elements) {
+    public void addAll(Collection<T> elements) {
         if (elements != null) {
             for (T element : elements) {
                 if (element != null) {
-                    put(element);
+                    add(element);
+                }
+            }
+        }
+    }
+
+    public void set(T element) {
+        if (element != null) {
+            elements.computeIfAbsent(element.getName().getNamespace(), v -> new LinkedHashMap<>())
+                    .put(element.getName().getLocalName(), new ChildList<>(List.of(element), parent));
+        }
+    }
+
+    public void setAll(Collection<T> elements) {
+        if (elements != null) {
+            Set<Name> replaced = new HashSet<>();
+            for (T element : elements) {
+                if (element != null) {
+                    Map<String, List<T>> values = this.elements.computeIfAbsent(element.getName().getNamespace(),
+                            v -> new LinkedHashMap<>());
+                    List<T> properties;
+                    if (replaced.add(element.getName())) {
+                        properties = new ChildList<>(parent);
+                        values.put(element.getName().getLocalName(), properties);
+                    } else {
+                        properties = values.get(element.getName().getLocalName());
+                    }
+
+                    properties.add(element);
                 }
             }
         }

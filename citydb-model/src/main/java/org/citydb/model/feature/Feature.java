@@ -204,7 +204,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addAttribute(Attribute attribute) {
         if (attribute != null) {
-            getAttributes().put(attribute);
+            getAttributes().add(attribute);
         }
 
         return this;
@@ -229,7 +229,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addGeometry(GeometryProperty geometry) {
         if (geometry != null) {
-            getGeometries().put(geometry);
+            getGeometries().add(geometry);
         }
 
         return this;
@@ -254,7 +254,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addImplicitGeometry(ImplicitGeometryProperty implicitGeometry) {
         if (implicitGeometry != null) {
-            getImplicitGeometries().put(implicitGeometry);
+            getImplicitGeometries().add(implicitGeometry);
         }
 
         return this;
@@ -279,7 +279,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addFeature(FeatureProperty feature) {
         if (feature != null) {
-            getFeatures().put(feature);
+            getFeatures().add(feature);
         }
 
         return this;
@@ -304,7 +304,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addAppearance(AppearanceProperty appearance) {
         if (appearance != null) {
-            getAppearances().put(appearance);
+            getAppearances().add(appearance);
         }
 
         return this;
@@ -329,7 +329,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addAddress(AddressProperty address) {
         if (address != null) {
-            getAddresses().put(address);
+            getAddresses().add(address);
         }
 
         return this;
