@@ -61,11 +61,11 @@ public class CityObjectRelationAdapter implements ModelBuilder<CityObjectRelatio
             target.setRelationType(helper.getAttribute(relationType, CodeAdapter.class));
         }
 
-        for (Attribute attribute : source.getProperties().getByNamespace(Namespaces.GENERICS, Attribute.class)) {
+        source.getProperties().forEachByNamespace(Namespaces.GENERICS, Attribute.class, attribute -> {
             AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
             if (genericAttribute != null) {
                 target.getGenericAttributes().add(new AbstractGenericAttributeProperty(genericAttribute));
             }
-        }
+        });
     }
 }

@@ -183,7 +183,7 @@ public class Attribute extends Property<Attribute> {
 
     public Attribute addProperty(Property<?> property) {
         if (property != null) {
-            getProperties().put(property);
+            getProperties().add(property);
         }
 
         return this;

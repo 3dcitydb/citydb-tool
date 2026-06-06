@@ -12,7 +12,6 @@ import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
-import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.DataType;
 import org.citydb.model.property.FeatureProperty;
@@ -109,18 +108,16 @@ public abstract class AbstractCityObjectAdapter<T extends AbstractCityObject> ex
         }
 
         if (source.hasAppearances()) {
-            for (AppearanceProperty property : source.getAppearances().getAll()) {
-                target.getAppearances().add(
-                        helper.getAppearanceProperty(property, AbstractAppearancePropertyAdapter.class));
-            }
+            source.getAppearances().forEach(property -> target.getAppearances().add(
+                    helper.getAppearanceProperty(property, AbstractAppearancePropertyAdapter.class)));
         }
 
-        for (Attribute attribute : source.getAttributes().getByNamespace(Namespaces.GENERICS)) {
+        source.getAttributes().forEachByNamespace(Namespaces.GENERICS, attribute -> {
             AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
             if (genericAttribute != null) {
                 target.getGenericAttributes().add(new AbstractGenericAttributeProperty(genericAttribute));
             }
-        }
+        });
 
         for (FeatureProperty property : source.getFeatures().get(Name.of("dynamizer", Namespaces.CORE))) {
             target.getDynamizers().add(helper.getObjectProperty(property, AbstractDynamizerPropertyAdapter.class));

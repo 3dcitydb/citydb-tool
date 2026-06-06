@@ -112,7 +112,7 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
 
     public ImplicitGeometry addAppearance(AppearanceProperty appearance) {
         if (appearance != null) {
-            getAppearances().put(appearance);
+            getAppearances().add(appearance);
         }
 
         return this;

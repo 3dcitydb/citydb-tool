@@ -96,39 +96,27 @@ public class ModelWalker implements Visitor {
     @Override
     public void visit(Feature feature) {
         if (feature.hasFeatures()) {
-            for (FeatureProperty property : feature.getFeatures().getAll()) {
-                visit(property);
-            }
+            feature.getFeatures().forEach(this::visit);
         }
 
         if (feature.hasGeometries()) {
-            for (GeometryProperty property : feature.getGeometries().getAll()) {
-                visit(property);
-            }
+            feature.getGeometries().forEach(this::visit);
         }
 
         if (feature.hasImplicitGeometries()) {
-            for (ImplicitGeometryProperty property : feature.getImplicitGeometries().getAll()) {
-                visit(property);
-            }
+            feature.getImplicitGeometries().forEach(this::visit);
         }
 
         if (feature.hasAppearances()) {
-            for (AppearanceProperty property : feature.getAppearances().getAll()) {
-                visit(property);
-            }
+            feature.getAppearances().forEach(this::visit);
         }
 
         if (feature.hasAddresses()) {
-            for (AddressProperty property : feature.getAddresses().getAll()) {
-                visit(property);
-            }
+            feature.getAddresses().forEach(this::visit);
         }
 
         if (feature.hasAttributes()) {
-            for (Attribute attribute : feature.getAttributes().getAll()) {
-                visit(attribute);
-            }
+            feature.getAttributes().forEach(this::visit);
         }
     }
 
@@ -148,9 +136,7 @@ public class ModelWalker implements Visitor {
         }
 
         if (implicitGeometry.hasAppearances()) {
-            for (AppearanceProperty property : implicitGeometry.getAppearances().getAll()) {
-                visit(property);
-            }
+            implicitGeometry.getAppearances().forEach(this::visit);
         }
     }
 
@@ -283,7 +269,7 @@ public class ModelWalker implements Visitor {
         visit((Property<?>) attribute);
 
         if (attribute.hasProperties()) {
-            for (Property<?> child : attribute.getProperties().getAll()) {
+            attribute.getProperties().forEach(child -> {
                 if (child instanceof FeatureProperty property) {
                     visit(property);
                 } else if (child instanceof GeometryProperty property) {
@@ -295,7 +281,7 @@ public class ModelWalker implements Visitor {
                 } else if (child instanceof Attribute childAttribute) {
                     visit(childAttribute);
                 }
-            }
+            });
         }
     }
 }

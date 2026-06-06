@@ -127,9 +127,7 @@ public abstract class AbstractBridgeAdapter<T extends AbstractBridge> extends Ab
             target.getBridgeFurniture().add(helper.getObjectProperty(property, BridgeFurniturePropertyAdapter.class));
         }
 
-        for (org.citydb.model.property.AddressProperty property : source.getAddresses().getAll()) {
-            target.getAddresses().add(helper.getAddressProperty(property));
-        }
+        source.getAddresses().forEach(property -> target.getAddresses().add(helper.getAddressProperty(property)));
     }
 
     @Override

@@ -12,16 +12,12 @@ import org.citydb.model.util.GeometryInfo;
 import org.citydb.model.walker.ModelWalker;
 
 import java.time.OffsetDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
-    private final Name featureType;
+    private Name featureType;
     private String objectId;
     private String identifier;
     private String identifierCodeSpace;
@@ -61,6 +57,18 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Name getFeatureType() {
         return featureType;
+    }
+
+    public Feature setFeatureType(Name featureType) {
+        if (featureType != null) {
+            this.featureType = featureType;
+        }
+
+        return this;
+    }
+
+    public Feature setFeatureType(FeatureTypeProvider provider) {
+        return provider != null ? setFeatureType(provider.getName()) : this;
     }
 
     @Override
@@ -196,7 +204,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addAttribute(Attribute attribute) {
         if (attribute != null) {
-            getAttributes().put(attribute);
+            getAttributes().add(attribute);
         }
 
         return this;
@@ -221,7 +229,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addGeometry(GeometryProperty geometry) {
         if (geometry != null) {
-            getGeometries().put(geometry);
+            getGeometries().add(geometry);
         }
 
         return this;
@@ -246,7 +254,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addImplicitGeometry(ImplicitGeometryProperty implicitGeometry) {
         if (implicitGeometry != null) {
-            getImplicitGeometries().put(implicitGeometry);
+            getImplicitGeometries().add(implicitGeometry);
         }
 
         return this;
@@ -271,7 +279,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addFeature(FeatureProperty feature) {
         if (feature != null) {
-            getFeatures().put(feature);
+            getFeatures().add(feature);
         }
 
         return this;
@@ -296,7 +304,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addAppearance(AppearanceProperty appearance) {
         if (appearance != null) {
-            getAppearances().put(appearance);
+            getAppearances().add(appearance);
         }
 
         return this;
@@ -321,7 +329,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Feature addAddress(AddressProperty address) {
         if (address != null) {
-            getAddresses().put(address);
+            getAddresses().add(address);
         }
 
         return this;
@@ -337,11 +345,32 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
     }
 
     public List<Property<?>> getProperties() {
-        return Stream.of(attributes, geometries, implicitGeometries, features, appearances, addresses)
-                .filter(Objects::nonNull)
-                .map(PropertyMap::getAll)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+        List<Property<?>> properties = new ArrayList<>();
+        if (hasAttributes()) {
+            attributes.forEach(properties::add);
+        }
+
+        if (hasGeometries()) {
+            geometries.forEach(properties::add);
+        }
+
+        if (hasImplicitGeometries()) {
+            implicitGeometries.forEach(properties::add);
+        }
+
+        if (hasFeatures()) {
+            features.forEach(properties::add);
+        }
+
+        if (hasAppearances()) {
+            appearances.forEach(properties::add);
+        }
+
+        if (hasAddresses()) {
+            addresses.forEach(properties::add);
+        }
+
+        return properties;
     }
 
     public List<Property<?>> getPropertiesIf(Predicate<Property<?>> predicate) {

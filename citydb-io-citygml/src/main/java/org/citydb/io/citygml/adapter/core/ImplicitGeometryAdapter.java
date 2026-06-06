@@ -15,7 +15,6 @@ import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
-import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.CityGMLVersion;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
@@ -58,7 +57,7 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
 
         ImplicitGeometry implicitGeometry = helper.getOrLookupObject(source);
         if (implicitGeometry != null && implicitGeometry.hasAppearances()) {
-            for (AppearanceProperty property : implicitGeometry.getAppearances().getAll()) {
+            implicitGeometry.getAppearances().forEach(property -> {
                 boolean isInline = target.getRelativeGeometry() != null
                         && target.getRelativeGeometry().isSetInlineObject()
                         && !helper.lookupAndPut(property.getObject());
@@ -69,7 +68,7 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
                 } else if (isInline) {
                     helper.writeAsGlobalFeature(helper.getAppearance(property.getObject()));
                 }
-            }
+            });
         }
     }
 }
