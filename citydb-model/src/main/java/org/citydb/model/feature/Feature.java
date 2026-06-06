@@ -12,16 +12,12 @@ import org.citydb.model.util.GeometryInfo;
 import org.citydb.model.walker.ModelWalker;
 
 import java.time.OffsetDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
-    private final Name featureType;
+    private Name featureType;
     private String objectId;
     private String identifier;
     private String identifierCodeSpace;
@@ -61,6 +57,18 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
 
     public Name getFeatureType() {
         return featureType;
+    }
+
+    public Feature setFeatureType(Name featureType) {
+        if (featureType != null) {
+            this.featureType = featureType;
+        }
+
+        return this;
+    }
+
+    public Feature setFeatureType(FeatureTypeProvider provider) {
+        return provider != null ? setFeatureType(provider.getName()) : this;
     }
 
     @Override
@@ -337,11 +345,32 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
     }
 
     public List<Property<?>> getProperties() {
-        return Stream.of(attributes, geometries, implicitGeometries, features, appearances, addresses)
-                .filter(Objects::nonNull)
-                .map(PropertyMap::getAll)
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+        List<Property<?>> properties = new ArrayList<>();
+        if (hasAttributes()) {
+            properties.addAll(attributes.getAll());
+        }
+
+        if (hasGeometries()) {
+            properties.addAll(geometries.getAll());
+        }
+
+        if (hasImplicitGeometries()) {
+            properties.addAll(implicitGeometries.getAll());
+        }
+
+        if (hasFeatures()) {
+            properties.addAll(features.getAll());
+        }
+
+        if (hasAppearances()) {
+            properties.addAll(appearances.getAll());
+        }
+
+        if (hasAddresses()) {
+            properties.addAll(addresses.getAll());
+        }
+
+        return properties;
     }
 
     public List<Property<?>> getPropertiesIf(Predicate<Property<?>> predicate) {
