@@ -269,6 +269,22 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
     }
 
+    /**
+     * @deprecated Use {@link #add(T)} instead.
+     */
+    @Deprecated(since = "1.4", forRemoval = true)
+    public void put(T element) {
+        add(element);
+    }
+
+    /**
+     * @deprecated Use {@link #addAll(Collection)} instead.
+     */
+    @Deprecated(since = "1.4", forRemoval = true)
+    public void putAll(Collection<T> elements) {
+        addAll(elements);
+    }
+
     public void add(T element) {
         if (element != null) {
             elements.computeIfAbsent(element.getName().getNamespace(), v -> new LinkedHashMap<>())
