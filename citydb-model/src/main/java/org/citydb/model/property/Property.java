@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 public abstract class Property<T extends Property<?>> extends Child implements Describable<PropertyDescriptor> {
-    private final Name name;
+    private Name name;
     private Name dataType;
     private PropertyDescriptor descriptor;
 
@@ -32,6 +32,14 @@ public abstract class Property<T extends Property<?>> extends Child implements D
 
     public Name getName() {
         return name;
+    }
+
+    public Property<T> setName(Name name) {
+        if (name != null) {
+            this.name = name;
+        }
+
+        return this;
     }
 
     public Optional<Name> getDataType() {
