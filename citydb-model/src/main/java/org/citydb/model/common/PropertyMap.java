@@ -11,7 +11,6 @@ import org.citydb.model.property.Property;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class PropertyMap<T extends Property<?>> implements Serializable {
     private final Map<String, Map<String, List<T>>> elements;
@@ -32,12 +31,6 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         elements = new LinkedHashMap<>(initialCapacity, loadFactor);
     }
 
-    public PropertyMap(Child parent, PropertyMap<T> m) {
-        this.parent = Objects.requireNonNull(parent, "The parent must not be null.");
-        applyParent(m);
-        elements = new LinkedHashMap<>(m.elements);
-    }
-
     public PropertyMap(Child parent, Collection<T> c) {
         this(parent);
         putAll(c);
@@ -50,10 +43,6 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
     void setParent(Child parent) {
         this.parent = parent;
         applyParent(this);
-    }
-
-    public int size() {
-        return elements.size();
     }
 
     public boolean isEmpty() {
@@ -70,9 +59,14 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
     }
 
     public List<T> get(Name name, Name dataType) {
-        return get(name).stream()
-                .filter(element -> element.hasDataType(dataType))
-                .collect(Collectors.toList());
+        List<T> result = new ArrayList<>();
+        for (T property : get(name)) {
+            if (property.hasDataType(dataType)) {
+                result.add(property);
+            }
+        }
+
+        return result;
     }
 
     public List<T> get(Name name, DataTypeProvider provider) {
@@ -80,31 +74,64 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
     }
 
     public <R extends Property<?>> List<R> get(Name name, Class<R> type) {
-        return get(name).stream()
-                .filter(type::isInstance)
-                .map(type::cast)
-                .collect(Collectors.toList());
+        return get(get(name), type);
+    }
+
+    public <R extends Property<?>> List<R> get(Name name, Name dataType, Class<R> type) {
+        return get(get(name, dataType), type);
+    }
+
+    public <R extends Property<?>> List<R> get(Name name, DataTypeProvider provider, Class<R> type) {
+        return get(get(name, provider.getName()), type);
+    }
+
+    private <R extends Property<?>> List<R> get(List<T> properties, Class<R> type) {
+        List<R> result = new ArrayList<>();
+        for (T property : properties) {
+            if (type.isInstance(property)) {
+                result.add(type.cast(property));
+            }
+        }
+
+        return result;
     }
 
     public Optional<T> getFirst(Name name) {
-        return get(name).stream().findFirst();
+        List<T> properties = get(name);
+        return !properties.isEmpty()
+                ? Optional.of(properties.get(0))
+                : Optional.empty();
     }
 
     public Optional<T> getFirst(Name name, Name dataType) {
-        return get(name).stream()
-                .filter(element -> element.hasDataType(dataType))
-                .findFirst();
+        for (T property : get(name)) {
+            if (property.hasDataType(dataType)) {
+                return Optional.of(property);
+            }
+        }
+
+        return Optional.empty();
     }
 
     public Optional<T> getFirst(Name name, DataTypeProvider provider) {
         return getFirst(name, provider.getName());
     }
 
-    @SuppressWarnings("unchecked")
     public <R extends Property<?>> Optional<R> getFirst(Name name, Class<R> type) {
-        Optional<T> result = getFirst(name);
-        return result.isPresent() && type.isInstance(result.get())
-                ? (Optional<R>) result
+        return getFirst(getFirst(name).orElse(null), type);
+    }
+
+    public <R extends Property<?>> Optional<R> getFirst(Name name, Name dataType, Class<R> type) {
+        return getFirst(getFirst(name, dataType).orElse(null), type);
+    }
+
+    public <R extends Property<?>> Optional<R> getFirst(Name name, DataTypeProvider provider, Class<R> type) {
+        return getFirst(getFirst(name, provider.getName()).orElse(null), type);
+    }
+
+    private <R extends Property<?>> Optional<R> getFirst(T property, Class<R> type) {
+        return type.isInstance(property)
+                ? Optional.of(type.cast(property))
                 : Optional.empty();
     }
 
@@ -113,43 +140,72 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
     }
 
     public List<T> getByNamespace(String namespace) {
-        return elements.getOrDefault(Namespaces.ensureNonNull(namespace), Collections.emptyMap())
-                .values().stream()
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        List<T> result = new ArrayList<>();
+        Collection<List<T>> elements = this.elements
+                .getOrDefault(Namespaces.ensureNonNull(namespace), Collections.emptyMap())
+                .values();
+
+        for (List<T> properties : elements) {
+            result.addAll(properties);
+        }
+
+        return result;
     }
 
     public <R extends Property<?>> List<R> getByNamespace(String namespace, Class<R> type) {
-        return elements.getOrDefault(Namespaces.ensureNonNull(namespace), Collections.emptyMap())
-                .values().stream()
-                .flatMap(List::stream)
-                .filter(type::isInstance)
-                .map(type::cast)
-                .collect(Collectors.toList());
+        List<R> result = new ArrayList<>();
+        Collection<List<T>> elements = this.elements
+                .getOrDefault(Namespaces.ensureNonNull(namespace), Collections.emptyMap())
+                .values();
+
+        for (List<T> properties : elements) {
+            for (T property : properties) {
+                if (type.isInstance(property)) {
+                    result.add(type.cast(property));
+                }
+            }
+        }
+
+        return result;
     }
 
     public List<T> getAll() {
-        return elements.values().stream()
-                .map(Map::values)
-                .flatMap(Collection::stream)
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        List<T> result = new ArrayList<>();
+        for (Map<String, List<T>> values : elements.values()) {
+            for (List<T> properties : values.values()) {
+                result.addAll(properties);
+            }
+        }
+
+        return result;
     }
 
     public List<T> getIf(Predicate<T> predicate) {
-        return getAll().stream()
-                .filter(predicate)
-                .collect(Collectors.toList());
+        List<T> result = new ArrayList<>();
+        for (Map<String, List<T>> values : elements.values()) {
+            for (List<T> properties : values.values()) {
+                for (T property : properties) {
+                    if (predicate.test(property)) {
+                        result.add(property);
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
     public List<T> getIfNamespace(Predicate<String> predicate) {
-        return elements.entrySet().stream()
-                .filter(e -> predicate.test(e.getKey()))
-                .map(Map.Entry::getValue)
-                .map(Map::values)
-                .flatMap(Collection::stream)
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        List<T> result = new ArrayList<>();
+        for (Map.Entry<String, Map<String, List<T>>> entry : elements.entrySet()) {
+            if (predicate.test(entry.getKey())) {
+                for (List<T> properties : entry.getValue().values()) {
+                    result.addAll(properties);
+                }
+            }
+        }
+
+        return result;
     }
 
     public void put(T element) {
@@ -162,53 +218,73 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
 
     public void putAll(Collection<T> elements) {
         if (elements != null) {
-            elements.stream().filter(Objects::nonNull).forEach(this::put);
-        }
-    }
-
-    public void putAll(PropertyMap<T> elements) {
-        if (elements != null) {
-            putAll(elements.getAll());
+            for (T element : elements) {
+                if (element != null) {
+                    put(element);
+                }
+            }
         }
     }
 
     public boolean remove(T element) {
-        return elements.getOrDefault(element.getName().getNamespace(), Collections.emptyMap())
-                .getOrDefault(element.getName().getLocalName(), Collections.emptyList())
-                .remove(element);
+        if (element == null) {
+            return false;
+        }
+
+        Map<String, List<T>> values = elements.get(element.getName().getNamespace());
+        if (values == null) {
+            return false;
+        }
+
+        List<T> properties = values.get(element.getName().getLocalName());
+        if (properties == null || !properties.remove(element)) {
+            return false;
+        }
+
+        if (properties.isEmpty()) {
+            values.remove(element.getName().getLocalName());
+            if (values.isEmpty()) {
+                elements.remove(element.getName().getNamespace());
+            }
+        }
+
+        return true;
     }
 
     public List<T> remove(Name name) {
-        return elements.getOrDefault(name.getNamespace(), Collections.emptyMap())
-                .remove(name.getLocalName());
-    }
+        if (name == null) {
+            return new ArrayList<>();
+        }
 
-    public Optional<T> removeAndGetFirst(Name name) {
-        List<T> elements = remove(name);
-        return !elements.isEmpty()
-                ? Optional.ofNullable(elements.get(0))
-                : Optional.empty();
-    }
+        Map<String, List<T>> values = elements.get(name.getNamespace());
+        if (values == null) {
+            return new ArrayList<>();
+        }
 
-    public Optional<T> removeAndGetFirst(Name name, Name dataType) {
-        return remove(name).stream()
-                .filter(element -> element.hasDataType(dataType))
-                .findFirst();
-    }
+        List<T> properties = values.remove(name.getLocalName());
+        if (values.isEmpty()) {
+            elements.remove(name.getNamespace());
+        }
 
-    public Optional<T> removeAndGetFirst(Name name, DataTypeProvider provider) {
-        return removeAndGetFirst(name, provider.getName());
+        return properties != null
+                ? properties :
+                new ArrayList<>();
     }
 
     public List<T> removeByNamespace(String namespace) {
-        return elements.remove(Namespaces.ensureNonNull(namespace))
-                .values().stream()
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+        List<T> result = new ArrayList<>();
+        Map<String, List<T>> values = elements.remove(Namespaces.ensureNonNull(namespace));
+        if (values != null) {
+            for (List<T> properties : values.values()) {
+                result.addAll(properties);
+            }
+        }
+
+        return result;
     }
 
     public Set<String> getNamespaces() {
-        return elements.keySet();
+        return Collections.unmodifiableSet(elements.keySet());
     }
 
     public void sortPropertiesWithIdenticalNames(Comparator<Property<?>> comparator) {
@@ -221,11 +297,11 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
     }
 
-    private void applyParent(PropertyMap<T> m) {
-        m.elements.values().stream()
-                .map(Map::values)
-                .flatMap(Collection::stream)
-                .map(ChildList.class::cast)
-                .forEach(childList -> childList.setParent(parent));
+    private void applyParent(PropertyMap<T> map) {
+        for (Map<String, List<T>> values : map.elements.values()) {
+            for (List<T> properties : values.values()) {
+                ((ChildList<?>) properties).setParent(parent);
+            }
+        }
     }
 }
