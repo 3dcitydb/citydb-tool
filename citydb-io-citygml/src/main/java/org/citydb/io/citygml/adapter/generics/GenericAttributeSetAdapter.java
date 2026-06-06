@@ -14,7 +14,6 @@ import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.DataType;
-import org.citydb.model.property.Property;
 import org.citygml4j.core.model.core.AbstractGenericAttribute;
 import org.citygml4j.core.model.core.AbstractGenericAttributeProperty;
 import org.citygml4j.core.model.generics.GenericAttributeSet;
@@ -44,13 +43,11 @@ public class GenericAttributeSetAdapter extends AbstractGenericAttributeAdapter<
     public void serialize(Attribute source, GenericAttributeSet target, ModelSerializerHelper helper) throws ModelSerializeException {
         super.serialize(source, target, helper);
 
-        for (Property<?> property : source.getProperties().getByNamespace(Namespaces.GENERICS)) {
-            if (property instanceof Attribute attribute) {
-                AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
-                if (genericAttribute != null) {
-                    target.getValue().add(new AbstractGenericAttributeProperty(genericAttribute));
-                }
+        source.getProperties().forEachByNamespace(Namespaces.GENERICS, Attribute.class, attribute -> {
+            AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
+            if (genericAttribute != null) {
+                target.getValue().add(new AbstractGenericAttributeProperty(genericAttribute));
             }
-        }
+        });
     }
 }

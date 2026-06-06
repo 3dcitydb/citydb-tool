@@ -47,8 +47,6 @@ public class DoorAdapter extends AbstractFillingElementAdapter<Door> {
         super.serialize(source, target, helper);
         helper.addStandardObjectClassifiers(source, target, Namespaces.CONSTRUCTION);
 
-        for (org.citydb.model.property.AddressProperty property : source.getAddresses().getAll()) {
-            target.getAddresses().add(helper.getAddressProperty(property));
-        }
+        source.getAddresses().forEach(property -> target.getAddresses().add(helper.getAddressProperty(property)));
     }
 }

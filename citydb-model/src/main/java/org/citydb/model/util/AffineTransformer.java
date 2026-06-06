@@ -13,7 +13,6 @@ import org.citydb.model.common.Matrix4x4;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.*;
-import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.util.matrix.Matrix;
 import org.citydb.model.walker.ModelWalker;
@@ -119,9 +118,7 @@ public class AffineTransformer {
         @Override
         public void visit(ImplicitGeometry implicitGeometry) {
             if (implicitGeometry.hasAppearances()) {
-                for (AppearanceProperty property : implicitGeometry.getAppearances().getAll()) {
-                    visit(property);
-                }
+                implicitGeometry.getAppearances().forEach(this::visit);
             }
         }
 

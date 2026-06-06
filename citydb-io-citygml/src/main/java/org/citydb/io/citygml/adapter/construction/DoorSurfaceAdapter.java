@@ -45,8 +45,6 @@ public class DoorSurfaceAdapter extends AbstractFillingSurfaceAdapter<DoorSurfac
     public void serialize(Feature source, DoorSurface target, ModelSerializerHelper helper) throws ModelSerializeException {
         super.serialize(source, target, helper);
 
-        for (org.citydb.model.property.AddressProperty property : source.getAddresses().getAll()) {
-            target.getAddresses().add(helper.getAddressProperty(property));
-        }
+        source.getAddresses().forEach(property -> target.getAddresses().add(helper.getAddressProperty(property)));
     }
 }

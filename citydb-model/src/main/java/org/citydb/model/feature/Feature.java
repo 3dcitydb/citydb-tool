@@ -347,27 +347,27 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
     public List<Property<?>> getProperties() {
         List<Property<?>> properties = new ArrayList<>();
         if (hasAttributes()) {
-            properties.addAll(attributes.getAll());
+            attributes.forEach(properties::add);
         }
 
         if (hasGeometries()) {
-            properties.addAll(geometries.getAll());
+            geometries.forEach(properties::add);
         }
 
         if (hasImplicitGeometries()) {
-            properties.addAll(implicitGeometries.getAll());
+            implicitGeometries.forEach(properties::add);
         }
 
         if (hasFeatures()) {
-            properties.addAll(features.getAll());
+            features.forEach(properties::add);
         }
 
         if (hasAppearances()) {
-            properties.addAll(appearances.getAll());
+            appearances.forEach(properties::add);
         }
 
         if (hasAddresses()) {
-            properties.addAll(addresses.getAll());
+            addresses.forEach(properties::add);
         }
 
         return properties;

@@ -206,9 +206,7 @@ public abstract class AbstractBuildingAdapter<T extends AbstractBuilding> extend
                     helper.getObjectProperty(property, AbstractBuildingSubdivisionPropertyAdapter.class));
         }
 
-        for (org.citydb.model.property.AddressProperty property : source.getAddresses().getAll()) {
-            target.getAddresses().add(helper.getAddressProperty(property));
-        }
+        source.getAddresses().forEach(property -> target.getAddresses().add(helper.getAddressProperty(property)));
     }
 
     @Override

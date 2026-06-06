@@ -5,6 +5,7 @@
 
 package org.citydb.model.common;
 
+import org.citydb.core.function.CheckedConsumer;
 import org.citydb.model.property.DataTypeProvider;
 import org.citydb.model.property.Property;
 
@@ -152,6 +153,18 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         return result;
     }
 
+    public <E extends Exception> void forEachByNamespace(String namespace, CheckedConsumer<T, E> action) throws E {
+        Collection<List<T>> values = elements
+                .getOrDefault(Namespaces.ensureNonNull(namespace), Collections.emptyMap())
+                .values();
+
+        for (List<T> properties : values) {
+            for (T property : properties) {
+                action.accept(property);
+            }
+        }
+    }
+
     public <R extends Property<?>> List<R> getByNamespace(String namespace, Class<R> type) {
         List<R> result = new ArrayList<>();
         Collection<List<T>> elements = this.elements
@@ -169,6 +182,20 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         return result;
     }
 
+    public <R extends Property<?>, E extends Exception> void forEachByNamespace(String namespace, Class<R> type, CheckedConsumer<R, E> action) throws E {
+        Collection<List<T>> values = elements
+                .getOrDefault(Namespaces.ensureNonNull(namespace), Collections.emptyMap())
+                .values();
+
+        for (List<T> properties : values) {
+            for (T property : properties) {
+                if (type.isInstance(property)) {
+                    action.accept(type.cast(property));
+                }
+            }
+        }
+    }
+
     public List<T> getAll() {
         List<T> result = new ArrayList<>();
         for (Map<String, List<T>> values : elements.values()) {
@@ -178,6 +205,16 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
 
         return result;
+    }
+
+    public <E extends Exception> void forEach(CheckedConsumer<T, E> action) throws E {
+        for (Map<String, List<T>> values : elements.values()) {
+            for (List<T> properties : values.values()) {
+                for (T property : properties) {
+                    action.accept(property);
+                }
+            }
+        }
     }
 
     public List<T> getIf(Predicate<T> predicate) {
@@ -195,6 +232,18 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         return result;
     }
 
+    public <E extends Exception> void forEachIf(Predicate<T> predicate, CheckedConsumer<T, E> action) throws E {
+        for (Map<String, List<T>> values : elements.values()) {
+            for (List<T> properties : values.values()) {
+                for (T property : properties) {
+                    if (predicate.test(property)) {
+                        action.accept(property);
+                    }
+                }
+            }
+        }
+    }
+
     public List<T> getIfNamespace(Predicate<String> predicate) {
         List<T> result = new ArrayList<>();
         for (Map.Entry<String, Map<String, List<T>>> entry : elements.entrySet()) {
@@ -206,6 +255,18 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
 
         return result;
+    }
+
+    public <E extends Exception> void forEachIfNamespace(Predicate<String> predicate, CheckedConsumer<T, E> action) throws E {
+        for (Map.Entry<String, Map<String, List<T>>> entry : elements.entrySet()) {
+            if (predicate.test(entry.getKey())) {
+                for (List<T> properties : entry.getValue().values()) {
+                    for (T property : properties) {
+                        action.accept(property);
+                    }
+                }
+            }
+        }
     }
 
     public void add(T element) {

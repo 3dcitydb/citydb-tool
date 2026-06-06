@@ -57,8 +57,6 @@ public class BuildingUnitAdapter extends AbstractBuildingSubdivisionAdapter<Buil
             target.getStoreys().add(helper.getObjectProperty(property, StoreyPropertyAdapter.class));
         }
 
-        for (org.citydb.model.property.AddressProperty property : source.getAddresses().getAll()) {
-            target.getAddresses().add(helper.getAddressProperty(property));
-        }
+        source.getAddresses().forEach(property -> target.getAddresses().add(helper.getAddressProperty(property)));
     }
 }
