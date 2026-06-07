@@ -11,7 +11,7 @@ import java.util.Optional;
 public class PrefixedName extends Name {
     private final String prefix;
 
-    protected PrefixedName(String localName, String namespace, String prefix) {
+    private PrefixedName(String localName, String namespace, String prefix) {
         super(localName, namespace);
         this.prefix = prefix;
     }
