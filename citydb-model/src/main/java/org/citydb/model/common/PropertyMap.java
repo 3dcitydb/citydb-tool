@@ -136,6 +136,24 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
                 : Optional.empty();
     }
 
+    public boolean contains(Name name) {
+        return !get(name).isEmpty();
+    }
+
+    public boolean contains(Name name, Name dataType) {
+        for (T property : get(name)) {
+            if (property.hasDataType(dataType)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public boolean contains(Name name, DataTypeProvider provider) {
+        return contains(name, provider.getName());
+    }
+
     public boolean containsNamespace(String namespace) {
         return elements.containsKey(Namespaces.ensureNonNull(namespace));
     }

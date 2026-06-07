@@ -296,7 +296,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                         plugin.getClass().getName());
             }
         } else {
-            pluginFailures.forEach(e -> logger.error(e.getMessage(), e.getCause()));
+            pluginFailures.forEach(e -> helper.logException(e.getMessage(), e.getCause()));
             throw new ExecutionException("Failed to load plugins.");
         }
     }
