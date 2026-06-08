@@ -9,7 +9,6 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
 import org.citydb.vis.attribute.AttributeProjection;
-import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 
 /**
@@ -125,17 +124,6 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     public VisFormatOptions setEnableShading(boolean enableShading) {
         this.enableShading = enableShading;
         return this;
-    }
-
-    /**
-     * Global fallback style for surfaces without an explicit per-feature-type
-     * override. Mirrored from {@link #getStyleRegistry()} so I3S — which
-     * cannot consume the per-type registry due to its node-level material
-     * model — keeps its current behavior of applying one style to every
-     * no-appearance surface in a scene layer.
-     */
-    public DefaultObjectStyle getDefaultObjectStyle() {
-        return styleRegistry.defaultStyle();
     }
 
     public ObjectStyleRegistry getStyleRegistry() {
