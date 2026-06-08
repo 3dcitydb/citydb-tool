@@ -93,7 +93,8 @@ public class CityGMLReader implements FeatureReader {
         ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
         CountLatch countLatch = new CountLatch();
 
-        try (org.citygml4j.xml.reader.CityGMLReader reader = factory.createReader(file, inputFactory)) {
+        try (org.citygml4j.xml.reader.CityGMLReader reader = factory.createReader(file, inputFactory,
+                "CityObjectGroup", "Appearance")) {
             int featureId = 0;
             FileMetadata metadata = FileMetadata.of(reader);
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->

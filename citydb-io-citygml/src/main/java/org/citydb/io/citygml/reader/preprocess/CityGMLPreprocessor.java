@@ -16,6 +16,7 @@ import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.citygml4j.xml.module.citygml.CityGMLModules;
 import org.citygml4j.xml.reader.CityGMLChunk;
 import org.citygml4j.xml.reader.CityGMLInputFactory;
 import org.citygml4j.xml.reader.CityGMLReader;
@@ -23,6 +24,7 @@ import org.xmlobjects.copy.Copier;
 import org.xmlobjects.copy.CopierBuilder;
 import org.xmlobjects.gml.util.reference.ReferenceResolver;
 
+import javax.xml.namespace.QName;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -111,7 +113,13 @@ public class CityGMLPreprocessor {
 
                 while (shouldRun && reader.hasNext()) {
                     CityGMLChunk chunk = reader.nextChunk();
-                    chunk.getLocalProperties().set("featureId", featureId++);
+
+                    QName name = chunk.getFirstElement();
+                    if ((!"Appearance".equals(name.getLocalPart())
+                            && !"CityObjectGroup".equals(name.getLocalPart()))
+                            || !CityGMLModules.isCityGMLNamespace(name.getNamespaceURI())) {
+                        chunk.getLocalProperties().set("featureId", featureId++);
+                    }
 
                     countLatch.increment();
                     service.execute(() -> {
