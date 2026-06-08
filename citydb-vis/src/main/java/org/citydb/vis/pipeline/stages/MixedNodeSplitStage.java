@@ -39,7 +39,7 @@ import java.util.Set;
  * split inside a single GLB.
  * <p>
  * Push-down (rather than sibling) split keeps the cell root in place with
- * its grid coordinates intact, so the 3D Tiles
+ * its grid coordinates intact, so the
  * {@link org.citydb.vis.scene.CellAggregator} continues to index
  * cells correctly regardless of how far the mesh moves into the subtree.
  * <p>

@@ -550,11 +550,14 @@ final class GltfJsonBuilder {
      * textured path (material indexed by atlas page); negative sentinels
      * select one of the two untextured materials (plain PBR or unlit
      * colored). {@code bvNormals}, {@code bvUvs} and {@code bvColors} may
-     * be {@code -1} when the primitive doesn't carry that attribute — only
-     * the untextured-plain path emits NORMAL; textured primitives carry UV
-     * (no normal, no color); X3DMaterial-colored primitives carry COLOR_0
-     * (no normal, no UV). {@code anyAlphaBelowOne} flips the untextured
-     * colored material to {@code alphaMode=BLEND}.
+     * be {@code -1} when the primitive doesn't carry that attribute. NORMAL
+     * is emitted on every path when {@code --enable-shading} is on and
+     * dropped on every path otherwise — independent of the path. UV and
+     * COLOR_0 are path-specific regardless of shading: textured primitives
+     * carry UV (no color), X3DMaterial-colored primitives carry COLOR_0 (no
+     * UV), and the untextured-plain path carries neither. {@code
+     * anyAlphaBelowOne} flips the untextured colored material to
+     * {@code alphaMode=BLEND}.
      */
     record Primitive(int atlasPage, int vertexCount, float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvColors,
