@@ -30,8 +30,11 @@ import java.util.Set;
  * tree, flush the compact {@link NodeEntry} list to {@link NodeEntryStore},
  * release cell data. Peak heap is one cell's spatial-entry list.
  * <p>
- * Populates {@link PipelineContext#allNodes()} and
- * {@link PipelineContext#meshNodeIndices()}; closes
+ * Populates {@link PipelineContext#allNodes()},
+ * {@link PipelineContext#meshNodeIndices()},
+ * {@link PipelineContext#cellRootGridCoords()},
+ * {@link PipelineContext#hasTextures()} and
+ * {@link PipelineContext#hasColors()}; closes
  * {@link PipelineContext#partitioned()} after consumption.
  */
 public final class TreeBuildingStage implements Stage {
