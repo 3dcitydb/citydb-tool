@@ -204,9 +204,7 @@ public class CityGMLPreprocessor {
     }
 
     public boolean process(AbstractFeature feature, int featureId) {
-        if (!shouldRun
-                || feature instanceof Appearance
-                || feature instanceof CityObjectGroup) {
+        if (!shouldRun) {
             return false;
         }
 
