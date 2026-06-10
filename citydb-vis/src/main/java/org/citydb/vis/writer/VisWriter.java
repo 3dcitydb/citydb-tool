@@ -720,4 +720,10 @@ public abstract class VisWriter implements FeatureWriter {
             this.cause = cause;
         }
     }
+
+
+    @Override
+    public void flush() throws WriteException {
+
+    }
 }
