@@ -8,7 +8,6 @@ package org.citydb.cli.exporter;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.exporter.citygml.CityGMLExportCommand;
 import org.citydb.cli.exporter.cityjson.CityJSONExportCommand;
-import org.citydb.cli.exporter.vis.VisExportCommand;
 import org.citydb.cli.exporter.extension.ExportFormatCommand;
 import org.citydb.plugin.PluginManager;
 import picocli.CommandLine;
@@ -39,7 +38,6 @@ public final class ExportCommand implements Command {
     public void registerSubcommands(CommandLine commandLine, PluginManager pluginManager) throws Exception {
         commandLine.addSubcommand(new CityGMLExportCommand());
         commandLine.addSubcommand(new CityJSONExportCommand());
-        commandLine.addSubcommand(new VisExportCommand());
         for (ExportFormatCommand extension : pluginManager.getAllExtensions(ExportFormatCommand.class)) {
             Command.addSubcommand(extension, commandLine, pluginManager);
         }
