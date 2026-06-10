@@ -7,18 +7,15 @@ package org.citydb.cli.visExporter;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
+import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.common.Command;
-import org.citydb.cli.common.ConfigOption;
-import org.citydb.cli.common.ConnectionOptions;
-import org.citydb.cli.common.ThreadsOptions;
-import org.citydb.cli.common.ValidityOptions;
+import org.citydb.cli.common.*;
+
 import org.citydb.cli.logging.LoggerManager;
-import org.citydb.cli.util.CommandHelper;
+
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.cli.visExporter.options.QueryOptions;
 import org.citydb.cli.visExporter.options.SceneOptions;
-import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
@@ -90,14 +87,14 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             heading = "Database connection options:%n")
     protected ConnectionOptions connectionOptions;
 
-    @ConfigOption
-    private Config config;
-
     @CommandLine.Spec
     protected CommandLine.Model.CommandSpec commandSpec;
 
+    @Inject
+    private CommandHelper helper;
+
     protected final Logger logger = LoggerManager.getInstance().getLogger(VisExportController.class);
-    protected final CommandHelper helper = CommandHelper.getInstance();
+
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -306,7 +303,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                         .findFirst()
                         .orElse(null));
 
-        DatabaseManager databaseManager = helper.connect(connectionOptions, config);
+        DatabaseManager databaseManager = helper.connect(connectionOptions);
         VisExportOptions exportOptions = getExportOptions();
         WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
         SchemaMapping schemaMapping = databaseManager.getAdapter().getSchemaAdapter().getSchemaMapping();
@@ -412,7 +409,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
     protected VisExportOptions getExportOptions() throws ExecutionException {
         VisExportOptions exportOptions;
         try {
-            exportOptions = config.getOrElse(VisExportOptions.class, VisExportOptions::new);
+            exportOptions = helper.getConfig().getOrElse(VisExportOptions.class, VisExportOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get vis-export options from config.", e);
         }
@@ -461,7 +458,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
     protected WriteOptions getWriteOptions(DatabaseAdapter adapter) throws ExecutionException {
         WriteOptions writeOptions;
         try {
-            writeOptions = config.getOrElse(WriteOptions.class, WriteOptions::new);
+            writeOptions = helper.getConfig().getOrElse(WriteOptions.class, WriteOptions::new);
         } catch (ConfigException e) {
             throw new ExecutionException("Failed to get write options from config.", e);
         }
