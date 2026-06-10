@@ -10,9 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
-
 import org.citydb.cli.logging.LoggerManager;
-
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.cli.visExporter.options.QueryOptions;
 import org.citydb.cli.visExporter.options.SceneOptions;
@@ -24,13 +22,13 @@ import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.SchemaMapping;
-import org.citydb.model.common.PrefixedName;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
+import org.citydb.model.common.PrefixedName;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
@@ -40,8 +38,8 @@ import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.attribute.AttributeProjection;
+import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.geometry.ImplicitReferencePointReprojector;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
@@ -366,25 +364,27 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
                     exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
-                        if (feature != null) {
-                            try {
-                                ImplicitReferencePointReprojector.reproject(feature, databaseManager.getAdapter());
-                                writer.write(feature, (success, e) -> {
-                                    if (success == Boolean.TRUE) {
-                                        statistics.add(feature);
-                                        long count = counter.incrementAndGet();
-                                        if (count % 1000 == 0) {
-                                            logger.info("{} features exported.", count);
-                                        }
-                                    } else {
-                                        abort(feature, id, e);
-                                    }
-                                });
-                            } catch (Throwable e) {
-                                abort(feature, id, e);
-                            }
-                        } else {
+                        if (feature == null) {
                             abort(null, id, t);
+                            return;
+                        }
+
+                        try {
+                            ImplicitReferencePointReprojector.reproject(feature, databaseManager.getAdapter());
+                            writer.write(feature, (success, e) -> {
+                                if (success != Boolean.TRUE) {
+                                    abort(feature, id, e);
+                                    return;
+                                }
+
+                                statistics.add(feature);
+                                long count = counter.incrementAndGet();
+                                if (count % 1000 == 0) {
+                                    logger.info("{} features exported.", count);
+                                }
+                            });
+                        } catch (Throwable e) {
+                            abort(feature, id, e);
                         }
                     });
                 }
