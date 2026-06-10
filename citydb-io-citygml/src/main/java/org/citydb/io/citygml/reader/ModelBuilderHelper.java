@@ -32,7 +32,6 @@ import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
 import org.citygml4j.core.model.CityGMLVersion;
-import org.citygml4j.core.model.appearance.AbstractSurfaceData;
 import org.citygml4j.core.model.core.AbstractAppearance;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
@@ -68,7 +67,6 @@ public class ModelBuilderHelper {
     private final GeometryHelper geometryHelper;
     private final Map<Class<?>, ModelBuilder<?, ?>> builderCache = new IdentityHashMap<>();
     private final Set<String> featureIdCache = new HashSet<>();
-    private final Set<String> surfaceDataIdCache = new HashSet<>();
     private final Set<String> geometryIdCache = new HashSet<>();
     private final Set<String> addressIdCache = new HashSet<>();
     private final Set<String> externalFileIdCache = new HashSet<>();
@@ -181,10 +179,6 @@ public class ModelBuilderHelper {
 
     public boolean lookupAndPut(AbstractGML feature) {
         return feature.getId() != null && !featureIdCache.add(feature.getId());
-    }
-
-    public boolean lookupAndPut(AbstractSurfaceData surfaceData) {
-        return surfaceData.getId() != null && !surfaceDataIdCache.add(surfaceData.getId());
     }
 
     public boolean lookupAndPut(AbstractGeometry geometry) {
@@ -739,7 +733,6 @@ public class ModelBuilderHelper {
     private void clear() {
         appearanceHelper.reset();
         featureIdCache.clear();
-        surfaceDataIdCache.clear();
         geometryIdCache.clear();
         addressIdCache.clear();
         externalFileIdCache.clear();

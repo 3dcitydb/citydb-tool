@@ -41,6 +41,7 @@ public class AppearanceHelper {
     private final Map<AbstractSurfaceData, SurfaceData<?>> surfaceData = new IdentityHashMap<>();
     private final Map<GMLObject, List<TargetContext<Surface<?>>>> surfaces = new IdentityHashMap<>();
     private final Map<GMLObject, List<TargetContext<LinearRing>>> rings = new IdentityHashMap<>();
+    private final Set<String> surfaceDataIdCache = new HashSet<>();
     private boolean processAppearances = true;
     private Set<String> themes;
 
@@ -57,6 +58,10 @@ public class AppearanceHelper {
         processAppearances = options.isReadAppearances();
         themes = options.hasThemes() ? options.getThemes() : null;
         return this;
+    }
+
+    public boolean lookupAndPut(AbstractSurfaceData surfaceData) {
+        return surfaceData.getId() != null && !surfaceDataIdCache.add(surfaceData.getId());
     }
 
     public org.citydb.model.appearance.Appearance getAppearance(AbstractAppearance source) throws ModelBuildException {
@@ -104,6 +109,7 @@ public class AppearanceHelper {
         surfaceData.clear();
         surfaces.clear();
         rings.clear();
+        surfaceDataIdCache.clear();
     }
 
     private static class AppearanceCollector extends ObjectWalker {
