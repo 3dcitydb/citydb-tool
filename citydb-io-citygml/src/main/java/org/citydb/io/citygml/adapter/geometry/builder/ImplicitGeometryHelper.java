@@ -79,7 +79,7 @@ public class ImplicitGeometryHelper {
 
             Geometry<?> geometry = geometryHelper.getGeometry(template, force2D);
             if (geometry != null) {
-                ImplicitGeometry target = ImplicitGeometry.of(geometry.setSrsIdentifier(template.getSrsName()));
+                ImplicitGeometry target = ImplicitGeometry.asShared(geometry.setSrsIdentifier(template.getSrsName()));
                 if (source.isSetAppearances()) {
                     for (AbstractAppearanceProperty property : source.getAppearances()) {
                         if (property != null && property.getObject() != null) {

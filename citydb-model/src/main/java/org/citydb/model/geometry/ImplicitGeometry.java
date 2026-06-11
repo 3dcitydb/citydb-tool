@@ -16,27 +16,34 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class ImplicitGeometry extends Child implements Referencable, Visitable {
+    private final boolean shared;
     private Geometry<?> geometry;
     private ExternalFile libraryObject;
     private String objectId;
     private PropertyMap<AppearanceProperty> appearances;
 
-    private ImplicitGeometry(Geometry<?> geometry) {
+    private ImplicitGeometry(Geometry<?> geometry, boolean shared) {
         Objects.requireNonNull(geometry, "The geometry must not be null.");
         setGeometry(geometry);
+        this.shared = shared;
     }
 
-    private ImplicitGeometry(ExternalFile libraryObject) {
+    private ImplicitGeometry(ExternalFile libraryObject, boolean shared) {
         Objects.requireNonNull(libraryObject, "The library object must not be null.");
         setLibraryObject(libraryObject);
+        this.shared = shared;
     }
 
     public static ImplicitGeometry of(Geometry<?> geometry) {
-        return new ImplicitGeometry(geometry);
+        return new ImplicitGeometry(geometry, false);
     }
 
     public static ImplicitGeometry of(ExternalFile libraryObjectFile) {
-        return new ImplicitGeometry(libraryObjectFile);
+        return new ImplicitGeometry(libraryObjectFile, false);
+    }
+
+    public static ImplicitGeometry asShared(Geometry<?> geometry) {
+        return new ImplicitGeometry(geometry, true);
     }
 
     public Optional<Geometry<?>> getGeometry() {
@@ -65,6 +72,10 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
         }
 
         return this;
+    }
+
+    public boolean isShared() {
+        return shared;
     }
 
     @Override
@@ -145,5 +156,12 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
+    }
+
+    @Override
+    protected void setParent(Child parent) {
+        if (!shared) {
+            super.setParent(parent);
+        }
     }
 }
