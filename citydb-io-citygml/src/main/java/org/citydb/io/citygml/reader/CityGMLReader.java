@@ -168,6 +168,7 @@ public class CityGMLReader implements FeatureReader {
         logger.debug("Reading global objects and resolving global references...");
         preprocessor.processGlobalObjects(file, factory);
         isPreprocessed = true;
+        logger.debug("Finished processing global objects and references.");
     }
 
     @Override
