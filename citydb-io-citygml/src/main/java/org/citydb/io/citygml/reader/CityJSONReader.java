@@ -81,7 +81,8 @@ public class CityJSONReader implements FeatureReader {
         try (org.citygml4j.cityjson.reader.CityJSONReader reader = factory.createReader(file)) {
             FileMetadata metadata = FileMetadata.of(reader);
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->
-                    new ModelBuilderHelper(file, store, adapterContext).initialize(metadata, options, formatOptions));
+                    new ModelBuilderHelper(file, preprocessor.getImplicitGeometryResolver(), store, adapterContext)
+                            .initialize(metadata, options, formatOptions));
 
             while (shouldRun && reader.hasNext()) {
                 AbstractFeature feature = reader.next();

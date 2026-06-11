@@ -98,7 +98,8 @@ public class CityGMLReader implements FeatureReader {
             int featureId = 0;
             FileMetadata metadata = FileMetadata.of(reader);
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->
-                    new ModelBuilderHelper(file, store, context).initialize(metadata, options, formatOptions));
+                    new ModelBuilderHelper(file, preprocessor.getImplicitGeometryResolver(), store, context)
+                            .initialize(metadata, options, formatOptions));
 
             while (shouldRun && reader.hasNext()) {
                 CityGMLChunk chunk = reader.nextChunk();

@@ -94,10 +94,10 @@ public class AppearanceHelper {
         }
     }
 
-    public void processTargets(AbstractFeature feature) {
+    public void processTargets(VisitableObject object) {
         if (processAppearances && !surfaceData.isEmpty()) {
             AppearanceCollector collector = new AppearanceCollector();
-            for (AppearanceCollector.Context context : collector.collect(feature)) {
+            for (AppearanceCollector.Context context : collector.collect(object)) {
                 for (Appearance appearance : context.appearances) {
                     processor.process(appearance, context.properties);
                 }
@@ -115,8 +115,8 @@ public class AppearanceHelper {
     private static class AppearanceCollector extends ObjectWalker {
         private final Map<VisitableObject, Context> contexts = new IdentityHashMap<>();
 
-        Collection<Context> collect(AbstractFeature feature) {
-            feature.accept(this);
+        Collection<Context> collect(VisitableObject object) {
+            object.accept(this);
             return contexts.values();
         }
 

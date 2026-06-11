@@ -33,12 +33,14 @@ public abstract class AbstractFeatureAdapter<T extends AbstractFeature> extends 
                 || source.getBoundedBy() == null
                 || !source.getBoundedBy().isSetEnvelope()) {
             source.computeEnvelope(EnvelopeOptions.defaults().setEnvelopeOnFeatures(true));
-        } else {
-            // make sure implicit geometries are included in envelope
+        }
+
+        // make sure implicit geometries are included in envelope
+        if (helper.hasImplicitGeometries()) {
             source.accept(new ObjectWalker() {
                 @Override
                 public void visit(ImplicitGeometry implicitGeometry) {
-                    source.getBoundedBy().getEnvelope().include(implicitGeometry.computeEnvelope());
+                    source.getBoundedBy().getEnvelope().include(helper.computeEnvelope(implicitGeometry));
                 }
             });
         }
