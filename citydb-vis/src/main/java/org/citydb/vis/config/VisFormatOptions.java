@@ -5,11 +5,17 @@
 
 package org.citydb.vis.config;
 
+import com.alibaba.fastjson2.annotation.JSONField;
+import org.citydb.database.schema.SchemaMapping;
 import org.citydb.io.writer.options.OutputFormatOptions;
+import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
 import org.citydb.vis.attribute.AttributeProjection;
 import org.citydb.vis.styling.ObjectStyleRegistry;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Base format options shared by all visualization export formats (I3S, 3D Tiles, etc.).
@@ -35,7 +41,22 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     private AtlasOverflowMode atlasOverflowMode = AtlasOverflowMode.HYBRID;
     private AtlasFallbackStrategy atlasFallbackStrategy = AtlasFallbackStrategy.EXPAND;
     private boolean enableShading;
+
+    // Serializable string inputs for the derived styling/attribute objects
+    // below. These are what a JSON config file (or the CLI) actually
+    // carries; the runtime ObjectStyleRegistry / AttributeProjection are
+    // built from them by buildStyleRegistry() / buildAttributeProjection()
+    // and are themselves excluded from serialization (they hold a
+    // SchemaMapping and a sealed-type tree that fastjson2 cannot round-trip).
+    // Keeping the raw strings in the config gives --default-color /
+    // --feature-type-style / --attributes a clean JSON home with full CLI parity.
+    private String defaultColor;
+    private Map<String, String> featureTypeStyles;
+    private List<String> attributes;
+
+    @JSONField(serialize = false, deserialize = false)
     private ObjectStyleRegistry styleRegistry = ObjectStyleRegistry.empty();
+    @JSONField(serialize = false, deserialize = false)
     private AttributeProjection attributeProjection;
 
     public double getGridEdgeLength() {
@@ -126,13 +147,89 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
         return this;
     }
 
-    public ObjectStyleRegistry getStyleRegistry() {
-        return styleRegistry;
+    /**
+     * Default sRGB color (form {@code #rrggbb} or {@code #rrggbbaa}) applied
+     * to features on the no-appearance path (CLI {@code --default-color}).
+     * {@code null} means opaque white. Consumed by {@link #resolve} to build
+     * the {@link #styleRegistry}.
+     */
+    public String getDefaultColor() {
+        return defaultColor;
     }
 
-    public VisFormatOptions setStyleRegistry(ObjectStyleRegistry styleRegistry) {
-        this.styleRegistry = styleRegistry != null ? styleRegistry : ObjectStyleRegistry.empty();
+    public VisFormatOptions setDefaultColor(String defaultColor) {
+        this.defaultColor = defaultColor;
         return this;
+    }
+
+    /**
+     * Per-feature-type {@code qualifiedName -> hex color} overrides on the
+     * no-appearance path (CLI {@code --feature-type-style}). Keys must be
+     * qualified feature type names like {@code bldg:Building}; resolved
+     * against the schema hierarchy by {@link #resolve}.
+     */
+    public Map<String, String> getFeatureTypeStyles() {
+        return featureTypeStyles;
+    }
+
+    public VisFormatOptions setFeatureTypeStyles(Map<String, String> featureTypeStyles) {
+        this.featureTypeStyles = featureTypeStyles;
+        return this;
+    }
+
+    /**
+     * Raw {@code --attributes} mapping tokens, one per element. Parsed into
+     * the {@link #attributeProjection} by {@link #resolve}. {@code null} or
+     * empty means "no projection — export every top-level attribute".
+     */
+    public List<String> getAttributes() {
+        return attributes;
+    }
+
+    public VisFormatOptions setAttributes(List<String> attributes) {
+        this.attributes = attributes;
+        return this;
+    }
+
+    /**
+     * Build the runtime {@link #styleRegistry} from the serialized string
+     * inputs ({@link #getDefaultColor}, {@link #getFeatureTypeStyles}),
+     * passing the {@link SchemaMapping} of the target database so
+     * per-feature-type style keys can be resolved against the schema type
+     * hierarchy. Call once after the config has been loaded and any CLI
+     * overrides applied; idempotent.
+     * <p>
+     * The thrown message names the offending concept ("default color",
+     * "feature type style") but deliberately not the CLI flag — the caller
+     * (which knows whether the value came from the CLI or a config file)
+     * adds that attribution.
+     *
+     * @throws VisExportException if a color string is malformed or a feature
+     *                            type style key is not a known qualified name
+     */
+    public void buildStyleRegistry(SchemaMapping schemaMapping) throws VisExportException {
+        styleRegistry = ObjectStyleRegistry.fromConfig(defaultColor, featureTypeStyles, schemaMapping);
+    }
+
+    /**
+     * Parse {@link #getAttributes} into the runtime {@link #attributeProjection}.
+     * Call once after the config has been loaded and any CLI override applied;
+     * idempotent. {@code null}/empty input yields a {@code null} projection
+     * ("export every top-level attribute"). The thrown message carries only the
+     * parser's reason; the caller adds the source attribution.
+     *
+     * @throws VisExportException if an attribute mapping token cannot be parsed
+     */
+    public void buildAttributeProjection() throws VisExportException {
+        try {
+            attributeProjection = AttributeProjection.parse(attributes);
+        } catch (IllegalArgumentException e) {
+            throw new VisExportException(e.getMessage(), e);
+        }
+    }
+
+    public ObjectStyleRegistry getStyleRegistry() {
+        return styleRegistry;
     }
 
     /**
@@ -143,10 +240,5 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
      */
     public AttributeProjection getAttributeProjection() {
         return attributeProjection;
-    }
-
-    public VisFormatOptions setAttributeProjection(AttributeProjection attributeProjection) {
-        this.attributeProjection = attributeProjection;
-        return this;
     }
 }
