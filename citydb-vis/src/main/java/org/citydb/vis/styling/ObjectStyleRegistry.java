@@ -8,6 +8,8 @@ package org.citydb.vis.styling;
 import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.model.common.Name;
+import org.citydb.model.common.PrefixedName;
+import org.citydb.vis.VisExportException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -63,6 +65,74 @@ public final class ObjectStyleRegistry {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Build a registry from the raw string inputs carried by a JSON config
+     * file or the CLI ({@code --default-color} / {@code --feature-type-style}).
+     * This is the single place that turns user-supplied strings into a
+     * validated registry, so both entry points behave identically.
+     * <p>
+     * Returns {@link #empty()} when neither a default color nor any
+     * per-feature-type override is given. Otherwise each override key is
+     * required to be a qualified feature type name (e.g. {@code bldg:Building})
+     * that resolves against {@code schemaMapping}; a bare local name, an
+     * unknown type, or a malformed color is rejected loudly rather than
+     * silently ignored — the styling space wants precision over convenience.
+     *
+     * @param defaultColor      sRGB hex string ({@code #rrggbb[aa]}) or {@code null}
+     * @param featureTypeStyles {@code qualifiedName -> hex color} map or {@code null}
+     * @param schemaMapping     schema used to resolve override keys; must be
+     *                          non-null when {@code featureTypeStyles} is non-empty
+     * @throws VisExportException on a malformed color, an unqualified or
+     *                            unknown feature type key, or a missing schema
+     */
+    public static ObjectStyleRegistry fromConfig(String defaultColor,
+                                                 Map<String, String> featureTypeStyles,
+                                                 SchemaMapping schemaMapping) throws VisExportException {
+        boolean hasDefault = defaultColor != null;
+        boolean hasOverrides = featureTypeStyles != null && !featureTypeStyles.isEmpty();
+        if (!hasDefault && !hasOverrides) {
+            return empty();
+        }
+
+        Builder builder = builder().schemaMapping(schemaMapping);
+        if (hasDefault) {
+            builder.defaultStyle(parseColor(defaultColor, "default color", null));
+        }
+
+        if (hasOverrides) {
+            if (schemaMapping == null) {
+                throw new VisExportException("Resolving per-feature-type styles requires a database schema.");
+            }
+            for (Map.Entry<String, String> e : featureTypeStyles.entrySet()) {
+                // Strict qualified-name match: typos like 'building' or
+                // 'bldgg:Building' fail loudly rather than silently picking
+                // the wrong type via a local-name fallback.
+                PrefixedName name = PrefixedName.of(e.getKey());
+                if (name.getPrefix().isEmpty()) {
+                    throw new VisExportException("Feature type style key '" + e.getKey() +
+                            "' must be a qualified name with a namespace prefix (e.g. 'bldg:Building').");
+                }
+                FeatureType featureType = schemaMapping.getFeatureType(name);
+                if (featureType == FeatureType.UNDEFINED) {
+                    throw new VisExportException("Feature type style references unknown feature type '" +
+                            e.getKey() + "'.");
+                }
+                builder.override(featureType.getName(), parseColor(e.getValue(), "feature type style", e.getKey()));
+            }
+        }
+
+        return builder.build();
+    }
+
+    private static DefaultObjectStyle parseColor(String hex, String what, String key) throws VisExportException {
+        try {
+            return DefaultObjectStyle.parseColor(hex);
+        } catch (IllegalArgumentException e) {
+            String where = key != null ? " for '" + key + "'" : "";
+            throw new VisExportException("Invalid " + what + where + ": " + e.getMessage(), e);
+        }
     }
 
     /**

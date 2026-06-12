@@ -197,24 +197,24 @@ public class SceneOptions implements Option {
     }
 
     /**
-     * Build a {@link DefaultObjectStyle} from the {@code --default-color}
-     * CLI flag. The caller is expected to gate the call on
-     * {@code Command.hasMatchedOption("--default-color", ...)} so the
-     * writer's format-options-level default is not overwritten when no
-     * flag was provided.
+     * Raw {@code --default-color} hex string ({@code #rrggbb[aa]}), or
+     * {@code null} when the flag was not provided. The controller copies
+     * this onto the format options, which build the
+     * {@link org.citydb.vis.styling.ObjectStyleRegistry} in
+     * {@link org.citydb.vis.config.VisFormatOptions#buildStyleRegistry};
+     * this class only validates the hex syntax in {@link #preprocess}.
      */
-    public DefaultObjectStyle getDefaultObjectStyle() {
-        return defaultColor != null
-                ? DefaultObjectStyle.parseColor(defaultColor)
-                : DefaultObjectStyle.defaults();
+    public String getDefaultColor() {
+        return defaultColor;
     }
 
     /**
      * Raw {@code qualifiedName -> hex color} map from
-     * {@code --feature-type-style}. The controller resolves each qualified
-     * name against the {@link org.citydb.database.schema.SchemaMapping} and
-     * builds the {@link org.citydb.vis.styling.ObjectStyleRegistry}; this
-     * class only validates the hex syntax in {@link #preprocess}.
+     * {@code --feature-type-style}. The controller copies it onto the format
+     * options, which resolve each qualified name against the
+     * {@link org.citydb.database.schema.SchemaMapping} and build the
+     * {@link org.citydb.vis.styling.ObjectStyleRegistry}; this class only
+     * validates the hex syntax in {@link #preprocess}.
      * Returns an empty map when the option was not provided.
      */
     public Map<String, String> getFeatureTypeStyles() {
