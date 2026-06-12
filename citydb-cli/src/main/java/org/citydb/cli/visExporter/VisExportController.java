@@ -20,7 +20,6 @@ import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -28,7 +27,6 @@ import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
-import org.citydb.model.common.PrefixedName;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
@@ -38,19 +36,15 @@ import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
-import org.citydb.vis.attribute.AttributeProjection;
+import org.citydb.vis.VisExportException;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.geometry.ImplicitReferencePointReprojector;
-import org.citydb.vis.styling.DefaultObjectStyle;
-import org.citydb.vis.styling.ObjectStyleRegistry;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class VisExportController<T extends VisFormatOptions> implements Command {
@@ -142,100 +136,89 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
     }
 
     /**
-     * Apply the shared scene CLI options to the given format options.
-     * Only values explicitly matched on the command line override the config.
+     * Apply the shared scene CLI options to the given format options, then
+     * build the derived runtime objects (styling registry, attribute
+     * projection) from the resulting string inputs.
+     * <p>
+     * Only values explicitly matched on the command line override the config:
+     * the raw {@code --default-color} / {@code --feature-type-style} /
+     * {@code --attributes} strings are copied onto the format options, leaving
+     * any config-file values in place when the corresponding flag is absent.
+     * {@link VisFormatOptions#buildStyleRegistry} and
+     * {@link VisFormatOptions#buildAttributeProjection} then turn those strings
+     * (whatever their source) into the runtime {@code ObjectStyleRegistry} and
+     * {@code AttributeProjection}, so config-only styling and attribute
+     * projections are honoured even when no scene CLI options are supplied.
      */
     private void applySceneOptions(VisFormatOptions options, SchemaMapping schemaMapping)
             throws ExecutionException {
-        if (sceneOptions == null) {
-            return;
-        }
-
-        if (Command.hasMatchedOption("--grid-edge-length", commandSpec)) {
-            options.setGridEdgeLength(sceneOptions.getGridEdgeLength());
-        }
-
-        if (Command.hasMatchedOption("--screen-pixel-threshold", commandSpec)) {
-            options.setScreenPixelThreshold(sceneOptions.getScreenPixelThreshold());
-        }
-
-        if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
-            options.setClampToGround(sceneOptions.isClampToGround());
-        }
-
-        if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
-            options.setTextureScale(sceneOptions.getTextureScale());
-        }
-
-        if (Command.hasMatchedOption("--max-atlas-size", commandSpec)) {
-            options.setMaxAtlasSize(sceneOptions.getMaxAtlasSize());
-        }
-
-        if (Command.hasMatchedOption("--atlas-overflow-mode", commandSpec)) {
-            options.setAtlasOverflowMode(sceneOptions.getAtlasOverflowMode());
-        }
-
-        if (Command.hasMatchedOption("--atlas-fallback", commandSpec)) {
-            options.setAtlasFallbackStrategy(sceneOptions.getAtlasFallbackStrategy());
-        }
-
-        if (Command.hasMatchedOption("--enable-shading", commandSpec)) {
-            options.setEnableShading(sceneOptions.isEnableShading());
-        }
-
-        applyAttributeProjection(options);
-
-        // The styling registry combines --default-color (if matched) with
-        // any --feature-type-style overrides. Only built when the user
-        // actually configured one of them; otherwise the format options
-        // keep their default empty registry.
-        boolean hasDefaultColor = Command.hasMatchedOption("--default-color", commandSpec);
-        Map<String, String> typeStyles = sceneOptions.getFeatureTypeStyles();
-        if (!hasDefaultColor && typeStyles.isEmpty()) {
-            return;
-        }
-
-        ObjectStyleRegistry.Builder builder = ObjectStyleRegistry.builder()
-                .schemaMapping(schemaMapping);
-        if (hasDefaultColor) {
-            builder.defaultStyle(sceneOptions.getDefaultObjectStyle());
-        }
-        for (Map.Entry<String, String> e : typeStyles.entrySet()) {
-            // Strict qualified-name match: typos like 'building' or
-            // 'bldgg:Building' fail loudly rather than silently picking
-            // the wrong type via local-name fallback. The styling space
-            // wants precision over convenience.
-            PrefixedName name = PrefixedName.of(e.getKey());
-            if (name.getPrefix().isEmpty()) {
-                throw new ExecutionException("Error: --feature-type-style key '" + e.getKey() +
-                        "' must be a qualified name with a namespace prefix (e.g. 'bldg:Building').");
+        if (sceneOptions != null) {
+            if (Command.hasMatchedOption("--grid-edge-length", commandSpec)) {
+                options.setGridEdgeLength(sceneOptions.getGridEdgeLength());
             }
-            FeatureType ft = schemaMapping.getFeatureType(name);
-            if (ft == FeatureType.UNDEFINED) {
-                throw new ExecutionException("Error: --feature-type-style references " +
-                        "unknown feature type '" + e.getKey() + "'.");
-            }
-            DefaultObjectStyle style = DefaultObjectStyle.parseColor(e.getValue());
-            builder.override(ft.getName(), style);
-        }
-        options.setStyleRegistry(builder.build());
-    }
 
-    /**
-     * Parse the {@code --attributes} CLI tokens (if any) and install
-     * the resulting projection on the format options. Any parse error
-     * becomes an {@link ExecutionException} preserving the original
-     * message so the user sees the token index that failed.
-     */
-    private void applyAttributeProjection(VisFormatOptions options) throws ExecutionException {
-        List<String> tokens = sceneOptions.getAttributes();
-        if (tokens.isEmpty()) {
-            return;
+            if (Command.hasMatchedOption("--screen-pixel-threshold", commandSpec)) {
+                options.setScreenPixelThreshold(sceneOptions.getScreenPixelThreshold());
+            }
+
+            if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
+                options.setClampToGround(sceneOptions.isClampToGround());
+            }
+
+            if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
+                options.setTextureScale(sceneOptions.getTextureScale());
+            }
+
+            if (Command.hasMatchedOption("--max-atlas-size", commandSpec)) {
+                options.setMaxAtlasSize(sceneOptions.getMaxAtlasSize());
+            }
+
+            if (Command.hasMatchedOption("--atlas-overflow-mode", commandSpec)) {
+                options.setAtlasOverflowMode(sceneOptions.getAtlasOverflowMode());
+            }
+
+            if (Command.hasMatchedOption("--atlas-fallback", commandSpec)) {
+                options.setAtlasFallbackStrategy(sceneOptions.getAtlasFallbackStrategy());
+            }
+
+            if (Command.hasMatchedOption("--enable-shading", commandSpec)) {
+                options.setEnableShading(sceneOptions.isEnableShading());
+            }
+
+            // Raw string inputs for the derived styling/attribute objects:
+            // a matched flag overrides the config, otherwise the config value
+            // stands. The strings are validated/parsed by the build* calls below.
+            if (Command.hasMatchedOption("--default-color", commandSpec)) {
+                options.setDefaultColor(sceneOptions.getDefaultColor());
+            }
+
+            if (Command.hasMatchedOption("--feature-type-style", commandSpec)) {
+                options.setFeatureTypeStyles(sceneOptions.getFeatureTypeStyles());
+            }
+
+            if (Command.hasMatchedOption("--attributes", commandSpec)) {
+                options.setAttributes(sceneOptions.getAttributes());
+            }
         }
+
+        // Build the derived runtime objects from the final string inputs
+        // (whatever their source). The library exceptions name the offending
+        // concept but not the CLI flag; we add the flag attribution here when
+        // the value came from the command line, so a CLI typo still reports
+        // against the flag the user typed (e.g. "Error: --attributes ...").
         try {
-            options.setAttributeProjection(AttributeProjection.parse(tokens));
-        } catch (IllegalArgumentException e) {
-            throw new ExecutionException("Error: --attributes " + e.getMessage(), e);
+            options.buildStyleRegistry(schemaMapping);
+        } catch (VisExportException e) {
+            throw new ExecutionException("Error: " + e.getMessage(), e);
+        }
+
+        try {
+            options.buildAttributeProjection();
+        } catch (VisExportException e) {
+            String prefix = Command.hasMatchedOption("--attributes", commandSpec) ?
+                    "--attributes " :
+                    "Invalid attribute projection: ";
+            throw new ExecutionException("Error: " + prefix + e.getMessage(), e);
         }
     }
 
