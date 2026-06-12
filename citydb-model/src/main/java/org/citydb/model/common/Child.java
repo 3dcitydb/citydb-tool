@@ -30,7 +30,7 @@ public abstract class Child implements Serializable {
         return null;
     }
 
-    protected void setParent(Child parent) {
+    void setParent(Child parent) {
         this.parent = parent;
     }
 

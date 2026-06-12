@@ -15,35 +15,28 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class ImplicitGeometry extends Child implements Referencable, Visitable {
-    private final boolean shared;
+public class ImplicitGeometry extends Shareable implements Referencable, Visitable {
     private Geometry<?> geometry;
     private ExternalFile libraryObject;
     private String objectId;
     private PropertyMap<AppearanceProperty> appearances;
 
-    private ImplicitGeometry(Geometry<?> geometry, boolean shared) {
+    private ImplicitGeometry(Geometry<?> geometry) {
         Objects.requireNonNull(geometry, "The geometry must not be null.");
         setGeometry(geometry);
-        this.shared = shared;
     }
 
-    private ImplicitGeometry(ExternalFile libraryObject, boolean shared) {
+    private ImplicitGeometry(ExternalFile libraryObject) {
         Objects.requireNonNull(libraryObject, "The library object must not be null.");
         setLibraryObject(libraryObject);
-        this.shared = shared;
     }
 
     public static ImplicitGeometry of(Geometry<?> geometry) {
-        return new ImplicitGeometry(geometry, false);
+        return new ImplicitGeometry(geometry);
     }
 
     public static ImplicitGeometry of(ExternalFile libraryObjectFile) {
-        return new ImplicitGeometry(libraryObjectFile, false);
-    }
-
-    public static ImplicitGeometry asShared(Geometry<?> geometry) {
-        return new ImplicitGeometry(geometry, true);
+        return new ImplicitGeometry(libraryObjectFile);
     }
 
     public Optional<Geometry<?>> getGeometry() {
@@ -72,10 +65,6 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
         }
 
         return this;
-    }
-
-    public boolean isShared() {
-        return shared;
     }
 
     @Override
@@ -156,12 +145,5 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
     @Override
     public void accept(Visitor visitor) {
         visitor.visit(this);
-    }
-
-    @Override
-    protected void setParent(Child parent) {
-        if (!shared) {
-            super.setParent(parent);
-        }
     }
 }
