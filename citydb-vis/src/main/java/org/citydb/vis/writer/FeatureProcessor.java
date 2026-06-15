@@ -8,13 +8,12 @@ package org.citydb.vis.writer;
 import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
-import org.citydb.model.appearance.TextureCoordinate;
-import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.geometry.GeometryMeshBuilder;
+import org.citydb.vis.geometry.RingAttributes;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.SpatialEntry;
 import org.citydb.vis.store.VisExportStores;
@@ -46,16 +45,14 @@ public final class FeatureProcessor {
                         String featureTypeNamespace,
                         Envelope envelope, Map<String, Object> attributes,
                         List<GeometryProperty> geomProps,
-                        Map<LinearRing, List<TextureCoordinate>> texCoords,
-                        Map<LinearRing, Integer> ringTextureIds,
-                        Map<LinearRing, float[]> ringColors) throws VisExportException {
+                        RingAttributes ringAttributes) throws VisExportException {
         // Surface type fallback for geometries that hang directly off the
         // top-level feature (e.g. a Building's own LoD1 box) — anything
         // owned by a nested boundary surface picks up that surface's type
         // inside GeometryMeshBuilder.
         Name defaultSurfaceType = Name.of(featureType, featureTypeNamespace);
         TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId, defaultSurfaceType,
-                texCoords, ringTextureIds, ringColors);
+                ringAttributes);
         if (mesh.isEmpty()) {
             return;
         }
