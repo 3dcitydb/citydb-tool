@@ -7,6 +7,7 @@ package org.citydb.vis.appearance;
 
 import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.geometry.LinearRing;
+import org.citydb.vis.geometry.RingAttributes;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -49,6 +50,16 @@ public record RingAppearance(Map<LinearRing, List<TextureCoordinate>> texCoords,
 
     public static RingAppearance empty() {
         return EMPTY;
+    }
+
+    /**
+     * Bridge to the geometry-package view of this data for the triangulation
+     * pipeline. Exists because {@code vis.geometry} cannot depend on this
+     * package (see {@link RingAttributes}); the field values are passed through
+     * unchanged.
+     */
+    public RingAttributes forTriangulation() {
+        return new RingAttributes(texCoords, ringTextureIds, ringColors);
     }
 
     /**

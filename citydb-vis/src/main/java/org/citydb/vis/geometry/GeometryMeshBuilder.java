@@ -5,18 +5,15 @@
 
 package org.citydb.vis.geometry;
 
-import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.vis.util.GeoTransform;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Converts a feature's geometry properties into a single {@link TriangleMesh}
@@ -49,16 +46,13 @@ public final class GeometryMeshBuilder {
      * @param featureId          owning feature id, propagated into the mesh
      * @param defaultSurfaceType fallback surface type for properties whose
      *                           parent walk does not reach a Feature
-     * @param texCoordMap        per-ring UV coordinates, or {@code null} if untextured
-     * @param ringTextureMap     per-ring texture id, or {@code null} if untextured
-     * @param ringColorMap       per-ring RGBA from X3D material, or {@code null}
+     * @param ringAttributes     per-ring UV / texture id / X3D-material colour,
+     *                           each map {@code null} when absent
      */
     public static TriangleMesh build(List<GeometryProperty> geometryProperties,
                                      long featureId,
                                      Name defaultSurfaceType,
-                                     Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-                                     Map<LinearRing, Integer> ringTextureMap,
-                                     Map<LinearRing, float[]> ringColorMap) {
+                                     RingAttributes ringAttributes) {
         PolygonTriangulator triangulator = new PolygonTriangulator();
         TriangleMesh mesh = new TriangleMesh();
 
@@ -87,7 +81,7 @@ public final class GeometryMeshBuilder {
                     Feature owner = property.getParent(Feature.class);
                     Name surfaceType = owner != null ? owner.getFeatureType() : defaultSurfaceType;
                     TriangleMesh geomMesh = triangulator.triangulate(geometry, featureId,
-                            surfaceType, texCoordMap, ringTextureMap, ringColorMap);
+                            surfaceType, ringAttributes);
                     mesh.merge(geomMesh);
                 }
                 default -> {
