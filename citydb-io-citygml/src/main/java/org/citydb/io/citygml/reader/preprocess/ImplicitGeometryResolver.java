@@ -125,7 +125,8 @@ public class ImplicitGeometryResolver {
             @Override
             public void visit(ImplicitGeometry implicitGeometry) {
                 if (implicitGeometry.getRelativeGeometry() != null
-                        && implicitGeometry.getRelativeGeometry().isSetInlineObject()) {
+                        && implicitGeometry.getRelativeGeometry().isSetInlineObject()
+                        && implicitGeometry.getRelativeGeometry().getObject().getId() != null) {
                     String objectId = FeatureHelper.getOrCreateId(implicitGeometry.getRelativeGeometry().getObject());
                     implicitGeometry.getRelativeGeometry().setHref("#" + objectId);
                     implicitGeometry.getRelativeGeometry().setInlineObject(null);

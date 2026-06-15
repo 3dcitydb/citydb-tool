@@ -28,15 +28,17 @@ public abstract class AbstractFeatureAdapter<T extends AbstractFeature> extends 
     @Override
     public void build(T source, Feature target, ModelBuilderHelper helper) throws ModelBuildException {
         super.build(source, target, helper);
+        boolean isTopLevel = source.getParent() == null;
 
-        if (helper.isComputeEnvelopes()
+        boolean computeEnvelope = (isTopLevel && helper.isComputeEnvelopes())
                 || source.getBoundedBy() == null
-                || !source.getBoundedBy().isSetEnvelope()) {
+                || !source.getBoundedBy().isSetEnvelope();
+        if (computeEnvelope) {
             source.computeEnvelope(EnvelopeOptions.defaults().setEnvelopeOnFeatures(true));
         }
 
         // make sure implicit geometries are included in envelope
-        if (helper.hasImplicitGeometries()) {
+        if (!computeEnvelope || helper.hasImplicitGeometries()) {
             source.accept(new ObjectWalker() {
                 @Override
                 public void visit(ImplicitGeometry implicitGeometry) {
