@@ -504,19 +504,14 @@ public class GlbEncoder {
 
     private static PropertyTableBufferViews encodePropertyField(
             BinBufferBuilder bin, AttrField field, List<FeatureData> features) {
-        String name = field.name();
-        return switch (field.type()) {
-            case OID, INT -> new PropertyTableBufferViews(
-                    bin.addInt32Array(AttributeValueCoercer.extractInts(features, name)), -1);
-            case DOUBLE -> new PropertyTableBufferViews(
-                    bin.addFloat64Array(AttributeValueCoercer.extractDoubles(features, name)), -1);
-            case STRING -> encodeStringProperty(bin, name, features);
-        };
+        return AttributeValueCoercer.dispatchByType(field.type(), features, field.name(),
+                v -> new PropertyTableBufferViews(bin.addInt32Array(v), -1),
+                v -> new PropertyTableBufferViews(bin.addFloat64Array(v), -1),
+                v -> encodeStringProperty(bin, v));
     }
 
     private static PropertyTableBufferViews encodeStringProperty(
-            BinBufferBuilder bin, String fieldName, List<FeatureData> features) {
-        byte[][] utf8 = AttributeValueCoercer.extractUtf8(features, fieldName);
+            BinBufferBuilder bin, byte[][] utf8) {
         ByteArrayOutputStream valuesStream = new ByteArrayOutputStream();
         int[] offsets = new int[utf8.length + 1];
         int offset = 0;

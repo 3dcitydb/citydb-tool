@@ -51,16 +51,13 @@ public class I3SAttributeEncoder extends AttributeEncoder {
                     updateStats(field, fd.getFieldValue(field.name()));
                 }
             }
-            ByteBuffer buffer = switch (field.type()) {
-                // OID: Oid32 / INT: Int32 — ArcGIS requires unique non-null
-                // OIDs to enable single-feature identify/picking.
-                case OID, INT -> writeInt32Attribute(count,
-                        AttributeValueCoercer.extractInts(features, field.name()));
-                case DOUBLE -> writeDoubleAttribute(count,
-                        AttributeValueCoercer.extractDoubles(features, field.name()));
-                case STRING -> writeStringAttribute(count,
-                        AttributeValueCoercer.extractUtf8(features, field.name()));
-            };
+            // OID: Oid32 / INT: Int32 — ArcGIS requires unique non-null OIDs
+            // to enable single-feature identify/picking.
+            ByteBuffer buffer = AttributeValueCoercer.dispatchByType(
+                    field.type(), features, field.name(),
+                    v -> writeInt32Attribute(count, v),
+                    v -> writeDoubleAttribute(count, v),
+                    v -> writeStringAttribute(count, v));
             Files.write(attributesDir.resolve("f_" + i).resolve("0"), buffer.array());
         }
     }
