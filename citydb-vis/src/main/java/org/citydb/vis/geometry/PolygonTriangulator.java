@@ -62,15 +62,12 @@ public class PolygonTriangulator {
     private final Set<String> seenIds = new HashSet<>();
 
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId, Name surfaceType,
-                                    Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-                                    Map<LinearRing, Integer> ringTextureMap,
-                                    Map<LinearRing, float[]> ringColorMap) {
+                                    RingAttributes ringAttributes) {
         TriangleMesh mesh = new TriangleMesh();
         List<Polygon> polygons = collectPolygons(geometry);
 
         for (Polygon polygon : polygons) {
-            triangulatePolygon(polygon, featureId, surfaceType, mesh, texCoordMap, ringTextureMap,
-                    ringColorMap);
+            triangulatePolygon(polygon, featureId, surfaceType, mesh, ringAttributes);
         }
 
         return mesh;
@@ -103,10 +100,13 @@ public class PolygonTriangulator {
     }
 
     private static void triangulatePolygon(Polygon polygon, long featureId, Name surfaceType,
-                                    TriangleMesh mesh,
-                                    Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-                                    Map<LinearRing, Integer> ringTextureMap,
-                                    Map<LinearRing, float[]> ringColorMap) {
+                                    TriangleMesh mesh, RingAttributes ringAttributes) {
+        // Unpack the per-ring appearance lookups (any may be null when the
+        // feature carries no data of that kind).
+        Map<LinearRing, List<TextureCoordinate>> texCoordMap = ringAttributes.texCoords();
+        Map<LinearRing, Integer> ringTextureMap = ringAttributes.ringTextureIds();
+        Map<LinearRing, float[]> ringColorMap = ringAttributes.ringColors();
+
         LinearRing exteriorRing = polygon.getExteriorRing();
         List<Coordinate> outerPoints = exteriorRing.getPoints();
 
@@ -598,6 +598,35 @@ public class PolygonTriangulator {
     }
 
     /**
+     * Whether any polygon vertex other than the candidate triple
+     * ({@code prevIdx}, {@code i}, {@code nextIdx}, indices into {@code indices})
+     * lies inside triangle (a, b, c) in the projection plane. Vertices
+     * coincident with a corner are keyhole-bridge duplicates and ignored —
+     * counting them as "inside" would block legitimate ears and leave a bridged
+     * hole filled. Shared by the normal ear test and the forced-triple fallback
+     * in {@link #earClip}; {@code a}/{@code b}/{@code c} are the already-projected
+     * corners the caller derived from the triple.
+     */
+    private static boolean triangleContainsOtherVertex(
+            List<Integer> indices, List<double[]> vertices, int projAxis,
+            int prevIdx, int i, int nextIdx,
+            double[] a, double[] b, double[] c) {
+        for (int j = 0; j < indices.size(); j++) {
+            if (j == prevIdx || j == i || j == nextIdx) {
+                continue;
+            }
+            double[] p = project2D(vertices.get(indices.get(j)), projAxis);
+            if (coincident2D(p, a) || coincident2D(p, b) || coincident2D(p, c)) {
+                continue;
+            }
+            if (pointInTriangle(p, a, b, c)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Ear clipping triangulation algorithm.
      * Operates on scaled coordinates (meters) for correct geometric tests.
      */
@@ -639,23 +668,8 @@ public class PolygonTriangulator {
                     continue;
                 }
 
-                boolean isEar = true;
-                for (int j = 0; j < indices.size(); j++) {
-                    if (j == prevIdx || j == i || j == nextIdx) continue;
-                    double[] p = project2D(vertices.get(indices.get(j)), projAxis);
-                    // Skip points that are coincident with one of the
-                    // candidate triangle's corners — keyhole hole-bridging
-                    // intentionally produces such duplicate vertices, and
-                    // counting them as "inside" would block legitimate ears
-                    // and leave the hole filled.
-                    if (coincident2D(p, a) || coincident2D(p, b) || coincident2D(p, c)) {
-                        continue;
-                    }
-                    if (pointInTriangle(p, a, b, c)) {
-                        isEar = false;
-                        break;
-                    }
-                }
+                boolean isEar = !triangleContainsOtherVertex(
+                        indices, vertices, projAxis, prevIdx, i, nextIdx, a, b, c);
 
                 if (isEar) {
                     triangles.add(new int[]{prev, curr, next});
@@ -681,21 +695,11 @@ public class PolygonTriangulator {
                         double[] c = project2D(vertices.get(indices.get(nextIdx)), projAxis);
                         double cross = cross2D(a, b, c);
                         if (Math.abs(cross) > TOLERANCE) {
-                            // Containment check: skip if any other vertex is inside.
-                            // Coincident-with-corner points are bridge duplicates;
-                            // ignore them (see ear-loop above for rationale).
-                            boolean valid = true;
-                            for (int j = 0; j < indices.size(); j++) {
-                                if (j == prevIdx || j == i || j == nextIdx) continue;
-                                double[] p = project2D(vertices.get(indices.get(j)), projAxis);
-                                if (coincident2D(p, a) || coincident2D(p, b) || coincident2D(p, c)) {
-                                    continue;
-                                }
-                                if (pointInTriangle(p, a, b, c)) {
-                                    valid = false;
-                                    break;
-                                }
-                            }
+                            // Containment check: skip if any other vertex is
+                            // inside — same predicate as the normal ear path,
+                            // but here also accepting concave (CW) triples.
+                            boolean valid = !triangleContainsOtherVertex(
+                                    indices, vertices, projAxis, prevIdx, i, nextIdx, a, b, c);
                             if (valid) {
                                 if (cross > 0) {
                                     triangles.add(new int[]{indices.get(prevIdx), indices.get(i), indices.get(nextIdx)});
