@@ -36,22 +36,12 @@ public class TriangleMesh {
     private final List<float[]> normals;
     private final List<float[]> texCoords;
     private final List<float[]> colors;
-    private final List<int[]> triangles;
-    private final List<Long> featureIds;
-    private final List<Integer> triangleTextureIds;
-    // Per-triangle bit: set when the triangle's source polygon carried an
-    // explicit X3DMaterial color (so its vertex COLOR_0 values are authored,
-    // not WHITE_RGBA padding from merge/mixed-feature processing). Drives the
-    // GLB writer's untextured-plain vs untextured-unlit primitive split so
-    // unappeared surfaces in a colored feature still render with PBR shading.
-    private final BitSet triangleColored;
-    // Per-triangle source surface feature type — the most-specific Feature
-    // ancestor of the triangle's polygon (e.g. RoofSurface / WallSurface for
-    // a CityGML 3.0 Building, falling back to the top-level Feature when the
-    // geometry is not nested in a boundary surface). Drives per-feature-type
-    // styling on the 3D Tiles plain path so a single building can render
-    // each surface with a different color. Always non-null when filled in.
-    private final List<Name> triangleSurfaceTypes;
+    // Per-triangle attributes (vertex-index triple, featureId, atlas texture
+    // id, X3DMaterial-colored flag, source surface type), kept index-aligned
+    // with one another. The alignment invariant lives entirely inside
+    // TriangleData so the add/copy/rebuild paths in merge, removeDuplicate and
+    // resolveTJunctions touch one object instead of five parallel collections.
+    private TriangleData triangleData;
     private boolean hasTexCoords;
     private boolean hasColors;
 
@@ -60,11 +50,7 @@ public class TriangleMesh {
         normals = new ArrayList<>();
         texCoords = new ArrayList<>();
         colors = new ArrayList<>();
-        triangles = new ArrayList<>();
-        featureIds = new ArrayList<>();
-        triangleTextureIds = new ArrayList<>();
-        triangleColored = new BitSet();
-        triangleSurfaceTypes = new ArrayList<>();
+        triangleData = new TriangleData();
     }
 
     public List<double[]> getPositions() {
@@ -76,7 +62,7 @@ public class TriangleMesh {
     }
 
     public List<int[]> getTriangles() {
-        return Collections.unmodifiableList(triangles);
+        return Collections.unmodifiableList(triangleData.vertices);
     }
 
     public List<float[]> getTexCoords() {
@@ -101,7 +87,7 @@ public class TriangleMesh {
     }
 
     public List<Long> getFeatureIds() {
-        return Collections.unmodifiableList(featureIds);
+        return Collections.unmodifiableList(triangleData.featureIds);
     }
 
     public int getVertexCount() {
@@ -109,11 +95,11 @@ public class TriangleMesh {
     }
 
     public int getTriangleCount() {
-        return triangles.size();
+        return triangleData.size();
     }
 
     public boolean isEmpty() {
-        return triangles.isEmpty();
+        return triangleData.isEmpty();
     }
 
     public int addVertex(double x, double y, double z, float nx, float ny, float nz) {
@@ -193,28 +179,21 @@ public class TriangleMesh {
 
     public void addTriangle(int v0, int v1, int v2, long featureId, int textureId,
                             boolean colored, Name surfaceType) {
-        int triIndex = triangles.size();
-        triangles.add(new int[]{v0, v1, v2});
-        featureIds.add(featureId);
-        triangleTextureIds.add(textureId);
-        if (colored) {
-            triangleColored.set(triIndex);
-        }
-        triangleSurfaceTypes.add(surfaceType);
+        triangleData.add(new int[]{v0, v1, v2}, featureId, textureId, colored, surfaceType);
     }
 
     /**
      * Source surface feature type of the triangle at {@code triIndex} — see
-     * {@link #triangleSurfaceTypes} for semantics. Never {@code null} on
+     * {@link TriangleData#surfaceTypes} for semantics. Never {@code null} on
      * meshes built through the standard pipeline; tests that synthesize a
      * mesh directly should pass a non-null type to {@link #addTriangle}.
      */
     public Name getTriangleSurfaceType(int triIndex) {
-        return triangleSurfaceTypes.get(triIndex);
+        return triangleData.surfaceType(triIndex);
     }
 
     public List<Integer> getTriangleTextureIds() {
-        return Collections.unmodifiableList(triangleTextureIds);
+        return Collections.unmodifiableList(triangleData.textureIds);
     }
 
     /**
@@ -222,7 +201,7 @@ public class TriangleMesh {
      * polygon. Always {@code false} when {@link #hasColors()} is {@code false}.
      */
     public boolean isTriangleColored(int triIndex) {
-        return triangleColored.get(triIndex);
+        return triangleData.isColored(triIndex);
     }
 
     public void merge(TriangleMesh other) {
@@ -264,19 +243,15 @@ public class TriangleMesh {
             hasColors = true;
         }
 
-        int triOffset = triangles.size();
-        for (int[] tri : other.triangles) {
-            triangles.add(new int[]{tri[0] + offset, tri[1] + offset, tri[2] + offset});
-        }
-        featureIds.addAll(other.featureIds);
-        triangleTextureIds.addAll(other.triangleTextureIds);
-        triangleSurfaceTypes.addAll(other.triangleSurfaceTypes);
-
-        // Shift other.triangleColored bits by triOffset and OR into ours.
-        // BitSet has no built-in shift, so iterate set bits explicitly.
-        for (int bit = other.triangleColored.nextSetBit(0); bit >= 0;
-                bit = other.triangleColored.nextSetBit(bit + 1)) {
-            triangleColored.set(bit + triOffset);
+        // Append other's triangles, shifting vertex indices by offset. Each
+        // triangle's attributes (featureId/textureId/colored/surfaceType) are
+        // copied in lockstep by TriangleData, so no per-attribute bookkeeping
+        // (including the manual BitSet shift) is needed here.
+        for (int i = 0; i < other.triangleData.size(); i++) {
+            int[] tri = other.triangleData.vertices(i);
+            triangleData.addCopy(
+                    new int[]{tri[0] + offset, tri[1] + offset, tri[2] + offset},
+                    other.triangleData, i);
         }
     }
 
@@ -304,13 +279,13 @@ public class TriangleMesh {
      *                        range
      */
     public void resolveTJunctions(double scaleX, double scaleY, double toleranceMeters) {
-        if (positions.size() < 3 || triangles.isEmpty()) return;
+        if (positions.size() < 3 || triangleData.isEmpty()) return;
 
-        if (triangles.size() > T_JUNCTION_MAX_TRIANGLES) {
+        if (triangleData.size() > T_JUNCTION_MAX_TRIANGLES) {
             logger.warn("Skipping T-junction resolution for oversized feature "
                     + "mesh (triangles={} > {}). Sub-pixel cracks at shared "
                     + "edges (if any) will not be resolved.",
-                    triangles.size(), T_JUNCTION_MAX_TRIANGLES);
+                    triangleData.size(), T_JUNCTION_MAX_TRIANGLES);
             return;
         }
 
@@ -327,8 +302,11 @@ public class TriangleMesh {
                 mPos[i][2] = p[2];
             }
 
-            int triCount = triangles.size();
-            TJunctionEdgeGrid edgeGrid = TJunctionEdgeGrid.build(mPos, triangles, triCount);
+            // Snapshot the vertex lane for this iteration; the rebuild at the
+            // end of the loop body swaps in a fresh TriangleData.
+            List<int[]> tris = triangleData.vertices;
+            int triCount = tris.size();
+            TJunctionEdgeGrid edgeGrid = TJunctionEdgeGrid.build(mPos, tris, triCount);
 
             // Find all T-junctions: vertex vi lies on edge of triangle ti.
             // Store the parametric position t along the edge for correct UV interpolation.
@@ -366,7 +344,7 @@ public class TriangleMesh {
 
                                 int ti = edgeId / 3;
                                 int e = edgeId % 3;
-                                int[] tri = triangles.get(ti);
+                                int[] tri = tris.get(ti);
                                 if (vi == tri[0] || vi == tri[1] || vi == tri[2]) continue;
 
                                 int ei1 = tri[e];
@@ -406,29 +384,25 @@ public class TriangleMesh {
             // size threshold, and the per-entry Integer.box + HashMap.contains
             // cost dominated the loop in profiling.
             BitSet removed = new BitSet(triCount);
-            List<int[]> newTriangles = new ArrayList<>();
-            List<Long> newFeatureIds = new ArrayList<>();
-            List<Integer> newTriTexIds = new ArrayList<>();
-            // Per-new-triangle colored flag, inherited from the parent triangle
-            // being split. Both sub-triangles share the parent's flag.
-            List<Boolean> newColored = new ArrayList<>();
-            // Per-new-triangle source surface type, also inherited from the
-            // parent triangle (a single split never crosses a surface boundary).
-            List<Name> newSurfaceTypes = new ArrayList<>();
+            // Sub-triangles produced by the splits. Each inherits its parent
+            // triangle's attributes (featureId/textureId/colored/surfaceType)
+            // — a single split never crosses a surface boundary — which
+            // TriangleData.add carries across in lockstep.
+            TriangleData splitChildren = new TriangleData();
 
             for (int s = 0; s < splits.size(); s++) {
                 int[] split = splits.get(s);
                 int ti = split[0], edgeSlot = split[1], vi = split[2];
                 if (removed.get(ti)) continue;
 
-                int[] tri = triangles.get(ti);
+                int[] tri = triangleData.vertices(ti);
                 int ei1 = tri[edgeSlot];
                 int ei2 = tri[(edgeSlot + 1) % 3];
                 int ei3 = tri[(edgeSlot + 2) % 3];
-                long fid = featureIds.get(ti);
-                int texId = triangleTextureIds.get(ti);
-                boolean colored = triangleColored.get(ti);
-                Name surfaceType = triangleSurfaceTypes.get(ti);
+                long fid = triangleData.featureId(ti);
+                int texId = triangleData.textureId(ti);
+                boolean colored = triangleData.isColored(ti);
+                Name surfaceType = triangleData.surfaceType(ti);
 
                 // New vertex at vi's position with the split triangle's normal.
                 // Interpolate UV/color along the edge at the parametric position t.
@@ -470,57 +444,22 @@ public class TriangleMesh {
                 }
 
                 removed.set(ti);
-                newTriangles.add(new int[]{ei1, newVi, ei3});
-                newFeatureIds.add(fid);
-                newTriTexIds.add(texId);
-                newColored.add(colored);
-                newSurfaceTypes.add(surfaceType);
-                newTriangles.add(new int[]{newVi, ei2, ei3});
-                newFeatureIds.add(fid);
-                newTriTexIds.add(texId);
-                newColored.add(colored);
-                newSurfaceTypes.add(surfaceType);
+                splitChildren.add(new int[]{ei1, newVi, ei3}, fid, texId, colored, surfaceType);
+                splitChildren.add(new int[]{newVi, ei2, ei3}, fid, texId, colored, surfaceType);
             }
 
-            List<int[]> updatedTri = new ArrayList<>();
-            List<Long> updatedFid = new ArrayList<>();
-            List<Integer> updatedTexId = new ArrayList<>();
-            BitSet updatedColored = new BitSet();
-            List<Name> updatedSurfaceTypes = new ArrayList<>();
-            int outIdx = 0;
+            // Rebuild: surviving triangles in original order, then the split
+            // children. TriangleData keeps all five attribute lanes aligned,
+            // so this is a copy of the kept indices plus an append of the
+            // children — no manual per-lane re-synchronisation.
+            TriangleData rebuilt = new TriangleData();
             for (int ti = 0; ti < triCount; ti++) {
                 if (!removed.get(ti)) {
-                    updatedTri.add(triangles.get(ti));
-                    updatedFid.add(featureIds.get(ti));
-                    updatedTexId.add(triangleTextureIds.get(ti));
-                    if (triangleColored.get(ti)) {
-                        updatedColored.set(outIdx);
-                    }
-                    updatedSurfaceTypes.add(triangleSurfaceTypes.get(ti));
-                    outIdx++;
+                    rebuilt.addCopy(triangleData.vertices(ti), triangleData, ti);
                 }
             }
-            updatedTri.addAll(newTriangles);
-            updatedFid.addAll(newFeatureIds);
-            updatedTexId.addAll(newTriTexIds);
-            for (Boolean c : newColored) {
-                if (c) {
-                    updatedColored.set(outIdx);
-                }
-                outIdx++;
-            }
-            updatedSurfaceTypes.addAll(newSurfaceTypes);
-
-            triangles.clear();
-            triangles.addAll(updatedTri);
-            featureIds.clear();
-            featureIds.addAll(updatedFid);
-            triangleTextureIds.clear();
-            triangleTextureIds.addAll(updatedTexId);
-            triangleColored.clear();
-            triangleColored.or(updatedColored);
-            triangleSurfaceTypes.clear();
-            triangleSurfaceTypes.addAll(updatedSurfaceTypes);
+            rebuilt.addAll(splitChildren);
+            triangleData = rebuilt;
         }
     }
 
@@ -542,17 +481,13 @@ public class TriangleMesh {
      * so upstream rounding would be both redundant and incorrect.
      */
     public void removeDuplicateTriangles() {
-        if (triangles.size() <= 1) return;
+        if (triangleData.size() <= 1) return;
 
         Set<TriangleKey> seen = new HashSet<>();
-        List<int[]> kept = new ArrayList<>();
-        List<Long> keptIds = new ArrayList<>();
-        List<Integer> keptTexIds = new ArrayList<>();
-        BitSet keptColored = new BitSet();
-        List<Name> keptSurfaceTypes = new ArrayList<>();
+        TriangleData kept = new TriangleData();
 
-        for (int i = 0; i < triangles.size(); i++) {
-            int[] tri = triangles.get(i);
+        for (int i = 0; i < triangleData.size(); i++) {
+            int[] tri = triangleData.vertices(i);
             long h0 = vertexHash(positions.get(tri[0]));
             long h1 = vertexHash(positions.get(tri[1]));
             long h2 = vertexHash(positions.get(tri[2]));
@@ -563,27 +498,12 @@ public class TriangleMesh {
             if (h0 > h1) { long t = h0; h0 = h1; h1 = t; }
 
             if (seen.add(new TriangleKey(h0, h1, h2))) {
-                if (triangleColored.get(i)) {
-                    keptColored.set(kept.size());
-                }
-                kept.add(tri);
-                keptIds.add(featureIds.get(i));
-                keptTexIds.add(triangleTextureIds.get(i));
-                keptSurfaceTypes.add(triangleSurfaceTypes.get(i));
+                kept.addCopy(tri, triangleData, i);
             }
         }
 
-        if (kept.size() < triangles.size()) {
-            triangles.clear();
-            triangles.addAll(kept);
-            featureIds.clear();
-            featureIds.addAll(keptIds);
-            triangleTextureIds.clear();
-            triangleTextureIds.addAll(keptTexIds);
-            triangleColored.clear();
-            triangleColored.or(keptColored);
-            triangleSurfaceTypes.clear();
-            triangleSurfaceTypes.addAll(keptSurfaceTypes);
+        if (kept.size() < triangleData.size()) {
+            triangleData = kept;
         }
     }
 
@@ -646,15 +566,15 @@ public class TriangleMesh {
      */
     public Map<Integer, float[]> computeUVExtents() {
         Map<Integer, float[]> extents = new HashMap<>();
-        for (int t = 0; t < triangles.size(); t++) {
-            int texId = triangleTextureIds.get(t);
+        for (int t = 0; t < triangleData.size(); t++) {
+            int texId = triangleData.textureId(t);
             if (texId < 0) {
                 continue;
             }
             float[] ext = extents.computeIfAbsent(texId,
                     k -> new float[]{Float.MAX_VALUE, Float.MAX_VALUE,
                             -Float.MAX_VALUE, -Float.MAX_VALUE});
-            int[] tri = triangles.get(t);
+            int[] tri = triangleData.vertices(t);
             for (int vi : tri) {
                 float[] uv = texCoords.get(vi);
                 ext[0] = Math.min(ext[0], uv[0]);
@@ -664,5 +584,96 @@ public class TriangleMesh {
             }
         }
         return extents;
+    }
+
+    /**
+     * Struct-of-arrays holder for the per-triangle attribute lanes —
+     * vertex-index triple, source featureId, atlas texture id, the
+     * X3DMaterial-colored flag, and the source surface feature type. All five
+     * lanes are kept index-aligned: every {@link #add}/{@link #addCopy}/
+     * {@link #addAll} appends to all of them together, so the alignment
+     * invariant that used to be re-implemented in {@link TriangleMesh#merge},
+     * {@link TriangleMesh#removeDuplicateTriangles} and
+     * {@link TriangleMesh#resolveTJunctions} now lives in exactly one place.
+     *
+     * <p>Struct-of-arrays (rather than a list of record objects) is
+     * deliberate: the colored lane is a {@link BitSet} (one bit per triangle)
+     * and rebuilds replace the whole holder, which preserves the memory layout
+     * and scan cost the T-junction pass depends on.
+     */
+    private static final class TriangleData {
+        private final List<int[]> vertices = new ArrayList<>();
+        private final List<Long> featureIds = new ArrayList<>();
+        private final List<Integer> textureIds = new ArrayList<>();
+        // Set when the triangle's source polygon carried an explicit
+        // X3DMaterial color (so its vertex COLOR_0 values are authored, not
+        // WHITE_RGBA padding from merge/mixed-feature processing). Drives the
+        // GLB writer's untextured-plain vs untextured-unlit primitive split so
+        // unappeared surfaces in a colored feature still render PBR-shaded.
+        private final BitSet colored = new BitSet();
+        // Most-specific Feature ancestor of the triangle's polygon (e.g.
+        // RoofSurface / WallSurface for a CityGML 3.0 Building, falling back to
+        // the top-level Feature when the geometry is not nested in a boundary
+        // surface). Drives per-feature-type styling on the 3D Tiles plain path.
+        // Always non-null when filled in through the standard pipeline.
+        private final List<Name> surfaceTypes = new ArrayList<>();
+
+        int size() {
+            return vertices.size();
+        }
+
+        boolean isEmpty() {
+            return vertices.isEmpty();
+        }
+
+        int[] vertices(int i) {
+            return vertices.get(i);
+        }
+
+        long featureId(int i) {
+            return featureIds.get(i);
+        }
+
+        int textureId(int i) {
+            return textureIds.get(i);
+        }
+
+        boolean isColored(int i) {
+            return colored.get(i);
+        }
+
+        Name surfaceType(int i) {
+            return surfaceTypes.get(i);
+        }
+
+        /** Append one triangle with explicit attributes. */
+        void add(int[] tri, long featureId, int textureId, boolean isColored,
+                 Name surfaceType) {
+            if (isColored) {
+                colored.set(vertices.size());
+            }
+            vertices.add(tri);
+            featureIds.add(featureId);
+            textureIds.add(textureId);
+            surfaceTypes.add(surfaceType);
+        }
+
+        /**
+         * Append {@code tri} with the attributes of triangle {@code srcIdx}
+         * copied from {@code src} (which may be {@code this}). The caller
+         * supplies the vertex triple so it can be offset (merge) or reused
+         * unchanged (rebuild/dedup).
+         */
+        void addCopy(int[] tri, TriangleData src, int srcIdx) {
+            add(tri, src.featureIds.get(srcIdx), src.textureIds.get(srcIdx),
+                    src.colored.get(srcIdx), src.surfaceTypes.get(srcIdx));
+        }
+
+        /** Append every triangle of {@code other}, attributes included. */
+        void addAll(TriangleData other) {
+            for (int i = 0; i < other.size(); i++) {
+                addCopy(other.vertices.get(i), other, i);
+            }
+        }
     }
 }
