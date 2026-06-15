@@ -13,7 +13,9 @@ import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.visitor.ObjectWalker;
+import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.Envelope;
+import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.util.Matrices;
 import org.xmlobjects.gml.util.matrix.Matrix;
 
@@ -103,16 +105,16 @@ public class ImplicitGeometryResolver {
                 if (implicitGeometry.getRelativeGeometry() != null
                         && implicitGeometry.getRelativeGeometry().isSetInlineObject()
                         && implicitGeometry.getRelativeGeometry().getObject().getId() != null) {
-                    ImplicitGeometry template = new ImplicitGeometry(implicitGeometry.getRelativeGeometry());
+                    AbstractGeometry geometry = implicitGeometry.getRelativeGeometry().getObject();
+                    ImplicitGeometry template = new ImplicitGeometry(new GeometryProperty<>(geometry));
                     if (implicitGeometry.isSetAppearances()) {
                         implicitGeometry.getAppearances().stream()
                                 .filter(AbstractAppearanceProperty::isSetInlineObject)
                                 .forEach(template.getAppearances()::add);
                     }
 
-                    String objectId = implicitGeometry.getRelativeGeometry().getObject().getId();
-                    implicitGeometries.put(objectId, template);
-                    envelopes.put(objectId, template.getRelativeGeometry().getObject().computeEnvelope());
+                    implicitGeometries.put(geometry.getId(), template);
+                    envelopes.put(geometry.getId(), geometry.computeEnvelope());
                 }
             }
         });

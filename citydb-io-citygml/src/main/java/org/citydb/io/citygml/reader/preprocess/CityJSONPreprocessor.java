@@ -26,7 +26,7 @@ public class CityJSONPreprocessor {
     }
 
     public void process(AbstractFeature feature) {
-        implicitGeometryResolver.removeTemplateGeometries(feature);
         referenceResolver.resolveReferences(feature);
+        implicitGeometryResolver.removeTemplateGeometries(feature);
     }
 }
