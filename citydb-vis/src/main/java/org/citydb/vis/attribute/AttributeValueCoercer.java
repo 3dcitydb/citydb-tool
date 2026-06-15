@@ -5,15 +5,40 @@
 
 package org.citydb.vis.attribute;
 
+import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.FeatureData;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Function;
 
 public class AttributeValueCoercer {
     private static final byte[] EMPTY = new byte[0];
 
     private AttributeValueCoercer() {
+    }
+
+    /**
+     * Extract a column's values with the coercion appropriate to its
+     * {@link AttrType} and hand them to the matching writer. Centralises the
+     * type→extractor mapping (notably that both {@code OID} and {@code INT}
+     * use the int path) so the I3S and 3D Tiles attribute encoders share one
+     * source of truth. The switch is exhaustive: adding an {@code AttrType}
+     * becomes a compile error here rather than a silent per-format divergence.
+     *
+     * @param onInt    receives the {@code int[]} for OID / INT columns
+     * @param onDouble receives the {@code double[]} for DOUBLE columns
+     * @param onUtf8   receives the {@code byte[][]} for STRING columns
+     */
+    public static <R> R dispatchByType(AttrType type, List<FeatureData> features, String name,
+                                       Function<int[], R> onInt,
+                                       Function<double[], R> onDouble,
+                                       Function<byte[][], R> onUtf8) {
+        return switch (type) {
+            case OID, INT -> onInt.apply(extractInts(features, name));
+            case DOUBLE -> onDouble.apply(extractDoubles(features, name));
+            case STRING -> onUtf8.apply(extractUtf8(features, name));
+        };
     }
 
     public static int toInt(Object value) {

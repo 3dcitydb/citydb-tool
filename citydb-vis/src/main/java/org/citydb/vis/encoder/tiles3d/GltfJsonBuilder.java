@@ -251,6 +251,30 @@ final class GltfJsonBuilder {
      * Returns the resolved material indices keyed by atlas page so
      * {@link #writeMeshes} can reference them.
      */
+    /**
+     * Finish a glTF material from a (possibly populated) PBR block: apply the
+     * project defaults (metallic 0, roughness 1, double-sided), optionally mark
+     * {@code alphaMode=BLEND}, and — when {@code --enable-shading} is off — add
+     * the unlit extension. The unlit extension matters because NORMAL-less
+     * primitives would otherwise have CesiumJS auto-derive flat normals and dim
+     * the surface; with shading on, the primitive carries normals and renders
+     * PBR-shaded. Shared by the textured / plain / colored material paths.
+     */
+    private JSONObject finishMaterial(JSONObject pbr, boolean blend) {
+        pbr.put("metallicFactor", 0.0);
+        pbr.put("roughnessFactor", 1.0);
+        JSONObject material = new JSONObject();
+        material.put("pbrMetallicRoughness", pbr);
+        if (blend) {
+            material.put("alphaMode", "BLEND");
+        }
+        material.put("doubleSided", true);
+        if (!enableShading) {
+            addUnlitExtension(material);
+        }
+        return material;
+    }
+
     private MaterialIndices writeMaterials(JSONObject root) {
         JSONArray materials = new JSONArray();
         int pageCount = bvTextures.size();
@@ -286,34 +310,19 @@ final class GltfJsonBuilder {
         int textureSlot = 0;
         for (int p = 0; p < pageCount; p++) {
             if (!pageUsed[p]) continue;
-            JSONObject material = new JSONObject();
             JSONObject pbr = new JSONObject();
             JSONObject baseColorTexture = new JSONObject();
             baseColorTexture.put("index", textureSlot++);
             baseColorTexture.put("texCoord", 0);
             pbr.put("baseColorTexture", baseColorTexture);
-            pbr.put("metallicFactor", 0.0);
-            pbr.put("roughnessFactor", 1.0);
-            material.put("pbrMetallicRoughness", pbr);
-            material.put("doubleSided", true);
-            // Without NORMAL the unlit extension prevents CesiumJS from
-            // auto-deriving flat normals (which would dim the texture).
-            // With NORMAL the textured primitive carries the local
-            // up-direction normal (see GlbEncoder), so PBR + Lambertian
-            // gives every textured triangle the same brightness.
-            if (!enableShading) {
-                addUnlitExtension(material);
-            }
             texturedIdx[p] = materials.size();
-            materials.add(material);
+            materials.add(finishMaterial(pbr, false));
         }
 
         Map<DefaultObjectStyle, Integer> plainIdxByStyle = new HashMap<>(plainStyles.size() * 2);
         for (DefaultObjectStyle style : plainStyles) {
-            JSONObject material = new JSONObject();
             JSONObject pbr = new JSONObject();
-            pbr.put("metallicFactor", 0.0);
-            pbr.put("roughnessFactor", 1.0);
+            boolean blend = false;
             // baseColorFactor: only emit when the style is non-default
             // opaque white; the glTF default is opaque white so omitting
             // the field keeps the JSON minimal in the common case.
@@ -321,40 +330,17 @@ final class GltfJsonBuilder {
                 JSONArray baseColorFactor = new JSONArray();
                 for (float v : style.toLinearRgba()) baseColorFactor.add(v);
                 pbr.put("baseColorFactor", baseColorFactor);
-                if (style.hasAlpha()) {
-                    material.put("alphaMode", "BLEND");
-                }
-            }
-            material.put("pbrMetallicRoughness", pbr);
-            material.put("doubleSided", true);
-            // Plain primitives drop NORMAL when --enable-shading is off; the
-            // unlit extension prevents CesiumJS from auto-deriving flat
-            // normals (which would dim the geometry).
-            if (!enableShading) {
-                addUnlitExtension(material);
+                blend = style.hasAlpha();
             }
             plainIdxByStyle.put(style, materials.size());
-            materials.add(material);
+            materials.add(finishMaterial(pbr, blend));
         }
 
         if (needColored) {
-            JSONObject material = new JSONObject();
-            JSONObject pbr = new JSONObject();
-            pbr.put("metallicFactor", 0.0);
-            pbr.put("roughnessFactor", 1.0);
-            material.put("pbrMetallicRoughness", pbr);
-            if (coloredNeedsBlend) {
-                material.put("alphaMode", "BLEND");
-            }
-            material.put("doubleSided", true);
-            // X3DMaterial colored primitives are unlit only when NORMAL is
-            // absent; with --enable-shading the material renders PBR-shaded
-            // and authored thematic colours pick up Lambertian darkening.
-            if (!enableShading) {
-                addUnlitExtension(material);
-            }
+            // Colored primitives carry their colour in vertex COLOR_0, so the
+            // PBR block keeps its defaults (no baseColorFactor).
             untexturedColoredIdx = materials.size();
-            materials.add(material);
+            materials.add(finishMaterial(new JSONObject(), coloredNeedsBlend));
         }
 
         root.put("materials", materials);

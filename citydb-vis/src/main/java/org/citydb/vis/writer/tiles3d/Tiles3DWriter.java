@@ -21,7 +21,6 @@ import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
 import org.citydb.vis.model.AttrField;
-import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.util.FileHelper;
 import org.citydb.vis.util.GeoTransform;
@@ -207,11 +206,7 @@ public class Tiles3DWriter extends VisWriter {
                 == AtlasFallbackStrategy.EXPAND
                 ? AtlasMode.AUTO
                 : AtlasMode.SINGLE_ATLAS;
-        PreparedNode prepared = prepareNodeMesh(node, mode);
-        List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
-        logAtlasViolations(node, prepared, featureDataList);
-
-        try {
+        return writeNode(node, mode, "3D Tiles", (prepared, features) -> {
             // Serialize each atlas page to JPEG bytes and index texture ids by
             // page so the GLB encoder can route textured triangles to the
             // primitive backed by the correct atlas.
@@ -230,7 +225,7 @@ public class Tiles3DWriter extends VisWriter {
             // Encode GLB
             node.setMesh(prepared.mesh());
             byte[] glb = glbEncoder.encode(node, atlasBytesList, texIdToPage,
-                    featureDataList, attrFields, datasetCenter,
+                    features, attrFields, datasetCenter,
                     getFormatOptions().getStyleRegistry(),
                     getFormatOptions().isEnableShading());
             if (glb == null) {
@@ -239,9 +234,7 @@ public class Tiles3DWriter extends VisWriter {
 
             Files.write(tilesDir.resolve(TilePaths.tileFile(tilePaths.get(node.getIndex()))), glb);
             return true;
-        } catch (IOException e) {
-            throw new VisExportException("Failed to write 3D Tiles node " + node.getIndex() + ".", e);
-        }
+        });
     }
 
     private static void createTileParentDirs(Path tilesDir,
