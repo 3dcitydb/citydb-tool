@@ -13,7 +13,6 @@ import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.common.Matrix4x4;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
@@ -35,6 +34,7 @@ import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.geometry.ImplicitInstanceTransformer;
+import org.citydb.vis.geometry.RingAttributes;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
@@ -253,16 +253,14 @@ public abstract class VisWriter implements FeatureWriter {
                     AppearanceExtractor.extract(feature, stores.getTextureStore());
 
             List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
-            Map<LinearRing, List<TextureCoordinate>> texCoords = appearance.texCoords();
             Map<LinearRing, Integer> ringTextureIds = appearance.ringTextureIds();
-            Map<LinearRing, float[]> ringColors = appearance.ringColors();
             if (ringTextureIds != null && !ringTextureIds.isEmpty()) {
                 stores.setFeatureTextured(featureId);
             }
 
             futures.add(dispatchProcessing(featureId, objectId, featureType,
                     featureTypeNamespace, envelope, attributes, geomProps,
-                    texCoords, ringTextureIds, ringColors));
+                    appearance.forTriangulation()));
         }
 
         if (!implicitProperties.isEmpty()) {
@@ -302,18 +300,14 @@ public abstract class VisWriter implements FeatureWriter {
     private CompletableFuture<Boolean> dispatchProcessing(
             long featureId, String objectId, String featureType, String featureTypeNamespace,
             Envelope envelope, Map<String, Object> attributes,
-            List<GeometryProperty> geomProps,
-            Map<LinearRing, List<TextureCoordinate>> texCoords,
-            Map<LinearRing, Integer> ringTextureIds,
-            Map<LinearRing, float[]> ringColors) {
+            List<GeometryProperty> geomProps, RingAttributes ringAttributes) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
         service.execute(() -> {
             try {
                 featureProcessor.process(featureId, objectId, featureType,
                         featureTypeNamespace,
-                        envelope, attributes, geomProps, texCoords, ringTextureIds,
-                        ringColors);
+                        envelope, attributes, geomProps, ringAttributes);
                 result.complete(true);
             } catch (Throwable e) {
                 shouldRun = false;
@@ -393,9 +387,7 @@ public abstract class VisWriter implements FeatureWriter {
         // single-instance footprint that spatial partitioning needs.
         return dispatchProcessing(instanceId, objectId, featureType, featureTypeNamespace,
                 null, attributes, List.of(wrapped),
-                instanceAppearance.texCoords(),
-                instanceAppearance.ringTextureIds(),
-                instanceAppearance.ringColors());
+                instanceAppearance.forTriangulation());
     }
 
     @Override
@@ -570,6 +562,39 @@ public abstract class VisWriter implements FeatureWriter {
             return features;
         } catch (IOException e) {
             throw new VisExportException("Failed to load node attribute data.", e);
+        }
+    }
+
+    /**
+     * Format-specific body of a per-node write, run by {@link #writeNode} after
+     * the shared prepare/load/log steps and inside its uniform
+     * {@link IOException}→{@link VisExportException} wrapper.
+     *
+     * @return {@code false} if the node yielded no writable geometry and should
+     *         be dropped (mirrors the encoders' {@code null} result)
+     */
+    @FunctionalInterface
+    protected interface NodeBody {
+        boolean write(PreparedNode prepared, List<FeatureData> features) throws IOException;
+    }
+
+    /**
+     * Shared per-node write scaffold for both output formats: prepare the node
+     * mesh + atlas(es), load its feature attributes, log any atlas-budget
+     * violations, then run the format-specific {@code body} under one
+     * {@code IOException} wrapper. Keeps the prepare/load/log sequence and the
+     * failure-message shape identical across the I3S and 3D Tiles writers.
+     */
+    protected final boolean writeNode(SceneNode node, AtlasMode mode, String formatName,
+                                      NodeBody body) throws VisExportException {
+        PreparedNode prepared = prepareNodeMesh(node, mode);
+        List<FeatureData> features = loadNodeFeatures(prepared.entries());
+        logAtlasViolations(node, prepared, features);
+        try {
+            return body.write(prepared, features);
+        } catch (IOException e) {
+            throw new VisExportException(
+                    "Failed to write " + formatName + " node " + node.getIndex() + ".", e);
         }
     }
 
