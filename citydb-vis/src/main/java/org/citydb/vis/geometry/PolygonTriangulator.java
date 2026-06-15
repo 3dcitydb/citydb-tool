@@ -229,7 +229,7 @@ public class PolygonTriangulator {
 
         // Add triangles — if original polygon was CW, swap winding to restore face direction.
         // The colored flag flows from the X3DMaterial extractor; see
-        // TriangleMesh#triangleColored for how the GLB writer consumes it.
+        // TriangleMesh.isTriangleColored for how the GLB writer consumes it.
         boolean polyColored = polyColor != null;
         for (int[] tri : triangleIndices) {
             if (reverseWinding) {
