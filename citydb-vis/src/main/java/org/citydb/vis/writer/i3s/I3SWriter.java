@@ -268,11 +268,7 @@ public class I3SWriter extends VisWriter {
                                     boolean layerHasColors,
                                     boolean enableShading,
                                     ObjectStyleRegistry styleRegistry) throws VisExportException {
-        PreparedNode prepared = prepareNodeMesh(node, AtlasMode.SINGLE_ATLAS);
-        List<FeatureData> featureDataList = loadNodeFeatures(prepared.entries());
-        logAtlasViolations(node, prepared, featureDataList);
-
-        try {
+        return writeNode(node, AtlasMode.SINGLE_ATLAS, "I3S", (prepared, features) -> {
             node.setMesh(prepared.mesh());
             I3SGeometryEncoder.NodeGeometryResult geomResult =
                     geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors,
@@ -301,6 +297,7 @@ public class I3SWriter extends VisWriter {
             // have removed all triangles for some features, causing fewer face
             // ranges than input features. Feature/attribute output must match
             // the legacy buffer's per-feature featureId/faceRange order.
+            List<FeatureData> featureDataList = features;
             if (validFeatureIds.size() < featureDataList.size()) {
                 featureDataList = FeatureData.reorderByIds(featureDataList, validFeatureIds);
                 node.setFeatureCount(featureDataList.size());
@@ -311,9 +308,7 @@ public class I3SWriter extends VisWriter {
             i3sAttributeEncoder.writeNodeAttributes(layerDir, node, attrFields,
                     featureDataList);
             return true;
-        } catch (IOException e) {
-            throw new VisExportException("Failed to write I3S node " + node.getIndex() + ".", e);
-        }
+        });
     }
 
 }
