@@ -219,10 +219,12 @@ public class TextureAtlas {
     }
 
     /**
-     * Compose a single atlas page from its packed regions. Mirrors the second
-     * half of {@link #buildSingleAtlas} (compositing + UV region computation)
-     * but without the rescale loop or white-pixel reservation, since those
-     * only apply to the single-page I3S path.
+     * Compose a single atlas page from its packed regions. Shares the
+     * compositing and UV-region steps with {@link #buildSingleAtlas} via
+     * {@link #compositeAtlas} / {@link #computeUvRegions}, but skips the
+     * rescale loop and white-pixel reservation since those only apply to the
+     * single-page I3S path. No white pixel is reserved here, so the returned
+     * {@code whitePixelUV} is always {@code null}.
      */
     private static TextureAtlas composePage(List<AtlasRegion> regions,
                                             List<TextureMeta> metas,
@@ -243,6 +245,27 @@ public class TextureAtlas {
             }
         }
 
+        BufferedImage atlas = compositeAtlas(atlasWidth, atlasHeight, pixelRegions,
+                metas, texIdToIdx, rotated, textureStore);
+        UvLayout uv = computeUvRegions(pixelRegions, atlasWidth, atlasHeight);
+        return new TextureAtlas(uv.uvRegions(), atlas, tileOffsets, rotated,
+                uv.whitePixelUV(), actualScale);
+    }
+
+    /**
+     * Allocate the atlas image and composite every packed region into it.
+     * Sources are decoded JIT with subsampling so at most one source bitmap is
+     * resident at a time. Rotated regions are rotated 90° CCW before drawing;
+     * tiled regions (UV range &gt; 1) are repeated across the region. The
+     * white-pixel sentinel is skipped — the cleared white background already
+     * covers it. A region whose source cannot be decoded is logged and skipped.
+     */
+    private static BufferedImage compositeAtlas(int atlasWidth, int atlasHeight,
+                                                Map<Integer, int[]> pixelRegions,
+                                                List<TextureMeta> metas,
+                                                Map<Integer, Integer> texIdToIdx,
+                                                Set<Integer> rotated,
+                                                TextureStore textureStore) throws IOException {
         BufferedImage atlas = new BufferedImage(atlasWidth, atlasHeight,
                 BufferedImage.TYPE_INT_RGB);
         Graphics2D g = atlas.createGraphics();
@@ -254,12 +277,18 @@ public class TextureAtlas {
         for (Map.Entry<Integer, int[]> entry : pixelRegions.entrySet()) {
             int texId = entry.getKey();
             int[] pr = entry.getValue();
+            if (texId == WHITE_PIXEL_TEX_ID) {
+                // Atlas is already cleared to white; nothing to composite.
+                continue;
+            }
             TextureMeta m = metas.get(texIdToIdx.get(texId));
             boolean isRotated = rotated.contains(texId);
 
             int tU = m.tilesU, tV = m.tilesV;
             if (isRotated) { int tmp = tU; tU = tV; tV = tmp; }
 
+            // Per-tile target pixel dimensions in atlas; in rotated layout,
+            // source width maps to atlas height and vice versa.
             int targetTileW = Math.max(1, pr[2] / Math.max(1, tU));
             int targetTileH = Math.max(1, pr[3] / Math.max(1, tV));
             int matchSrcW = isRotated ? targetTileH : targetTileW;
@@ -293,20 +322,39 @@ public class TextureAtlas {
                     }
                 }
             }
+            // srcImg leaves scope here; atlas has its pixels, source is GC-eligible
         }
         g.dispose();
+        return atlas;
+    }
 
+    /** Result of {@link #computeUvRegions}: the per-texture atlas-space UV
+     * rectangles plus the white-pixel sample point ({@code null} when no
+     * white-pixel sentinel was packed). */
+    private record UvLayout(Map<Integer, float[]> uvRegions, float[] whitePixelUV) {}
+
+    /**
+     * Convert pixel regions to normalized atlas-space UV rectangles. The
+     * white-pixel sentinel, when present, is reported separately as a single
+     * sample point at the region center rather than added to {@code uvRegions}.
+     */
+    private static UvLayout computeUvRegions(Map<Integer, int[]> pixelRegions,
+                                             int atlasWidth, int atlasHeight) {
         Map<Integer, float[]> uvRegions = new HashMap<>();
+        float[] whitePixelUV = null;
         for (Map.Entry<Integer, int[]> e : pixelRegions.entrySet()) {
             int[] pr = e.getValue();
             float uOff = (float) pr[0] / atlasWidth;
             float vOff = (float) pr[1] / atlasHeight;
             float uScale = (float) pr[2] / atlasWidth;
             float vScale = (float) pr[3] / atlasHeight;
-            uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
+            if (e.getKey() == WHITE_PIXEL_TEX_ID) {
+                whitePixelUV = new float[]{uOff + uScale * 0.5f, vOff + vScale * 0.5f};
+            } else {
+                uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
+            }
         }
-
-        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, null, actualScale);
+        return new UvLayout(uvRegions, whitePixelUV);
     }
 
     // ---- Metadata gathering (no pixel decode) -------------------------------
@@ -577,84 +625,13 @@ public class TextureAtlas {
                     fallback, scale, currentMaxSize, currentMaxSize, dropped, metas.size());
         }
 
-        // Compose atlas image — decode each source JIT with subsampling
-        BufferedImage atlas = new BufferedImage(atlasWidth, atlasHeight,
-                BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = atlas.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.setColor(Color.WHITE);
-        g.fillRect(0, 0, atlasWidth, atlasHeight);
-
-        for (Map.Entry<Integer, int[]> entry : pixelRegions.entrySet()) {
-            int texId = entry.getKey();
-            int[] pr = entry.getValue();
-            if (texId == WHITE_PIXEL_TEX_ID) {
-                // Atlas is already cleared to white; nothing to composite.
-                continue;
-            }
-            TextureMeta m = metas.get(texIdToIdx.get(texId));
-            boolean isRotated = rotated.contains(texId);
-
-            int tU = m.tilesU, tV = m.tilesV;
-            if (isRotated) { int tmp = tU; tU = tV; tV = tmp; }
-
-            // Per-tile target pixel dimensions in atlas; in rotated layout,
-            // source width maps to atlas height and vice versa.
-            int targetTileW = Math.max(1, pr[2] / Math.max(1, tU));
-            int targetTileH = Math.max(1, pr[3] / Math.max(1, tV));
-            int matchSrcW = isRotated ? targetTileH : targetTileW;
-            int matchSrcH = isRotated ? targetTileW : targetTileH;
-            int subsample = pickSubsample(m.srcWidth, m.srcHeight, matchSrcW, matchSrcH);
-
-            BufferedImage srcImg;
-            try {
-                srcImg = textureStore.loadImage(texId, subsample);
-            } catch (IOException e) {
-                logger.warn("Skipping corrupt texture {} ({}): {}",
-                        texId, textureStore.getSourcePath(texId), e.getMessage());
-                continue;
-            }
-            if (srcImg == null) continue;
-
-            if (isRotated) {
-                srcImg = rotateImage90CCW(srcImg);
-            }
-
-            if (tU == 1 && tV == 1) {
-                g.drawImage(srcImg, pr[0], pr[1], pr[2], pr[3], null);
-            } else {
-                for (int ty = 0; ty < tV; ty++) {
-                    for (int tx = 0; tx < tU; tx++) {
-                        int x1 = pr[0] + (pr[2] * tx) / tU;
-                        int y1 = pr[1] + (pr[3] * ty) / tV;
-                        int x2 = pr[0] + (pr[2] * (tx + 1)) / tU;
-                        int y2 = pr[1] + (pr[3] * (ty + 1)) / tV;
-                        g.drawImage(srcImg, x1, y1, x2 - x1, y2 - y1, null);
-                    }
-                }
-            }
-            // srcImg leaves scope here; atlas has its pixels, source is GC-eligible
-        }
-        g.dispose();
-
-        // Compute UV regions
-        Map<Integer, float[]> uvRegions = new HashMap<>();
-        float[] whitePixelUV = null;
-        for (Map.Entry<Integer, int[]> e : pixelRegions.entrySet()) {
-            int[] pr = e.getValue();
-            float uOff = (float) pr[0] / atlasWidth;
-            float vOff = (float) pr[1] / atlasHeight;
-            float uScale = (float) pr[2] / atlasWidth;
-            float vScale = (float) pr[3] / atlasHeight;
-            if (e.getKey() == WHITE_PIXEL_TEX_ID) {
-                whitePixelUV = new float[]{uOff + uScale * 0.5f, vOff + vScale * 0.5f};
-            } else {
-                uvRegions.put(e.getKey(), new float[]{uOff, vOff, uScale, vScale});
-            }
-        }
-
-        return new TextureAtlas(uvRegions, atlas, tileOffsets, rotated, whitePixelUV, scale);
+        // Compose atlas image (decode each source JIT with subsampling) and
+        // derive UV regions — shared with the multi-page composePage path.
+        BufferedImage atlas = compositeAtlas(atlasWidth, atlasHeight, pixelRegions,
+                metas, texIdToIdx, rotated, textureStore);
+        UvLayout uv = computeUvRegions(pixelRegions, atlasWidth, atlasHeight);
+        return new TextureAtlas(uv.uvRegions(), atlas, tileOffsets, rotated,
+                uv.whitePixelUV(), scale);
     }
 
     /**
