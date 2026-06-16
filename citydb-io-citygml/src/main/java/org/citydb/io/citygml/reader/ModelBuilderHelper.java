@@ -36,6 +36,7 @@ import org.citydb.model.property.AddressProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.CityGMLVersion;
 import org.citygml4j.core.model.core.*;
+import org.citygml4j.xml.CityGMLContext;
 import org.citygml4j.xml.module.Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +81,7 @@ public class ModelBuilderHelper {
     private boolean computeEnvelopes;
     private boolean includeXALSource;
     private ImplicitGeometryScope implicitGeometryScope;
+    private XMLObjects xmlObjects;
 
     ModelBuilderHelper(InputFile file, ImplicitGeometryResolver resolver, PersistentMapStore store, CityGMLAdapterContext context) {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
@@ -91,7 +93,7 @@ public class ModelBuilderHelper {
         implicitGeometryHelper = new ImplicitGeometryHelper(resolver, this);
     }
 
-    private ModelBuilderHelper doInitialize(FileMetadata metadata, ReadOptions options, FormatOptions<?> formatOptions) {
+    private ModelBuilderHelper doInitialize(FileMetadata metadata, ReadOptions options, FormatOptions<?> formatOptions, CityGMLContext context) {
         version = metadata.getVersion() != null ? metadata.getVersion() : CityGMLVersion.v3_0;
         encoding = metadata.getEncoding() != null ? metadata.getEncoding() : StandardCharsets.UTF_8.name();
         rootSrsName = metadata.getSrsName();
@@ -99,16 +101,18 @@ public class ModelBuilderHelper {
         computeEnvelopes = options.isComputeEnvelopes();
         implicitGeometryScope = options.getImplicitGeometryScope();
         appearanceHelper.initialize(formatOptions);
+        xmlObjects = context != null ? context.getXMLObjects() : null;
         return this;
     }
 
-    ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityGMLFormatOptions formatOptions) {
+    ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityGMLFormatOptions formatOptions, CityGMLContext context) {
         includeXALSource = formatOptions.isIncludeXALSource();
-        return doInitialize(metadata, options, formatOptions);
+        return doInitialize(metadata, options, formatOptions, context);
     }
 
     ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityJSONFormatOptions formatOptions) {
-        return doInitialize(metadata, options, formatOptions);
+        includeXALSource = false;
+        return doInitialize(metadata, options, formatOptions, null);
     }
 
     public InputFile getInputFile() {
@@ -707,8 +711,7 @@ public class ModelBuilderHelper {
     }
 
     public String toXML(Object source, Module... modules) throws ModelBuildException {
-        if (source != null) {
-            XMLObjects xmlObjects = context.getCityGMLContext().getXMLObjects();
+        if (xmlObjects != null && source != null) {
             try (ByteArrayOutputStream stream = new ByteArrayOutputStream(1024)) {
                 try (XMLWriter writer = XMLWriterFactory.newInstance(xmlObjects)
                         .createWriter(stream, encoding)
