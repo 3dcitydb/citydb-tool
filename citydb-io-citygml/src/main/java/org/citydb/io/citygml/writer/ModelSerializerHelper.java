@@ -36,6 +36,7 @@ import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.CityGMLVersion;
 import org.citygml4j.core.model.core.*;
 import org.citygml4j.core.model.core.AddressProperty;
+import org.citygml4j.xml.CityGMLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -77,6 +78,7 @@ public class ModelSerializerHelper {
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
     private AddressMode addressMode;
+    private XMLObjects xmlObjects;
 
     ModelSerializerHelper(GlobalFeatureWriter writer, PersistentMapStore store, CityGMLAdapterContext context) {
         this.writer = Objects.requireNonNull(writer, "The global feature writer must not be null.");
@@ -88,7 +90,7 @@ public class ModelSerializerHelper {
         preprocessor = new Preprocessor();
     }
 
-    ModelSerializerHelper initialize(WriteOptions options, CityGMLFormatOptions formatOptions) {
+    ModelSerializerHelper initialize(WriteOptions options, CityGMLFormatOptions formatOptions, CityGMLContext context) {
         failFast = options.isFailFast();
         version = formatOptions.getVersion();
         versionHelper = CityGMLVersionHelper.of(version);
@@ -97,6 +99,7 @@ public class ModelSerializerHelper {
         mapLod1MultiSurfaces = version == CityGMLVersion.v3_0 && formatOptions.isMapLod1MultiSurfaces();
         preprocessor.checkForDeprecatedLod4Geometry(version == CityGMLVersion.v3_0 && formatOptions.isUseLod4AsLod3());
         addressMode = formatOptions.getAddressMode();
+        xmlObjects = context != null ? context.getXMLObjects() : null;
         return this;
     }
 
@@ -106,7 +109,7 @@ public class ModelSerializerHelper {
                 .setMapLod0RoofEdge(true)
                 .setMapLod1MultiSurfaces(true)
                 .setUseLod4AsLod3(formatOptions.isUseLod4AsLod3())
-                .setAddressMode(AddressMode.COLUMNS_FIRST));
+                .setAddressMode(AddressMode.COLUMNS_FIRST), null);
     }
 
     public CityGMLAdapterContext getContext() {
@@ -551,8 +554,7 @@ public class ModelSerializerHelper {
     }
 
     public <T> T fromXML(String source, Class<T> type) {
-        if (source != null) {
-            XMLObjects xmlObjects = context.getCityGMLContext().getXMLObjects();
+        if (xmlObjects != null && source != null) {
             try (XMLReader reader = getOrCreateXMLReaderFactory(xmlObjects)
                     .createReader(new StringReader(source))) {
                 return xmlObjects.fromXML(reader, type);

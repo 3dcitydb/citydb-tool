@@ -13,6 +13,7 @@ import org.citydb.core.file.InputFile;
 import org.citydb.io.citygml.CityGMLAdapterContext;
 import org.citydb.io.citygml.reader.preprocess.CityGMLPreprocessor;
 import org.citydb.io.citygml.reader.util.FileMetadata;
+import org.citydb.io.citygml.reader.util.TemplateReferenceBuilder;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.ReadOptions;
@@ -20,10 +21,14 @@ import org.citydb.io.reader.filter.Filter;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.xml.CityGMLContext;
+import org.citygml4j.xml.CityGMLContextException;
+import org.citygml4j.xml.module.citygml.CoreModule;
 import org.citygml4j.xml.reader.CityGMLChunk;
 import org.citygml4j.xml.reader.CityGMLInputFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xmlobjects.XMLObjectsException;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -36,6 +41,7 @@ public class CityGMLReader implements FeatureReader {
     private final InputFile file;
     private final ReadOptions options;
     private final CityGMLAdapterContext context;
+    private final CityGMLContext cityGMLContext;
     private final CityGMLReaderFactory factory;
     private final CityGMLFormatOptions formatOptions;
     private final PersistentMapStore store;
@@ -49,7 +55,13 @@ public class CityGMLReader implements FeatureReader {
     public CityGMLReader(InputFile file, ReadOptions options, CityGMLAdapterContext context) throws ReadException {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
         this.options = Objects.requireNonNull(options, "The read options must not be null.");
-        this.context = Objects.requireNonNull(context, "CityGML adapter context must not be null.");
+        this.context = Objects.requireNonNull(context, "The CityGML adapter context must not be null.");
+
+        try {
+            cityGMLContext = CityGMLContext.newInstance(context.getClass().getClassLoader());
+        } catch (CityGMLContextException e) {
+            throw new ReadException("Failed to create CityGML context.", e);
+        }
 
         try {
             formatOptions = options.getFormatOptions()
@@ -67,7 +79,7 @@ public class CityGMLReader implements FeatureReader {
             throw new ReadException("Failed to initialize local cache.", e);
         }
 
-        factory = CityGMLReaderFactory.newInstance(context.getCityGMLContext(), options, formatOptions);
+        factory = CityGMLReaderFactory.newInstance(cityGMLContext, options, formatOptions);
         filter = options.getFilter().orElseGet(Filter::acceptAll);
         preprocessor = new CityGMLPreprocessor()
                 .resolveCrossLodReferences(formatOptions.isResolveCrossLodReferences())
@@ -83,6 +95,7 @@ public class CityGMLReader implements FeatureReader {
         shouldRun = true;
         if (!isPreprocessed) {
             preprocess();
+            readTemplatesAsReference();
         }
 
         CityGMLInputFactory inputFactory = factory.createInputFactory();
@@ -93,11 +106,13 @@ public class CityGMLReader implements FeatureReader {
         ExecutorService service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
         CountLatch countLatch = new CountLatch();
 
-        try (org.citygml4j.xml.reader.CityGMLReader reader = factory.createReader(file, inputFactory)) {
+        try (org.citygml4j.xml.reader.CityGMLReader reader = factory.createReader(file, inputFactory,
+                "CityObjectGroup", "Appearance")) {
             int featureId = 0;
             FileMetadata metadata = FileMetadata.of(reader);
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->
-                    new ModelBuilderHelper(file, store, context).initialize(metadata, options, formatOptions));
+                    new ModelBuilderHelper(file, preprocessor.getImplicitGeometryResolver(), store, context)
+                            .initialize(metadata, options, formatOptions, cityGMLContext));
 
             while (shouldRun && reader.hasNext()) {
                 CityGMLChunk chunk = reader.nextChunk();
@@ -166,6 +181,19 @@ public class CityGMLReader implements FeatureReader {
         logger.debug("Reading global objects and resolving global references...");
         preprocessor.processGlobalObjects(file, factory);
         isPreprocessed = true;
+        logger.debug("Finished processing global objects and references.");
+    }
+
+    private void readTemplatesAsReference() throws ReadException {
+        try {
+            TemplateReferenceBuilder builder = new TemplateReferenceBuilder();
+            cityGMLContext.getXMLObjects()
+                    .registerBuilder(builder, CoreModule.v3_0.getNamespaceURI(), "ImplicitGeometry")
+                    .registerBuilder(builder, CoreModule.v2_0.getNamespaceURI(), "ImplicitGeometry")
+                    .registerBuilder(builder, CoreModule.v1_0.getNamespaceURI(), "ImplicitGeometry");
+        } catch (XMLObjectsException e) {
+            throw new ReadException("Failed to register template reference builder.", e);
+        }
     }
 
     @Override

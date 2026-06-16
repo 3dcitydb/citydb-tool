@@ -20,8 +20,6 @@ import org.citydb.io.validator.Validator;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citygml4j.cityjson.CityJSONContext;
-import org.citygml4j.cityjson.CityJSONContextException;
 
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -32,17 +30,11 @@ import java.util.stream.Stream;
         mediaType = "application/city+json",
         fileExtensions = {".json", ".jsonl"})
 public class CityJSONAdapter implements IOAdapter {
-    private CityGMLAdapterContext adapterContext;
-    private CityJSONContext cityJSONContext;
+    private CityGMLAdapterContext context;
 
     @Override
     public void initialize(ClassLoader loader) throws IOAdapterException {
-        adapterContext = new CityGMLAdapterContext(loader);
-        try {
-            cityJSONContext = CityJSONContext.newInstance(loader);
-        } catch (CityJSONContextException e) {
-            throw new IOAdapterException("Failed to create CityJSON context.", e);
-        }
+        context = new CityGMLAdapterContext(loader);
     }
 
     @Override
@@ -67,12 +59,12 @@ public class CityJSONAdapter implements IOAdapter {
 
     @Override
     public FeatureReader createReader(InputFile file, ReadOptions options) throws ReadException {
-        return new CityJSONReader(file, options, adapterContext, cityJSONContext);
+        return new CityJSONReader(file, options, context);
     }
 
     @Override
     public FeatureWriter createWriter(OutputFile file, WriteOptions options) throws WriteException {
-        return new CityJSONWriter(file, options, adapterContext, cityJSONContext);
+        return new CityJSONWriter(file, options, context);
     }
 
     @Override
