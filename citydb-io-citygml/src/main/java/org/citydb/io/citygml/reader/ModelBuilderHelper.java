@@ -13,11 +13,13 @@ import org.citydb.io.citygml.adapter.address.AddressAdapter;
 import org.citydb.io.citygml.adapter.appearance.builder.AppearanceHelper;
 import org.citydb.io.citygml.adapter.core.ImplicitGeometryAdapter;
 import org.citydb.io.citygml.adapter.geometry.builder.GeometryHelper;
+import org.citydb.io.citygml.adapter.geometry.builder.ImplicitGeometryHelper;
 import org.citydb.io.citygml.adapter.geometry.builder.Lod;
 import org.citydb.io.citygml.adapter.gml.CodeAdapter;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.builder.ModelBuilder;
 import org.citydb.io.citygml.reader.options.FormatOptions;
+import org.citydb.io.citygml.reader.preprocess.ImplicitGeometryResolver;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citydb.io.citygml.reader.util.FileMetadata;
 import org.citydb.io.reader.ReadOptions;
@@ -29,14 +31,12 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
+import org.citydb.model.property.AddressProperty;
+import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.CityGMLVersion;
-import org.citygml4j.core.model.appearance.AbstractSurfaceData;
-import org.citygml4j.core.model.core.AbstractAppearance;
-import org.citygml4j.core.model.core.AbstractAppearanceProperty;
-import org.citygml4j.core.model.core.AbstractFeature;
-import org.citygml4j.core.model.core.StandardObjectClassifier;
+import org.citygml4j.core.model.core.*;
+import org.citygml4j.xml.CityGMLContext;
 import org.citygml4j.xml.module.Module;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +48,7 @@ import org.xmlobjects.gml.model.base.AbstractInlineProperty;
 import org.xmlobjects.gml.model.base.ResolvableAssociation;
 import org.xmlobjects.gml.model.basictypes.Code;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
+import org.xmlobjects.gml.model.geometry.Envelope;
 import org.xmlobjects.gml.model.geometry.SRSReference;
 import org.xmlobjects.stream.XMLWriter;
 import org.xmlobjects.stream.XMLWriterFactory;
@@ -66,9 +67,9 @@ public class ModelBuilderHelper {
     private final CityGMLAdapterContext context;
     private final AppearanceHelper appearanceHelper;
     private final GeometryHelper geometryHelper;
+    private final ImplicitGeometryHelper implicitGeometryHelper;
     private final Map<Class<?>, ModelBuilder<?, ?>> builderCache = new IdentityHashMap<>();
     private final Set<String> featureIdCache = new HashSet<>();
-    private final Set<String> surfaceDataIdCache = new HashSet<>();
     private final Set<String> geometryIdCache = new HashSet<>();
     private final Set<String> addressIdCache = new HashSet<>();
     private final Set<String> externalFileIdCache = new HashSet<>();
@@ -80,17 +81,19 @@ public class ModelBuilderHelper {
     private boolean computeEnvelopes;
     private boolean includeXALSource;
     private ImplicitGeometryScope implicitGeometryScope;
+    private XMLObjects xmlObjects;
 
-    ModelBuilderHelper(InputFile file, PersistentMapStore store, CityGMLAdapterContext context) {
+    ModelBuilderHelper(InputFile file, ImplicitGeometryResolver resolver, PersistentMapStore store, CityGMLAdapterContext context) {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
         this.store = Objects.requireNonNull(store, "The persistent map store must not be null.");
-        this.context = Objects.requireNonNull(context, "CityGML adapter context must not be null.");
+        this.context = Objects.requireNonNull(context, "The CityGML adapter context must not be null.");
 
         appearanceHelper = new AppearanceHelper(this);
         geometryHelper = new GeometryHelper(appearanceHelper, this);
+        implicitGeometryHelper = new ImplicitGeometryHelper(resolver, this);
     }
 
-    private ModelBuilderHelper doInitialize(FileMetadata metadata, ReadOptions options, FormatOptions<?> formatOptions) {
+    private ModelBuilderHelper doInitialize(FileMetadata metadata, ReadOptions options, FormatOptions<?> formatOptions, CityGMLContext context) {
         version = metadata.getVersion() != null ? metadata.getVersion() : CityGMLVersion.v3_0;
         encoding = metadata.getEncoding() != null ? metadata.getEncoding() : StandardCharsets.UTF_8.name();
         rootSrsName = metadata.getSrsName();
@@ -98,16 +101,18 @@ public class ModelBuilderHelper {
         computeEnvelopes = options.isComputeEnvelopes();
         implicitGeometryScope = options.getImplicitGeometryScope();
         appearanceHelper.initialize(formatOptions);
+        xmlObjects = context != null ? context.getXMLObjects() : null;
         return this;
     }
 
-    ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityGMLFormatOptions formatOptions) {
+    ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityGMLFormatOptions formatOptions, CityGMLContext context) {
         includeXALSource = formatOptions.isIncludeXALSource();
-        return doInitialize(metadata, options, formatOptions);
+        return doInitialize(metadata, options, formatOptions, context);
     }
 
     ModelBuilderHelper initialize(FileMetadata metadata, ReadOptions options, CityJSONFormatOptions formatOptions) {
-        return doInitialize(metadata, options, formatOptions);
+        includeXALSource = false;
+        return doInitialize(metadata, options, formatOptions, null);
     }
 
     public InputFile getInputFile() {
@@ -179,16 +184,22 @@ public class ModelBuilderHelper {
         return null;
     }
 
+    public boolean hasImplicitGeometries() {
+        return implicitGeometryHelper.hasImplicitGeometries();
+    }
+
+    public Envelope computeEnvelope(ImplicitGeometry implicitGeometry) {
+        return implicitGeometryHelper.computeEnvelope(implicitGeometry);
+    }
+
     public boolean lookupAndPut(AbstractGML feature) {
         return feature.getId() != null && !featureIdCache.add(feature.getId());
     }
 
-    public boolean lookupAndPut(AbstractSurfaceData surfaceData) {
-        return surfaceData.getId() != null && !surfaceDataIdCache.add(surfaceData.getId());
-    }
-
-    public boolean lookupAndPut(AbstractGeometry geometry) {
-        String objectId = geometry.getId();
+    public boolean lookupAndPut(org.xmlobjects.gml.model.geometry.GeometryProperty<?> property) {
+        String objectId = property.getObject() != null
+                ? property.getObject().getId()
+                : FeatureHelper.getIdFromReference(property.getHref());
         if (objectId != null) {
             if (implicitGeometryScope == ImplicitGeometryScope.GLOBAL) {
                 return store.getOrCreateMap("implicit-geometries").putIfAbsent(objectId, true) != null;
@@ -276,10 +287,6 @@ public class ModelBuilderHelper {
 
     public void addAppearance(Name name, AbstractAppearanceProperty source, Attribute attribute) throws ModelBuildException {
         addProperty(getAppearanceProperty(name, source), attribute::addProperty);
-    }
-
-    public void addAppearance(Name name, AbstractAppearanceProperty source, ImplicitGeometry geometry) throws ModelBuildException {
-        addProperty(getAppearanceProperty(name, source), geometry::addAppearance);
     }
 
     public Appearance getAppearance(AbstractAppearance source) throws ModelBuildException {
@@ -463,24 +470,21 @@ public class ModelBuilderHelper {
         return getImplicitGeometryProperty(name, source, lod, false);
     }
 
-    public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometry source, Lod lod, boolean force2D) throws ModelBuildException {
-        return source != null ?
-                getImplicitGeometryProperty(source, geometryHelper.getImplicitGeometry(source, name, force2D), lod) :
-                null;
-    }
-
     public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometry source, Lod lod) throws ModelBuildException {
         return getImplicitGeometryProperty(name, source, lod, false);
     }
 
-    private ImplicitGeometryProperty getImplicitGeometryProperty(org.citygml4j.core.model.core.ImplicitGeometry source, ImplicitGeometryProperty target, Lod lod) throws ModelBuildException {
-        if (source != null && target != null) {
-            target = buildObject(source, target, getOrCreateBuilder(ImplicitGeometryAdapter.class));
-            if (lod != null && lod != Lod.NONE) {
-                target.setLod(lod.getValue());
-            }
+    public ImplicitGeometryProperty getImplicitGeometryProperty(Name name, org.citygml4j.core.model.core.ImplicitGeometry source, Lod lod, boolean force2D) throws ModelBuildException {
+        if (source != null) {
+            ImplicitGeometryProperty target = implicitGeometryHelper.getImplicitGeometry(name, source, force2D);
+            if (target != null) {
+                target = buildObject(source, target, getOrCreateBuilder(ImplicitGeometryAdapter.class));
+                if (lod != null && lod != Lod.NONE) {
+                    target.setLod(lod.getValue());
+                }
 
-            return target;
+                return target;
+            }
         }
 
         return null;
@@ -653,7 +657,7 @@ public class ModelBuilderHelper {
 
     private String getReference(ResolvableAssociation<?> association) {
         return association != null && association.getHref() != null ?
-                getIdFromReference(association.getHref()) :
+                FeatureHelper.getIdFromReference(association.getHref()) :
                 null;
     }
 
@@ -707,8 +711,7 @@ public class ModelBuilderHelper {
     }
 
     public String toXML(Object source, Module... modules) throws ModelBuildException {
-        if (source != null) {
-            XMLObjects xmlObjects = context.getCityGMLContext().getXMLObjects();
+        if (xmlObjects != null && source != null) {
             try (ByteArrayOutputStream stream = new ByteArrayOutputStream(1024)) {
                 try (XMLWriter writer = XMLWriterFactory.newInstance(xmlObjects)
                         .createWriter(stream, encoding)
@@ -739,7 +742,6 @@ public class ModelBuilderHelper {
     private void clear() {
         appearanceHelper.reset();
         featureIdCache.clear();
-        surfaceDataIdCache.clear();
         geometryIdCache.clear();
         addressIdCache.clear();
         externalFileIdCache.clear();

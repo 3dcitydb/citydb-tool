@@ -16,10 +16,7 @@ import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.construction.AbstractFillingSurface;
 import org.citygml4j.core.model.construction.RoofSurface;
-import org.citygml4j.core.model.core.AbstractFeature;
-import org.citygml4j.core.model.core.AbstractSpace;
-import org.citygml4j.core.model.core.AbstractSpaceBoundaryProperty;
-import org.citygml4j.core.model.core.AbstractThematicSurface;
+import org.citygml4j.core.model.core.*;
 import org.citygml4j.core.model.deprecated.bridge.*;
 import org.citygml4j.core.model.deprecated.building.DeprecatedPropertiesOfAbstractBuilding;
 import org.citygml4j.core.model.deprecated.building.DeprecatedPropertiesOfBuildingFurniture;
@@ -672,6 +669,14 @@ public class DeprecatedPropertiesProcessor {
             }
 
             super.visit(waterBody);
+        }
+
+        @Override
+        public void visit(ImplicitGeometry implicitGeometry) {
+        }
+
+        @Override
+        public void visit(GeometryProperty<?> property) {
         }
 
         private void processLod1MultiSurface(MultiSurfaceProperty property, AbstractSpace object) {

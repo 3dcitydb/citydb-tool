@@ -8,16 +8,9 @@ package org.citydb.io.citygml.adapter.geometry.builder;
 import org.citydb.io.citygml.adapter.appearance.builder.AppearanceHelper;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.ModelBuilderHelper;
-import org.citydb.model.common.ExternalFile;
-import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.ImplicitGeometry;
-import org.citydb.model.property.ImplicitGeometryProperty;
-import org.slf4j.event.Level;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
-
-import java.io.IOException;
 
 public class GeometryHelper {
     private final ModelBuilderHelper helper;
@@ -126,43 +119,5 @@ public class GeometryHelper {
         }
 
         return null;
-    }
-
-    public ImplicitGeometryProperty getImplicitGeometry(org.citygml4j.core.model.core.ImplicitGeometry source, Name name, boolean force2D) throws ModelBuildException {
-        if (source != null) {
-            if (source.getRelativeGeometry() != null) {
-                if (source.getRelativeGeometry().getObject() != null) {
-                    AbstractGeometry template = source.getRelativeGeometry().getObject();
-                    if (helper.lookupAndPut(template)) {
-                        return ImplicitGeometryProperty.of(name, template.getId());
-                    } else {
-                        Geometry<?> geometry = getGeometry(template, force2D);
-                        if (geometry != null) {
-                            return ImplicitGeometryProperty.of(name, ImplicitGeometry.of(geometry
-                                    .setSrsIdentifier(template.getSrsName())));
-                        }
-                    }
-                } else if (source.getRelativeGeometry().getHref() != null) {
-                    return ImplicitGeometryProperty.of(name,
-                            helper.getIdFromReference(source.getRelativeGeometry().getHref()));
-                }
-            } else if (source.getLibraryObject() != null) {
-                try {
-                    ExternalFile libraryObject = helper.getExternalFile(source.getLibraryObject());
-                    return helper.lookupAndPut(libraryObject) ?
-                            ImplicitGeometryProperty.of(name, libraryObject.getOrCreateObjectId()) :
-                            ImplicitGeometryProperty.of(name, ImplicitGeometry.of(libraryObject));
-                } catch (IOException e) {
-                    helper.logOrThrow(Level.ERROR, helper.formatMessage(source, "Failed to read library object file " +
-                            source.getLibraryObject() + "."), e);
-                }
-            }
-        }
-
-        return null;
-    }
-
-    public ImplicitGeometryProperty getImplicitGeometry(org.citygml4j.core.model.core.ImplicitGeometryProperty source, Name name, boolean force2D) throws ModelBuildException {
-        return source != null ? getImplicitGeometry(source.getObject(), name, force2D) : null;
     }
 }

@@ -27,7 +27,7 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     private ImplicitGeometryProperty(Name name, ImplicitGeometry implicitGeometry) {
         super(name, DataType.IMPLICIT_GEOMETRY_PROPERTY);
         Objects.requireNonNull(implicitGeometry, "The implicit geometry must not be null.");
-        this.implicitGeometry = asChild(implicitGeometry);
+        this.implicitGeometry = implicitGeometry;
     }
 
     private ImplicitGeometryProperty(Name name, String reference) {
@@ -57,7 +57,7 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     @Override
     public ImplicitGeometryProperty setObject(ImplicitGeometry implicitGeometry) {
         if (implicitGeometry != null) {
-            this.implicitGeometry = asChild(implicitGeometry);
+            this.implicitGeometry = implicitGeometry;
             reference = null;
         }
 

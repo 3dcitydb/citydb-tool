@@ -15,7 +15,7 @@ import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.util.reference.DefaultReferenceResolver;
-import org.citygml4j.core.visitor.ObjectWalker;
+import org.citygml4j.xml.module.citygml.CityGMLModules;
 import org.citygml4j.xml.reader.CityGMLChunk;
 import org.citygml4j.xml.reader.CityGMLInputFactory;
 import org.citygml4j.xml.reader.CityGMLReader;
@@ -23,6 +23,7 @@ import org.xmlobjects.copy.Copier;
 import org.xmlobjects.copy.CopierBuilder;
 import org.xmlobjects.gml.util.reference.ReferenceResolver;
 
+import javax.xml.namespace.QName;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,7 +48,7 @@ public class CityGMLPreprocessor {
     public CityGMLPreprocessor() {
         Copier copier = CopierBuilder.newCopier();
         appearanceConverter = new GlobalAppearanceConverter(copier);
-        implicitGeometryResolver = new ImplicitGeometryResolver(copier);
+        implicitGeometryResolver = new ImplicitGeometryResolver();
         globalReferenceResolver = new GeometryReferenceResolver();
         propertiesProcessor = new DeprecatedPropertiesProcessor(copier);
         crossLodResolver = new CrossLodReferenceResolver()
@@ -92,6 +93,10 @@ public class CityGMLPreprocessor {
         return this;
     }
 
+    public ImplicitGeometryResolver getImplicitGeometryResolver() {
+        return implicitGeometryResolver;
+    }
+
     public Collection<CityObjectGroup> getCityObjectGroups() {
         return cityObjectGroups;
     }
@@ -106,12 +111,17 @@ public class CityGMLPreprocessor {
         try {
             try (CityGMLReader reader = factory.createReader(file, inputFactory)) {
                 List<Appearance> appearances = Collections.synchronizedList(new ArrayList<>());
-                ImplicitGeometryCollector collector = new ImplicitGeometryCollector();
                 int featureId = 0;
 
                 while (shouldRun && reader.hasNext()) {
                     CityGMLChunk chunk = reader.nextChunk();
-                    chunk.getLocalProperties().set("featureId", featureId++);
+
+                    QName name = chunk.getFirstElement();
+                    if ((!"Appearance".equals(name.getLocalPart())
+                            && !"CityObjectGroup".equals(name.getLocalPart()))
+                            || !CityGMLModules.isCityGMLNamespace(name.getNamespaceURI())) {
+                        chunk.getLocalProperties().set("featureId", featureId++);
+                    }
 
                     countLatch.increment();
                     service.execute(() -> {
@@ -122,7 +132,7 @@ public class CityGMLPreprocessor {
                             } else if (feature instanceof CityObjectGroup group) {
                                 cityObjectGroups.add(group);
                             } else {
-                                feature.accept(collector);
+                                implicitGeometryResolver.collectImplicitGeometries(feature);
                                 globalReferenceResolver.processGeometryReferences(feature,
                                         (int) chunk.getLocalProperties().get("featureId"));
                             }
@@ -196,15 +206,13 @@ public class CityGMLPreprocessor {
     }
 
     public boolean process(AbstractFeature feature, int featureId) {
-        if (!shouldRun
-                || feature instanceof Appearance
-                || feature instanceof CityObjectGroup) {
+        if (!shouldRun) {
             return false;
         }
 
+        implicitGeometryResolver.removeTemplateGeometries(feature);
         appearanceConverter.convertGlobalAppearance(feature);
         referenceResolver.resolveReferences(feature);
-        implicitGeometryResolver.resolveImplicitGeometries(feature);
         globalReferenceResolver.resolveGeometryReferences(feature, featureId);
         if (resolveCrossLodReferences || !propertiesProcessor.isUseLod4AsLod3()) {
             crossLodResolver.resolveCrossLodReferences(feature);
@@ -221,12 +229,5 @@ public class CityGMLPreprocessor {
 
     public void cancel() {
         shouldRun = false;
-    }
-
-    private class ImplicitGeometryCollector extends ObjectWalker {
-        @Override
-        public void visit(ImplicitGeometry implicitGeometry) {
-            implicitGeometryResolver.addImplicitGeometry(implicitGeometry);
-        }
     }
 }

@@ -17,6 +17,8 @@ import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.xml.CityGMLContext;
+import org.citygml4j.xml.CityGMLContextException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xmlobjects.util.xml.SAXBuffer;
@@ -39,7 +41,14 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
     public CityGMLWriter(OutputFile file, WriteOptions options, CityGMLAdapterContext context) throws WriteException {
         Objects.requireNonNull(file, "The output file must not be null.");
         Objects.requireNonNull(options, "The write options must not be null.");
-        Objects.requireNonNull(context, "CityGML adapter context must not be null.");
+        Objects.requireNonNull(context, "The CityGML adapter context must not be null.");
+
+        CityGMLContext cityGMLContext;
+        try {
+            cityGMLContext = CityGMLContext.newInstance(context.getClass().getClassLoader());
+        } catch (CityGMLContextException e) {
+            throw new WriteException("Failed to create CityGML context.", e);
+        }
 
         CityGMLFormatOptions formatOptions;
         try {
@@ -49,7 +58,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
             throw new WriteException("Failed to get CityGML format options from config.", e);
         }
 
-        writer = CityGMLWriterFactory.newInstance(context.getCityGMLContext(), options, formatOptions)
+        writer = CityGMLWriterFactory.newInstance(cityGMLContext, options, formatOptions)
                 .createWriter(file);
 
         try {
@@ -63,7 +72,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
 
         service = ExecutorHelper.newFixedAndBlockingThreadPool(1, 100);
         helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, context)
-                .initialize(options, formatOptions));
+                .initialize(options, formatOptions, cityGMLContext));
         countLatch = new CountLatch();
     }
 

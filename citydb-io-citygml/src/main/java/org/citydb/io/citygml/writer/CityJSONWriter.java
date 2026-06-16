@@ -18,6 +18,7 @@ import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citygml4j.cityjson.CityJSONContext;
+import org.citygml4j.cityjson.CityJSONContextException;
 import org.citygml4j.cityjson.writer.AbstractCityJSONWriter;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
@@ -42,11 +43,17 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
     private volatile boolean shouldRun = true;
     private Throwable exception;
 
-    public CityJSONWriter(OutputFile file, WriteOptions options, CityGMLAdapterContext adapterContext, CityJSONContext cityJSONContext) throws WriteException {
+    public CityJSONWriter(OutputFile file, WriteOptions options, CityGMLAdapterContext context) throws WriteException {
         Objects.requireNonNull(file, "The output file must not be null.");
         Objects.requireNonNull(options, "The write options must not be null.");
-        Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
-        Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
+        Objects.requireNonNull(context, "The CityGML adapter context must not be null.");
+
+        CityJSONContext cityJSONContext;
+        try {
+            cityJSONContext = CityJSONContext.newInstance(context.getClass().getClassLoader());
+        } catch (CityJSONContextException e) {
+            throw new WriteException("Failed to create CityJSON context.", e);
+        }
 
         CityJSONFormatOptions formatOptions;
         try {
@@ -69,7 +76,7 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
         }
 
         service = ExecutorHelper.newFixedAndBlockingThreadPool(1, 100);
-        helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, adapterContext)
+        helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, context)
                 .initialize(options, formatOptions));
         countLatch = new CountLatch();
 

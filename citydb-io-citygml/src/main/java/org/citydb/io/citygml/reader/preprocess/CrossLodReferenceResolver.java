@@ -7,6 +7,7 @@ package org.citydb.io.citygml.reader.preprocess;
 
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.citygml4j.core.visitor.ObjectWalker;
 import org.xmlobjects.copy.CopySession;
 import org.xmlobjects.gml.model.GMLObject;
@@ -106,12 +107,19 @@ public class CrossLodReferenceResolver {
         }
 
         @Override
+        public void visit(ImplicitGeometry implicitGeometry) {
+        }
+
+        @Override
         public void visit(GeometryProperty<?> property) {
             if (property.isSetReferencedObject() && property.getHref() != null) {
                 Integer lod = getLod(property);
-                Integer targetLod = getLod(property.getObject().getParent(GeometryProperty.class));
+                if (lod == null) {
+                    return;
+                }
 
-                if (lod != null && targetLod != null && !lod.equals(targetLod)) {
+                Integer targetLod = getLod(property.getObject().getParent(GeometryProperty.class));
+                if (targetLod != null && !lod.equals(targetLod)) {
                     if (mode == Mode.RESOLVE
                             || (mode == Mode.REMOVE_LOD4_REFERENCES && targetLod == 4)) {
                         references.computeIfAbsent(lod, k -> new LinkedHashMap<>())
@@ -119,9 +127,9 @@ public class CrossLodReferenceResolver {
                                 .add(property);
                     }
                 }
+            } else {
+                super.visit(property);
             }
-
-            super.visit(property);
         }
 
         private Integer getLod(GeometryProperty<?> property) {

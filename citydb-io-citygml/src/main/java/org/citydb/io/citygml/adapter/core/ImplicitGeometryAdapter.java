@@ -11,8 +11,6 @@ import org.citydb.io.citygml.reader.ModelBuilderHelper;
 import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.serializer.ModelSerializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.AppearanceProperty;
@@ -32,13 +30,6 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
 
         if (source.getReferencePoint() != null) {
             target.setReferencePoint(helper.getPointGeometry(source.getReferencePoint().getObject(), Point.class));
-        }
-
-        ImplicitGeometry implicitGeometry = target.getObject().orElse(null);
-        if (implicitGeometry != null && source.isSetAppearances()) {
-            for (AbstractAppearanceProperty property : source.getAppearances()) {
-                helper.addAppearance(Name.of("appearance", Namespaces.CORE), property, implicitGeometry);
-            }
         }
     }
 

@@ -19,6 +19,7 @@ import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.filter.Filter;
 import org.citydb.model.feature.Feature;
 import org.citygml4j.cityjson.CityJSONContext;
+import org.citygml4j.cityjson.CityJSONContextException;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,7 @@ public class CityJSONReader implements FeatureReader {
     private final Logger logger = LoggerFactory.getLogger(CityJSONReader.class);
     private final InputFile file;
     private final ReadOptions options;
-    private final CityGMLAdapterContext adapterContext;
+    private final CityGMLAdapterContext context;
     private final CityJSONReaderFactory factory;
     private final CityJSONFormatOptions formatOptions;
     private final PersistentMapStore store;
@@ -42,11 +43,17 @@ public class CityJSONReader implements FeatureReader {
     private volatile boolean shouldRun = true;
     private Throwable exception;
 
-    public CityJSONReader(InputFile file, ReadOptions options, CityGMLAdapterContext adapterContext, CityJSONContext cityJSONContext) throws ReadException {
+    public CityJSONReader(InputFile file, ReadOptions options, CityGMLAdapterContext context) throws ReadException {
         this.file = Objects.requireNonNull(file, "The input file must not be null.");
         this.options = Objects.requireNonNull(options, "The read options must not be null.");
-        this.adapterContext = Objects.requireNonNull(adapterContext, "CityGML adapter context must not be null.");
-        Objects.requireNonNull(cityJSONContext, "CityJSON context must not be null.");
+        this.context = Objects.requireNonNull(context, "The CityGML adapter context must not be null.");
+
+        CityJSONContext cityJSONContext;
+        try {
+            cityJSONContext = CityJSONContext.newInstance(context.getClass().getClassLoader());
+        } catch (CityJSONContextException e) {
+            throw new ReadException("Failed to create CityJSON context.", e);
+        }
 
         try {
             formatOptions = options.getFormatOptions()
@@ -81,7 +88,8 @@ public class CityJSONReader implements FeatureReader {
         try (org.citygml4j.cityjson.reader.CityJSONReader reader = factory.createReader(file)) {
             FileMetadata metadata = FileMetadata.of(reader);
             ThreadLocal<ModelBuilderHelper> helpers = ThreadLocal.withInitial(() ->
-                    new ModelBuilderHelper(file, store, adapterContext).initialize(metadata, options, formatOptions));
+                    new ModelBuilderHelper(file, preprocessor.getImplicitGeometryResolver(), store, context)
+                            .initialize(metadata, options, formatOptions));
 
             while (shouldRun && reader.hasNext()) {
                 AbstractFeature feature = reader.next();
