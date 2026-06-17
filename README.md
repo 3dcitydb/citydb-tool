@@ -54,13 +54,14 @@ Command-line interface for the 3D City Database.
   -h, --help                 Show this help message and exit.
   -V, --version              Print version information and exit.
 Commands:
-  help     Display help information about the specified command.
-  connect  Test connection to the database.
-  info     Show database contents and summary information.
-  import   Import data in a supported format.
-  export   Export data in a supported format.
-  delete   Delete features from the database.
-  index    Perform index operations.
+  help        Display help information about the specified command.
+  connect     Test connection to the database.
+  info        Show database contents and summary information.
+  import      Import data in a supported format.
+  export      Export data in a supported format.
+  delete      Delete features from the database.
+  index       Perform index operations.
+  vis-export  Export data in a visualization format.
 ```
 
 To get help about a specific command of the citydb-tool, enter the following and replace `COMMAND` with the name of
