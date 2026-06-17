@@ -37,6 +37,7 @@ import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.vis.VisExportException;
+import org.citydb.vis.config.ClampMode;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.geometry.ImplicitReferencePointReprojector;
 import picocli.CommandLine;
@@ -162,7 +163,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             }
 
             if (Command.hasMatchedOption("--clamp-to-ground", commandSpec)) {
-                options.setClampToGround(sceneOptions.isClampToGround());
+                options.setClampMode(sceneOptions.getClampMode());
             }
 
             if (Command.hasMatchedOption("--texture-scale", commandSpec)) {
@@ -198,6 +199,26 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
 
             if (Command.hasMatchedOption("--attributes", commandSpec)) {
                 options.setAttributes(sceneOptions.getAttributes());
+            }
+        }
+
+        // Resolve the ion token with the same precedence as the database
+        // password: CLI flag > config file > CESIUM_ION_TOKEN env var. This runs
+        // outside the sceneOptions guard above because the clamp mode (and the
+        // config token) can come from the config file alone, with no scene CLI
+        // flags present — in which case sceneOptions is null. The config token,
+        // if any, is already deserialized into options; the CLI flag overrides
+        // it, and the env var fills in when neither CLI nor config supplied one.
+        if (options.getClampMode() == ClampMode.CESIUM_WORLD_TERRAIN) {
+            if (sceneOptions != null && Command.hasMatchedOption("--cesium-ion-token", commandSpec)) {
+                options.setCesiumIonToken(sceneOptions.getCesiumIonToken());
+            } else if (options.getCesiumIonToken() == null || options.getCesiumIonToken().isBlank()) {
+                options.setCesiumIonToken(System.getenv("CESIUM_ION_TOKEN"));
+            }
+            if (options.getCesiumIonToken() == null || options.getCesiumIonToken().isBlank()) {
+                throw new ExecutionException("Error: --clamp-to-ground=cesium-world-terrain " +
+                        "requires a Cesium ion token via --cesium-ion-token, the config file, " +
+                        "or the CESIUM_ION_TOKEN environment variable.");
             }
         }
 

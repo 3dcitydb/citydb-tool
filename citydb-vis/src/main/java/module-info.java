@@ -5,6 +5,7 @@ module org.citydb.vis {
     requires org.slf4j;
     requires texture.atlas.creator;
     requires java.desktop;
+    requires java.net.http;
 
     exports org.citydb.vis;
     exports org.citydb.vis.appearance;
