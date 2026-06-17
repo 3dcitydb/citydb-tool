@@ -31,8 +31,11 @@ import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.RingAppearance;
 import org.citydb.vis.appearance.TextureAtlas;
+import org.citydb.vis.config.ClampMode;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.attribute.AttributeEncoder;
+import org.citydb.vis.terrain.CesiumWorldTerrainProvider;
+import org.citydb.vis.terrain.TerrainElevationProvider;
 import org.citydb.vis.geometry.ImplicitInstanceTransformer;
 import org.citydb.vis.geometry.RingAttributes;
 import org.citydb.vis.geometry.TriangleMesh;
@@ -113,6 +116,8 @@ public abstract class VisWriter implements FeatureWriter {
     private final ExecutorService service;
     private final CountLatch countLatch;
     private final VisExportStores stores;
+    // Non-null only for --clamp-to-ground=cesium-world-terrain; closed in close().
+    private final TerrainElevationProvider terrainProvider;
 
     private volatile boolean shouldRun = true;
 
@@ -185,7 +190,24 @@ public abstract class VisWriter implements FeatureWriter {
         } catch (IOException e) {
             throw new WriteException("Failed to create disk-backed stores.", e);
         }
-        this.featureProcessor = new FeatureProcessor(stores, formatOptions, attributeEncoder);
+
+        // Stand up the terrain sampler up front (one ion handshake) so a bad
+        // token / unreachable service fails fast before any feature is processed.
+        if (formatOptions.getClampMode() == ClampMode.CESIUM_WORLD_TERRAIN) {
+            try {
+                this.terrainProvider = new CesiumWorldTerrainProvider(formatOptions.getCesiumIonToken());
+            } catch (VisExportException e) {
+                // The stores (temp dir + open file handles) and the thread pool
+                // are already up; close() will never run because construction
+                // fails here, so release them before rethrowing.
+                stores.close();
+                service.shutdownNow();
+                throw new WriteException("Failed to initialize Cesium World Terrain clamping.", e);
+            }
+        } else {
+            this.terrainProvider = null;
+        }
+        this.featureProcessor = new FeatureProcessor(stores, formatOptions, attributeEncoder, terrainProvider);
     }
 
     // ---- Protected accessors for subclasses ---------------------------------
@@ -426,6 +448,9 @@ public abstract class VisWriter implements FeatureWriter {
         } catch (VisExportException e) {
             throw new WriteException("Failed to write scene layer.", e);
         } finally {
+            if (terrainProvider != null) {
+                terrainProvider.close();
+            }
             logger.info("Closing intermediate stores and deleting temp directory.");
             stores.close();
         }
