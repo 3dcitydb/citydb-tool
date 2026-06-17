@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+- Optimized preprocessing of implicit geometries during CityGML/CityJSON imports to improve performance and reduce
+  memory usage.
+
 ## [1.3.2] - 2026-05-31
 
 ### Fixed

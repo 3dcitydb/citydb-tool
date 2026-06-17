@@ -17,8 +17,6 @@ import org.citydb.model.common.Child;
 import org.citydb.model.common.Name;
 import org.citygml4j.core.ade.ADEException;
 import org.citygml4j.core.ade.ADERegistry;
-import org.citygml4j.xml.CityGMLContext;
-import org.citygml4j.xml.CityGMLContextException;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -28,24 +26,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CityGMLAdapterContext {
-    private final CityGMLContext context;
     private final Map<String, BuilderInfo> builders = new ConcurrentHashMap<>();
     private final Map<String, Map<String, SerializerInfo>> serializers = new ConcurrentHashMap<>();
 
     CityGMLAdapterContext(ClassLoader loader) throws IOAdapterException {
         try {
             ADERegistry.getInstance().loadADEs(loader);
-            context = CityGMLContext.newInstance(loader);
-        } catch (ADEException | CityGMLContextException e) {
+        } catch (ADEException e) {
             throw new IOAdapterException("Failed to create CityGML context.", e);
         }
 
         loadBuilders(loader);
         loadSerializers(loader);
-    }
-
-    public CityGMLContext getCityGMLContext() {
-        return context;
     }
 
     @SuppressWarnings("unchecked")

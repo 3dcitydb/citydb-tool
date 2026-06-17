@@ -127,7 +127,7 @@ public abstract class SrsHelper {
                     throw UncheckedException.wrap(e);
                 }
             });
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             throw UncheckedException.unwrap(e, SrsException.class);
         }
     }

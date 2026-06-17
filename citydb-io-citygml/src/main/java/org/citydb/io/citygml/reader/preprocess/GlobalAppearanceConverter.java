@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GlobalAppearanceConverter {
     private final Copier copier;
     private final Map<String, List<AbstractSurfaceData>> targets = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, TextureAssociationProperty>> textureAssociations = new ConcurrentHashMap<>();
 
     private Mode mode = Mode.TOPLEVEL;
 
@@ -89,47 +90,51 @@ public class GlobalAppearanceConverter {
                         }
                     }
 
+                    String textureId = FeatureHelper.getOrCreateId(texture);
                     for (TextureAssociationProperty property : texture.getTextureParameterizations()) {
                         GeometryReference reference = getGeometryReference(property);
                         if (reference != null && reference.getHref() != null) {
-                            targets.computeIfAbsent(
-                                    FeatureHelper.getIdFromReference(reference.getHref()),
-                                    v -> new ArrayList<>()).add(texture);
+                            String geometryId = FeatureHelper.getIdFromReference(reference.getHref());
+                            targets.computeIfAbsent(geometryId, v -> new ArrayList<>()).add(texture);
+                            textureAssociations.computeIfAbsent(textureId, v -> new ConcurrentHashMap<>())
+                                    .put(geometryId, property);
                         }
                     }
 
+                    texture.setTextureParameterizations(null);
                     super.visit(texture);
                 }
 
                 @Override
                 public void visit(GeoreferencedTexture texture) {
-                    for (GeometryReference reference : texture.getTargets()) {
-                        if (reference.getHref() != null) {
-                            targets.computeIfAbsent(
-                                    FeatureHelper.getIdFromReference(reference.getHref()),
-                                    v -> new ArrayList<>()).add(texture);
-                        }
-                    }
-
+                    addTargets(texture, texture.getTargets());
+                    texture.setTargets(null);
                     super.visit(texture);
                 }
 
                 @Override
                 public void visit(X3DMaterial material) {
-                    for (GeometryReference reference : material.getTargets()) {
+                    addTargets(material, material.getTargets());
+                    material.setTargets(null);
+                    super.visit(material);
+                }
+
+                private void addTargets(AbstractSurfaceData surfaceData, List<GeometryReference> references) {
+                    for (GeometryReference reference : references) {
                         if (reference.getHref() != null) {
                             targets.computeIfAbsent(
                                     FeatureHelper.getIdFromReference(reference.getHref()),
-                                    v -> new ArrayList<>()).add(material);
+                                    v -> new ArrayList<>()).add(surfaceData);
                         }
                     }
-
-                    super.visit(material);
                 }
             };
 
             DefaultReferenceResolver.newInstance().resolveReferences(appearances);
-            appearances.forEach(preprocessor::visit);
+            appearances.forEach(appearance -> {
+                appearance.accept(preprocessor);
+                appearance.setSurfaceData(null);
+            });
         }
     }
 
@@ -207,13 +212,16 @@ public class GlobalAppearanceConverter {
             Appearance appearance = source.getParent(Appearance.class);
             AbstractSurfaceData surfaceData = getOrCreateSurfaceData(target, appearance, source);
             if (surfaceData instanceof ParameterizedTexture targetTexture) {
-                ParameterizedTexture texture = (ParameterizedTexture) source;
-                for (TextureAssociationProperty property : texture.getTextureParameterizations()) {
-                    GeometryReference reference = getGeometryReference(property);
-                    if (reference != null
-                            && reference.getHref() != null
-                            && FeatureHelper.getIdFromReference(reference.getHref()).equals(geometry.getId())) {
+                Map<String, TextureAssociationProperty> properties = textureAssociations.get(source.getId());
+                if (properties != null) {
+                    TextureAssociationProperty property = removeTargets
+                            ? properties.remove(geometry.getId())
+                            : properties.get(geometry.getId());
+                    if (property != null) {
                         targetTexture.getTextureParameterizations().add(property);
+                        if (removeTargets && properties.isEmpty()) {
+                            textureAssociations.remove(source.getId());
+                        }
                     }
                 }
             } else if (surfaceData instanceof X3DMaterial material) {
@@ -235,8 +243,6 @@ public class GlobalAppearanceConverter {
 
             appearance = copier.shallowCopy(globalAppearance, session);
             appearance.setId(target instanceof ImplicitGeometry ? FeatureHelper.createId() : null);
-            appearance.setSurfaceData(null);
-            appearance.setLocalProperties(null);
             appearances.add(new AbstractAppearanceProperty(appearance));
 
             return appearance;
@@ -250,16 +256,6 @@ public class GlobalAppearanceConverter {
 
             surfaceData = copier.shallowCopy(globalSurfaceData, session);
             surfaceData.setId(null);
-            surfaceData.setLocalProperties(null);
-
-            if (surfaceData instanceof ParameterizedTexture texture) {
-                texture.setTextureParameterizations(null);
-            } else if (surfaceData instanceof X3DMaterial material) {
-                material.setTargets(null);
-            } else if (surfaceData instanceof GeoreferencedTexture texture) {
-                texture.setTargets(null);
-            }
-
             Appearance appearance = getOrCreateAppearance(target, globalAppearance);
             appearance.getSurfaceData().add(new AbstractSurfaceDataProperty(surfaceData));
 
