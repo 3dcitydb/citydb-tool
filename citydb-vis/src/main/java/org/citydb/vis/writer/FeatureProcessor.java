@@ -10,9 +10,11 @@ import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.vis.VisExportException;
+import org.citydb.vis.config.ClampMode;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.geometry.GeometryMeshBuilder;
+import org.citydb.vis.terrain.TerrainElevationProvider;
 import org.citydb.vis.geometry.RingAttributes;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.SpatialEntry;
@@ -32,13 +34,33 @@ public final class FeatureProcessor {
     private final VisExportStores stores;
     private final VisFormatOptions formatOptions;
     private final AttributeEncoder attributeEncoder;
+    // Non-null only for --clamp-to-ground=cesium-world-terrain; samples the
+    // terrain height baked into each feature. Must be thread-safe (this
+    // processor runs once per feature on the writer's async pool).
+    private final TerrainElevationProvider terrainProvider;
 
     public FeatureProcessor(VisExportStores stores,
                             VisFormatOptions formatOptions,
-                            AttributeEncoder attributeEncoder) {
+                            AttributeEncoder attributeEncoder,
+                            TerrainElevationProvider terrainProvider) {
         this.stores = stores;
         this.formatOptions = formatOptions;
         this.attributeEncoder = attributeEncoder;
+        this.terrainProvider = terrainProvider;
+    }
+
+    /**
+     * Feature centroid in WGS84 lon/lat (degrees), taken from the envelope when
+     * present (cheap) and otherwise from the mesh bounds. Z is irrelevant here
+     * and ignored. Used as the terrain sampling location.
+     */
+    private static double[] centroidLonLat(Envelope env, TriangleMesh mesh) {
+        if (env != null) {
+            Coordinate center = env.getCenter();
+            return new double[]{center.getX(), center.getY()};
+        }
+        double[] bbox = mesh.computeBoundingBox();
+        return new double[]{(bbox[0] + bbox[3]) / 2, (bbox[1] + bbox[4]) / 2};
     }
 
     public void process(long featureId, String objectId, String featureType,
@@ -58,8 +80,21 @@ public final class FeatureProcessor {
         }
 
         Envelope env = envelope;
-        if (formatOptions.isClampToGround()) {
-            mesh.clampToGround();
+        ClampMode clampMode = formatOptions.getClampMode();
+        if (clampMode != null) {
+            // Ground height the mesh's lowest point is shifted onto: 0 for the
+            // ellipsoid, or the Cesium World Terrain height sampled at the
+            // feature centroid (lon/lat — the export CRS is WGS84, X=lon Y=lat).
+            // A failed terrain sample (NaN) falls back to the ellipsoid.
+            double groundHeight = 0.0;
+            if (clampMode == ClampMode.CESIUM_WORLD_TERRAIN && terrainProvider != null) {
+                double[] centroid = centroidLonLat(env, mesh);
+                double sampled = terrainProvider.sampleHeight(centroid[0], centroid[1]);
+                if (!Double.isNaN(sampled)) {
+                    groundHeight = sampled;
+                }
+            }
+            mesh.clampToGround(groundHeight);
             // Recompute Z from the clamped mesh — the Feature's envelope Z
             // may not match the mesh when multiple LODs or non-surface
             // geometries contribute to the envelope.
