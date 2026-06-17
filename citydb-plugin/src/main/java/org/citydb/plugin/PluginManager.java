@@ -67,16 +67,33 @@ public class PluginManager implements AutoCloseable {
 
         deregisterPlugin(plugin);
 
-        PluginMetadata metadata = loadOrCreateMetadata(plugin);
-        plugin.initialize(metadata, plugin.getBasePath() == null
-                ? findBasePath(plugin)
-                : plugin.getBasePath());
+        PluginException exception = null;
+        try {
+            PluginMetadata metadata = loadOrCreateMetadata(plugin);
+            plugin.initialize(metadata, plugin.getBasePath() == null
+                    ? findBasePath(plugin)
+                    : plugin.getBasePath());
+        } catch (PluginException e) {
+            exception = e;
+        }
 
-        plugin.getExtensions().stream()
-                .filter(Objects::nonNull)
-                .forEach(extension -> extensions.put(extension.getClass(), new ExtensionInfo(extension, plugin)));
+        try {
+            plugin.getExtensions().stream()
+                    .filter(Objects::nonNull)
+                    .forEach(extension -> extensions.put(extension.getClass(), new ExtensionInfo(extension, plugin)));
+        } catch (Exception e) {
+            if (exception == null) {
+                exception = new PluginException("Failed to load extensions for plugin " +
+                        plugin.getClass().getName() + ".", e);
+            }
+        }
 
         plugins.put(plugin.getClass().getName(), plugin);
+
+        if (exception != null) {
+            plugin.setEnabled(false);
+            throw exception;
+        }
     }
 
     public void deregisterPlugin(Plugin plugin) {

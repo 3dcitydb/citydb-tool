@@ -168,6 +168,8 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             }
 
             initializeLogging();
+            logger.info("Starting {}, version {}.", CliConstants.APP_NAME, CliConstants.APP_VERSION);
+            logPluginsOrThrow();
 
             for (CommandLine commandLine : commandLines) {
                 Object command = commandLine.getCommand();
@@ -175,9 +177,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                 if (command instanceof Extension extension) {
                     Plugin plugin = pluginManager.getPlugin(extension);
                     if (plugin != null && !plugin.isEnabled()) {
-                        throw new CommandLine.ParameterException(commandLine, "The subcommand '" +
-                                commandLine.getCommandName() + "' is added through the plugin " +
-                                plugin.getClass().getName() + " but this plugin is disabled.");
+                        throw new ExecutionException("The subcommand '" + commandLine.getCommandName() +
+                                "' is added through the plugin " + plugin.getClass().getName() +
+                                " but this plugin is disabled.");
                     }
                 }
 
@@ -217,14 +219,16 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     @Override
     public Integer call() throws ExecutionException {
-        logger.info("Starting {}, version {}.", CliConstants.APP_NAME, CliConstants.APP_VERSION);
-
         if (pidFile != null) {
             createPidFile(helper.resolveAgainstWorkingDir(pidFile));
         }
 
-        helper.setConfig(loadOrCreateConfig(configFile));
-        loadPlugins();
+        Config config = loadOrCreateConfig(configFile);
+        for (ConfigListener listener : helper.getExtensions(ConfigListener.class)) {
+            listener.onLoad(config);
+        }
+
+        helper.setConfig(config);
 
         logger.info("Executing '{}' command.", subCommandName);
         return CommandLine.ExitCode.OK;
@@ -278,14 +282,10 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             config = new Config();
         }
 
-        for (ConfigListener listener : helper.getExtensions(ConfigListener.class)) {
-            listener.onLoad(config);
-        }
-
         return config;
     }
 
-    private void loadPlugins() throws ExecutionException {
+    private void logPluginsOrThrow() throws ExecutionException {
         logger.info("Loading plugins...");
         if (pluginFailures.isEmpty()) {
             for (Plugin plugin : helper.getPluginManager().getPlugins()) {
