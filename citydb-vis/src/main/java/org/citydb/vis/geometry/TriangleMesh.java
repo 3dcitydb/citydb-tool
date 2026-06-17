@@ -542,9 +542,12 @@ public class TriangleMesh {
     }
 
     /**
-     * Shift all vertex Z values so the mesh's bottom sits at height 0.
+     * Shift all vertex Z values so the mesh's lowest point sits at
+     * {@code groundHeight} (metres above the WGS84 ellipsoid). Pass {@code 0}
+     * to place the mesh on the ellipsoid surface; pass a sampled terrain height
+     * to place it on terrain.
      */
-    public void clampToGround() {
+    public void clampToGround(double groundHeight) {
         if (positions.isEmpty()) {
             return;
         }
@@ -552,9 +555,10 @@ public class TriangleMesh {
         for (double[] pos : positions) {
             if (pos[2] < minZ) minZ = pos[2];
         }
-        if (minZ != 0) {
+        double shift = groundHeight - minZ;
+        if (shift != 0) {
             for (double[] pos : positions) {
-                pos[2] -= minZ;
+                pos[2] += shift;
             }
         }
     }
