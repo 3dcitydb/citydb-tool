@@ -88,8 +88,8 @@ public class Tiles3DWriter extends VisWriter {
     /**
      * 3D Tiles never needs the atlas's white-pixel sentinel: untextured
      * triangles are partitioned into a separate GLB primitive (with its own
-     * untextured PBR material) by {@code GlbEncoder.partitionByAtlasPage} and
-     * never sample the atlas. Reserving the sentinel just wastes BSP space
+     * untextured PBR material) by {@code GlbEncoder} and never sample the
+     * atlas. Reserving the sentinel just wastes BSP space
      * and can push a borderline-fitting atlas over the edge into needless
      * expansion.
      */
