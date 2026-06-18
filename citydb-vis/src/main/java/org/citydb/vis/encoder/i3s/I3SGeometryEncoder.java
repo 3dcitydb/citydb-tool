@@ -5,6 +5,8 @@
 
 package org.citydb.vis.encoder.i3s;
 
+import org.citydb.vis.encoder.TriangleRouter;
+import org.citydb.vis.encoder.TriangleRouter.RoutedTriangle;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.scene.BoundingVolume;
@@ -152,17 +154,22 @@ public class I3SGeometryEncoder {
             return null;
         }
 
+        // Format-neutral per-triangle routing facts (texture id, X3DMaterial-
+        // colored flag, resolved style, face-range row) computed once and
+        // shared with the 3D Tiles encoder. The I3S single-buffer / one-
+        // material-per-node policy is applied on top of these facts below.
+        List<RoutedTriangle> routed = TriangleRouter.route(mesh, weld, styleRegistry);
+
         // Detect intra-feature mixed: textured node whose mesh still has
         // some triangles flagged untextured (texId < 0). The atlas builder
         // routes these via a reserved white-pixel sentinel region so they
         // ride through the textured material as flat white. Without
         // per-vertex bake the styling/default colour is dropped for those
         // triangles — the textured slot has no baseColorFactor.
-        List<Integer> triTexIds = hasTexCoords ? mesh.getTriangleTextureIds() : null;
         boolean intraFeatureMixed = false;
         if (hasTexCoords) {
-            for (int ti : weld.validTriIndices()) {
-                if (triTexIds.get(ti) < 0) {
+            for (RoutedTriangle rt : routed) {
+                if (!rt.textured()) {
                     intraFeatureMixed = true;
                     break;
                 }
@@ -192,7 +199,6 @@ public class I3SGeometryEncoder {
         // Identity check `s != defaultStyle` works because
         // ObjectStyleRegistry's cache returns the same instance for every
         // type that resolves to the default style.
-        DefaultObjectStyle[] perTriangleStyle = null;
         boolean anyTypeOverride = false;
         boolean anyNonWhiteStyle = false;
         boolean buildStyles = (!hasTexCoords && (styleRegistry.hasOverrides()
@@ -200,9 +206,9 @@ public class I3SGeometryEncoder {
                 || (hasTexCoords && intraFeatureMixed && (styleRegistry.hasOverrides()
                         || styleRegistry.defaultStyle().hasNonDefaultColor()));
         if (buildStyles) {
-            perTriangleStyle = resolveTriangleStyles(weld, mesh, styleRegistry);
             DefaultObjectStyle defaultStyle = styleRegistry.defaultStyle();
-            for (DefaultObjectStyle s : perTriangleStyle) {
+            for (RoutedTriangle rt : routed) {
+                DefaultObjectStyle s = rt.style();
                 if (s != defaultStyle) {
                     anyTypeOverride = true;
                 }
@@ -213,13 +219,13 @@ public class I3SGeometryEncoder {
                     break;
                 }
             }
-            if (!anyNonWhiteStyle) {
-                // Every triangle resolves to opaque white — no point
-                // paying the per-vertex COLOR_0 cost; fall back to
-                // WHITE_RGBA in the iterator.
-                perTriangleStyle = null;
-            }
         }
+        // Per-vertex COLOR_0 baking of resolved styles is worth its cost only
+        // when the node carries a non-white style somewhere; otherwise every
+        // triangle resolves to opaque white and the iterator falls back to
+        // WHITE_RGBA. The per-triangle style itself is read straight off the
+        // shared routing facts when baking.
+        boolean bakeStyles = buildStyles && anyNonWhiteStyle;
         // Styled-colored slot (NORMAL + COLOR_0 + alphaMode=blend) is used
         // only for pure-plain nodes that hit a per-type override. Mixed
         // nodes stay on the X3DMaterial colored slot 2/3 (one-material-per-
@@ -287,14 +293,11 @@ public class I3SGeometryEncoder {
                 ? GeoTransform.EnuBasis.at(centerX, centerY) : null;
 
         boolean[] anyAlphaBelowOne = new boolean[1];
-        DefaultObjectStyle[] styles = perTriangleStyle;
-        List<Integer> validTriIndices = weld.validTriIndices();
-        List<Integer> triTexIdsFinal = triTexIds;
         VertexWelder.iterateOutputVertices(weld, mesh, (idx, weldedPos, srcIdx) -> {
             outPositions[idx] = weldedPos;
+            RoutedTriangle rt = routed.get(idx / 3);
             if (outNormals != null) {
-                int normalTriIdx = validTriIndices.get(idx / 3);
-                boolean trulyTextured = hasTexCoords && triTexIdsFinal.get(normalTriIdx) >= 0;
+                boolean trulyTextured = hasTexCoords && rt.textured();
                 if (trulyTextured) {
                     enu.fillUpInEcef(outNormals[idx]);
                 } else {
@@ -303,12 +306,10 @@ public class I3SGeometryEncoder {
             }
             outUVs[idx] = hasTexCoords ? mesh.getTexCoords().get(srcIdx) : ZERO_UV;
             if (outColors != null) {
-                int triLocalIdx = idx / 3;
-                int srcTriIdx = validTriIndices.get(triLocalIdx);
-                boolean whitePixelTri = hasTexCoords && triTexIdsFinal.get(srcTriIdx) < 0;
-                boolean x3dColored = mesh.isTriangleColored(srcTriIdx);
+                boolean whitePixelTri = hasTexCoords && !rt.textured();
+                boolean x3dColored = rt.colored();
                 float[] c;
-                if (whitePixelTri && !x3dColored && styles != null) {
+                if (whitePixelTri && !x3dColored && bakeStyles) {
                     // Intra-feature mixed: this triangle has no real texture
                     // (atlas builder pointed its UVs at the white-pixel
                     // sentinel). Bake the resolved styling / default colour
@@ -317,7 +318,7 @@ public class I3SGeometryEncoder {
                     // Skipped when the triangle is also X3D-authored: the
                     // next branch returns the authored RGBA, which wins
                     // over styling per X3DMaterial precedence.
-                    c = styles[triLocalIdx].color();
+                    c = rt.style().color();
                 } else if (meshHasColors && (hasTexCoords || x3dColored)) {
                     // mesh.getColors() returns the authored X3DMaterial RGBA
                     // for X3D-authored vertices and WHITE_RGBA padding (set
@@ -329,7 +330,7 @@ public class I3SGeometryEncoder {
                     // X3D-authored triangles enter this branch — non-X3D
                     // triangles fall through to styling or default white.
                     c = mesh.getColors().get(srcIdx);
-                } else if (!hasTexCoords && styles != null) {
+                } else if (!hasTexCoords && bakeStyles) {
                     // Non-textured + non-X3D triangle on a styled node:
                     // bake the resolved style colour. Source is the
                     // matching --feature-type-style override when present,
@@ -339,7 +340,7 @@ public class I3SGeometryEncoder {
                     // textured triangle on a textured node — only the
                     // dedicated white-pixel branch above applies styling
                     // through a textured material.
-                    c = styles[triLocalIdx].color();
+                    c = rt.style().color();
                 } else {
                     c = WHITE_RGBA;
                 }
@@ -377,24 +378,6 @@ public class I3SGeometryEncoder {
         writeLegacyGeometry(geometryDir, outPositions, outNormals, outUVs, outColors,
                 faceRanges, rangeFeatureIds);
         return new NodeGeometryResult(rangeFeatureIds, featureAabbs);
-    }
-
-    /**
-     * Resolve each valid triangle's source surface type to a
-     * {@link DefaultObjectStyle} via the registry. Returned array is
-     * aligned with {@link VertexWelder.WeldResult#validTriIndices()} —
-     * index {@code i / 3} on a per-vertex iteration locates the style for
-     * the triangle owning vertex {@code i}.
-     */
-    private static DefaultObjectStyle[] resolveTriangleStyles(VertexWelder.WeldResult weld,
-                                                              TriangleMesh mesh,
-                                                              ObjectStyleRegistry registry) {
-        List<Integer> validTriIndices = weld.validTriIndices();
-        DefaultObjectStyle[] styles = new DefaultObjectStyle[validTriIndices.size()];
-        for (int i = 0; i < validTriIndices.size(); i++) {
-            styles[i] = registry.resolve(mesh.getTriangleSurfaceType(validTriIndices.get(i)));
-        }
-        return styles;
     }
 
     /**
