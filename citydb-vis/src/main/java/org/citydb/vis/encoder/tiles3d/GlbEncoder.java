@@ -6,6 +6,8 @@
 package org.citydb.vis.encoder.tiles3d;
 
 import org.citydb.vis.attribute.AttributeValueCoercer;
+import org.citydb.vis.encoder.TriangleRouter;
+import org.citydb.vis.encoder.TriangleRouter.RoutedTriangle;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.model.AttrField;
@@ -20,7 +22,6 @@ import org.citydb.vis.util.GeoTransform;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -114,37 +115,47 @@ public class GlbEncoder {
 
         DatasetFrame frame = DatasetFrame.from(mbs, datasetCenter);
 
-        // Partition valid triangles by atlas page (textured) plus two
-        // untextured buckets — "plain" (renders with PBR shading, default
-        // baseColor) and "colored" (X3DMaterial vertex colors, renders
-        // unlit). Plain triangles are further sub-bucketed by the resolved
-        // DefaultObjectStyle of each triangle's source surface type, so a
-        // CityGML 3.0 Building with mixed RoofSurface / WallSurface /
-        // GroundSurface boundaries emits one plain primitive (and one
-        // material) per distinct style used. Face-range index is tracked
-        // per entry so the per-vertex _FEATURE_ID_0 can reference the
-        // shared property table regardless of which primitive the triangle
-        // lands in — this preserves the original encoder's semantics, where
+        // Classify valid triangles into format-neutral routing facts once
+        // (texture id, X3DMaterial-colored flag, resolved style, face-range
+        // row), then bucket them into the GLB's primitive flavours: one
+        // textured primitive per atlas page, one "plain" primitive per
+        // distinct DefaultObjectStyle (PBR-shaded, default baseColor), and one
+        // "colored" primitive (X3DMaterial vertex colors, unlit). A CityGML
+        // 3.0 Building with mixed RoofSurface / WallSurface / GroundSurface
+        // boundaries therefore emits one plain primitive (and one material)
+        // per distinct style used. The face-range index carried on each routed
+        // triangle lets the per-vertex _FEATURE_ID_0 reference the shared
+        // property table regardless of which primitive the triangle lands in —
         // two non-contiguous runs of the same feature become two distinct
         // property table rows.
+        List<RoutedTriangle> routed = TriangleRouter.route(mesh, weld, styleRegistry);
+
         int pageCount = atlasBytesList.size();
-        List<List<TriEntry>> texturedTrisByPage;
+        List<List<RoutedTriangle>> texturedTrisByPage = new ArrayList<>(pageCount);
+        for (int i = 0; i < pageCount; i++) {
+            texturedTrisByPage.add(new ArrayList<>());
+        }
         // LinkedHashMap so emitted plain primitives appear in the order the
         // styles were first encountered — stable across runs for a given
         // input.
-        Map<DefaultObjectStyle, List<TriEntry>> untexturedPlainTrisByStyle = new LinkedHashMap<>();
-        List<TriEntry> untexturedColoredTris = new ArrayList<>();
-        if (hasTexture) {
-            texturedTrisByPage = new ArrayList<>(pageCount);
-            for (int i = 0; i < pageCount; i++) {
-                texturedTrisByPage.add(new ArrayList<>());
+        Map<DefaultObjectStyle, List<RoutedTriangle>> untexturedPlainTrisByStyle = new LinkedHashMap<>();
+        List<RoutedTriangle> untexturedColoredTris = new ArrayList<>();
+        for (RoutedTriangle rt : routed) {
+            if (hasTexture && rt.textured()) {
+                Integer page = texIdToPage.get(rt.textureId());
+                // A texId missing from the map means the atlas builder dropped
+                // this texture (e.g. corrupt source). Route the triangle to an
+                // untextured bucket so the feature still renders.
+                if (page != null) {
+                    texturedTrisByPage.get(page).add(rt);
+                    continue;
+                }
             }
-            partitionByAtlasPage(mesh, weld, texIdToPage, styleRegistry,
-                    texturedTrisByPage, untexturedPlainTrisByStyle, untexturedColoredTris);
-        } else {
-            texturedTrisByPage = Collections.emptyList();
-            collectAllEntries(mesh, weld, styleRegistry,
-                    untexturedPlainTrisByStyle, untexturedColoredTris);
+            if (rt.colored()) {
+                untexturedColoredTris.add(rt);
+            } else {
+                untexturedPlainTrisByStyle.computeIfAbsent(rt.style(), k -> new ArrayList<>()).add(rt);
+            }
         }
 
         int featureCount = weld.faceRanges().size();
@@ -159,12 +170,12 @@ public class GlbEncoder {
         List<PrimitiveArrays> primitives =
                 new ArrayList<>(pageCount + untexturedPlainTrisByStyle.size() + 1);
         for (int p = 0; p < pageCount; p++) {
-            List<TriEntry> tris = texturedTrisByPage.get(p);
+            List<RoutedTriangle> tris = texturedTrisByPage.get(p);
             if (!tris.isEmpty()) {
                 primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, null, frame, enableShading));
             }
         }
-        for (Map.Entry<DefaultObjectStyle, List<TriEntry>> e : untexturedPlainTrisByStyle.entrySet()) {
+        for (Map.Entry<DefaultObjectStyle, List<RoutedTriangle>> e : untexturedPlainTrisByStyle.entrySet()) {
             if (!e.getValue().isEmpty()) {
                 primitives.add(buildPrimitiveArrays(mesh, weld, e.getValue(),
                         UNTEXTURED_PLAIN_PAGE, e.getKey(), frame, enableShading));
@@ -250,90 +261,6 @@ public class GlbEncoder {
     }
 
     /**
-     * Walk valid triangles in face-range order and bucket them by atlas page
-     * (textured), by resolved {@link DefaultObjectStyle} (untextured plain),
-     * or into the colored bucket (carries X3DMaterial vertex color). The
-     * face-range index is tracked alongside the original triangle index so
-     * the per-vertex {@code _FEATURE_ID_0} can reference the shared property
-     * table regardless of which primitive the triangle ends up in.
-     */
-    private static void partitionByAtlasPage(TriangleMesh mesh, VertexWelder.WeldResult weld,
-                                             Map<Integer, Integer> texIdToPage,
-                                             ObjectStyleRegistry styleRegistry,
-                                             List<List<TriEntry>> texturedByPage,
-                                             Map<DefaultObjectStyle, List<TriEntry>> untexturedPlainByStyle,
-                                             List<TriEntry> untexturedColored) {
-        List<Integer> validTriIndices = weld.validTriIndices();
-        List<int[]> faceRanges = weld.faceRanges();
-        List<Integer> triTexIds = mesh.getTriangleTextureIds();
-
-        int rangeIdx = 0;
-        int[] currentRange = faceRanges.get(0);
-        for (int i = 0; i < validTriIndices.size(); i++) {
-            while (i > currentRange[1]) {
-                currentRange = faceRanges.get(++rangeIdx);
-            }
-            int ti = validTriIndices.get(i);
-            TriEntry entry = new TriEntry(ti, rangeIdx);
-            int texId = triTexIds.get(ti);
-            if (texId >= 0) {
-                Integer page = texIdToPage.get(texId);
-                // A texId missing from the map means the atlas builder dropped
-                // this texture (e.g. corrupt source). Route the triangle to
-                // an untextured bucket so the feature still renders.
-                if (page != null) {
-                    texturedByPage.get(page).add(entry);
-                    continue;
-                }
-            }
-            if (mesh.isTriangleColored(ti)) {
-                untexturedColored.add(entry);
-            } else {
-                bucketPlain(mesh, ti, entry, styleRegistry, untexturedPlainByStyle);
-            }
-        }
-    }
-
-    /**
-     * Untextured-only node: every valid triangle goes into one of the
-     * untextured buckets — colored ones into {@code untexturedColored},
-     * plain ones bucketed by their resolved {@link DefaultObjectStyle}.
-     */
-    private static void collectAllEntries(TriangleMesh mesh, VertexWelder.WeldResult weld,
-                                          ObjectStyleRegistry styleRegistry,
-                                          Map<DefaultObjectStyle, List<TriEntry>> untexturedPlainByStyle,
-                                          List<TriEntry> untexturedColored) {
-        List<Integer> validTriIndices = weld.validTriIndices();
-        List<int[]> faceRanges = weld.faceRanges();
-        int rangeIdx = 0;
-        int[] currentRange = faceRanges.get(0);
-        for (int i = 0; i < validTriIndices.size(); i++) {
-            while (i > currentRange[1]) {
-                currentRange = faceRanges.get(++rangeIdx);
-            }
-            int ti = validTriIndices.get(i);
-            TriEntry entry = new TriEntry(ti, rangeIdx);
-            if (mesh.isTriangleColored(ti)) {
-                untexturedColored.add(entry);
-            } else {
-                bucketPlain(mesh, ti, entry, styleRegistry, untexturedPlainByStyle);
-            }
-        }
-    }
-
-    /**
-     * Resolve the plain triangle's source surface type to a style via the
-     * registry (the registry's own cache makes the per-Name lookup cheap),
-     * then append the entry to the bucket for that style.
-     */
-    private static void bucketPlain(TriangleMesh mesh, int ti, TriEntry entry,
-                                    ObjectStyleRegistry registry,
-                                    Map<DefaultObjectStyle, List<TriEntry>> bucket) {
-        DefaultObjectStyle style = registry.resolve(mesh.getTriangleSurfaceType(ti));
-        bucket.computeIfAbsent(style, k -> new ArrayList<>()).add(entry);
-    }
-
-    /**
      * Build per-primitive welded vertex arrays from the chosen triangle subset.
      * Rewrites welded positions from ENU (meters, East/North/Up) into glTF
      * Y-up (X=East, Y=Up, Z=-North), collects per-axis min/max for the
@@ -348,7 +275,7 @@ public class GlbEncoder {
      */
     private static PrimitiveArrays buildPrimitiveArrays(TriangleMesh mesh,
                                                         VertexWelder.WeldResult weld,
-                                                        List<TriEntry> triEntries,
+                                                        List<RoutedTriangle> triEntries,
                                                         int atlasPage,
                                                         DefaultObjectStyle plainStyle,
                                                         DatasetFrame frame,
@@ -375,11 +302,11 @@ public class GlbEncoder {
         List<int[]> triangles = mesh.getTriangles();
 
         int idx = 0;
-        for (TriEntry entry : triEntries) {
-            int ti = entry.ti;
+        for (RoutedTriangle entry : triEntries) {
+            int ti = entry.triangleIndex();
             int base = ti * 3;
             int[] tri = triangles.get(ti);
-            int fIdx = entry.faceIdx;
+            int fIdx = entry.faceIndex();
             for (int j = 0; j < 3; j++) {
                 float[] wp = weldedPositions[base + j];
                 int srcIdx = tri[j];
@@ -479,13 +406,6 @@ public class GlbEncoder {
      */
     private static final int UNTEXTURED_PLAIN_PAGE = -1;
     private static final int UNTEXTURED_COLORED_PAGE = -2;
-
-    /**
-     * One valid triangle earmarked for a specific primitive, paired with the
-     * face-range (property table row) it belongs to.
-     */
-    private record TriEntry(int ti, int faceIdx) {
-    }
 
     private record PrimitiveArrays(int atlasPage, int vertexCount,
                                    float[] positions, float[] normals, float[] uvs,
