@@ -394,6 +394,22 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
                 new ArrayList<>();
     }
 
+    public boolean removeIf(Predicate<T> predicate) {
+        boolean removed = false;
+        Iterator<Map<String, List<T>>> valuesIterator = elements.values().iterator();
+        while (valuesIterator.hasNext()) {
+            Map<String, List<T>> values = valuesIterator.next();
+            if (removeIf(values, predicate)) {
+                removed = true;
+                if (values.isEmpty()) {
+                    valuesIterator.remove();
+                }
+            }
+        }
+
+        return removed;
+    }
+
     public List<T> removeByNamespace(String namespace) {
         List<T> result = new ArrayList<>();
         Map<String, List<T>> values = elements.remove(Namespaces.ensureNonNull(namespace));
@@ -404,6 +420,36 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
         }
 
         return result;
+    }
+
+    public boolean removeByNamespaceIf(String namespace, Predicate<T> predicate) {
+        namespace = Namespaces.ensureNonNull(namespace);
+        Map<String, List<T>> values = elements.get(namespace);
+        if (values != null && removeIf(values, predicate)) {
+            if (values.isEmpty()) {
+                elements.remove(namespace);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean removeIf(Map<String, List<T>> values, Predicate<T> predicate) {
+        boolean removed = false;
+        Iterator<List<T>> iterator = values.values().iterator();
+        while (iterator.hasNext()) {
+            List<T> properties = iterator.next();
+            if (properties.removeIf(predicate)) {
+                removed = true;
+                if (properties.isEmpty()) {
+                    iterator.remove();
+                }
+            }
+        }
+
+        return removed;
     }
 
     public Set<String> getNamespaces() {
