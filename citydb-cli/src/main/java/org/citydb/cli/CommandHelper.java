@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -296,14 +295,10 @@ public class CommandHelper {
     }
 
     private IOAdapterManager createIOAdapterManager() throws ExecutionException {
-        IOAdapterManager manager = IOAdapterManager.newInstance().load(getExtensionLoader());
-        if (manager.hasExceptions()) {
-            throw new ExecutionException("Failed to load IO adapters.",
-                    manager.getExceptions().values().stream()
-                            .flatMap(Collection::stream)
-                            .findFirst().orElse(new IOAdapterException()));
+        try {
+            return IOAdapterManager.newInstance().load(getExtensionLoader());
+        } catch (IOAdapterException e) {
+            throw new ExecutionException("Failed to load IO adapters.", e);
         }
-
-        return manager;
     }
 }

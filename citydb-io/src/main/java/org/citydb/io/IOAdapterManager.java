@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 public class IOAdapterManager {
     private final Map<String, IOAdapterInfo> adapters = new HashMap<>();
-    private Map<String, List<IOAdapterException>> exceptions;
 
     private IOAdapterManager() {
     }
@@ -22,23 +21,17 @@ public class IOAdapterManager {
         return new IOAdapterManager();
     }
 
-    public IOAdapterManager load() {
+    public IOAdapterManager load() throws IOAdapterException {
         return load(Thread.currentThread().getContextClassLoader());
     }
 
-    public IOAdapterManager load(ClassLoader loader) {
+    public IOAdapterManager load(ClassLoader loader) throws IOAdapterException {
         for (IOAdapter adapter : ServiceLoader.load(IOAdapter.class, loader)) {
-            if ((exceptions != null
-                    && exceptions.containsKey(adapter.getClass().getName()))
-                    || adapters.containsKey(adapter.getClass().getName())) {
+            if (adapters.containsKey(adapter.getClass().getName())) {
                 continue;
             }
 
-            try {
-                register(adapter, loader, false);
-            } catch (IOAdapterException e) {
-                addException(adapter, "Failed to load the IO adapter " + adapter.getClass().getName() + ".", e);
-            }
+            register(adapter, loader, false);
         }
 
         return this;
@@ -148,23 +141,6 @@ public class IOAdapterManager {
     public Set<String> getFileExtensions(IOAdapter adapter) {
         IOAdapterInfo info = adapters.get(adapter.getClass().getName());
         return info != null ? info.fileExtensions : Collections.emptySet();
-    }
-
-    public boolean hasExceptions() {
-        return exceptions != null && !exceptions.isEmpty();
-    }
-
-    public Map<String, List<IOAdapterException>> getExceptions() {
-        return exceptions != null ? exceptions : Collections.emptyMap();
-    }
-
-    private void addException(IOAdapter adapter, String message, Exception cause) {
-        if (exceptions == null) {
-            exceptions = new HashMap<>();
-        }
-
-        exceptions.computeIfAbsent(adapter.getClass().getName(), v -> new ArrayList<>())
-                .add(new IOAdapterException(message, cause));
     }
 
     private String processFileExtension(String fileExtension) {
