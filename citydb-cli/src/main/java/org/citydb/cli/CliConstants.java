@@ -17,7 +17,7 @@ public class CliConstants {
     public static final String APP_VENDOR;
     public static final String APP_COMMAND = "citydb";
     public static final Path WORKING_DIR;
-    public static final String PLUGINS_DIR = "plugins";
+    public static final String EXTENSIONS_DIR = "extensions";
 
     static {
         String appHome = System.getenv("APP_HOME");

@@ -92,7 +92,7 @@ distributions {
                 from "$rootDir/resources/samples"
             }
             from("$projectDir/build/tmp/dir") {
-                mkdir "$projectDir/build/tmp/dir/plugins"
+                mkdir "$projectDir/build/tmp/dir/extensions"
             }
         }
     }

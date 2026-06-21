@@ -77,9 +77,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             description = "Create a file containing the process ID.")
     private Path pidFile;
 
-    @CommandLine.Option(names = "--plugins", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<dir>",
-            description = "Load plugins from this directory.")
-    private Path pluginsDirectory;
+    @CommandLine.Option(names = "--extensions", scope = CommandLine.ScopeType.INHERIT, paramLabel = "<dir>",
+            description = "Load extensions from this directory.")
+    private Path extensionsDirectory;
 
     @CommandLine.Option(names = "--use-plugin", scope = CommandLine.ScopeType.INHERIT, split = ",",
             paramLabel = "<plugin[=true|false]>", mapFallbackValue = "true",
@@ -126,7 +126,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         int exitCode = CommandLine.ExitCode.SOFTWARE;
 
         try (ExtensionClassLoader extensionLoader = ExtensionClassLoader.newInstance()
-                .loadFrom(parsePluginsDirectory(args))) {
+                .loadFrom(parseExtensionsDirectory(args))) {
             helper.setExtensionLoader(extensionLoader);
 
             PluginManager pluginManager = helper.getPluginManager();
@@ -304,23 +304,23 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         }
     }
 
-    private Path parsePluginsDirectory(String[] args) {
-        String pluginsDirectory = null;
-        for (int i = 0; pluginsDirectory == null && i < args.length; i++) {
+    private Path parseExtensionsDirectory(String[] args) {
+        String extensionsDirectory = null;
+        for (int i = 0; extensionsDirectory == null && i < args.length; i++) {
             int delimiter = args[i].indexOf('=');
             String parameter = delimiter != -1 ? args[i].substring(0, delimiter) : args[i];
-            if ("--plugins".startsWith(parameter.toLowerCase(Locale.ROOT))) {
+            if ("--extensions".startsWith(parameter.toLowerCase(Locale.ROOT))) {
                 if (delimiter != -1 && delimiter < args[i].length()) {
-                    pluginsDirectory = args[i].substring(delimiter + 1);
+                    extensionsDirectory = args[i].substring(delimiter + 1);
                 } else if (i < args.length - 1) {
-                    pluginsDirectory = args[++i];
+                    extensionsDirectory = args[++i];
                 }
             }
         }
 
-        return pluginsDirectory != null
-                ? CliConstants.WORKING_DIR.resolve(pluginsDirectory)
-                : CliConstants.APP_HOME.resolve(CliConstants.PLUGINS_DIR);
+        return extensionsDirectory != null
+                ? CliConstants.WORKING_DIR.resolve(extensionsDirectory)
+                : CliConstants.APP_HOME.resolve(CliConstants.EXTENSIONS_DIR);
     }
 
     private void logException(Throwable e) {
