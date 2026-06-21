@@ -19,6 +19,7 @@ import org.citydb.cli.importer.ImportCommand;
 import org.citydb.cli.index.IndexCommand;
 import org.citydb.cli.info.InfoCommand;
 import org.citydb.cli.logging.LoggerManager;
+import org.citydb.cli.util.ExtensionClassLoader;
 import org.citydb.cli.util.PidFile;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigManager;
@@ -124,14 +125,16 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         helper = new CommandHelper();
         int exitCode = CommandLine.ExitCode.SOFTWARE;
 
-        try (PluginManager pluginManager = PluginManager.newInstance()) {
-            helper.setPluginManager(pluginManager);
+        try (ExtensionClassLoader extensionLoader = ExtensionClassLoader.newInstance()
+                .loadFrom(parsePluginsDirectory(args))) {
+            helper.setExtensionLoader(extensionLoader);
 
+            PluginManager pluginManager = helper.getPluginManager();
             for (Plugin plugin : pluginsToRegister) {
                 pluginManager.register(plugin, true);
             }
 
-            pluginFailures = pluginManager.load(parsePluginsDirectory(args));
+            pluginFailures = pluginManager.load(extensionLoader);
             Command.addSubcommand(new ConnectCommand(), cmd, pluginManager);
             Command.addSubcommand(new InfoCommand(), cmd, pluginManager);
             Command.addSubcommand(new ImportCommand(), cmd, pluginManager);

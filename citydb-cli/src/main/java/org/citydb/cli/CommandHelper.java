@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.logging.LoggerManager;
+import org.citydb.cli.util.ExtensionClassLoader;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
@@ -48,16 +49,25 @@ import java.util.function.Consumer;
 
 public class CommandHelper {
     private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
+    private final PluginManager pluginManager = PluginManager.newInstance();
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
     private final LazyCheckedInitializer<DatabaseAdapterManager, ExecutionException> databaseAdapterManager =
             LazyCheckedInitializer.of(this::createDatabaseAdapterManager);
     private final LazyCheckedInitializer<IOAdapterManager, ExecutionException> ioAdapterManager =
             LazyCheckedInitializer.of(this::createIOAdapterManager);
 
-    private PluginManager pluginManager;
+    private ExtensionClassLoader extensionLoader;
     private Config config;
 
     CommandHelper() {
+    }
+
+    public PluginManager getPluginManager() {
+        return pluginManager;
+    }
+
+    public <T extends Extension> List<T> getExtensions(Class<T> type) {
+        return pluginManager.getExtensionsIfEnabled(type);
     }
 
     public DatabaseManager getDatabaseManager() {
@@ -68,24 +78,22 @@ public class CommandHelper {
         return databaseAdapterManager.get();
     }
 
+    private ClassLoader getExtensionLoader() {
+        return extensionLoader != null
+                ? extensionLoader
+                : Thread.currentThread().getContextClassLoader();
+    }
+
+    void setExtensionLoader(ExtensionClassLoader extensionLoader) {
+        this.extensionLoader = extensionLoader;
+    }
+
     public Config getConfig() {
         return config;
     }
 
     void setConfig(Config config) {
         this.config = config;
-    }
-
-    public PluginManager getPluginManager() {
-        return pluginManager;
-    }
-
-    void setPluginManager(PluginManager pluginManager) {
-        this.pluginManager = pluginManager;
-    }
-
-    public <T extends Extension> List<T> getExtensions(Class<T> type) {
-        return pluginManager.getExtensionsIfEnabled(type);
     }
 
     public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
@@ -281,14 +289,14 @@ public class CommandHelper {
 
     private DatabaseAdapterManager createDatabaseAdapterManager() throws ExecutionException {
         try {
-            return DatabaseAdapterManager.newInstance().load(pluginManager.getClassLoader());
+            return DatabaseAdapterManager.newInstance().load(getExtensionLoader());
         } catch (DatabaseAdapterException e) {
             throw new ExecutionException("Failed to load database adapters.", e);
         }
     }
 
     private IOAdapterManager createIOAdapterManager() throws ExecutionException {
-        IOAdapterManager manager = IOAdapterManager.newInstance().load(pluginManager.getClassLoader());
+        IOAdapterManager manager = IOAdapterManager.newInstance().load(getExtensionLoader());
         if (manager.hasExceptions()) {
             throw new ExecutionException("Failed to load IO adapters.",
                     manager.getExceptions().values().stream()

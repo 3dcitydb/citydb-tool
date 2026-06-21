@@ -8,37 +8,32 @@ package org.citydb.plugin;
 import com.alibaba.fastjson2.JSON;
 import org.citydb.plugin.metadata.PluginMetadata;
 
-import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-public class PluginManager implements AutoCloseable {
-    private final PluginClassLoader loader;
+public class PluginManager {
     private final Map<String, Plugin> plugins = new HashMap<>();
     private final Map<Class<? extends Extension>, ExtensionInfo> extensions = new HashMap<>();
 
     private record ExtensionInfo(Extension extension, Plugin plugin) {
     }
 
-    private PluginManager(ClassLoader parent) {
-        loader = new PluginClassLoader(parent);
+    private PluginManager() {
     }
 
     public static PluginManager newInstance() {
-        return new PluginManager(Thread.currentThread().getContextClassLoader());
+        return new PluginManager();
     }
 
-    public static PluginManager of(ClassLoader parent) {
-        return new PluginManager(parent);
+    public List<PluginException> load() {
+        return load(Thread.currentThread().getContextClassLoader());
     }
 
-    public List<PluginException> load(Path pluginsDirectory) throws PluginException {
-        loader.addPath(pluginsDirectory);
+    public List<PluginException> load(ClassLoader loader) {
         List<PluginException> failures = new ArrayList<>();
-
         for (Plugin plugin : ServiceLoader.load(Plugin.class, loader)) {
             if (plugins.containsKey(plugin.getClass().getName())) {
                 continue;
@@ -101,10 +96,6 @@ public class PluginManager implements AutoCloseable {
         if (registered != null) {
             extensions.entrySet().removeIf(e -> e.getValue().plugin() == registered);
         }
-    }
-
-    public ClassLoader getClassLoader() {
-        return loader;
     }
 
     public List<Plugin> getPlugins() {
@@ -194,10 +185,5 @@ public class PluginManager implements AutoCloseable {
         }
 
         return null;
-    }
-
-    @Override
-    public void close() throws IOException {
-        loader.close();
     }
 }
