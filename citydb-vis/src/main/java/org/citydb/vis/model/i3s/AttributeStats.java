@@ -3,7 +3,7 @@
  * Copyright Stuttgart University of Applied Sciences <https://www.hft-stuttgart.de>
  */
 
-package org.citydb.vis.attribute;
+package org.citydb.vis.model.i3s;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,7 +20,7 @@ import java.util.Map;
  * handful of arithmetic ops, so the simpler synchronized form beats
  * managing per-thread shards.
  * <p>
- * Consumed by {@link AttributeEncoder} to populate the I3S layer's
+ * Consumed by the I3S attribute encoder to populate the I3S layer's
  * {@code layer.statisticsInfo[]} entries plus the per-attribute
  * {@code layers/0/statistics/f_K/0/index.json} resource files. ArcGIS
  * Pro reads these to drive its attribute-filter UI (range sliders for
