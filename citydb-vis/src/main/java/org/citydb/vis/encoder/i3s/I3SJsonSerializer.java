@@ -5,10 +5,10 @@
 
 package org.citydb.vis.encoder.i3s;
 
-import org.citydb.vis.attribute.AttributeStats;
 import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
+import org.citydb.vis.model.i3s.AttributeStats;
 import org.citydb.vis.model.i3s.FeatureEntry;
 import org.citydb.vis.model.i3s.I3SConstants;
 import org.citydb.vis.model.i3s.NodeFeatureDocument;
