@@ -5,7 +5,6 @@
 
 package org.citydb.vis.appearance;
 
-import org.citydb.core.file.output.RegularOutputFile;
 import org.citydb.model.common.Name;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.store.TextureStore;
@@ -43,7 +42,7 @@ class TextureAtlasTest {
     private TextureStore store;
 
     private TextureStore newStore() {
-        return new TextureStore(new RegularOutputFile(tempDir.resolve("tileset.json")));
+        return new TextureStore(tempDir);
     }
 
     /** Write a solid-colour PNG into the temp dir and register it. */

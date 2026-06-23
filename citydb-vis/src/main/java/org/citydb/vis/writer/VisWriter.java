@@ -186,7 +186,7 @@ public abstract class VisWriter implements FeatureWriter {
             Path tempDir = writeOptions.getTempDirectory().isPresent()
                     ? writeOptions.getTempDirectory().get()
                     : createFallbackTempDir(outputFile);
-            this.stores = new VisExportStores(outputFile, cpuCores, tempDir);
+            this.stores = new VisExportStores(cpuCores, tempDir);
         } catch (IOException e) {
             throw new WriteException("Failed to create disk-backed stores.", e);
         }
