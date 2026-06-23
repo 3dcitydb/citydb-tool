@@ -18,6 +18,7 @@ import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
+import org.citydb.core.file.output.RegularOutputFile;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
@@ -243,9 +244,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         }
     }
 
-    private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager,
-                                         IOAdapterManager ioManager, IOAdapter ioAdapter,
-                                         Path outputFileParent, Path tempDir) throws ExecutionException {
+    private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager) throws ExecutionException {
         if (!exportOptions.getAppearanceOptions()
                 .map(AppearanceOptions::isExportAppearances)
                 .orElse(true)) {
@@ -268,11 +267,6 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         AppearanceOptions appearanceOptions = exportOptions.getAppearanceOptions()
                 .orElseGet(AppearanceOptions::new);
         appearanceOptions.setNumberOfTextureBuckets(buckets);
-
-        Path texturesInTemp = tempDir.resolve(
-                ioManager.getFileFormat(ioAdapter).toLowerCase() + "-textures");
-        String folder = outputFileParent.relativize(texturesInTemp).toString();
-        appearanceOptions.setTextureOutputFolder(folder);
 
         exportOptions.setAppearanceOptions(appearanceOptions);
     }
@@ -313,12 +307,14 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
 
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
 
-        // Pre-create a unique temp directory shared by the DB texture exporter
-        // (AppearanceOptions.textureOutputFolder) and the VisWriter stores.
-        // Having both write into one directory keeps all intermediate files
-        // together so --temp-dir redirects everything, and lets close-time
-        // deletion clean the whole tree in one shot without racing concurrent
-        // exports (each run gets its own .citydb-vis-tmp-* subdirectory).
+        // Pre-create a unique temp directory shared by the DB exporter and the
+        // VisWriter stores. The DB exporter's OutputFile is rooted here (see
+        // setOutputFile below), so external files it emits — textures under the
+        // default "appearance" folder, library objects under "library-objects" —
+        // land inside this temp tree. Having both write into one directory keeps
+        // all intermediate files together so --temp-dir redirects everything, and
+        // lets close-time deletion clean the whole tree in one shot without racing
+        // concurrent exports (each run gets its own .citydb-vis-tmp-* subdirectory).
         Path file = helper.resolveAgainstWorkingDir(outputFile);
         Path outputFileParent = file.toAbsolutePath().normalize().getParent();
         Path tempDir;
@@ -329,13 +325,13 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             }
             Files.createDirectories(tempRoot);
             tempDir = Files.createTempDirectory(tempRoot, ".citydb-vis-tmp-");
+            exportOptions.setOutputFile(new RegularOutputFile(tempDir.resolve("temp")));
         } catch (IOException e) {
             throw new ExecutionException("Failed to create temp directory for vis export.", e);
         }
         writeOptions.setTempDirectory(tempDir);
 
-        configureTextureBuckets(exportOptions, databaseManager, ioManager, ioAdapter,
-                outputFileParent, tempDir);
+        configureTextureBuckets(exportOptions, databaseManager);
 
         Query query = getQuery(exportOptions);
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
@@ -344,7 +340,6 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         try (OutputFile output = builder.newOutputFile(file);
              FeatureWriter writer = ioAdapter.createWriter(output, writeOptions)) {
             Exporter exporter = Exporter.newInstance();
-            exportOptions.setOutputFile(output);
 
             Path outputPath = output.getFile();
             String name = outputPath.getFileName().toString();
