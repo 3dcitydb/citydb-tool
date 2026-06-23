@@ -5,7 +5,6 @@
 
 package org.citydb.vis.store;
 
-import org.citydb.core.file.OutputFile;
 import org.citydb.vis.util.FileHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,13 +53,13 @@ public class VisExportStores implements AutoCloseable {
      * pre-creates one with a {@code .citydb-vis-tmp-*} suffix so close-time
      * {@code deleteDirectoryTree} can't wipe a sibling export's files).
      */
-    public VisExportStores(OutputFile outputFile, int cpuCores, Path tempDir) throws IOException {
+    public VisExportStores(int cpuCores, Path tempDir) throws IOException {
         Files.createDirectories(tempDir);
         this.tempDir = tempDir;
         this.spatialEntryStore = new SpatialEntryStore(cpuCores, tempDir);
         this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
         this.attrStore = new AttributeStore(tempDir);
-        this.textureStore = new TextureStore(outputFile);
+        this.textureStore = new TextureStore(tempDir);
     }
 
     public Path getTempDir() {
