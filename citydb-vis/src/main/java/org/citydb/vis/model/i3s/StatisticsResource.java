@@ -6,7 +6,6 @@
 package org.citydb.vis.model.i3s;
 
 import com.alibaba.fastjson2.annotation.JSONType;
-import org.citydb.vis.attribute.AttributeStats;
 
 import java.util.ArrayList;
 import java.util.List;
