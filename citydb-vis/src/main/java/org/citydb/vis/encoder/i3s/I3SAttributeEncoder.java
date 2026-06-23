@@ -8,7 +8,9 @@ package org.citydb.vis.encoder.i3s;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.attribute.AttributeValueCoercer;
 import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.FeatureData;
+import org.citydb.vis.model.i3s.AttributeStats;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.util.BufferUtils;
 
@@ -16,7 +18,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * I3S-specific binary attribute encoding.
@@ -25,6 +30,36 @@ import java.util.List;
  * attribute buffer writing (per-node {@code attributes/f_N/0} files).
  */
 public class I3SAttributeEncoder extends AttributeEncoder {
+
+    // Per-attribute statistics accumulator. Lives here (not in the
+    // format-agnostic AttributeEncoder base) because the I3S layer's
+    // statisticsInfo[] and per-field statistics resources are the only
+    // consumers — 3D Tiles emits no attribute statistics.
+    private final ConcurrentHashMap<String, AttributeStats> stats = new ConcurrentHashMap<>();
+
+    /**
+     * Update per-attribute statistics for each (field, value) pair while
+     * iterating per-node features — thread-safe via {@link AttributeStats}'s
+     * synchronized internals plus the {@code computeIfAbsent} guard. The
+     * accumulator chosen (numeric vs string) is fixed by the field's resolved
+     * {@link AttrType} after type tracking finalizes.
+     */
+    public void updateStats(AttrField field, Object value) {
+        AttributeStats accumulator = stats.computeIfAbsent(field.name(), name ->
+                field.type() == AttrType.STRING ? AttributeStats.forString() : AttributeStats.forNumeric());
+        accumulator.update(value);
+    }
+
+    /**
+     * Snapshot of all per-attribute statistics gathered during the write
+     * phase. Returned in a fresh map keyed by attribute name; the entries
+     * themselves are immutable {@link AttributeStats.Result} records.
+     */
+    public Map<String, AttributeStats.Result> snapshotStats() {
+        Map<String, AttributeStats.Result> result = new LinkedHashMap<>();
+        stats.forEach((name, s) -> result.put(name, s.toResult()));
+        return result;
+    }
 
     /**
      * Write binary attribute data for all fields of a single node.
