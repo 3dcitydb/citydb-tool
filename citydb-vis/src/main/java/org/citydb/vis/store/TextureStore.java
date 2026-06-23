@@ -5,8 +5,6 @@
 
 package org.citydb.vis.store;
 
-import org.citydb.core.file.OutputFile;
-
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
@@ -36,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * needed for their output format.
  */
 public class TextureStore implements Closeable {
-    private final OutputFile outputFile;
+    private final Path tempDir;
     private final ConcurrentHashMap<String, Integer> uriToId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, String> idToUri = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger(0);
@@ -50,8 +48,8 @@ public class TextureStore implements Closeable {
     private final ConcurrentHashMap<Integer, SoftReference<BufferedImage>> imageCache =
             new ConcurrentHashMap<>();
 
-    public TextureStore(OutputFile outputFile) {
-        this.outputFile = outputFile;
+    public TextureStore(Path tempDir) {
+        this.tempDir = tempDir;
     }
 
     /**
@@ -75,7 +73,10 @@ public class TextureStore implements Closeable {
     public Path getSourcePath(int textureId) {
         String uri = idToUri.get(textureId);
         if (uri == null) return null;
-        Path source = outputFile.getFile().getParent().resolve(uri);
+        // The DB texture exporter writes BLOBs into the shared temp directory
+        // (its OutputFile is rooted there), so registered URIs are relative to
+        // tempDir — resolve against it, not the final output file's parent.
+        Path source = tempDir.resolve(uri);
         return Files.exists(source) ? source : null;
     }
 
