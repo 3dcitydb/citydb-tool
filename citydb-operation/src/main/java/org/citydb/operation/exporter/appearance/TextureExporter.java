@@ -27,13 +27,16 @@ public abstract class TextureExporter extends SurfaceDataExporter {
     public TextureExporter(ExportHelper helper) throws SQLException {
         super(helper);
         blobExporter = new BlobExporter(tableHelper.getTable(Table.TEX_IMAGE), "id", "image_data", helper);
+        AppearanceOptions appearanceOptions = helper.getOptions().getAppearanceOptions()
+                .orElseGet(AppearanceOptions::new);
+        String outputFolder = appearanceOptions.getTextureOutputFolder() != null ?
+                appearanceOptions.getTextureOutputFolder() :
+                ExportConstants.TEXTURE_DIR;
         externalFileHelper = ExternalFileHelper.newInstance(helper)
-                .withRelativeOutputFolder(ExportConstants.TEXTURE_DIR)
+                .withRelativeOutputFolder(outputFolder)
                 .withFileNamePrefix(ExportConstants.TEXTURE_PREFIX)
                 .createUniqueFileNames(true)
-                .withNumberOfBuckets(helper.getOptions().getAppearanceOptions()
-                        .orElseGet(AppearanceOptions::new)
-                        .getNumberOfTextureBuckets());
+                .withNumberOfBuckets(appearanceOptions.getNumberOfTextureBuckets());
     }
 
     protected <T extends Texture<?>> T doExport(T texture, ResultSet rs) throws ExportException, SQLException {
