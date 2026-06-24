@@ -5,4 +5,25 @@ dependencies {
     implementation project(':citydb-model')
     implementation project(':citydb-database')
     implementation 'org.citydb:texture-atlas-creator:1.5.0'
+
+    // Integration-test only: drive the full DB -> Feature -> VisWriter pipeline
+    // against a live citydb. Production vis code never depends on these; the
+    // module-info intentionally does not 'requires' them. Gradle's whitebox
+    // module testing patches the test classes into org.citydb.vis and adds the
+    // necessary --add-reads / ALL-MODULE-PATH so the test can read them and the
+    // postgres adapter is discovered via ServiceLoader.
+    testImplementation project(':citydb-query')
+    testImplementation project(':citydb-operation')
+    testRuntimeOnly project(':citydb-database-postgres')
+    testRuntimeOnly 'org.slf4j:slf4j-simple:2.0.18'
+}
+
+test {
+    // RailwaySceneI3SExportIT runs a full textured export, which loads every
+    // texture image and builds I3S atlases via AWT (Graphics2D / BufferedImage
+    // in TextureAtlas + texture-atlas-creator). Run AWT headless so the forked
+    // test worker does not pull in the desktop toolkit, and give the heap some
+    // headroom comparable to a real CLI run.
+    maxHeapSize = '4g'
+    jvmArgs '-Djava.awt.headless=true'
 }
