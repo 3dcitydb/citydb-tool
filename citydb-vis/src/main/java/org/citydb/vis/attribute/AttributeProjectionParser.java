@@ -396,10 +396,16 @@ final class AttributeProjectionParser {
         }
         if ("true".equalsIgnoreCase(raw)) return Boolean.TRUE;
         if ("false".equalsIgnoreCase(raw)) return Boolean.FALSE;
-        // Numeric: decimal/scientific → Double; integer → Long.
+        // Numeric: decimal/scientific → Double; integer → Long. Kept as
+        // separate returns (not a ?: ) on purpose — a conditional expression
+        // mixing double and long operands undergoes binary numeric promotion,
+        // which would silently widen the integer branch to a Double.
         boolean isDecimal = raw.indexOf('.') >= 0 || raw.indexOf('e') >= 0 || raw.indexOf('E') >= 0;
         try {
-            return isDecimal ? Double.parseDouble(raw) : Long.parseLong(raw);
+            if (isDecimal) {
+                return Double.parseDouble(raw);
+            }
+            return Long.parseLong(raw);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(location + ": predicate value '" + raw
                     + "' is not a quoted string, integer, decimal, or boolean (true/false).");
