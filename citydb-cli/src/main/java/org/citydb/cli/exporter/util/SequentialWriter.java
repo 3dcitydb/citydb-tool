@@ -5,12 +5,12 @@
 
 package org.citydb.cli.exporter.util;
 
-import org.apache.logging.log4j.Logger;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.function.BiConsumer;
 
 public class SequentialWriter implements FeatureWriter {
     private static final String SKIPPED = SequentialWriter.class.getName() + ".skipped";
-    private final Logger logger = LoggerManager.getInstance().getLogger(SequentialWriter.class);
+    private final Logger logger = LoggerFactory.getLogger(SequentialWriter.class);
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition condition = lock.newCondition();
     private final Map<Long, CacheEntry> cache = new HashMap<>();

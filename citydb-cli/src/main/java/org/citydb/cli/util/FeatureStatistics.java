@@ -5,9 +5,6 @@
 
 package org.citydb.cli.util;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.model.appearance.Appearance;
@@ -15,6 +12,9 @@ import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.walker.ModelWalker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.util.Map;
 import java.util.Objects;
@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class FeatureStatistics {
-    private final Logger logger = LoggerManager.getInstance().getLogger(FeatureStatistics.class);
+    private final Logger logger = LoggerFactory.getLogger(FeatureStatistics.class);
     private final SchemaMapping schemaMapping;
     private final Counter counter = new Counter();
     private final Map<Integer, Long> features = new ConcurrentHashMap<>();
@@ -58,11 +58,11 @@ public class FeatureStatistics {
     }
 
     public void logFeatureSummary(Level level) {
-        printFeatureSummary(s -> logger.log(level, s));
+        printFeatureSummary(s -> logger.atLevel(level).log(s));
     }
 
     public void logFeatureSummary(Level level, Runnable whenEmptyAction) {
-        printFeatureSummary(s -> logger.log(level, s), whenEmptyAction);
+        printFeatureSummary(s -> logger.atLevel(level).log(s), whenEmptyAction);
     }
 
     public void printFeatureSummary(Consumer<String> consumer) {

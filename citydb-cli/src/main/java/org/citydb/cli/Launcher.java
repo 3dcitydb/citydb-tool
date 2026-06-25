@@ -5,8 +5,6 @@
 
 package org.citydb.cli;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.Option;
@@ -28,6 +26,9 @@ import org.citydb.plugin.Extension;
 import org.citydb.plugin.Plugin;
 import org.citydb.plugin.PluginException;
 import org.citydb.plugin.PluginManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -87,7 +88,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
                     "(default: ${MAP-FALLBACK-VALUE}).")
     private Map<String, Boolean> usePlugins;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(Launcher.class);
+    private final Logger logger = LoggerFactory.getLogger(Launcher.class);
     private final List<Plugin> pluginsToRegister = new ArrayList<>();
     private CommandHelper helper;
     private List<PluginException> pluginFailures;
@@ -241,7 +242,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
         LoggerManager manager = LoggerManager.getInstance();
         manager.logConsole()
                 .setLogLevel(logLevel.level)
-                .setLogPattern(logLevel.level.isMoreSpecificThan(Level.INFO)
+                .setLogPattern(logLevel.level.toInt() >= Level.INFO.toInt()
                         ? manager.logConsole().getLogPattern() + "%ex{0}"
                         : manager.logConsole().getLogPattern())
                 .setEnabled(!quiet)
@@ -386,7 +387,6 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     }
 
     enum LogLevel {
-        fatal(Level.FATAL),
         error(Level.ERROR),
         warn(Level.WARN),
         info(Level.INFO),

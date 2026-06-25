@@ -5,22 +5,22 @@
 
 package org.citydb.cli.importer.duplicate;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.importer.ImportOptions;
 import org.citydb.cli.importer.options.ImportMode;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.operation.deleter.DeleteOptions;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DuplicateDeleter {
-    private final Logger logger = LoggerManager.getInstance().getLogger(DuplicateDeleter.class);
+    private final Logger logger = LoggerFactory.getLogger(DuplicateDeleter.class);
     private final ImportOptions options;
     private final DatabaseAdapter adapter;
     private final boolean preview;

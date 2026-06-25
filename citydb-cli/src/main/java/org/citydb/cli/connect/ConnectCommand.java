@@ -7,17 +7,17 @@ package org.citydb.cli.connect;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.Inject;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.ConnectionInfoBuilder;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
@@ -36,7 +36,7 @@ public class ConnectCommand implements Command {
     @Inject
     private CommandHelper helper;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(ConnectCommand.class);
+    private final Logger logger = LoggerFactory.getLogger(ConnectCommand.class);
 
     public Integer call() throws ExecutionException {
         ConnectionDetails connectionDetails = helper.getConnectionDetails(connectionOptions);

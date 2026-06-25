@@ -5,8 +5,6 @@
 
 package org.citydb.cli;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.ExtensionClassLoader;
@@ -38,6 +36,9 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.operation.BooleanExpression;
 import org.citydb.query.filter.operation.Operators;
 import org.citydb.sqlbuilder.common.SqlObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -47,7 +48,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class CommandHelper {
-    private final Logger logger = LoggerManager.getInstance().getLogger(CommandHelper.class);
+    private final Logger logger = LoggerFactory.getLogger(CommandHelper.class);
     private final PluginManager pluginManager = PluginManager.newInstance();
     private final DatabaseManager databaseManager = DatabaseManager.newInstance();
     private final LazyCheckedInitializer<DatabaseAdapterManager, ExecutionException> databaseAdapterManager =
@@ -219,11 +220,11 @@ public class CommandHelper {
     }
 
     public void logIndexStatus(Level level, DatabaseAdapter adapter) throws ExecutionException {
-        printIndexStatus(adapter, message -> logger.log(level, message));
+        printIndexStatus(adapter, message -> logger.atLevel(level).log(message));
     }
 
     public void logIndexStatus(Level level, IndexHelper.Status status) {
-        printIndexStatus(status, message -> logger.log(level, message));
+        printIndexStatus(status, message -> logger.atLevel(level).log(message));
     }
 
     public void printIndexStatus(DatabaseAdapter adapter, Consumer<String> consumer) throws ExecutionException {
@@ -262,11 +263,11 @@ public class CommandHelper {
     public synchronized void logException(String message, Throwable e) {
         logger.error(message, e);
         Level level = LoggerManager.getInstance().logConsole().getLogLevel();
-        if (level.isMoreSpecificThan(Level.INFO)) {
+        if (level.toInt() >= Level.INFO.toInt()) {
             while (e != null) {
-                String cause = logger.getMessageFactory().newMessage(e).getFormattedMessage();
+                String cause = e.toString();
                 if (!cause.equals(message)) {
-                    logger.error(e);
+                    logger.error(cause);
                 }
 
                 message = cause;

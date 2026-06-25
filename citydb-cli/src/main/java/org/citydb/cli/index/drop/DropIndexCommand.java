@@ -5,14 +5,14 @@
 
 package org.citydb.cli.index.drop;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.index.IndexController;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
@@ -21,7 +21,7 @@ import java.sql.SQLException;
         name = "drop",
         description = "Drop indexes on the database tables.")
 public class DropIndexCommand extends IndexController {
-    private final Logger logger = LoggerManager.getInstance().getLogger(DropIndexCommand.class);
+    private final Logger logger = LoggerFactory.getLogger(DropIndexCommand.class);
 
     @Override
     public Integer call() throws ExecutionException {

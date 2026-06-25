@@ -5,14 +5,14 @@
 
 package org.citydb.cli.index.create;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.index.IndexController;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.sql.SQLException;
@@ -28,7 +28,7 @@ public class CreateIndexCommand extends IndexController {
                     "(default: ${DEFAULT-VALUE}). Null values are not indexed in partial mode.")
     private Mode mode;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(CreateIndexCommand.class);
+    private final Logger logger = LoggerFactory.getLogger(CreateIndexCommand.class);
 
     @Override
     public Integer call() throws ExecutionException {

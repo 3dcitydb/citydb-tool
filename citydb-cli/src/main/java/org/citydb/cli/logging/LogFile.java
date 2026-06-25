@@ -5,7 +5,7 @@
 
 package org.citydb.cli.logging;
 
-import org.apache.logging.log4j.Level;
+import org.slf4j.event.Level;
 
 import java.nio.file.Path;
 import java.util.Objects;

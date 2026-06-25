@@ -5,8 +5,6 @@
 
 package org.citydb.cli.importer;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CliConstants;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
@@ -18,7 +16,6 @@ import org.citydb.cli.importer.options.FilterOptions;
 import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.cli.importer.options.MetadataOptions;
 import org.citydb.cli.importer.util.ImportOptionsHelper;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
@@ -35,6 +32,9 @@ import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citydb.io.reader.options.InputFormatOptions;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.importer.Importer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -96,7 +96,7 @@ public abstract class ImportController implements Command {
     protected CommandHelper helper;
 
     protected static final int ARG_GROUP_ORDER = 2;
-    protected final Logger logger = LoggerManager.getInstance().getLogger(ImportController.class);
+    protected final Logger logger = LoggerFactory.getLogger(ImportController.class);
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 

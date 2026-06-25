@@ -5,10 +5,8 @@
 
 package org.citydb.cli.exporter.util;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.core.tuple.SimplePair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Namespaces;
@@ -27,6 +25,8 @@ import org.citydb.util.tiling.TileMatrix;
 import org.citydb.util.tiling.Tiling;
 import org.citydb.util.tiling.TilingException;
 import org.citydb.util.tiling.options.MatrixScheme;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class TilingHelper {
                     Coordinate.of(Double.MAX_VALUE, Double.MAX_VALUE)))
             .setScheme(MatrixScheme.of(1, 1));
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(TilingHelper.class);
+    private final Logger logger = LoggerFactory.getLogger(TilingHelper.class);
     private final Tiling tiling;
     private final Query query;
     private final CommandHelper helper;

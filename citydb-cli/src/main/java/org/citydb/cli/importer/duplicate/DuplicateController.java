@@ -5,18 +5,18 @@
 
 package org.citydb.cli.importer.duplicate;
 
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.importer.ImportOptions;
 import org.citydb.cli.importer.filter.Filter;
 import org.citydb.cli.importer.options.ImportMode;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.model.feature.Feature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Deque;
@@ -27,7 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DuplicateController implements AutoCloseable {
-    private final Logger logger = LoggerManager.getInstance().getLogger(DuplicateController.class);
+    private final Logger logger = LoggerFactory.getLogger(DuplicateController.class);
     private final ImportOptions options;
     private final DatabaseAdapter adapter;
     private final boolean preview;

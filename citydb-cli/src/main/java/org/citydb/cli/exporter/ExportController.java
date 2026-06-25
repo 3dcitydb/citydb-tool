@@ -5,8 +5,6 @@
 
 package org.citydb.cli.exporter;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
@@ -16,7 +14,6 @@ import org.citydb.cli.exporter.options.QueryOptions;
 import org.citydb.cli.exporter.options.TilingOptions;
 import org.citydb.cli.exporter.util.SequentialWriter;
 import org.citydb.cli.exporter.util.TilingHelper;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
@@ -42,6 +39,9 @@ import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileIterator;
 import org.citydb.util.tiling.Tiling;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -89,7 +89,7 @@ public abstract class ExportController implements Command {
     protected CommandHelper helper;
 
     protected static final int ARG_GROUP_ORDER = 1;
-    protected final Logger logger = LoggerManager.getInstance().getLogger(ExportController.class);
+    protected final Logger logger = LoggerFactory.getLogger(ExportController.class);
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -175,7 +175,7 @@ public abstract class ExportController implements Command {
                             ioManager.getFileFormat(ioAdapter), outputFile.getFile());
 
                     logger.debug("Querying features matching the request...");
-                    logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
+                    logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(),
                             databaseManager.getAdapter()));
 
                     long sequenceId = 1;
@@ -429,10 +429,10 @@ public abstract class ExportController implements Command {
 
     private void logStatistics(FeatureStatistics statistics, String title, Level level) {
         if (!statistics.isEmpty()) {
-            logger.log(level, title);
+            logger.atLevel(level).log(title);
             statistics.logFeatureSummary(level);
         } else {
-            logger.log(level, "No features exported.");
+            logger.atLevel(level).log("No features exported.");
         }
     }
 

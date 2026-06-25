@@ -7,16 +7,16 @@ package org.citydb.cli.index.status;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.index.IndexController;
 import org.citydb.cli.index.IndexStatusBuilder;
 import org.citydb.cli.index.options.OutputOptions;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
@@ -31,7 +31,7 @@ public class IndexStatusCommand extends IndexController {
     @CommandLine.Mixin
     private OutputOptions outputOptions;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(IndexStatusCommand.class);
+    private final Logger logger = LoggerFactory.getLogger(IndexStatusCommand.class);
 
     @Override
     public Integer call() throws ExecutionException {

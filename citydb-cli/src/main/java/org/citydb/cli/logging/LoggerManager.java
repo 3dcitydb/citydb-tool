@@ -5,13 +5,16 @@
 
 package org.citydb.cli.logging;
 
-import org.apache.logging.log4j.*;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.apache.logging.log4j.core.config.builder.api.*;
 import org.apache.logging.log4j.core.config.builder.impl.BuiltConfiguration;
 import org.citydb.cli.CliConstants;
+import org.citydb.cli.util.LoggerHelper;
 import org.citydb.core.concurrent.LazyInitializer;
+import org.slf4j.Marker;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -22,10 +25,9 @@ import java.util.Objects;
 import java.util.Properties;
 
 public class LoggerManager {
-    public static final String DEFAULT_LOG_PATTERN = "[%d{HH:mm:ss} %p] %m%n";
+    public static final String DEFAULT_LOG_PATTERN = "[%d{HH:mm:ss} %p]%notEmpty{ [%marker]} %m%n";
     public static final String DEFAULT_LOG_FILE = "citydb.log";
     public static final String DEFAULT_ROLLING_FILE_SUFFIX = "-%d{yyyy-MM-dd}";
-    public static final Marker PLAIN_MARKER = MarkerManager.getMarker("PLAIN");
 
     private static final String CONSOLE_APPENDER_NAME = "LOG_CONSOLE";
     private static final String FILE_APPENDER_NAME = "LOG_FILE";
@@ -46,7 +48,7 @@ public class LoggerManager {
         logConsole = new LogConsole(this).setEnabled(true);
         logFile = new LogFile(this).setEnabled(false);
         logLevels = LazyInitializer.of(this::loadLogLevels);
-        withLogPattern(LoggerManager.PLAIN_MARKER, "%m%n");
+        withLogPattern(LoggerHelper.PLAIN_LOG, "%m%n");
     }
 
     public static LoggerManager getInstance() {
@@ -61,7 +63,7 @@ public class LoggerManager {
     }
 
     public LoggerManager withLevel(Class<?> type, Level level) {
-        return withLevel(getLogger(type).getName(), level);
+        return withLevel(LogManager.getLogger(type).getName(), level);
     }
 
     public LoggerManager withLevel(String name, Level level) {
@@ -69,18 +71,6 @@ public class LoggerManager {
         Objects.requireNonNull(level, "The log level must not be null.");
         logLevels.get().put(name, level);
         return this;
-    }
-
-    public Logger getLogger() {
-        return LogManager.getLogger();
-    }
-
-    public Logger getLogger(Class<?> type) {
-        return LogManager.getLogger(type);
-    }
-
-    public Logger getLogger(String name) {
-        return LogManager.getLogger(name);
     }
 
     public LogConsole logConsole() {

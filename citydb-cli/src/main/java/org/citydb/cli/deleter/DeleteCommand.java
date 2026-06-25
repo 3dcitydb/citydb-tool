@@ -5,14 +5,11 @@
 
 package org.citydb.cli.deleter;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
 import org.citydb.cli.deleter.options.MetadataOptions;
 import org.citydb.cli.deleter.options.QueryOptions;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.operation.deleter.Deleter;
@@ -22,6 +19,9 @@ import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
 import org.citydb.query.filter.encoding.FilterParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.nio.file.Path;
@@ -78,7 +78,7 @@ public class DeleteCommand implements Command {
     @Inject
     private CommandHelper helper;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(DeleteCommand.class);
+    private final Logger logger = LoggerFactory.getLogger(DeleteCommand.class);
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
 
@@ -127,7 +127,7 @@ public class DeleteCommand implements Command {
 
         try {
             logger.debug("Querying features matching the request...");
-            logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
+            logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(),
                     databaseManager.getAdapter()));
 
             try (QueryResult result = executor.executeQuery()) {

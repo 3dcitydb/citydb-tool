@@ -7,15 +7,12 @@ package org.citydb.cli.info;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.ThreadsOptions;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.config.ConfigException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.util.IndexHelper;
@@ -23,6 +20,9 @@ import org.citydb.util.report.DatabaseReport;
 import org.citydb.util.report.DatabaseReportException;
 import org.citydb.util.report.ReportOptions;
 import org.citydb.util.report.options.FeatureScope;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.io.OutputStream;
@@ -66,7 +66,7 @@ public class InfoCommand implements Command {
     @Inject
     private CommandHelper helper;
 
-    private final Logger logger = LoggerManager.getInstance().getLogger(InfoCommand.class);
+    private final Logger logger = LoggerFactory.getLogger(InfoCommand.class);
 
     @Override
     public Integer call() throws ExecutionException {
