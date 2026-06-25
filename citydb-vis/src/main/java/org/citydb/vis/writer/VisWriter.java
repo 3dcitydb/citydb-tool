@@ -220,6 +220,15 @@ public abstract class VisWriter implements FeatureWriter {
         return formatOptions;
     }
 
+    /**
+     * Resolved worker thread count, reflecting the user's {@code --threads}
+     * option (or the all-cores default, floored at 2). Subclasses use this to
+     * size their own fan-out so it stays within the same thread budget.
+     */
+    protected int numberOfThreads() {
+        return cpuCores;
+    }
+
     // ---- Format-specific hook -----------------------------------------------
 
     /**
@@ -432,7 +441,7 @@ public abstract class VisWriter implements FeatureWriter {
             }
 
             PipelineContext ctx = new PipelineContext(
-                    stores, formatOptions, attributeEncoder, totalFeatures);
+                    stores, formatOptions, attributeEncoder, totalFeatures, cpuCores);
 
             new ExportPipeline(
                     new ExtentComputationStage(),
