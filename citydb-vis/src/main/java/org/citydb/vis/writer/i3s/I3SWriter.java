@@ -162,7 +162,7 @@ public class I3SWriter extends VisWriter {
         SlpkPackager.pack(outputDir, slpkFile);
 
         logger.info("Removing intermediate folder: {}", outputDir);
-        FileHelper.deleteDirectoryTree(outputDir);
+        FileHelper.deleteDirectoryTree(outputDir, numberOfThreads());
     }
 
     private static void setLodThresholds(List<SceneNode> nodes, int lodThreshold) {

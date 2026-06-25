@@ -15,6 +15,8 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Shared file path utilities for visualization format writers.
@@ -60,8 +62,13 @@ public class FileHelper {
      * Recursively delete a directory tree. Files are removed in parallel;
      * directories afterwards in reverse (depth-first) order.
      * Silently ignores individual delete failures (best-effort cleanup).
+     * <p>
+     * {@code parallelism} bounds the file-deletion fan-out. It is sourced from
+     * the resolved {@code --threads} count so cleanup honors the same thread
+     * budget as the rest of the export rather than saturating the JVM common
+     * pool. Values {@code <= 1} delete serially (no pool is created).
      */
-    public static void deleteDirectoryTree(Path root) {
+    public static void deleteDirectoryTree(Path root, int parallelism) {
         if (!Files.isDirectory(root)) {
             return;
         }
@@ -86,13 +93,7 @@ public class FileHelper {
             return;
         }
 
-        files.parallelStream().forEach(file -> {
-            try {
-                Files.delete(file);
-            } catch (IOException ignored) {
-                //
-            }
-        });
+        deleteFiles(files, parallelism);
 
         for (Path dir : dirs) {
             try {
@@ -100,6 +101,43 @@ public class FileHelper {
             } catch (IOException ignored) {
                 //
             }
+        }
+    }
+
+    /**
+     * Best-effort delete of {@code files}, fanned out across at most
+     * {@code parallelism} threads. Runs the parallel stream inside a dedicated
+     * {@link ForkJoinPool} so the fan-out is bounded by {@code --threads}
+     * instead of the JVM-wide common pool (sized to all cores). Falls back to
+     * a serial loop when {@code parallelism <= 1}.
+     */
+    private static void deleteFiles(List<Path> files, int parallelism) {
+        if (parallelism <= 1 || files.size() <= 1) {
+            for (Path file : files) {
+                deleteQuietly(file);
+            }
+            return;
+        }
+
+        ForkJoinPool pool = new ForkJoinPool(parallelism);
+        try {
+            pool.submit(() -> files.parallelStream().forEach(FileHelper::deleteQuietly)).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            // Best-effort cleanup: finish serially on the calling thread.
+            files.forEach(FileHelper::deleteQuietly);
+        } catch (ExecutionException ignored) {
+            //
+        } finally {
+            pool.shutdown();
+        }
+    }
+
+    private static void deleteQuietly(Path file) {
+        try {
+            Files.delete(file);
+        } catch (IOException ignored) {
+            //
         }
     }
 }
