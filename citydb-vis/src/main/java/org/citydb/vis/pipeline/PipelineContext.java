@@ -26,6 +26,9 @@ import java.util.Set;
  *   <li>{@link #formatOptions()} — format-specific tuning parameters</li>
  *   <li>{@link #attributeEncoder()} — incremental attribute type tracker</li>
  *   <li>{@link #totalFeatures()} — total feature count (from spatial store)</li>
+ *   <li>{@link #numberOfThreads()} — resolved worker thread count (honors the
+ *       user's {@code --threads}), used by stages that fan out their own
+ *       thread pools so they don't silently run at full core count</li>
  * </ul>
  * Outputs (populated once during pipeline execution via setters):
  * <ul>
@@ -49,6 +52,7 @@ public final class PipelineContext {
     private final VisFormatOptions formatOptions;
     private final AttributeEncoder attributeEncoder;
     private final long totalFeatures;
+    private final int numberOfThreads;
 
     private double[] extent;
     private List<AttrField> attrFields;
@@ -62,11 +66,13 @@ public final class PipelineContext {
     public PipelineContext(VisExportStores stores,
                            VisFormatOptions formatOptions,
                            AttributeEncoder attributeEncoder,
-                           long totalFeatures) {
+                           long totalFeatures,
+                           int numberOfThreads) {
         this.stores = stores;
         this.formatOptions = formatOptions;
         this.attributeEncoder = attributeEncoder;
         this.totalFeatures = totalFeatures;
+        this.numberOfThreads = numberOfThreads;
     }
 
     // ---- Inputs (read-only) -------------------------------------------------
@@ -85,6 +91,18 @@ public final class PipelineContext {
 
     public long totalFeatures() {
         return totalFeatures;
+    }
+
+    /**
+     * Resolved worker thread count, already reflecting the user's
+     * {@code --threads} option (or the all-cores default with a floor of 2).
+     * Stages that spin up their own thread pools must size them from this
+     * rather than {@code Runtime.availableProcessors()} so {@code --threads}
+     * actually bounds their parallelism — and, with it, peak heap from
+     * concurrently held meshes/atlases.
+     */
+    public int numberOfThreads() {
+        return numberOfThreads;
     }
 
     // ---- Outputs (write-once) -----------------------------------------------
