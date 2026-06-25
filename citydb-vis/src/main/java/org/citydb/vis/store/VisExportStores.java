@@ -31,6 +31,7 @@ import java.util.BitSet;
 public class VisExportStores implements AutoCloseable {
     private final Logger logger = LoggerFactory.getLogger(VisExportStores.class);
     private final Path tempDir;
+    private final int cpuCores;
     private final SpatialEntryStore spatialEntryStore;
     private final ShardedMeshStore meshStore;
     private final AttributeStore attrStore;
@@ -56,6 +57,7 @@ public class VisExportStores implements AutoCloseable {
     public VisExportStores(int cpuCores, Path tempDir) throws IOException {
         Files.createDirectories(tempDir);
         this.tempDir = tempDir;
+        this.cpuCores = cpuCores;
         this.spatialEntryStore = new SpatialEntryStore(cpuCores, tempDir);
         this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
         this.attrStore = new AttributeStore(tempDir);
@@ -112,7 +114,7 @@ public class VisExportStores implements AutoCloseable {
         closeQuietly("mesh store", meshStore);
         closeQuietly("attribute store", attrStore);
         textureStore.close();
-        FileHelper.deleteDirectoryTree(tempDir);
+        FileHelper.deleteDirectoryTree(tempDir, cpuCores);
     }
 
     private void closeQuietly(String name, AutoCloseable closeable) {
