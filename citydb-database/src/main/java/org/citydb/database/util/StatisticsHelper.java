@@ -25,6 +25,7 @@ import org.citydb.sqlbuilder.operation.Case;
 import org.citydb.sqlbuilder.operation.Exists;
 import org.citydb.sqlbuilder.operation.Operators;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.query.Selection;
 import org.citydb.sqlbuilder.schema.Column;
 import org.citydb.sqlbuilder.schema.Table;
 
@@ -50,7 +51,7 @@ public abstract class StatisticsHelper {
 
     public abstract DatabaseSize getDatabaseSize(Connection connection) throws DatabaseException, SQLException;
 
-    protected abstract Column getGeometryType(Table geometryData);
+    protected abstract Selection<?> getGeometryType(Table geometryData);
 
     public record FeatureInfo(long count, Envelope extent) {
     }
@@ -150,7 +151,7 @@ public abstract class StatisticsHelper {
 
     public Map<GeometryType, Long> getGeometryCount(FeatureScope scope, Connection connection) throws SQLException {
         Table geometryData = Table.of(org.citydb.database.schema.Table.GEOMETRY_DATA.getName(), getSchema());
-        Column type = getGeometryType(geometryData);
+        Selection<?> type = getGeometryType(geometryData);
 
         Select select = Select.newInstance()
                 .select(type, Function.of("count", geometryData.column("id")))
