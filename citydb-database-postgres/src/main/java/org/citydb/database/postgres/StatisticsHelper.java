@@ -10,9 +10,9 @@ import org.citydb.database.metadata.DatabaseSize;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.StringLiteral;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.query.Selection;
 import org.citydb.sqlbuilder.query.SetOperator;
 import org.citydb.sqlbuilder.query.Sets;
-import org.citydb.sqlbuilder.schema.Column;
 import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.sqlbuilder.util.PlainSql;
 
@@ -65,7 +65,7 @@ public class StatisticsHelper extends org.citydb.database.util.StatisticsHelper 
     }
 
     @Override
-    protected Column getGeometryType(Table geometryData) {
+    protected Selection<?> getGeometryType(Table geometryData) {
         return geometryData.column("geometry_properties->>'type'");
     }
 }
