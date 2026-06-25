@@ -141,7 +141,11 @@ public final class AtlasOverflowSplitStage implements Stage {
         // Parallel worker pass: each cell-root subtree is processed end-to-end
         // by one worker. Workers only mutate their own cell-root subtree and
         // local plan; they read shared stores via thread-safe positional reads.
-        int parallelism = Math.max(2, Runtime.getRuntime().availableProcessors());
+        // Size the pool from the resolved --threads count (already floored at 2
+        // by the writer): each worker holds a cell-tree's merged meshes and
+        // per-feature mesh cache resident, so honoring --threads here is what
+        // actually bounds this stage's peak heap.
+        int parallelism = Math.max(2, ctx.numberOfThreads());
         ForkJoinPool pool = new ForkJoinPool(parallelism);
         List<CellTreePlan> plans;
         try {
