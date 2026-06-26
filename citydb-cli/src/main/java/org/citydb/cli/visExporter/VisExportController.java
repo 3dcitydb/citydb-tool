@@ -5,12 +5,9 @@
 
 package org.citydb.cli.visExporter;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.Logger;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
-import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.cli.visExporter.options.QueryOptions;
 import org.citydb.cli.visExporter.options.SceneOptions;
@@ -41,6 +38,9 @@ import org.citydb.vis.VisExportException;
 import org.citydb.vis.config.ClampMode;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.geometry.ImplicitReferencePointReprojector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -87,7 +87,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
     @Inject
     private CommandHelper helper;
 
-    protected final Logger logger = LoggerManager.getInstance().getLogger(VisExportController.class);
+    protected final Logger logger = LoggerFactory.getLogger(VisExportController.class);
 
     private final Object lock = new Object();
     private volatile boolean shouldRun = true;
@@ -354,7 +354,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                     databaseManager.getAdapter());
 
             logger.debug("Querying features matching the request...");
-            logger.trace("Using SQL query:\n{}", () -> helper.getFormattedSql(executor.getSelect(),
+            logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(),
                     databaseManager.getAdapter()));
 
             long sequenceId = 1;
