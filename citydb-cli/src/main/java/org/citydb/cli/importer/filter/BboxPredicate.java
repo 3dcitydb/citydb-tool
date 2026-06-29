@@ -72,7 +72,7 @@ public class BboxPredicate implements FilterPredicate {
                             new FilterException("Failed to transform the bounding box filter to the feature SRS.", e));
                 }
             });
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             throw UncheckedException.unwrap(e, FilterException.class);
         }
     }

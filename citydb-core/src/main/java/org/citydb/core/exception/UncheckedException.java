@@ -29,13 +29,12 @@ public class UncheckedException extends RuntimeException {
         }
 
         return new UncheckedException(t);
-
     }
 
-    public static <T extends Throwable> T unwrap(Throwable t, Class<T> type) throws T {
+    public static <A extends Throwable> RuntimeException unwrap(Throwable t, Class<A> a) throws A {
         for (Throwable e = t; e != null; e = e.getCause()) {
-            if (type.isInstance(e)) {
-                throw type.cast(e);
+            if (a.isInstance(e)) {
+                throw a.cast(e);
             }
         }
 
@@ -43,6 +42,40 @@ public class UncheckedException extends RuntimeException {
             throw e;
         }
 
-        throw new RuntimeException(t);
+        throw new UncheckedException(t);
+    }
+
+    public static <A extends Throwable, B extends Throwable> RuntimeException unwrap(Throwable t, Class<A> a, Class<B> b) throws A, B {
+        for (Throwable e = t; e != null; e = e.getCause()) {
+            if (a.isInstance(e)) {
+                throw a.cast(e);
+            } else if (b.isInstance(e)) {
+                throw b.cast(e);
+            }
+        }
+
+        if (t instanceof RuntimeException e) {
+            throw e;
+        }
+
+        throw new UncheckedException(t);
+    }
+
+    public static <A extends Throwable, B extends Throwable, C extends Throwable> RuntimeException unwrap(Throwable t, Class<A> a, Class<B> b, Class<C> c) throws A, B, C {
+        for (Throwable e = t; e != null; e = e.getCause()) {
+            if (a.isInstance(e)) {
+                throw a.cast(e);
+            } else if (b.isInstance(e)) {
+                throw b.cast(e);
+            } else if (c.isInstance(e)) {
+                throw c.cast(e);
+            }
+        }
+
+        if (t instanceof RuntimeException e) {
+            throw e;
+        }
+
+        throw new UncheckedException(t);
     }
 }

@@ -34,6 +34,7 @@ public abstract class SrsHelper {
 
     protected final DatabaseAdapter adapter;
     private final Map<String, Integer> identifiers = new ConcurrentHashMap<>();
+    private final Map<String, SpatialReference> spatialReferences = new ConcurrentHashMap<>();
 
     protected SrsHelper(DatabaseAdapter adapter) {
         this.adapter = adapter;
@@ -58,19 +59,24 @@ public abstract class SrsHelper {
         if (srid == databaseSrs.getSRID()) {
             return databaseSrs.getIdentifier().equals(identifier)
                     ? databaseSrs
-                    : SpatialReference.of(srid,
-                    databaseSrs.getType(),
-                    databaseSrs.getName(),
-                    identifier,
+                    : SpatialReference.of(srid, databaseSrs.getType(), databaseSrs.getName(), identifier,
                     databaseSrs.getWKT());
         } else {
-            try (Connection connection = adapter.getPool().getConnection()) {
-                SpatialReference srs = getSpatialReference(srid, identifier, connection);
-                if (srs == null) {
-                    throw new SrsException("The SRID " + srid + " is not supported by the database.");
-                }
+            try {
+                return spatialReferences.computeIfAbsent(srid + "/" + identifier, k -> {
+                    try (Connection connection = adapter.getPool().getConnection()) {
+                        SpatialReference srs = getSpatialReference(srid, identifier, connection);
+                        if (srs == null) {
+                            throw new SrsException("The SRID " + srid + " is not supported by the database.");
+                        }
 
-                return srs;
+                        return srs;
+                    } catch (Exception e) {
+                        throw UncheckedException.wrap(e);
+                    }
+                });
+            } catch (Exception e) {
+                throw UncheckedException.unwrap(e, SrsException.class, SQLException.class);
             }
         }
     }
