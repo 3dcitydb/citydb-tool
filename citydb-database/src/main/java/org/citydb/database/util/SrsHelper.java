@@ -56,28 +56,31 @@ public abstract class SrsHelper {
 
     public SpatialReference getSpatialReference(int srid, String identifier) throws SrsException, SQLException {
         SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
-        if (srid == databaseSrs.getSRID()) {
-            return databaseSrs.getIdentifier().equals(identifier)
-                    ? databaseSrs
-                    : SpatialReference.of(srid, databaseSrs.getType(), databaseSrs.getName(), identifier,
-                    databaseSrs.getWKT());
-        } else {
-            try {
-                return spatialReferences.computeIfAbsent(srid + "/" + identifier, k -> {
-                    try (Connection connection = adapter.getPool().getConnection()) {
-                        SpatialReference srs = getSpatialReference(srid, identifier, connection);
-                        if (srs == null) {
-                            throw new SrsException("The SRID " + srid + " is not supported by the database.");
-                        }
+        String key = srid + "/" + identifier;
 
-                        return srs;
-                    } catch (Exception e) {
-                        throw UncheckedException.wrap(e);
-                    }
-                });
-            } catch (Exception e) {
-                throw UncheckedException.unwrap(e, SrsException.class, SQLException.class);
+        if (srid == databaseSrs.getSRID()) {
+            if (databaseSrs.getIdentifier().equals(identifier)) {
+                return databaseSrs;
             }
+
+            return spatialReferences.computeIfAbsent(key, k -> SpatialReference.of(
+                    srid,
+                    databaseSrs.getType(),
+                    databaseSrs.getName(),
+                    identifier,
+                    databaseSrs.getWKT()));
+        }
+
+        try {
+            return spatialReferences.computeIfAbsent(key, k -> {
+                try {
+                    return loadSpatialReference(srid, identifier);
+                } catch (Exception e) {
+                    throw UncheckedException.wrap(e);
+                }
+            });
+        } catch (Exception e) {
+            throw UncheckedException.unwrap(e, SrsException.class, SQLException.class);
         }
     }
 
@@ -92,6 +95,17 @@ public abstract class SrsHelper {
         }
 
         return Optional.empty();
+    }
+
+    private SpatialReference loadSpatialReference(int srid, String identifier) throws SrsException, SQLException {
+        try (Connection connection = adapter.getPool().getConnection()) {
+            SpatialReference srs = getSpatialReference(srid, identifier, connection);
+            if (srs == null) {
+                throw new SrsException("The SRID " + srid + " is not supported by the database.");
+            }
+
+            return srs;
+        }
     }
 
     public Optional<SpatialReference> getSpatialReference(org.citydb.model.geometry.SrsReference reference) throws SrsException, SQLException {
