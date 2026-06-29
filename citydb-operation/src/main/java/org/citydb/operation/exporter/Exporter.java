@@ -48,7 +48,7 @@ public class Exporter {
         return shouldRun;
     }
 
-    public Exporter startSession(DatabaseAdapter adapter, ExportOptions options) throws ExportException {
+    public Exporter startSession(DatabaseAdapter adapter, ExportOptions options) {
         if (state == State.SESSION_STARTED) {
             return this;
         }
@@ -56,30 +56,26 @@ public class Exporter {
         Objects.requireNonNull(adapter, "The database adapter must not be null.");
         Objects.requireNonNull(options, "The export options must not be null.");
 
-        try {
-            helpers = ConcurrentHashMap.newKeySet();
-            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
-                    ? options.getNumberOfThreads()
-                    : Math.max(2, Runtime.getRuntime().availableProcessors()), 1000);
+        helpers = ConcurrentHashMap.newKeySet();
+        service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+                ? options.getNumberOfThreads()
+                : Math.max(2, Runtime.getRuntime().availableProcessors()), 1000);
 
-            countLatch = new CountLatch();
-            contexts = ThreadLocal.withInitial(() -> {
-                try {
-                    ExportHelper helper = new ExportHelper(adapter, options);
-                    helpers.add(helper);
-                    return helper;
-                } catch (Exception e) {
-                    shouldRun = false;
-                    throw new RuntimeException(e);
-                }
-            });
+        countLatch = new CountLatch();
+        contexts = ThreadLocal.withInitial(() -> {
+            try {
+                ExportHelper helper = new ExportHelper(adapter, options);
+                helpers.add(helper);
+                return helper;
+            } catch (Exception e) {
+                shouldRun = false;
+                throw new RuntimeException("Failed to start export session.", e);
+            }
+        });
 
-            state = State.SESSION_STARTED;
-            shouldRun = true;
-            return this;
-        } catch (Exception e) {
-            throw new ExportException("Failed to start export session.", e);
-        }
+        state = State.SESSION_STARTED;
+        shouldRun = true;
+        return this;
     }
 
     public CompletableFuture<Feature> exportFeature(long id) {

@@ -102,32 +102,28 @@ public class Importer {
             throw new ImportException("Failed to initialize local cache.", e);
         }
 
-        try {
-            referenceManager = ReferenceManager.newInstance(adapter, store, options);
-            helpers = ConcurrentHashMap.newKeySet();
-            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
-                    ? options.getNumberOfThreads()
-                    : Math.max(2, Runtime.getRuntime().availableProcessors()));
+        referenceManager = ReferenceManager.newInstance(adapter, store, options);
+        helpers = ConcurrentHashMap.newKeySet();
+        service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+                ? options.getNumberOfThreads()
+                : Math.max(2, Runtime.getRuntime().availableProcessors()));
 
-            countLatch = new CountLatch();
-            contexts = ThreadLocal.withInitial(() -> {
-                try {
-                    ImportHelper helper = new ImportHelper(adapter, options, referenceManager, store,
-                            importLogger, transactionMode);
-                    helpers.add(helper);
-                    return helper;
-                } catch (Exception e) {
-                    shouldRun = false;
-                    throw new RuntimeException(e);
-                }
-            });
+        countLatch = new CountLatch();
+        contexts = ThreadLocal.withInitial(() -> {
+            try {
+                ImportHelper helper = new ImportHelper(adapter, options, referenceManager, store,
+                        importLogger, transactionMode);
+                helpers.add(helper);
+                return helper;
+            } catch (Exception e) {
+                shouldRun = false;
+                throw new RuntimeException("Failed to start import session.", e);
+            }
+        });
 
-            state = State.SESSION_STARTED;
-            shouldRun = true;
-            return this;
-        } catch (Exception e) {
-            throw new ImportException("Failed to start import session.", e);
-        }
+        state = State.SESSION_STARTED;
+        shouldRun = true;
+        return this;
     }
 
     public CompletableFuture<FeatureDescriptor> importFeature(Feature feature) {

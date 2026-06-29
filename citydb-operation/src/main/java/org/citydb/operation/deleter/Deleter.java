@@ -88,29 +88,30 @@ public class Deleter {
 
         try {
             connection = adapter.getPool().getConnection(false);
-            helpers = ConcurrentHashMap.newKeySet();
-            service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
-                    ? options.getNumberOfThreads()
-                    : 1);
-
-            countLatch = new CountLatch();
-            contexts = ThreadLocal.withInitial(() -> {
-                try {
-                    DeleteHelper helper = new DeleteHelper(adapter, connection, options, logger, transactionMode);
-                    helpers.add(helper);
-                    return helper;
-                } catch (Exception e) {
-                    shouldRun = false;
-                    throw new RuntimeException(e);
-                }
-            });
-
-            state = State.SESSION_STARTED;
-            shouldRun = true;
-            return this;
-        } catch (Exception e) {
-            throw new DeleteException("Failed to start delete session.", e);
+        } catch (SQLException e) {
+            throw new DeleteException("Failed to connect to the database.", e);
         }
+
+        helpers = ConcurrentHashMap.newKeySet();
+        service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+                ? options.getNumberOfThreads()
+                : 1);
+
+        countLatch = new CountLatch();
+        contexts = ThreadLocal.withInitial(() -> {
+            try {
+                DeleteHelper helper = new DeleteHelper(adapter, connection, options, logger, transactionMode);
+                helpers.add(helper);
+                return helper;
+            } catch (Exception e) {
+                shouldRun = false;
+                throw new RuntimeException("Failed to start delete session.", e);
+            }
+        });
+
+        state = State.SESSION_STARTED;
+        shouldRun = true;
+        return this;
     }
 
     public CompletableFuture<Boolean> deleteFeature(long id) {

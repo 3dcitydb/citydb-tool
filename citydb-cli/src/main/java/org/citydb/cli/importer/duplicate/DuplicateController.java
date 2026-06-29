@@ -106,7 +106,7 @@ public class DuplicateController implements AutoCloseable {
                 finders.add(finder);
                 return finder;
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Failed to create duplicate finder.", e);
             }
         });
 
