@@ -46,6 +46,14 @@ public class CityGMLWriterFactory {
                 writer.setTransformer(getTransformer(formatOptions.getXslTransforms()));
             }
 
+            if (formatOptions.hasPrefixes()) {
+                formatOptions.getPrefixes().forEach(writer::setPrefix);
+            }
+
+            if (formatOptions.hasSchemaLocations()) {
+                formatOptions.getSchemaLocations().forEach(writer::setSchemaLocation);
+            }
+
             writer.writeHeader();
             return writer;
         } catch (Exception e) {

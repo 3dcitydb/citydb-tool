@@ -14,7 +14,9 @@ import org.citygml4j.core.model.CityGMLVersion;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements OutputFormatOptions {
@@ -27,6 +29,8 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private AddressMode addressMode = AddressMode.COLUMNS_FIRST;
     private List<String> xslTransforms;
+    private Map<String, String> prefixes;
+    private Map<String, String> schemaLocations;
 
     public CityGMLVersion getVersion() {
         return version != null ? version : CityGMLVersion.v3_0;
@@ -106,6 +110,56 @@ public class CityGMLFormatOptions implements OutputFormatOptions {
     public CityGMLFormatOptions addXslTransform(String xslTransform) {
         if (xslTransform != null) {
             getXslTransforms().add(xslTransform);
+        }
+
+        return this;
+    }
+
+    public boolean hasPrefixes() {
+        return prefixes != null && !prefixes.isEmpty();
+    }
+
+    public Map<String, String> getPrefixes() {
+        if (prefixes == null) {
+            prefixes = new HashMap<>();
+        }
+
+        return prefixes;
+    }
+
+    public CityGMLFormatOptions setPrefixes(Map<String, String> prefixes) {
+        this.prefixes = prefixes;
+        return this;
+    }
+
+    public CityGMLFormatOptions setPrefix(String namespace, String prefix) {
+        if (namespace != null && prefix != null) {
+            getPrefixes().put(namespace, prefix);
+        }
+
+        return this;
+    }
+
+    public boolean hasSchemaLocations() {
+        return schemaLocations != null && !schemaLocations.isEmpty();
+    }
+
+    public Map<String, String> getSchemaLocations() {
+        if (schemaLocations == null) {
+            schemaLocations = new HashMap<>();
+        }
+
+        return schemaLocations;
+    }
+
+    public CityGMLFormatOptions setSchemaLocations(Map<String, String> schemaLocations) {
+        this.schemaLocations = schemaLocations;
+        return this;
+    }
+
+    public CityGMLFormatOptions setSchemaLocation(String namespace, String schemaLocation) {
+        if (namespace != null && schemaLocation != null) {
+            getSchemaLocations().put(namespace, schemaLocation);
         }
 
         return this;
