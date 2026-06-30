@@ -59,7 +59,7 @@ public abstract class SrsHelper {
         String key = srid + "/" + identifier;
 
         if (srid == databaseSrs.getSRID()) {
-            if (databaseSrs.getIdentifier().equals(identifier)) {
+            if (identifier == null || databaseSrs.getIdentifier().equals(identifier)) {
                 return databaseSrs;
             }
 
