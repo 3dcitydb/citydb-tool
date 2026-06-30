@@ -7,7 +7,6 @@ package org.citydb.cli.exporter.util;
 
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
-import org.citydb.core.tuple.SimplePair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Coordinate;
@@ -29,8 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.IllegalFormatException;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -52,9 +50,8 @@ public class TilingHelper {
     private TileMatrix tileMatrix;
     private Envelope queryExtent;
 
-    private final Pattern tokenPattern = Pattern.compile("@(?:column|row|x_min|y_min|x_max|y_max)(?:,.+?)?@",
+    private static final Pattern tokenPattern = Pattern.compile("@(?:column|row|x_min|y_min|x_max|y_max)(?:,.+?)?@",
             Pattern.CASE_INSENSITIVE);
-    private final Matcher matcher = Pattern.compile("").matcher("");
 
     private TilingHelper(Tiling tiling, Query query, CommandHelper helper, DatabaseAdapter adapter) {
         this.tiling = tiling;
@@ -93,7 +90,7 @@ public class TilingHelper {
                         .computeExtent();
                 tiling.setExtent(queryExtent);
             } catch (Exception e) {
-                throw new ExecutionException("Failed to compute the extent.", e);
+                throw new ExecutionException("Failed to compute the tiling extent.", e);
             }
         }
 
@@ -117,45 +114,57 @@ public class TilingHelper {
         }
     }
 
-    public Path getOutputFile(Path outputFile, Tile tile) {
+    public Path resolveOutputFile(Path outputFile, Tile tile) throws ExecutionException {
         if (useTiling) {
-            String file = outputFile.toString();
-            List<SimplePair<String>> replacements = new ArrayList<>();
+            String original = outputFile.toString();
+            String resolved = replaceTokens(original, tile);
 
-            matcher.reset(file).usePattern(tokenPattern);
-            while (matcher.find()) {
-                replacements.add(replaceToken(matcher.group(0), tile));
+            if (resolved.equals(original)
+                    && (tileMatrix == null || tileMatrix.size() > 1)) {
+                resolved = getDefaultOutputFile(original, tile);
             }
 
-            if (!replacements.isEmpty()) {
-                for (SimplePair<String> replacement : replacements) {
-                    file = file.replaceFirst(replacement.first(), replacement.second());
-                }
-            } else if (tileMatrix == null || tileMatrix.size() > 1) {
-                file = getDefaultOutputFile(file, tile);
-            }
-
-            outputFile = Path.of(file);
+            outputFile = Path.of(resolved);
         }
 
         return helper.resolveAgainstWorkingDir(outputFile);
     }
 
-    private SimplePair<String> replaceToken(String token, Tile tile) {
-        String[] parts = token.substring(1, token.length() - 1).split(",");
-        String format = parts.length == 2 ? parts[1].trim() : "%s";
-        String replacement = String.format(Locale.ENGLISH, format,
-                switch (parts[0].toLowerCase(Locale.ROOT)) {
-                    case "column" -> tile.getColumn();
-                    case "row" -> tile.getRow();
-                    case "x_min" -> tile.getExtent().getLowerCorner().getX();
-                    case "y_min" -> tile.getExtent().getLowerCorner().getY();
-                    case "x_max" -> tile.getExtent().getUpperCorner().getX();
-                    case "y_max" -> tile.getExtent().getUpperCorner().getY();
-                    default -> parts[0];
-                });
+    public String resolveTokens(String input, Tile tile) throws ExecutionException {
+        return useTiling ? replaceTokens(input, tile) : input;
+    }
 
-        return SimplePair.of(token, replacement);
+    private String replaceTokens(String input, Tile tile) throws ExecutionException {
+        Matcher matcher = tokenPattern.matcher(input);
+        StringBuilder result = new StringBuilder();
+
+        while (matcher.find()) {
+            String replacement = replaceToken(matcher.group(0), tile);
+            matcher.appendReplacement(result, Matcher.quoteReplacement(replacement));
+        }
+
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private String replaceToken(String token, Tile tile) throws ExecutionException {
+        String[] parts = token.substring(1, token.length() - 1).split(",", 2);
+        String format = parts.length == 2 ? parts[1].trim() : "%s";
+        Object value = switch (parts[0].toLowerCase(Locale.ROOT)) {
+            case "column" -> tile.getColumn();
+            case "row" -> tile.getRow();
+            case "x_min" -> tile.getExtent().getLowerCorner().getX();
+            case "y_min" -> tile.getExtent().getLowerCorner().getY();
+            case "x_max" -> tile.getExtent().getUpperCorner().getX();
+            case "y_max" -> tile.getExtent().getUpperCorner().getY();
+            default -> throw new ExecutionException("Unsupported tile token " + token + ".");
+        };
+
+        try {
+            return String.format(Locale.ENGLISH, format, value);
+        } catch (IllegalFormatException e) {
+            throw new ExecutionException("Illegal format '" + format + "' for token " + token + ".", e);
+        }
     }
 
     private String getDefaultOutputFile(String file, Tile tile) {
