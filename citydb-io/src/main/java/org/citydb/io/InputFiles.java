@@ -199,13 +199,13 @@ public class InputFiles {
             PathMatcher matcher = fileSystem.getPathMatcher(pattern);
             Files.walkFileTree(fileSystem.getPath("/"), new SimpleFileVisitor<>() {
                 @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                public FileVisitResult visitFile(Path contentFile, BasicFileAttributes attrs) {
                     if (attrs.isRegularFile()
-                            && matcher.matches(file.toAbsolutePath().normalize())
-                            && (filter == null || filter.test(file))) {
-                        MediaType mediaType = getMediaType(file);
+                            && matcher.matches(contentFile.toAbsolutePath().normalize())
+                            && (filter == null || filter.test(contentFile))) {
+                        MediaType mediaType = getMediaType(contentFile);
                         if (isSupportedMediaType(mediaType)) {
-                            inputFiles.add(new ZipInputFile(file.toString(), file, uri, mediaType));
+                            inputFiles.add(new ZipInputFile(contentFile.toString(), file, uri, mediaType));
                         }
                     }
 
