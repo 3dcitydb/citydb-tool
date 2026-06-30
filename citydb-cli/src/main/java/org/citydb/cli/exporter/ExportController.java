@@ -161,7 +161,7 @@ public abstract class ExportController implements Command {
                         helper.resolveAgainstWorkingDir(tempDirectory),
                         databaseManager.getAdapter());
 
-                Path file = tilingHelper.resolveOutputFile(outputFileOptions.getFile(), tile);
+                Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
                 FeatureStatistics tileStatistics = new FeatureStatistics(databaseManager.getAdapter());
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
