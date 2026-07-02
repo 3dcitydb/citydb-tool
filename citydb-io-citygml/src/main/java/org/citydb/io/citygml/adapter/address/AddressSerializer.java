@@ -42,11 +42,11 @@ public class AddressSerializer {
             if (street != null) {
                 Thoroughfare thoroughfare = new Thoroughfare();
                 thoroughfare.setType("Street");
-                ThoroughfareName name = new ThoroughfareName(street);
+                ThoroughfareName name = new ThoroughfareName(street, ThoroughfareNameType.NAME_AND_TYPE);
                 thoroughfare.getNameElementOrNumber().add(new ThoroughfareNameOrNumber(name));
 
                 if (houseNumber != null) {
-                    Identifier identifier = new Identifier(houseNumber);
+                    Identifier identifier = new Identifier(houseNumber, IdentifierElementType.NUMBER);
                     thoroughfare.getNameElementOrNumber().add(new ThoroughfareNameOrNumber(identifier));
                 }
 
@@ -67,7 +67,7 @@ public class AddressSerializer {
 
             if (city != null) {
                 Locality locality = new Locality(LocalityType.TOWN);
-                locality.getNameElements().add(new LocalityName(city));
+                locality.getNameElements().add(new LocalityName(city, LocalityNameType.NAME));
                 address.setLocality(locality);
             }
 
@@ -79,7 +79,7 @@ public class AddressSerializer {
 
             if (country != null) {
                 Country countryType = new Country();
-                countryType.getNameElements().add(new CountryName(country));
+                countryType.getNameElements().add(new CountryName(country, CountryNameType.NAME));
                 address.setCountry(countryType);
             }
 
