@@ -79,7 +79,7 @@ public class MetadataHelper {
             throw new ExecutionException("Failed to compute the export extent.", e);
         }
 
-        if (extent == null && useTiling) {
+        if ((extent == null || extent.isEmpty()) && useTiling) {
             logger.debug("No export extent available. Falling back to tile extent.");
             extent = tile.getExtent();
         }
