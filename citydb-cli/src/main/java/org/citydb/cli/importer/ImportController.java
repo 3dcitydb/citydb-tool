@@ -20,7 +20,6 @@ import org.citydb.cli.util.FeatureStatistics;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.core.file.InputFile;
-import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -104,7 +103,7 @@ public abstract class ImportController implements Command {
 
     protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
 
-    protected void beforeImport(ImportOptions importOptions, ReadOptions readOptions, DatabaseAdapter adapter) throws ExecutionException {
+    protected void beforeImport(ImportOptions importOptions, ReadOptions readOptions, DatabaseAdapter databaseAdapter) throws ExecutionException {
     }
 
     protected void afterImport(boolean success, FeatureStatistics statistics) throws ExecutionException {
@@ -133,37 +132,37 @@ public abstract class ImportController implements Command {
             logger.info("Found {} file(s) at {}.", inputFiles.size(), inputFileOptions.joinFiles());
         }
 
-        DatabaseManager databaseManager = helper.connect(connectionOptions);
+        DatabaseAdapter databaseAdapter = helper.connect(connectionOptions);
         ImportOptions importOptions = getImportOptions();
         ReadOptions readOptions = getReadOptions();
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
 
         List<FeatureImportProcessor> featureProcessors = helper.getExtensions(FeatureImportProcessor.class);
-        beforeImport(importOptions, readOptions, featureProcessors, databaseManager.getAdapter());
+        beforeImport(importOptions, readOptions, featureProcessors, databaseAdapter);
 
-        Filter filter = getFilter(importOptions, databaseManager.getAdapter());
+        Filter filter = getFilter(importOptions, databaseAdapter);
         readOptions.setFilter(filter)
                 .setImplicitGeometryScope(filter == Filter.ACCEPT_ALL
                         ? ImplicitGeometryScope.GLOBAL
                         : ImplicitGeometryScope.TOP_LEVEL_FEATURE);
 
-        ImportLogger importLogger = new ImportLogger(preview, databaseManager.getAdapter());
+        ImportLogger importLogger = new ImportLogger(preview, databaseAdapter);
         ImportMode importMode = importOptions.getMode();
         IndexMode indexMode = importOptions.getIndexMode();
 
         if (indexMode != IndexMode.KEEP) {
             logger.info("Dropping database indexes...");
-            helper.dropIndexes(databaseManager.getAdapter());
+            helper.dropIndexes(databaseAdapter);
         }
 
-        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        helper.logIndexStatus(Level.INFO, databaseAdapter);
 
         if (preview) {
             logger.info("Import is running in preview mode. Features will not be imported.");
         }
 
-        try (DuplicateController duplicateController = DuplicateController.of(importOptions,
-                databaseManager.getAdapter(), preview)) {
+        try (DuplicateController duplicateController = DuplicateController.of(importOptions, databaseAdapter,
+                preview)) {
             Importer importer = Importer.newInstance()
                     .setTransactionMode(preview
                             ? Importer.TransactionMode.AUTO_ROLLBACK
@@ -187,7 +186,7 @@ public abstract class ImportController implements Command {
                         }
                     }
 
-                    importer.startSession(databaseManager.getAdapter(), optionsHelper.update(importOptions, inputFile));
+                    importer.startSession(databaseAdapter, optionsHelper.update(importOptions, inputFile));
 
                     reader.read(candidate -> {
                         Feature feature;
@@ -232,7 +231,7 @@ public abstract class ImportController implements Command {
 
             if (shouldRun && indexMode == IndexMode.DROP_CREATE) {
                 logger.info("Re-creating database indexes. This operation may take some time...");
-                helper.createIndexes(databaseManager.getAdapter());
+                helper.createIndexes(databaseAdapter);
             }
         } catch (Throwable e) {
             shouldRun = false;

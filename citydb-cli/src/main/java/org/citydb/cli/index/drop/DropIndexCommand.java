@@ -7,7 +7,7 @@ package org.citydb.cli.index.drop;
 
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.index.IndexController;
-import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
 import org.slf4j.Logger;
@@ -25,8 +25,8 @@ public class DropIndexCommand extends IndexController {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(connectionOptions);
-        IndexHelper indexHelper = databaseManager.getAdapter().getSchemaAdapter().getIndexHelper();
+        DatabaseAdapter databaseAdapter = helper.connect(connectionOptions);
+        IndexHelper indexHelper = databaseAdapter.getSchemaAdapter().getIndexHelper();
 
         logger.info("Dropping database indexes.");
 
@@ -40,7 +40,7 @@ public class DropIndexCommand extends IndexController {
             }
         }
 
-        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        helper.logIndexStatus(Level.INFO, databaseAdapter);
         return CommandLine.ExitCode.OK;
     }
 }

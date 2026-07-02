@@ -11,7 +11,7 @@ import org.citydb.cli.common.*;
 import org.citydb.cli.deleter.options.MetadataOptions;
 import org.citydb.cli.deleter.options.QueryOptions;
 import org.citydb.config.ConfigException;
-import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.operation.deleter.Deleter;
 import org.citydb.operation.deleter.options.DeleteMode;
 import org.citydb.query.Query;
@@ -84,13 +84,13 @@ public class DeleteCommand implements Command {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(connectionOptions);
+        DatabaseAdapter databaseAdapter = helper.connect(connectionOptions);
 
         DeleteOptions deleteOptions = getDeleteOptions();
         int commitAfter = deleteOptions.getCommitAfter();
         boolean autoCommit = !preview && commitAfter > 0;
 
-        DeleteLogger deleteLogger = new DeleteLogger(autoCommit, databaseManager.getAdapter());
+        DeleteLogger deleteLogger = new DeleteLogger(autoCommit, databaseAdapter);
         Deleter deleter = Deleter.newInstance()
                 .setDeleteLogger(deleteLogger);
 
@@ -98,17 +98,17 @@ public class DeleteCommand implements Command {
         QueryExecutor executor = helper.getQueryExecutor(query,
                 SqlBuildOptions.defaults().omitDistinct(true),
                 helper.resolveAgainstWorkingDir(tempDirectory),
-                databaseManager.getAdapter());
+                databaseAdapter);
 
         IndexMode indexMode = deleteOptions.getIndexMode();
         AtomicLong counter = new AtomicLong();
 
         if (indexMode != IndexMode.KEEP) {
             logger.info("Dropping database indexes...");
-            helper.dropIndexes(databaseManager.getAdapter());
+            helper.dropIndexes(databaseAdapter);
         }
 
-        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        helper.logIndexStatus(Level.INFO, databaseAdapter);
         logger.info("{} features in the database.", mode == Mode.terminate ? "Terminating" : "Deleting");
 
         if (preview) {
@@ -127,11 +127,10 @@ public class DeleteCommand implements Command {
 
         try {
             logger.debug("Querying features matching the request...");
-            logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(),
-                    databaseManager.getAdapter()));
+            logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
             try (QueryResult result = executor.executeQuery()) {
-                deleter.startSession(databaseManager.getAdapter(), deleteOptions);
+                deleter.startSession(databaseAdapter, deleteOptions);
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
                     deleteLogger.add(id, result.getObjectClassId());
@@ -158,7 +157,7 @@ public class DeleteCommand implements Command {
 
             if (shouldRun && indexMode == IndexMode.DROP_CREATE) {
                 logger.info("Re-creating database indexes. This operation may take some time...");
-                helper.createIndexes(databaseManager.getAdapter());
+                helper.createIndexes(databaseAdapter);
             }
         } catch (Throwable e) {
             logger.warn("Database delete aborted due to an error.");

@@ -20,7 +20,6 @@ import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
-import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -121,26 +120,25 @@ public abstract class ExportController implements Command {
                         .findFirst()
                         .orElse(null));
 
-        DatabaseManager databaseManager = helper.connect(connectionOptions);
+        DatabaseAdapter databaseAdapter = helper.connect(connectionOptions);
         ExportOptions exportOptions = getExportOptions();
-        WriteOptions writeOptions = getWriteOptions(exportOptions, databaseManager.getAdapter());
+        WriteOptions writeOptions = getWriteOptions(exportOptions, databaseAdapter);
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions()));
 
-        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        helper.logIndexStatus(Level.INFO, databaseAdapter);
 
         List<FeatureExportProcessor> featureProcessors = helper.getExtensions(FeatureExportProcessor.class);
-        beforeExport(exportOptions, writeOptions, featureProcessors, databaseManager.getAdapter());
+        beforeExport(exportOptions, writeOptions, featureProcessors, databaseAdapter);
 
         Query query = getQuery(exportOptions);
         Tiling tiling = getTiling(exportOptions, writeOptions);
-        MetadataHelper metadataHelper = MetadataHelper.of(exportOptions, writeOptions, tiling,
-                databaseManager.getAdapter());
+        MetadataHelper metadataHelper = MetadataHelper.of(exportOptions, writeOptions, tiling, databaseAdapter);
 
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
+        FeatureStatistics statistics = new FeatureStatistics(databaseAdapter);
         AtomicLong counter = new AtomicLong();
 
         try {
-            TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseManager.getAdapter());
+            TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseAdapter);
             if (tilingHelper.isUseTiling()) {
                 logger.info("Processing {} tile(s) based on provided tiling scheme.",
                         tilingHelper.getTileMatrix().size());
@@ -154,10 +152,10 @@ public abstract class ExportController implements Command {
                                 .omitDistinct(true)
                                 .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
                         helper.resolveAgainstWorkingDir(tempDirectory),
-                        databaseManager.getAdapter());
+                        databaseAdapter);
 
                 Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
-                FeatureStatistics tileStatistics = new FeatureStatistics(databaseManager.getAdapter());
+                FeatureStatistics tileStatistics = new FeatureStatistics(databaseAdapter);
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
                      FeatureWriter writer = createWriter(outputFile, writeOptions, query, ioAdapter)) {
@@ -171,16 +169,15 @@ public abstract class ExportController implements Command {
                             ioManager.getFileFormat(ioAdapter), outputFile.getFile());
 
                     logger.debug("Querying features matching the request...");
-                    logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(),
-                            databaseManager.getAdapter()));
+                    logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
                     long sequenceId = 1;
                     try (QueryResult result = executor.executeQuery()) {
-                        exporter.startSession(databaseManager.getAdapter(), exportOptions);
+                        exporter.startSession(databaseAdapter, exportOptions);
                         while (shouldRun && result.hasNext()) {
                             long id = result.getId();
 
-                            if (tilingHelper.isUseTiling() && !tile.isOnTile(databaseManager.getAdapter()
+                            if (tilingHelper.isUseTiling() && !tile.isOnTile(databaseAdapter
                                     .getGeometryAdapter()
                                     .getEnvelope(result.get(rs -> rs.getObject("envelope"))))) {
                                 continue;

@@ -96,17 +96,17 @@ public class CommandHelper {
         this.config = config;
     }
 
-    public DatabaseManager connect(ConnectionOptions options) throws ExecutionException {
+    public DatabaseAdapter connect(ConnectionOptions options) throws ExecutionException {
         ConnectionDetails connectionDetails = getConnectionDetails(options);
         return connect(connectionDetails);
     }
 
-    public DatabaseManager connect(ConnectionDetails connectionDetails) throws ExecutionException {
+    public DatabaseAdapter connect(ConnectionDetails connectionDetails) throws ExecutionException {
         try {
             logger.info("Connecting to database {}.", connectionDetails.toConnectString());
             databaseManager.connect(connectionDetails, databaseAdapterManager.get());
             databaseManager.reportDatabaseInfo(logger::info);
-            return databaseManager;
+            return databaseManager.getAdapter();
         } catch (DatabaseException | SQLException e) {
             throw new ExecutionException("Failed to connect to the database.", e);
         }

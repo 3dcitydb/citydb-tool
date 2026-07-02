@@ -14,7 +14,7 @@ import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.ThreadsOptions;
 import org.citydb.config.ConfigException;
-import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.util.report.DatabaseReport;
 import org.citydb.util.report.DatabaseReportException;
@@ -70,10 +70,10 @@ public class InfoCommand implements Command {
 
     @Override
     public Integer call() throws ExecutionException {
-        DatabaseManager databaseManager = helper.connect(connectionOptions);
+        DatabaseAdapter databaseAdapter = helper.connect(connectionOptions);
         ReportOptions reportOptions = getReportOptions();
 
-        IndexHelper.Status status = helper.getIndexStatus(databaseManager.getAdapter());
+        IndexHelper.Status status = helper.getIndexStatus(databaseAdapter);
         helper.logIndexStatus(Level.INFO, status);
 
         logger.info("Collecting database contents and summary information...");
@@ -83,7 +83,7 @@ public class InfoCommand implements Command {
 
         DatabaseReport report;
         try {
-            report = DatabaseReport.build(reportOptions, databaseManager.getAdapter());
+            report = DatabaseReport.build(reportOptions, databaseAdapter);
         } catch (DatabaseReportException e) {
             throw new ExecutionException("Failed to create database report.", e);
         }
