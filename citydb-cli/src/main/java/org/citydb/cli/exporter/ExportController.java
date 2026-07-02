@@ -162,13 +162,13 @@ public abstract class ExportController implements Command {
                     Exporter exporter = Exporter.newInstance();
                     exportOptions.setOutputFile(outputFile);
 
-                    Metadata metadata = metadataHelper.getMetadata(executor, outputFile, tile);
-                    writer.writeMetadata(processMetadata(metadata));
-
                     logger.info("{}Exporting to {} file {}.", getTileCounter(tilingHelper, tile),
                             ioManager.getFileFormat(ioAdapter), outputFile.getFile());
 
-                    logger.debug("Querying features matching the request...");
+                    Metadata metadata = metadataHelper.getMetadata(executor, outputFile, tile);
+                    writer.writeMetadata(processMetadata(metadata));
+
+                    logger.debug("Querying features for export...");
                     logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
                     long sequenceId = 1;

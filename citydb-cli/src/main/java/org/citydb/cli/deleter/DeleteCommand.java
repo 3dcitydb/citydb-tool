@@ -126,7 +126,7 @@ public class DeleteCommand implements Command {
         }
 
         try {
-            logger.debug("Querying features matching the request...");
+            logger.debug("Querying features for deletion...");
             logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
             try (QueryResult result = executor.executeQuery()) {

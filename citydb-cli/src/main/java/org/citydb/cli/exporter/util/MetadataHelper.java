@@ -19,8 +19,11 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.Tiling;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MetadataHelper {
+    private final Logger logger = LoggerFactory.getLogger(MetadataHelper.class);
     private final MetadataOptions metadataOptions;
     private final SrsReference targetSrs;
     private final DatabaseAdapter adapter;
@@ -52,7 +55,7 @@ public class MetadataHelper {
                 .ifPresent(metadata::setDescription);
 
         if (metadataOptions.isComputeExtent()) {
-            metadata.setExtent(computeExtent(executor));
+            metadata.setExtent(computeExtent(executor, tile));
         }
 
         return metadata;
@@ -67,24 +70,32 @@ public class MetadataHelper {
         return input;
     }
 
-    private Envelope computeExtent(QueryExecutor executor) throws ExecutionException {
+    private Envelope computeExtent(QueryExecutor executor, Tile tile) throws ExecutionException {
         Envelope extent;
         try {
+            logger.debug("Computing export extent...");
             extent = executor.computeExtent();
         } catch (Exception e) {
             throw new ExecutionException("Failed to compute the export extent.", e);
         }
 
-        try {
-            SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
-            SpatialReference targetSrs = adapter.getGeometryAdapter().getSrsHelper()
-                    .getSpatialReference(this.targetSrs)
-                    .orElse(databaseSrs);
-            if (extent.getSRID().orElse(databaseSrs.getSRID()) != targetSrs.getSRID()) {
-                extent = adapter.getGeometryAdapter().transform(extent, targetSrs.getSRID());
+        if (extent == null && useTiling) {
+            logger.debug("No export extent available. Falling back to tile extent.");
+            extent = tile.getExtent();
+        }
+
+        if (extent != null) {
+            try {
+                SpatialReference databaseSrs = adapter.getDatabaseMetadata().getSpatialReference();
+                SpatialReference targetSrs = adapter.getGeometryAdapter().getSrsHelper()
+                        .getSpatialReference(this.targetSrs)
+                        .orElse(databaseSrs);
+                if (extent.getSRID().orElse(databaseSrs.getSRID()) != targetSrs.getSRID()) {
+                    extent = adapter.getGeometryAdapter().transform(extent, targetSrs.getSRID());
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("The requested target SRS is not supported.", e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException("The requested target SRS is not supported.", e);
         }
 
         return extent;

@@ -77,7 +77,7 @@ public class TilingHelper {
 
     private TilingHelper buildTileMatrix() throws ExecutionException {
         if (tiling.getExtent().isEmpty()) {
-            logger.info("Computing the extent of all features matching the request...");
+            logger.info("Computing tiling extent...");
             try {
                 queryExtent = QueryExecutor.builder(adapter)
                         .build(query, SqlBuildOptions.defaults().omitDistinct(true))
