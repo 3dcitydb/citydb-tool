@@ -8,7 +8,7 @@ package org.citydb.cli.exporter.extension;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.exporter.ExportOptions;
 import org.citydb.cli.util.FeatureStatistics;
-import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.feature.Feature;
 import org.citydb.plugin.Extension;
@@ -17,7 +17,7 @@ import org.citydb.plugin.Extension;
 public interface FeatureExportProcessor extends Extension {
     Feature process(Feature feature) throws ExecutionException;
 
-    default void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
+    default void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
     }
 
     default void afterExport(boolean success, FeatureStatistics statistics) throws ExecutionException {

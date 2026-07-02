@@ -7,6 +7,7 @@ package org.citydb.io.writer;
 
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
+import org.citydb.io.writer.options.MetadataOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 
 import java.nio.file.Path;
@@ -20,6 +21,7 @@ public class WriteOptions {
     private String encoding;
     private String srsName;
     private boolean skipEmptyTiles;
+    private MetadataOptions metadataOptions;
     private ConfigObject<OutputFormatOptions> formatOptions;
 
     public boolean isFailFast() {
@@ -77,6 +79,15 @@ public class WriteOptions {
 
     public WriteOptions setSkipEmptyTiles(boolean skipEmptyTiles) {
         this.skipEmptyTiles = skipEmptyTiles;
+        return this;
+    }
+
+    public Optional<MetadataOptions> getMetadataOptions() {
+        return Optional.ofNullable(metadataOptions);
+    }
+
+    public WriteOptions setMetadataOptions(MetadataOptions metadataOptions) {
+        this.metadataOptions = metadataOptions;
         return this;
     }
 

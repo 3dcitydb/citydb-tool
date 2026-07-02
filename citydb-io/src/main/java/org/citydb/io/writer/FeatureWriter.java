@@ -5,6 +5,7 @@
 
 package org.citydb.io.writer;
 
+import org.citydb.io.writer.metadata.Metadata;
 import org.citydb.model.feature.Feature;
 
 import java.util.concurrent.CompletableFuture;
@@ -17,9 +18,10 @@ public interface FeatureWriter extends AutoCloseable {
         write(feature).whenComplete(onCompletion);
     }
 
-    void cancel();
+    default void writeMetadata(Metadata metadata) throws WriteException {
+    }
 
-    void flush() throws WriteException;
+    void cancel();
 
     @Override
     void close() throws WriteException;

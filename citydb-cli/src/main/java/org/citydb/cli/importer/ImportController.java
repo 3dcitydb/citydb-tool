@@ -104,7 +104,7 @@ public abstract class ImportController implements Command {
 
     protected abstract InputFormatOptions getFormatOptions(ConfigObject<InputFormatOptions> formatOptions) throws ExecutionException;
 
-    protected void beforeImport(ImportOptions importOptions, ReadOptions readOptions, DatabaseManager databaseManager) throws ExecutionException {
+    protected void beforeImport(ImportOptions importOptions, ReadOptions readOptions, DatabaseAdapter adapter) throws ExecutionException {
     }
 
     protected void afterImport(boolean success, FeatureStatistics statistics) throws ExecutionException {
@@ -139,7 +139,7 @@ public abstract class ImportController implements Command {
         readOptions.getFormatOptions().set(getFormatOptions(readOptions.getFormatOptions()));
 
         List<FeatureImportProcessor> featureProcessors = helper.getExtensions(FeatureImportProcessor.class);
-        beforeImport(importOptions, readOptions, featureProcessors, databaseManager);
+        beforeImport(importOptions, readOptions, featureProcessors, databaseManager.getAdapter());
 
         Filter filter = getFilter(importOptions, databaseManager.getAdapter());
         readOptions.setFilter(filter)
@@ -375,10 +375,10 @@ public abstract class ImportController implements Command {
         return importOptions;
     }
 
-    private void beforeImport(ImportOptions importOptions, ReadOptions readOptions, List<FeatureImportProcessor> processors, DatabaseManager databaseManager) throws ExecutionException {
-        beforeImport(importOptions, readOptions, databaseManager);
+    private void beforeImport(ImportOptions importOptions, ReadOptions readOptions, List<FeatureImportProcessor> processors, DatabaseAdapter adapter) throws ExecutionException {
+        beforeImport(importOptions, readOptions, adapter);
         for (FeatureImportProcessor processor : processors) {
-            processor.beforeImport(importOptions, readOptions, databaseManager);
+            processor.beforeImport(importOptions, readOptions, adapter);
         }
     }
 

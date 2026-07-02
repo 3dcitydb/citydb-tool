@@ -109,11 +109,6 @@ public class SequentialWriter implements FeatureWriter {
     }
 
     @Override
-    public void flush() throws WriteException {
-        writer.flush();
-    }
-
-    @Override
     public void close() throws WriteException {
         try {
             if (shouldRun && !cache.isEmpty()) {

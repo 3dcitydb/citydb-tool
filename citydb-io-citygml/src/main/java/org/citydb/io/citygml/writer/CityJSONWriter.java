@@ -16,9 +16,11 @@ import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citygml4j.cityjson.CityJSONContext;
 import org.citygml4j.cityjson.CityJSONContextException;
+import org.citygml4j.cityjson.model.metadata.Metadata;
 import org.citygml4j.cityjson.writer.AbstractCityJSONWriter;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
@@ -179,13 +181,29 @@ public class CityJSONWriter implements FeatureWriter, GlobalFeatureWriter {
     }
 
     @Override
-    public void cancel() {
-        shouldRun = false;
+    public void writeMetadata(org.citydb.io.writer.metadata.Metadata metadata) {
+        if (metadata == null) {
+            return;
+        }
+
+        Metadata target = writer.getMetadata();
+        metadata.getTitle().ifPresent(target::setTitle);
+
+        metadata.getExtent().ifPresent(extent -> {
+            Coordinate lowerCorner = extent.getLowerCorner();
+            Coordinate upperCorner = extent.getUpperCorner();
+            target.setGeographicalExtent(List.of(
+                    lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
+                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()
+            ));
+        });
+
+        writer.withMetadata(target);
     }
 
     @Override
-    public void flush() {
-        countLatch.await();
+    public void cancel() {
+        shouldRun = false;
     }
 
     @Override

@@ -54,7 +54,6 @@ public class CityGMLWriterFactory {
                 formatOptions.getSchemaLocations().forEach(writer::setSchemaLocation);
             }
 
-            writer.writeHeader();
             return writer;
         } catch (Exception e) {
             throw new WriteException("Failed to create CityGML writer.", e);

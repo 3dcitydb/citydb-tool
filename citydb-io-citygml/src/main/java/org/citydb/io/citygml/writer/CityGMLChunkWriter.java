@@ -38,10 +38,11 @@ public class CityGMLChunkWriter {
     private final CityGMLVersion version;
     private final XMLWriterFactory factory;
     private final Namespaces namespaces;
+    private final Object lock = new Object();
 
     private TransformerPipeline transformer;
     private CityModel cityModel;
-    private State state = State.INITIAL;
+    private volatile State state = State.INITIAL;
 
     private enum State {
         INITIAL,
@@ -206,21 +207,34 @@ public class CityGMLChunkWriter {
         }
     }
 
-    void writeHeader() throws WriteException {
-        if (state != State.INITIAL) {
-            throw new WriteException("The document has already been started.");
-        }
+    void writeMetadata(CityModel metadata) throws WriteException {
+        synchronized (lock) {
+            if (state != State.INITIAL) {
+                throw new WriteException("Illegal to write metadata after features have been written.");
+            }
 
-        try {
-            SAXFragmentHandler fragmentHandler = new SAXFragmentHandler(writer, SAXFragmentHandler.Mode.HEADER);
-            XMLWriter writer = getWriter(fragmentHandler);
-            writer.writeStartDocument();
-            writer.writeObject(getCityModel(), namespaces);
-            writer.writeEndDocument();
-        } catch (XMLWriteException | ObjectSerializeException e) {
-            throw new WriteException("Caused by:", e);
-        } finally {
-            state = State.DOCUMENT_STARTED;
+            setCityModel(metadata);
+            writeHeader();
+        }
+    }
+
+    private void writeHeader() throws WriteException {
+        synchronized (lock) {
+            if (state != State.INITIAL) {
+                return;
+            }
+
+            try {
+                SAXFragmentHandler fragmentHandler = new SAXFragmentHandler(writer, SAXFragmentHandler.Mode.HEADER);
+                XMLWriter writer = getWriter(fragmentHandler);
+                writer.writeStartDocument();
+                writer.writeObject(getCityModel(), namespaces);
+                writer.writeEndDocument();
+            } catch (XMLWriteException | ObjectSerializeException e) {
+                throw new WriteException("Caused by:", e);
+            } finally {
+                state = State.DOCUMENT_STARTED;
+            }
         }
     }
 

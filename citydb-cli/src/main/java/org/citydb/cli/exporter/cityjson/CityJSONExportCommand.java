@@ -11,7 +11,7 @@ import org.citydb.cli.exporter.ExportController;
 import org.citydb.cli.exporter.ExportOptions;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
-import org.citydb.database.DatabaseManager;
+import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.util.SqlHelper;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
@@ -154,23 +154,23 @@ public class CityJSONExportCommand extends ExportController {
     }
 
     @Override
-    protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
+    protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
         try {
-            if (databaseManager.getAdapter().getGeometryAdapter().hasImplicitGeometries()) {
+            if (adapter.getGeometryAdapter().hasImplicitGeometries()) {
                 logger.info("Retrieving global template geometries...");
                 Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
                 Exporter exporter = Exporter.newInstance();
-                SqlHelper helper = databaseManager.getAdapter().getSchemaAdapter().getSqlHelper();
+                SqlHelper helper = adapter.getSchemaAdapter().getSqlHelper();
 
-                Select featureQuery = SqlQueryBuilder.of(databaseManager.getAdapter())
+                Select featureQuery = SqlQueryBuilder.of(adapter)
                         .build(getQuery(exportOptions), SqlBuildOptions.defaults().omitDistinct(true));
-                SqlObject query = databaseManager.getAdapter().getSchemaAdapter()
+                SqlObject query = adapter.getSchemaAdapter()
                         .getRecursiveImplicitGeometryQuery(featureQuery);
 
-                try (Connection connection = databaseManager.getAdapter().getPool().getConnection();
+                try (Connection connection = adapter.getPool().getConnection();
                      PreparedStatement stmt = helper.prepareStatement(query, connection);
                      ResultSet rs = stmt.executeQuery()) {
-                    exporter.startSession(databaseManager.getAdapter(), exportOptions);
+                    exporter.startSession(adapter, exportOptions);
                     while (shouldRun && rs.next()) {
                         long id = rs.getLong("id");
                         String lod = rs.getString("lod");

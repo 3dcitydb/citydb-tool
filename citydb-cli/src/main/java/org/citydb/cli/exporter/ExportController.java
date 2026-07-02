@@ -12,6 +12,7 @@ import org.citydb.cli.exporter.extension.FeatureExportProcessor;
 import org.citydb.cli.exporter.options.OutputFileOptions;
 import org.citydb.cli.exporter.options.QueryOptions;
 import org.citydb.cli.exporter.options.TilingOptions;
+import org.citydb.cli.exporter.util.MetadataHelper;
 import org.citydb.cli.exporter.util.SequentialWriter;
 import org.citydb.cli.exporter.util.TilingHelper;
 import org.citydb.cli.util.FeatureStatistics;
@@ -27,6 +28,7 @@ import org.citydb.io.OutputFileBuilder;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.io.writer.metadata.Metadata;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
@@ -97,20 +99,10 @@ public abstract class ExportController implements Command {
 
     protected abstract OutputFormatOptions getFormatOptions(ConfigObject<OutputFormatOptions> formatOptions) throws ExecutionException;
 
-    protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseManager databaseManager) throws ExecutionException {
+    protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
     }
 
     protected void afterExport(boolean success, FeatureStatistics statistics) throws ExecutionException {
-    }
-
-    protected void beforeWrite(QueryExecutor executor, FeatureWriter writer) throws ExecutionException {
-    }
-
-    protected void afterWrite(QueryExecutor executor, FeatureWriter writer) throws ExecutionException {
-    }
-
-    protected Feature processFeature(Feature feature) throws ExecutionException {
-        return feature;
     }
 
     @Override
@@ -137,10 +129,13 @@ public abstract class ExportController implements Command {
         helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
 
         List<FeatureExportProcessor> featureProcessors = helper.getExtensions(FeatureExportProcessor.class);
-        beforeExport(exportOptions, writeOptions, featureProcessors, databaseManager);
+        beforeExport(exportOptions, writeOptions, featureProcessors, databaseManager.getAdapter());
 
         Query query = getQuery(exportOptions);
         Tiling tiling = getTiling(exportOptions, writeOptions);
+        MetadataHelper metadataHelper = MetadataHelper.of(exportOptions, writeOptions, tiling,
+                databaseManager.getAdapter());
+
         FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
         AtomicLong counter = new AtomicLong();
 
@@ -166,10 +161,11 @@ public abstract class ExportController implements Command {
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
                      FeatureWriter writer = createWriter(outputFile, writeOptions, query, ioAdapter)) {
-                    beforeWrite(executor, writer);
-
                     Exporter exporter = Exporter.newInstance();
                     exportOptions.setOutputFile(outputFile);
+
+                    Metadata metadata = metadataHelper.getMetadata(executor, outputFile, tile);
+                    writer.writeMetadata(processMetadata(metadata));
 
                     logger.info("{}Exporting to {} file {}.", getTileCounter(tilingHelper, tile),
                             ioManager.getFileFormat(ioAdapter), outputFile.getFile());
@@ -226,9 +222,6 @@ public abstract class ExportController implements Command {
                     } finally {
                         exporter.closeSession();
                     }
-
-                    writer.flush();
-                    afterWrite(executor, writer);
                 } catch (Throwable e) {
                     logger.warn("Database export aborted due to an error.");
                     throw new ExecutionException("A fatal error has occurred during export.", e);
@@ -252,6 +245,14 @@ public abstract class ExportController implements Command {
         }
 
         return shouldRun;
+    }
+
+    protected Metadata processMetadata(Metadata metadata) throws ExecutionException {
+        return metadata;
+    }
+
+    protected Feature processFeature(Feature feature) throws ExecutionException {
+        return feature;
     }
 
     protected Query getQuery(ExportOptions exportOptions) throws ExecutionException {
@@ -358,10 +359,10 @@ public abstract class ExportController implements Command {
         return writeOptions;
     }
 
-    private void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, List<FeatureExportProcessor> processors, DatabaseManager databaseManager) throws ExecutionException {
-        beforeExport(exportOptions, writeOptions, databaseManager);
+    private void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, List<FeatureExportProcessor> processors, DatabaseAdapter adapter) throws ExecutionException {
+        beforeExport(exportOptions, writeOptions, adapter);
         for (FeatureExportProcessor processor : processors) {
-            processor.beforeExport(exportOptions, writeOptions, databaseManager);
+            processor.beforeExport(exportOptions, writeOptions, adapter);
         }
     }
 

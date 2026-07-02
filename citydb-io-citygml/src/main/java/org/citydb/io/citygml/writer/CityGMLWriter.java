@@ -15,15 +15,24 @@ import org.citydb.io.citygml.writer.util.GlobalFeatureWriter;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
+import org.citydb.io.writer.metadata.Metadata;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.Coordinate;
 import org.citygml4j.core.model.core.AbstractFeature;
+import org.citygml4j.core.model.core.CityModel;
 import org.citygml4j.xml.CityGMLContext;
 import org.citygml4j.xml.CityGMLContextException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xmlobjects.gml.model.basictypes.Code;
+import org.xmlobjects.gml.model.deprecated.StringOrRef;
+import org.xmlobjects.gml.model.feature.BoundingShape;
+import org.xmlobjects.gml.model.geometry.DirectPosition;
+import org.xmlobjects.gml.model.geometry.Envelope;
 import org.xmlobjects.util.xml.SAXBuffer;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -35,6 +44,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
     private final ExecutorService service;
     private final ThreadLocal<ModelSerializerHelper> helpers;
     private final CountLatch countLatch;
+    private final String srsName;
 
     private volatile boolean shouldRun = true;
 
@@ -74,6 +84,7 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
         helpers = ThreadLocal.withInitial(() -> new ModelSerializerHelper(this, store, context)
                 .initialize(options, formatOptions, cityGMLContext));
         countLatch = new CountLatch();
+        srsName = options.getSrsName().orElse(null);
     }
 
     @Override
@@ -123,13 +134,32 @@ public class CityGMLWriter implements FeatureWriter, GlobalFeatureWriter {
     }
 
     @Override
-    public void cancel() {
-        shouldRun = false;
+    public void writeMetadata(Metadata metadata) throws WriteException {
+        if (metadata == null) {
+            return;
+        }
+
+        CityModel cityModel = writer.getCityModel();
+        metadata.getTitle().ifPresent(title -> cityModel.setNames(List.of(new Code(title))));
+        metadata.getDescription().ifPresent(description -> cityModel.setDescription(new StringOrRef(description)));
+
+        metadata.getExtent().ifPresent(extent -> {
+            Coordinate lowerCorner = extent.getLowerCorner();
+            Coordinate upperCorner = extent.getUpperCorner();
+            Envelope envelope = new Envelope(
+                    new DirectPosition(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ()),
+                    new DirectPosition(upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
+            envelope.setSrsDimension(3);
+            envelope.setSrsName(srsName);
+            cityModel.setBoundedBy(new BoundingShape(envelope));
+        });
+
+        writer.writeMetadata(cityModel);
     }
 
     @Override
-    public void flush() {
-        countLatch.await();
+    public void cancel() {
+        shouldRun = false;
     }
 
     @Override
