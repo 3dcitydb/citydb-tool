@@ -16,7 +16,6 @@ import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
 import org.citydb.core.file.OutputFile;
 import org.citydb.core.file.output.RegularOutputFile;
-import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.io.IOAdapter;
@@ -244,7 +243,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         }
     }
 
-    private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseManager databaseManager) throws ExecutionException {
+    private void configureTextureBuckets(VisExportOptions exportOptions, DatabaseAdapter databaseAdapter) throws ExecutionException {
         if (!exportOptions.getAppearanceOptions()
                 .map(AppearanceOptions::isExportAppearances)
                 .orElse(true)) {
@@ -253,7 +252,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
 
         long featureCount;
         try {
-            featureCount = QueryExecutor.builder(databaseManager.getAdapter())
+            featureCount = QueryExecutor.builder(databaseAdapter)
                     .build(getQuery(exportOptions))
                     .countHits();
         } catch (QueryBuildException | SQLException | IOException e) {
@@ -299,13 +298,13 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                         .findFirst()
                         .orElse(null));
 
-        DatabaseManager databaseManager = helper.connect(connectionOptions);
+        DatabaseAdapter databaseAdapter = helper.connect(connectionOptions);
         VisExportOptions exportOptions = getExportOptions();
-        WriteOptions writeOptions = getWriteOptions(databaseManager.getAdapter());
-        SchemaMapping schemaMapping = databaseManager.getAdapter().getSchemaAdapter().getSchemaMapping();
+        WriteOptions writeOptions = getWriteOptions(databaseAdapter);
+        SchemaMapping schemaMapping = databaseAdapter.getSchemaAdapter().getSchemaMapping();
         writeOptions.getFormatOptions().set(getFormatOptions(writeOptions.getFormatOptions(), schemaMapping));
 
-        helper.logIndexStatus(Level.INFO, databaseManager.getAdapter());
+        helper.logIndexStatus(Level.INFO, databaseAdapter);
 
         // Pre-create a unique temp directory shared by the DB exporter and the
         // VisWriter stores. The DB exporter's OutputFile is rooted here (see
@@ -331,10 +330,10 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         }
         writeOptions.setTempDirectory(tempDir);
 
-        configureTextureBuckets(exportOptions, databaseManager);
+        configureTextureBuckets(exportOptions, databaseAdapter);
 
         Query query = getQuery(exportOptions);
-        FeatureStatistics statistics = new FeatureStatistics(databaseManager.getAdapter());
+        FeatureStatistics statistics = new FeatureStatistics(databaseAdapter);
         AtomicLong counter = new AtomicLong();
 
         try (OutputFile output = builder.newOutputFile(file);
@@ -351,15 +350,14 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             QueryExecutor executor = helper.getQueryExecutor(query,
                     SqlBuildOptions.defaults().omitDistinct(true),
                     helper.resolveAgainstWorkingDir(tempDirectory),
-                    databaseManager.getAdapter());
+                    databaseAdapter);
 
-            logger.debug("Querying features matching the request...");
-            logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(),
-                    databaseManager.getAdapter()));
+            logger.debug("Querying features for export...");
+            logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
             long sequenceId = 1;
             try (QueryResult result = executor.executeQuery()) {
-                exporter.startSession(databaseManager.getAdapter(), exportOptions);
+                exporter.startSession(databaseAdapter, exportOptions);
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
                     exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
@@ -369,7 +367,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                         }
 
                         try {
-                            ImplicitReferencePointReprojector.reproject(feature, databaseManager.getAdapter());
+                            ImplicitReferencePointReprojector.reproject(feature, databaseAdapter);
                             writer.write(feature, (success, e) -> {
                                 if (success != Boolean.TRUE) {
                                     abort(feature, id, e);
