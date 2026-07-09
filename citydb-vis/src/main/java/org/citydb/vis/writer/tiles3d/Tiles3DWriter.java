@@ -58,10 +58,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * cell count.
  * <p>
  * <b>Coordinate system:</b> all GLB vertex positions are in a local ENU
- * (East-North-Up) frame relative to the dataset center. A single
- * ENU-to-ECEF {@code transform} on the root tile places the entire dataset
- * in the global ECEF coordinate frame. This avoids per-tile transforms and
- * provides sufficient float32 precision for datasets up to ~100 km extent.
+ * (East-North-Up) frame relative to their grid cell's center. Each cell root
+ * carries its own ENU-to-ECEF {@code transform}, tangent to the WGS84
+ * ellipsoid at that cell center; descendants inherit it via 3D Tiles'
+ * hierarchical transform composition (aggregation nodes and the root tile
+ * stay identity). Anchoring per cell keeps vertex magnitudes bounded by the
+ * cell size (float32-safe at any dataset extent) and re-establishes the
+ * tangent plane at every cell, so Earth curvature no longer lifts cells far
+ * from the dataset center off the ground — the previous single-root-transform
+ * design floated them by the sagitta d²/2R (tens to hundreds of metres once
+ * cells sat tens of kilometres from the dataset center).
  */
 public class Tiles3DWriter extends VisWriter {
     private final Logger logger = LoggerFactory.getLogger(Tiles3DWriter.class);
@@ -116,13 +122,6 @@ public class Tiles3DWriter extends VisWriter {
             throw new VisExportException("Failed to create 3D Tiles output directories.", e);
         }
 
-        // Dataset center for ENU transform
-        double[] datasetCenter = {
-                (extent[0] + extent[3]) / 2,
-                (extent[1] + extent[4]) / 2,
-                (extent[2] + extent[5]) / 2
-        };
-
         // The shared AggregationStage has already wrapped the cell roots
         // under a single aggregation root attached as globalRoot's only
         // child. TilePaths walks that aggregation subtree to assign each
@@ -130,6 +129,37 @@ public class Tiles3DWriter extends VisWriter {
         SceneNode globalRoot = allNodes.get(0);
         SceneNode aggRoot = globalRoot.getChildren().get(0);
         Map<Integer, int[]> tilePaths = TilePaths.buildPathIndex(aggRoot);
+
+        // Per-cell placement: each populated grid cell (cell root) gets its own
+        // ENU-to-ECEF transform tangent to the WGS84 ellipsoid at the cell
+        // center. A single dataset-wide transform (the old design) is only
+        // tangent at one point, so cells far from it float above the ground by
+        // the Earth-curvature sagitta d²/2R (hundreds of metres at state scale).
+        // cellRootGridCoords' keys are exactly the cell-root node indices.
+        Set<Integer> cellRootIndices = ctx.cellRootGridCoords().keySet();
+        Map<Integer, double[]> cellTransforms = new HashMap<>();
+        Map<Integer, double[]> cellAnchors = new HashMap<>();
+        for (int cellRootIndex : cellRootIndices) {
+            var bv = allNodes.get(cellRootIndex).getBoundingVolume();
+            double[] anchor = {bv.getCenterX(), bv.getCenterY(), bv.getCenterZ()};
+            cellAnchors.put(cellRootIndex, anchor);
+            cellTransforms.put(cellRootIndex, GeoTransform.enuToEcefMatrix(anchor));
+        }
+
+        // Map every mesh node to its cell root's anchor by walking up the tree.
+        // All content in a cell (the cell root plus any mixed-texture / atlas-
+        // overflow / LOD-preview descendants) is encoded relative to the same
+        // cell center so it inherits that cell root's single tile transform.
+        // Every mesh node descends from a cell root by construction, so the
+        // walk always resolves (a null cur would be an invariant violation).
+        Map<Integer, double[]> nodeAnchor = new HashMap<>();
+        for (int meshIndex : meshNodeIndices) {
+            SceneNode cur = allNodes.get(meshIndex);
+            while (cur != null && !cellRootIndices.contains(cur.getIndex())) {
+                cur = cur.getParent();
+            }
+            nodeAnchor.put(meshIndex, cellAnchors.get(cur.getIndex()));
+        }
 
         // Pre-create parent directories serially so the parallel GLB
         // writer below doesn't contend on filesystem stat syscalls.
@@ -141,7 +171,8 @@ public class Tiles3DWriter extends VisWriter {
 
         // Parallel: encode GLB per node
         Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
-                node -> writeNodeGlb(node, tilesDir, tilePaths, attrFields, datasetCenter));
+                node -> writeNodeGlb(node, tilesDir, tilePaths, attrFields,
+                        nodeAnchor.get(node.getIndex())));
 
         try {
             // Write sub-tilesets (tree-based spatial split) starting at the
@@ -159,13 +190,14 @@ public class Tiles3DWriter extends VisWriter {
             double geRatio = pixelThreshold > 0 ? 16.0 / pixelThreshold : Double.POSITIVE_INFINITY;
             AtomicInteger subtreeFileCount = new AtomicInteger();
             tilesetSerializer.writeSubTileset(subtreesDir, aggRoot,
-                    effectiveMeshIndices, tilePaths, subtreeFileCount, geRatio);
+                    effectiveMeshIndices, tilePaths, cellTransforms,
+                    subtreeFileCount, geRatio);
 
             // Write root tileset.json: a single external ref to the aggregation
             // root's subtree file keeps the root bounded independent of cell count.
-            double[] transform = GeoTransform.enuToEcefMatrix(datasetCenter);
+            // The root tile is identity; ECEF placement is per cell (see above).
             tilesetSerializer.writeRootTileset(outputDir, globalRoot, aggRoot,
-                    extent, attrFields, transform, tilePaths, geRatio);
+                    extent, attrFields, tilePaths, geRatio);
 
             logger.info("3D Tiles output: {} tiles, {} sub-tileset files, tileset.json written.",
                     effectiveMeshIndices.size(), subtreeFileCount.get());
@@ -200,7 +232,7 @@ public class Tiles3DWriter extends VisWriter {
      */
     private boolean writeNodeGlb(SceneNode node, Path tilesDir,
                                  Map<Integer, int[]> tilePaths,
-                                 List<AttrField> attrFields, double[] datasetCenter)
+                                 List<AttrField> attrFields, double[] cellAnchor)
             throws VisExportException {
         AtlasMode mode = getFormatOptions().getAtlasFallbackStrategy()
                 == AtlasFallbackStrategy.EXPAND
@@ -225,7 +257,7 @@ public class Tiles3DWriter extends VisWriter {
             // Encode GLB
             node.setMesh(prepared.mesh());
             byte[] glb = glbEncoder.encode(node, atlasBytesList, texIdToPage,
-                    features, attrFields, datasetCenter,
+                    features, attrFields, cellAnchor,
                     getFormatOptions().getStyleRegistry(),
                     getFormatOptions().isEnableShading());
             if (glb == null) {
