@@ -42,6 +42,7 @@ public class TilesetSerializer {
      */
     private record Ctx(Set<Integer> meshNodeIndices,
                        Map<Integer, int[]> tilePaths,
+                       Map<Integer, double[]> cellTransforms,
                        Path subtreesDir,
                        AtomicInteger subtreeFileCount,
                        double geRatio) {
@@ -51,14 +52,16 @@ public class TilesetSerializer {
 
     /**
      * Write the top-level {@code tileset.json}. Carries the metadata schema
-     * and the ENU-to-ECEF transform, and contains a single external ref to
-     * the aggregation root's subtree file — regardless of cell count, so the
-     * root stays small for city-scale datasets.
+     * and contains a single external ref to the aggregation root's subtree
+     * file — regardless of cell count, so the root stays small for city-scale
+     * datasets. The root tile has no transform (identity): placement into
+     * global ECEF now happens per cell via the {@code transform} each cell
+     * root carries, which keeps cells tangent to the ellipsoid at their own
+     * centers instead of on a single dataset-wide tangent plane.
      */
     public void writeRootTileset(Path outputDir, SceneNode globalRoot,
                                  SceneNode aggRoot,
                                  double[] extent, List<AttrField> attrFields,
-                                 double[] transform,
                                  Map<Integer, int[]> tilePaths,
                                  double geRatio) throws IOException {
         // Root's geometricError must be > 0 so Cesium's SSE check triggers
@@ -73,7 +76,7 @@ public class TilesetSerializer {
         String aggUri = "subtrees/" + TilePaths.subtreeFile(aggPath);
 
         TilesetDescriptor descriptor = TilesetDescriptor.ofRoot(
-                rootGeo, extent, transform, attrFields,
+                rootGeo, extent, null, attrFields,
                 TileBoundingVolume.fromBoundingVolume(aggRoot.getBoundingVolume()),
                 aggGeo, aggUri);
 
@@ -85,10 +88,11 @@ public class TilesetSerializer {
     public void writeSubTileset(Path subtreesDir, SceneNode subtreeRoot,
                                 Set<Integer> meshNodeIndices,
                                 Map<Integer, int[]> tilePaths,
+                                Map<Integer, double[]> cellTransforms,
                                 AtomicInteger subtreeFileCount,
                                 double geRatio) throws IOException {
         int[] rootPath = tilePaths.get(subtreeRoot.getIndex());
-        Ctx ctx = new Ctx(meshNodeIndices, tilePaths,
+        Ctx ctx = new Ctx(meshNodeIndices, tilePaths, cellTransforms,
                 subtreesDir, subtreeFileCount, geRatio);
         writeSubtreeFile(ctx, subtreeRoot, rootPath);
     }
@@ -124,6 +128,17 @@ public class TilesetSerializer {
                 ? tilePrefix + TilePaths.tileFile(ctx.tilePaths().get(node.getIndex()))
                 : null;
         TileNode tile = TileNode.of(node, geometricError, contentUri);
+
+        // Cell roots carry a per-cell ENU-to-ECEF transform anchored at their
+        // own center; all cell content (this node plus every descendant) is
+        // encoded relative to that anchor and inherits the transform. Only the
+        // inline representation built here gets it — the external-ref view of a
+        // cell root (ofExternalRef, below) stays identity so the transform is
+        // applied exactly once across the external-tileset boundary.
+        double[] cellTransform = ctx.cellTransforms().get(node.getIndex());
+        if (cellTransform != null) {
+            tile.setTransform(cellTransform);
+        }
 
         for (SceneNode child : node.getChildren()) {
             double childGeo = TileNode.computeGeometricError(child, ctx.geRatio());
