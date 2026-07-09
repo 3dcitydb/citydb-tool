@@ -102,6 +102,19 @@ public class TileNode {
         return tile;
     }
 
+    /**
+     * Attach a per-cell ENU-to-ECEF transform to this tile. Set on cell-root
+     * tiles so each cell is placed tangent to the WGS84 ellipsoid at its own
+     * center; descendants inherit it via 3D Tiles' hierarchical transform
+     * composition (their own transform stays absent = identity). The
+     * geodetic {@code region} bounding volumes are unaffected by transforms,
+     * so no bounding-volume recomputation is needed.
+     */
+    public TileNode setTransform(double[] transform) {
+        this.transform = transform;
+        return this;
+    }
+
     public void addChild(TileNode child) {
         if (children == null) {
             children = new ArrayList<>();

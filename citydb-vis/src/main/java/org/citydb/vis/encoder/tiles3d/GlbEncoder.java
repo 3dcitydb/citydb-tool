@@ -46,8 +46,8 @@ import java.util.Map;
  *   <li>Textured primitive (one per atlas page): {@code POSITION +
  *       TEXCOORD_0 + _FEATURE_ID_0}, plus {@code NORMAL} when
  *       {@code --enable-shading} is on. The emitted normal is the local
- *       "up" direction (+Y in GLB Y-up local frame, which the root tile
- *       transform rotates to ECEF up at the dataset center) — not the
+ *       "up" direction (+Y in GLB Y-up local frame, which the per-cell
+ *       tile transform rotates to ECEF up at the cell center) — not the
  *       polygon's true geometric normal. Lambertian then evaluates against
  *       a single direction across all textured triangles in the node, so
  *       walls and roofs end up at the same brightness (matches the I3S
@@ -67,8 +67,10 @@ import java.util.Map;
  *       {@code --enable-shading} is on. Its material is PBR when shaded
  *       and unlit otherwise.</li>
  * </ul>
- * Positions are in a local ENU coordinate frame relative to a dataset center.
- * The root tile's {@code transform} in {@code tileset.json} converts ENU to ECEF.
+ * Positions are in a local ENU coordinate frame relative to the node's cell
+ * center. The cell root's per-cell {@code transform} in the tileset converts
+ * that cell-local ENU to global ECEF, re-establishing the tangent plane at
+ * every cell so Earth curvature does not lift distant cells off the ground.
  */
 public class GlbEncoder {
     /**
@@ -81,7 +83,11 @@ public class GlbEncoder {
      * @param texIdToPage    texture id → atlas page index; empty if untextured
      * @param features       per-feature attribute data
      * @param attrFields     finalized attribute field definitions
-     * @param datasetCenter  [centerLon, centerLat, centerAlt] of the dataset
+     * @param cellCenter     [centerLon, centerLat, centerAlt] of this node's
+     *                       cell (the anchor of the cell root's per-cell
+     *                       ENU-to-ECEF tile transform). All positions are
+     *                       encoded relative to this point, so it must match
+     *                       the anchor used to build the tile's transform.
      * @param styleRegistry  per-feature-type style registry. Each plain
      *                       triangle is bucketed by the style its source
      *                       surface type (recorded per-triangle on the
@@ -95,7 +101,7 @@ public class GlbEncoder {
     public byte[] encode(SceneNode node, List<byte[]> atlasBytesList,
                          Map<Integer, Integer> texIdToPage,
                          List<FeatureData> features, List<AttrField> attrFields,
-                         double[] datasetCenter,
+                         double[] cellCenter,
                          ObjectStyleRegistry styleRegistry,
                          boolean enableShading) throws IOException {
         TriangleMesh mesh = node.getMesh();
@@ -113,7 +119,7 @@ public class GlbEncoder {
             return null;
         }
 
-        DatasetFrame frame = DatasetFrame.from(mbs, datasetCenter);
+        CellFrame frame = CellFrame.from(mbs, cellCenter);
 
         // Classify valid triangles into format-neutral routing facts once
         // (texture id, X3DMaterial-colored flag, resolved style, face-range
@@ -278,7 +284,7 @@ public class GlbEncoder {
                                                         List<RoutedTriangle> triEntries,
                                                         int atlasPage,
                                                         DefaultObjectStyle plainStyle,
-                                                        DatasetFrame frame,
+                                                        CellFrame frame,
                                                         boolean enableShading) {
         boolean textured = atlasPage >= 0;
         boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
@@ -325,8 +331,8 @@ public class GlbEncoder {
 
                 if (normals != null) {
                     if (textured) {
-                        // Up-direction trick: emit local +Y (which the root
-                        // tile transform rotates to ECEF up at the dataset
+                        // Up-direction trick: emit local +Y (which the per-cell
+                        // tile transform rotates to ECEF up at the cell
                         // center) for every textured vertex, instead of the
                         // polygon's geometric normal. Lambertian then yields
                         // the same brightness for every textured triangle in
@@ -376,19 +382,23 @@ public class GlbEncoder {
     }
 
     /**
-     * Scale/offset from node-local meters to dataset-centered ENU meters.
+     * Scale/offset from node-local meters to cell-centered ENU meters.
      * Welded positions are relative to the node center; the offset shifts them
-     * into the dataset-centered frame used by the root tile's ENU-to-ECEF transform.
+     * into the cell-centered frame that the cell root's per-cell ENU-to-ECEF
+     * tile transform maps into global ECEF. Because the anchor is the cell
+     * center (not the whole dataset), positions stay small (bounded by the
+     * cell extent) and the tangent plane is re-established at every cell, so
+     * Earth curvature no longer lifts far-from-center cells off the ground.
      */
-    private record DatasetFrame(double scaleX, double scaleY,
-                                float offsetX, float offsetY, float offsetZ) {
-        static DatasetFrame from(BoundingVolume mbs, double[] datasetCenter) {
-            double scaleX = GeoTransform.metersPerDegreeLon(datasetCenter[1]);
+    private record CellFrame(double scaleX, double scaleY,
+                             float offsetX, float offsetY, float offsetZ) {
+        static CellFrame from(BoundingVolume mbs, double[] cellCenter) {
+            double scaleX = GeoTransform.metersPerDegreeLon(cellCenter[1]);
             double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
-            float offsetX = (float) ((mbs.getCenterX() - datasetCenter[0]) * scaleX);
-            float offsetY = (float) ((mbs.getCenterY() - datasetCenter[1]) * scaleY);
-            float offsetZ = (float) (mbs.getCenterZ() - datasetCenter[2]);
-            return new DatasetFrame(scaleX, scaleY, offsetX, offsetY, offsetZ);
+            float offsetX = (float) ((mbs.getCenterX() - cellCenter[0]) * scaleX);
+            float offsetY = (float) ((mbs.getCenterY() - cellCenter[1]) * scaleY);
+            float offsetZ = (float) (mbs.getCenterZ() - cellCenter[2]);
+            return new CellFrame(scaleX, scaleY, offsetX, offsetY, offsetZ);
         }
     }
 
