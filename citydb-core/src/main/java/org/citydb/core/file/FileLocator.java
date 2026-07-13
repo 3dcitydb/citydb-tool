@@ -63,14 +63,6 @@ public class FileLocator {
             //
         }
 
-        if (file.getFileType() == FileType.ARCHIVE && (path == null || !Files.exists(path))) {
-            try {
-                path = file.getFile().getParent().resolve(location);
-            } catch (Exception e) {
-                //
-            }
-        }
-
         if (path == null) {
             throw new IOException("Failed to find file at " + location + ".");
         }
