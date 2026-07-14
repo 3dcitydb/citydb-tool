@@ -161,37 +161,39 @@ public abstract class ImportController implements Command {
             ImportOptionsHelper optionsHelper = ImportOptionsHelper.of(importOptions);
 
             for (int i = 0; shouldRun && filter.isCountWithinLimit() && i < inputFiles.size(); i++) {
-                InputFile inputFile = inputFiles.get(i);
-                logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
+                try (InputFile inputFile = inputFiles.get(i)) {
+                    logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
 
-                try (FeatureReader reader = ioAdapter.createReader(inputFile, readOptions)) {
-                    if (importMode != ImportMode.IMPORT_ALL) {
-                        logger.debug("Checking database for duplicate features...");
-                        DuplicateController.Result result = duplicateController.processDuplicates(reader, filter);
-                        if (result == DuplicateController.Result.SKIP_FILE) {
-                            logger.info("All features to be imported are duplicates. Skipping input file.");
-                            continue;
+                    try (FeatureReader reader = ioAdapter.createReader(inputFile, readOptions)) {
+                        if (importMode != ImportMode.IMPORT_ALL) {
+                            logger.debug("Checking database for duplicate features...");
+                            DuplicateController.Result result = duplicateController.processDuplicates(reader, filter);
+                            if (result == DuplicateController.Result.SKIP_FILE) {
+                                logger.info("All features to be imported are duplicates. Skipping input file.");
+                                continue;
+                            }
                         }
-                    }
 
-                    importer.startSession(databaseManager.getAdapter(), optionsHelper.update(importOptions, inputFile));
+                        importer.startSession(databaseManager.getAdapter(),
+                                optionsHelper.update(importOptions, inputFile));
 
-                    reader.read(feature -> {
-                        if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
-                            importer.importFeature(feature).whenComplete((descriptor, e) -> {
-                                if (descriptor != null) {
-                                    importLogger.add(feature);
-                                    long count = counter.incrementAndGet();
-                                    if (count % 1000 == 0) {
-                                        logger.info("{} features processed.", count);
+                        reader.read(feature -> {
+                            if (importMode != ImportMode.SKIP_EXISTING || !duplicateController.isDuplicate(feature)) {
+                                importer.importFeature(feature).whenComplete((descriptor, e) -> {
+                                    if (descriptor != null) {
+                                        importLogger.add(feature);
+                                        long count = counter.incrementAndGet();
+                                        if (count % 1000 == 0) {
+                                            logger.info("{} features processed.", count);
+                                        }
+                                    } else {
+                                        abort(feature, e);
+                                        reader.cancel();
                                     }
-                                } else {
-                                    abort(feature, e);
-                                    reader.cancel();
-                                }
-                            });
-                        }
-                    });
+                                });
+                            }
+                        });
+                    }
                 } catch (Throwable e) {
                     shouldRun = false;
                     throw e;
