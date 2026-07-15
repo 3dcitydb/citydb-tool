@@ -79,45 +79,40 @@ public final class FeatureProcessor {
             return;
         }
 
-        Envelope env = envelope;
         ClampMode clampMode = formatOptions.getClampMode();
-        if (clampMode != null) {
+        boolean clamped = clampMode != null;
+        if (clamped) {
             // Ground height the mesh's lowest point is shifted onto: 0 for the
             // ellipsoid, or the Cesium World Terrain height sampled at the
             // feature centroid (lon/lat — the export CRS is WGS84, X=lon Y=lat).
             // A failed terrain sample (NaN) falls back to the ellipsoid.
             double groundHeight = 0.0;
             if (clampMode == ClampMode.CESIUM_WORLD_TERRAIN && terrainProvider != null) {
-                double[] centroid = centroidLonLat(env, mesh);
+                double[] centroid = centroidLonLat(envelope, mesh);
                 double sampled = terrainProvider.sampleHeight(centroid[0], centroid[1]);
                 if (!Double.isNaN(sampled)) {
                     groundHeight = sampled;
                 }
             }
             mesh.clampToGround(groundHeight);
-            // Recompute Z from the clamped mesh — the Feature's envelope Z
-            // may not match the mesh when multiple LODs or non-surface
-            // geometries contribute to the envelope.
-            if (env != null) {
-                double[] meshBbox = mesh.computeBoundingBox();
-                env = Envelope.of(
-                        Coordinate.of(env.getLowerCorner().getX(),
-                                env.getLowerCorner().getY(), meshBbox[2]),
-                        Coordinate.of(env.getUpperCorner().getX(),
-                                env.getUpperCorner().getY(), meshBbox[5]));
-            }
         }
 
+        // Spatial bbox for partitioning. The DB envelope is a cheap proxy for
+        // the mesh bounds, used only when we haven't already paid for the mesh
+        // box: when clamping we compute it anyway (the shift moves Z, and the
+        // Feature's envelope may not match the mesh when multiple LODs or
+        // non-surface geometries contribute to it), so use that ground-truth
+        // box directly for both XY and Z instead of trusting the envelope.
         double cx, cy;
         double[] bbox;
-        if (env != null) {
-            cx = (env.getLowerCorner().getX() + env.getUpperCorner().getX()) / 2;
-            cy = (env.getLowerCorner().getY() + env.getUpperCorner().getY()) / 2;
+        if (!clamped && envelope != null) {
+            cx = (envelope.getLowerCorner().getX() + envelope.getUpperCorner().getX()) / 2;
+            cy = (envelope.getLowerCorner().getY() + envelope.getUpperCorner().getY()) / 2;
             bbox = new double[]{
-                    env.getLowerCorner().getX(), env.getLowerCorner().getY(),
-                    env.getLowerCorner().getZ(),
-                    env.getUpperCorner().getX(), env.getUpperCorner().getY(),
-                    env.getUpperCorner().getZ()
+                    envelope.getLowerCorner().getX(), envelope.getLowerCorner().getY(),
+                    envelope.getLowerCorner().getZ(),
+                    envelope.getUpperCorner().getX(), envelope.getUpperCorner().getY(),
+                    envelope.getUpperCorner().getZ()
             };
         } else {
             bbox = mesh.computeBoundingBox();
