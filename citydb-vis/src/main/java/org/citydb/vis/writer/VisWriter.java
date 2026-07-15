@@ -268,8 +268,7 @@ public abstract class VisWriter implements FeatureWriter {
         // introduced by the dual paths, and GeometryMeshBuilder's
         // most-specific-owner-first ordering ensures the BoundarySurface
         // owner wins on each polygon's first triangulation.
-        GeometryInfo geometryInfo = feature.getGeometryInfo(
-                GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
+        GeometryInfo geometryInfo = feature.getGeometryInfo(GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
         List<GeometryProperty> geometryProperties = geometryInfo.getGeometries();
         List<ImplicitGeometryProperty> implicitProperties = geometryInfo.getImplicitGeometries();
 
@@ -280,8 +279,7 @@ public abstract class VisWriter implements FeatureWriter {
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
 
         if (!geometryProperties.isEmpty()) {
-            RingAppearance appearance =
-                    AppearanceExtractor.extract(feature, stores.getTextureStore());
+            RingAppearance appearance = AppearanceExtractor.extract(feature, stores.getTextureStore());
 
             List<GeometryProperty> geomProps = new ArrayList<>(geometryProperties);
             Map<LinearRing, Integer> ringTextureIds = appearance.ringTextureIds();
@@ -301,8 +299,7 @@ public abstract class VisWriter implements FeatureWriter {
             // typically reused across features, but caching globally would
             // need a thread-safe map keyed by prototype identity — not worth
             // the complexity unless profiling shows a hot spot.
-            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache =
-                    new IdentityHashMap<>();
+            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache = new IdentityHashMap<>();
 
             for (ImplicitGeometryProperty property : implicitProperties) {
                 CompletableFuture<Boolean> instance = dispatchImplicitInstance(
