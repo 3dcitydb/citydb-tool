@@ -21,7 +21,7 @@ dependencies {
 test {
     // RailwaySceneI3SExportIT runs a full textured export, which loads every
     // texture image and builds I3S atlases via AWT (Graphics2D / BufferedImage
-    // in TextureAtlas + texture-atlas-creator). Run AWT headless so the forked
+    // in TextureAtlasBuilder + texture-atlas-creator). Run AWT headless so the forked
     // test worker does not pull in the desktop toolkit, and give the heap some
     // headroom comparable to a real CLI run.
     maxHeapSize = '4g'

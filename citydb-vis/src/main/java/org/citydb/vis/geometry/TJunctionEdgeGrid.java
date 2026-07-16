@@ -11,10 +11,10 @@ import java.util.Map;
 
 /**
  * Uniform 3D hash grid over triangle edges, used by
- * {@link TriangleMesh#resolveTJunctions} to look up candidate edges near a
- * vertex without scanning the whole triangle list. Package-private and tied
- * to that algorithm's coordinate space (pre-scaled metres) and tolerance
- * regime (centimetres); not a general-purpose spatial index.
+ * {@link TJunctionResolver} to look up candidate edges near a vertex without
+ * scanning the whole triangle list. Package-private and tied to that
+ * algorithm's coordinate space (pre-scaled metres) and tolerance regime
+ * (centimetres); not a general-purpose spatial index.
  */
 final class TJunctionEdgeGrid {
     // Cell size (m). Tolerance is ~2 cm; 0.20 m gives ~10× headroom so a
@@ -125,9 +125,9 @@ final class TJunctionEdgeGrid {
 
     // Primitive-backed int list — the T-junction grid buckets must avoid
     // Integer boxing, since a dense mesh near the size ceiling produces
-    // tens of millions of bucket inserts and reads per resolveTJunctions
-    // iteration. Fields are package-private so the hot loop in
-    // TriangleMesh.resolveTJunctions can read them without method calls.
+    // tens of millions of bucket inserts and reads per resolver iteration.
+    // Fields are package-private so the hot loop in TJunctionResolver can
+    // read them without method calls.
     static final class IntList {
         int[] data = new int[4];
         int size = 0;
