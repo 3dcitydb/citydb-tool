@@ -7,8 +7,6 @@ package org.citydb.vis.geometry;
 
 import org.citydb.model.common.Name;
 import org.citydb.vis.util.BoundingBoxUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -20,17 +18,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class TriangleMesh {
-    private static final Logger logger = LoggerFactory.getLogger(TriangleMesh.class);
     private static final float[] WHITE_RGBA = {1f, 1f, 1f, 1f};
-
-    // Ceiling on triangle count for the T-junction pass. Below it the
-    // spatial-index detection plus the split-application loop finish in
-    // milliseconds for normal city-scale features. Above it (BIM-scale
-    // meshes from deeply nested feature trees) the dense overlapping
-    // geometry both makes detection scan minutes long and produces splits
-    // that would weld topologically independent components — the wrong
-    // thing to do. Skip with a warning.
-    private static final int T_JUNCTION_MAX_TRIANGLES = 100_000;
 
     private final List<double[]> positions;
     private final List<float[]> normals;
@@ -40,7 +28,8 @@ public class TriangleMesh {
     // id, X3DMaterial-colored flag, source surface type), kept index-aligned
     // with one another. The alignment invariant lives entirely inside
     // TriangleData so the add/copy/rebuild paths in merge, removeDuplicate and
-    // resolveTJunctions touch one object instead of five parallel collections.
+    // the T-junction pass ({@link TJunctionResolver}) touch one object instead
+    // of five parallel collections.
     private TriangleData triangleData;
     private boolean hasTexCoords;
     private boolean hasColors;
@@ -53,18 +42,35 @@ public class TriangleMesh {
         triangleData = new TriangleData();
     }
 
+    /**
+     * Unmodifiable <b>live</b> view of the position lane: vertices appended
+     * after the call are visible through it. All vertex-lane getters
+     * ({@link #getNormals()}, {@link #getTexCoords()}, {@link #getColors()})
+     * share this contract; {@link TJunctionResolver} caches these views
+     * across its pass and relies on the liveness — do not harden them into
+     * defensive copies.
+     */
     public List<double[]> getPositions() {
         return Collections.unmodifiableList(positions);
     }
 
+    /** Unmodifiable live view of the normal lane — same contract as {@link #getPositions()}. */
     public List<float[]> getNormals() {
         return Collections.unmodifiableList(normals);
     }
 
+    /**
+     * Unmodifiable view of the <i>current</i> triangle vertex lane. Unlike
+     * the vertex-lane views ({@link #getPositions()}), this view detaches
+     * when the triangle lanes are rebuilt ({@link #replaceTriangleData},
+     * {@link #removeDuplicateTriangles}): it keeps serving the replaced
+     * lanes. Re-fetch after any rebuild.
+     */
     public List<int[]> getTriangles() {
         return Collections.unmodifiableList(triangleData.vertices);
     }
 
+    /** Unmodifiable live view of the UV lane — same contract as {@link #getPositions()}. */
     public List<float[]> getTexCoords() {
         return Collections.unmodifiableList(texCoords);
     }
@@ -78,6 +84,7 @@ public class TriangleMesh {
         return this;
     }
 
+    /** Unmodifiable live view of the color lane — same contract as {@link #getPositions()}. */
     public List<float[]> getColors() {
         return Collections.unmodifiableList(colors);
     }
@@ -260,17 +267,12 @@ public class TriangleMesh {
      * A T-junction occurs when a vertex lies on an edge of another triangle
      * without being a vertex of that triangle, causing sub-pixel rendering cracks.
      * <p>
-     * Uses a uniform 3D hash grid over triangle edges so each vertex tests only
-     * the candidate edges in its local cell rather than every triangle in the
-     * mesh. Complexity is O(T) to build the index plus O(V·k) for the scan,
-     * where k is the average bucket size — small for typical building geometry.
-     * <p>
-     * Above {@value #T_JUNCTION_MAX_TRIANGLES} triangles the pass is skipped
-     * with a warning. At that scale (deeply nested BIM features merged into a
-     * single mesh) the split-application loop becomes a runaway cost, and the
-     * resulting topology changes would weld topologically independent
-     * components into shared edges — more harmful than the sub-pixel cracks
-     * the pass is meant to fix.
+     * The algorithm lives in {@link TJunctionResolver}. Above its triangle-count
+     * ceiling ({@value TJunctionResolver#MAX_TRIANGLES}) the pass is skipped with a warning:
+     * at that scale (deeply nested BIM features merged into a single mesh) the
+     * split-application loop becomes a runaway cost, and the resulting topology
+     * changes would weld topologically independent components into shared
+     * edges — more harmful than the sub-pixel cracks the pass is meant to fix.
      *
      * @param scaleX degrees-to-meters scale for X (longitude)
      * @param scaleY degrees-to-meters scale for Y (latitude)
@@ -279,188 +281,20 @@ public class TriangleMesh {
      *                        range
      */
     public void resolveTJunctions(double scaleX, double scaleY, double toleranceMeters) {
-        if (positions.size() < 3 || triangleData.isEmpty()) return;
+        TJunctionResolver.resolve(this, scaleX, scaleY, toleranceMeters);
+    }
 
-        if (triangleData.size() > T_JUNCTION_MAX_TRIANGLES) {
-            logger.warn("Skipping T-junction resolution for oversized feature "
-                    + "mesh (triangles={} > {}). Sub-pixel cracks at shared "
-                    + "edges (if any) will not be resolved.",
-                    triangleData.size(), T_JUNCTION_MAX_TRIANGLES);
-            return;
-        }
+    /** Live per-triangle attribute lanes — for same-package collaborators. */
+    TriangleData triangleData() {
+        return triangleData;
+    }
 
-        double tol2 = toleranceMeters * toleranceMeters;
-        int maxIterations = 5;
-
-        for (int iter = 0; iter < maxIterations; iter++) {
-            int vertexCount = positions.size();
-            double[][] mPos = new double[vertexCount][3];
-            for (int i = 0; i < vertexCount; i++) {
-                double[] p = positions.get(i);
-                mPos[i][0] = p[0] * scaleX;
-                mPos[i][1] = p[1] * scaleY;
-                mPos[i][2] = p[2];
-            }
-
-            // Snapshot the vertex lane for this iteration; the rebuild at the
-            // end of the loop body swaps in a fresh TriangleData.
-            List<int[]> tris = triangleData.vertices;
-            int triCount = tris.size();
-            TJunctionEdgeGrid edgeGrid = TJunctionEdgeGrid.build(mPos, tris, triCount);
-
-            // Find all T-junctions: vertex vi lies on edge of triangle ti.
-            // Store the parametric position t along the edge for correct UV interpolation.
-            List<int[]> splits = new ArrayList<>();   // {triIndex, edgeSlot, tJunctionVertex}
-            List<Double> splitParams = new ArrayList<>(); // parametric t for each split
-
-            // Per-vertex dedup of edges already tested in this vertex's cell
-            // sweep (the same edge can appear in multiple adjacent cells, and
-            // shared edges across triangles appear under different edgeIds).
-            // Stamping (increment the marker once per vertex, compare against
-            // it) costs O(1) per check and avoids the per-vertex clear that
-            // dominates BitSet/HashSet alternatives on BIM-scale meshes.
-            int[] visitedStamp = new int[triCount * 3];
-            int currentStamp = 0;
-
-            for (int vi = 0; vi < vertexCount; vi++) {
-                double vx = mPos[vi][0], vy = mPos[vi][1], vz = mPos[vi][2];
-                int cxMin = TJunctionEdgeGrid.cellOf(vx - toleranceMeters);
-                int cxMax = TJunctionEdgeGrid.cellOf(vx + toleranceMeters);
-                int cyMin = TJunctionEdgeGrid.cellOf(vy - toleranceMeters);
-                int cyMax = TJunctionEdgeGrid.cellOf(vy + toleranceMeters);
-                int czMin = TJunctionEdgeGrid.cellOf(vz - toleranceMeters);
-                int czMax = TJunctionEdgeGrid.cellOf(vz + toleranceMeters);
-
-                currentStamp++;
-                for (int cx = cxMin; cx <= cxMax; cx++) {
-                    for (int cy = cyMin; cy <= cyMax; cy++) {
-                        for (int cz = czMin; cz <= czMax; cz++) {
-                            TJunctionEdgeGrid.IntList bucket = edgeGrid.bucket(cx, cy, cz);
-                            if (bucket == null) continue;
-                            for (int bi = 0; bi < bucket.size; bi++) {
-                                int edgeId = bucket.data[bi];
-                                if (visitedStamp[edgeId] == currentStamp) continue;
-                                visitedStamp[edgeId] = currentStamp;
-
-                                int ti = edgeId / 3;
-                                int e = edgeId % 3;
-                                int[] tri = tris.get(ti);
-                                if (vi == tri[0] || vi == tri[1] || vi == tri[2]) continue;
-
-                                int ei1 = tri[e];
-                                int ei2 = tri[(e + 1) % 3];
-                                double dx = mPos[ei2][0] - mPos[ei1][0];
-                                double dy = mPos[ei2][1] - mPos[ei1][1];
-                                double dz = mPos[ei2][2] - mPos[ei1][2];
-                                double edgeLen2 = dx * dx + dy * dy + dz * dz;
-                                if (edgeLen2 < 1e-10) continue;
-
-                                double t = ((vx - mPos[ei1][0]) * dx
-                                        + (vy - mPos[ei1][1]) * dy
-                                        + (vz - mPos[ei1][2]) * dz) / edgeLen2;
-                                if (t <= 0.001 || t >= 0.999) continue;
-
-                                double px = mPos[ei1][0] + t * dx;
-                                double py = mPos[ei1][1] + t * dy;
-                                double pz = mPos[ei1][2] + t * dz;
-                                double dist2 = (vx - px) * (vx - px)
-                                        + (vy - py) * (vy - py)
-                                        + (vz - pz) * (vz - pz);
-
-                                if (dist2 < tol2) {
-                                    splits.add(new int[]{ti, e, vi});
-                                    splitParams.add(t);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (splits.isEmpty()) break;
-
-            // BitSet (primitive bit-per-triangle) rather than HashSet<Integer>
-            // — splits can hold millions of entries on dense meshes near the
-            // size threshold, and the per-entry Integer.box + HashMap.contains
-            // cost dominated the loop in profiling.
-            BitSet removed = new BitSet(triCount);
-            // Sub-triangles produced by the splits. Each inherits its parent
-            // triangle's attributes (featureId/textureId/colored/surfaceType)
-            // — a single split never crosses a surface boundary — which
-            // TriangleData.add carries across in lockstep.
-            TriangleData splitChildren = new TriangleData();
-
-            for (int s = 0; s < splits.size(); s++) {
-                int[] split = splits.get(s);
-                int ti = split[0], edgeSlot = split[1], vi = split[2];
-                if (removed.get(ti)) continue;
-
-                int[] tri = triangleData.vertices(ti);
-                int ei1 = tri[edgeSlot];
-                int ei2 = tri[(edgeSlot + 1) % 3];
-                int ei3 = tri[(edgeSlot + 2) % 3];
-                long fid = triangleData.featureId(ti);
-                int texId = triangleData.textureId(ti);
-                boolean colored = triangleData.isColored(ti);
-                Name surfaceType = triangleData.surfaceType(ti);
-
-                // New vertex at vi's position with the split triangle's normal.
-                // Interpolate UV/color along the edge at the parametric position t.
-                // Assumes per-face normals (all edge vertices share the same
-                // normal, as emitted by PolygonTriangulator). If upstream ever
-                // produces per-vertex smooth normals, this should interpolate.
-                float[] triNormal = normals.get(ei1);
-                double[] viPos = positions.get(vi);
-                float tParam = (float) splitParams.get(s).doubleValue();
-                int newVi;
-                if (hasTexCoords && hasColors) {
-                    float[] uv1 = texCoords.get(ei1), uv2 = texCoords.get(ei2);
-                    float[] c1 = colors.get(ei1), c2 = colors.get(ei2);
-                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
-                            triNormal[0], triNormal[1], triNormal[2],
-                            uv1[0] + tParam * (uv2[0] - uv1[0]),
-                            uv1[1] + tParam * (uv2[1] - uv1[1]),
-                            c1[0] + tParam * (c2[0] - c1[0]),
-                            c1[1] + tParam * (c2[1] - c1[1]),
-                            c1[2] + tParam * (c2[2] - c1[2]),
-                            c1[3] + tParam * (c2[3] - c1[3]));
-                } else if (hasTexCoords) {
-                    float[] uv1 = texCoords.get(ei1), uv2 = texCoords.get(ei2);
-                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
-                            triNormal[0], triNormal[1], triNormal[2],
-                            uv1[0] + tParam * (uv2[0] - uv1[0]),
-                            uv1[1] + tParam * (uv2[1] - uv1[1]));
-                } else if (hasColors) {
-                    float[] c1 = colors.get(ei1), c2 = colors.get(ei2);
-                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
-                            triNormal[0], triNormal[1], triNormal[2],
-                            c1[0] + tParam * (c2[0] - c1[0]),
-                            c1[1] + tParam * (c2[1] - c1[1]),
-                            c1[2] + tParam * (c2[2] - c1[2]),
-                            c1[3] + tParam * (c2[3] - c1[3]));
-                } else {
-                    newVi = addVertex(viPos[0], viPos[1], viPos[2],
-                            triNormal[0], triNormal[1], triNormal[2]);
-                }
-
-                removed.set(ti);
-                splitChildren.add(new int[]{ei1, newVi, ei3}, fid, texId, colored, surfaceType);
-                splitChildren.add(new int[]{newVi, ei2, ei3}, fid, texId, colored, surfaceType);
-            }
-
-            // Rebuild: surviving triangles in original order, then the split
-            // children. TriangleData keeps all five attribute lanes aligned,
-            // so this is a copy of the kept indices plus an append of the
-            // children — no manual per-lane re-synchronisation.
-            TriangleData rebuilt = new TriangleData();
-            for (int ti = 0; ti < triCount; ti++) {
-                if (!removed.get(ti)) {
-                    rebuilt.addCopy(triangleData.vertices(ti), triangleData, ti);
-                }
-            }
-            rebuilt.addAll(splitChildren);
-            triangleData = rebuilt;
-        }
+    /**
+     * Swap in a rebuilt set of triangle lanes. Vertex lanes are untouched;
+     * the caller is responsible for only referencing existing vertex indices.
+     */
+    void replaceTriangleData(TriangleData triangleData) {
+        this.triangleData = triangleData;
     }
 
     /**
@@ -597,15 +431,18 @@ public class TriangleMesh {
      * lanes are kept index-aligned: every {@link #add}/{@link #addCopy}/
      * {@link #addAll} appends to all of them together, so the alignment
      * invariant that used to be re-implemented in {@link TriangleMesh#merge},
-     * {@link TriangleMesh#removeDuplicateTriangles} and
-     * {@link TriangleMesh#resolveTJunctions} now lives in exactly one place.
+     * {@link TriangleMesh#removeDuplicateTriangles} and the T-junction pass
+     * now lives in exactly one place.
      *
      * <p>Struct-of-arrays (rather than a list of record objects) is
      * deliberate: the colored lane is a {@link BitSet} (one bit per triangle)
      * and rebuilds replace the whole holder, which preserves the memory layout
      * and scan cost the T-junction pass depends on.
+     *
+     * <p>Package-private so {@link TJunctionResolver} can build and swap in
+     * rebuilt lanes via {@link TriangleMesh#replaceTriangleData}.
      */
-    private static final class TriangleData {
+    static final class TriangleData {
         private final List<int[]> vertices = new ArrayList<>();
         private final List<Long> featureIds = new ArrayList<>();
         private final List<Integer> textureIds = new ArrayList<>();
