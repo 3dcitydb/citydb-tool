@@ -170,7 +170,7 @@ public class Tiles3DWriter extends VisWriter {
         }
 
         // Parallel: encode GLB per node
-        Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
+        Set<Integer> effectiveMeshIndices = nodeAssembler().processNodesParallel(allNodes, meshNodeIndices,
                 node -> writeNodeGlb(node, tilesDir, tilePaths, attrFields,
                         nodeAnchor.get(node.getIndex())));
 
@@ -238,7 +238,7 @@ public class Tiles3DWriter extends VisWriter {
                 == AtlasFallbackStrategy.EXPAND
                 ? AtlasMode.AUTO
                 : AtlasMode.SINGLE_ATLAS;
-        return writeNode(node, mode, "3D Tiles", (prepared, features) -> {
+        return nodeAssembler().writeNode(node, mode, "3D Tiles", (prepared, features) -> {
             // Serialize each atlas page to JPEG bytes and index texture ids by
             // page so the GLB encoder can route textured triangles to the
             // primitive backed by the correct atlas.
