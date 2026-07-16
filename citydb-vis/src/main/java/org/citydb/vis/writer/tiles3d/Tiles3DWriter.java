@@ -16,6 +16,7 @@ import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.TextureAtlas;
+import org.citydb.vis.appearance.TextureAtlasBuilder;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
@@ -213,7 +214,7 @@ public class Tiles3DWriter extends VisWriter {
      * <ul>
      *   <li>{@code expand} → {@link AtlasMode#AUTO}: the GLB encoder spills
      *       overflow onto additional atlas pages
-     *       ({@link TextureAtlas#buildMulti}) on every overflowing cell,
+     *       ({@link TextureAtlasBuilder#buildMulti}) on every overflowing cell,
      *       preserving source-resolution textures. Under
      *       {@code --atlas-overflow-mode=split}/{@code hybrid} this only
      *       affects residual cells the

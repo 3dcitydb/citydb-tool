@@ -12,7 +12,7 @@ package org.citydb.vis.appearance;
  * {@code --max-atlas-size} budget.
  * <p>
  * {@link #RESCALE} shrinks textures uniformly via the iterative rescale
- * loop in {@code TextureAtlas.buildSingleAtlas} so the atlas page stays
+ * loop in {@code TextureAtlasBuilder.buildSingleAtlas} so the atlas page stays
  * within the user-requested cap, accepting silent quality loss. If the
  * rescale loop exhausts at its minimum scale and overflow remains, the
  * atlas page is allowed to grow as a last-resort fallback (mirroring
@@ -30,7 +30,7 @@ package org.citydb.vis.appearance;
  * <ul>
  *   <li>3D Tiles uses {@link AtlasMode#AUTO} so the GLB
  *       encoder spills overflow onto additional atlas pages
- *       ({@code TextureAtlas.buildMulti}) — preserves quality without
+ *       ({@code TextureAtlasBuilder.buildMulti}) — preserves quality without
  *       inflating any single page.</li>
  *   <li>I3S (one-material-per-node spec) cannot multi-page, so it
  *       expands a single page up to 16K instead.</li>
