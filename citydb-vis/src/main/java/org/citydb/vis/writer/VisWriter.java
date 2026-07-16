@@ -266,7 +266,10 @@ public abstract class VisWriter implements FeatureWriter {
             return CompletableFuture.completedFuture(true);
         }
 
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        // Sub-tasks that together produce this one feature: one for its
+        // combined regular geometry, plus one per implicit geometry (each
+        // carries its own transform, so they can't be batched together).
+        List<CompletableFuture<Boolean>> subTasks = new ArrayList<>();
 
         if (!geometryProperties.isEmpty()) {
             RingAppearance appearance = AppearanceExtractor.extract(feature, stores.getTextureStore());
@@ -277,7 +280,7 @@ public abstract class VisWriter implements FeatureWriter {
                 stores.setFeatureTextured(featureId);
             }
 
-            futures.add(dispatchProcessing(featureId, objectId, featureType,
+            subTasks.add(dispatchProcessing(featureId, objectId, featureType,
                     featureTypeNamespace, envelope, attributes, geomProps,
                     appearance.forTriangulation()));
         }
@@ -296,22 +299,22 @@ public abstract class VisWriter implements FeatureWriter {
                         property, objectId, featureType, featureTypeNamespace,
                         attributes, protoAppearanceCache);
                 if (instance != null) {
-                    futures.add(instance);
+                    subTasks.add(instance);
                 }
             }
         }
 
-        if (futures.isEmpty()) {
+        if (subTasks.isEmpty()) {
             return CompletableFuture.completedFuture(true);
         }
-        if (futures.size() == 1) {
-            return futures.get(0);
+        if (subTasks.size() == 1) {
+            return subTasks.get(0);
         }
-        // Join: completes successfully only if every per-instance task
-        // completed successfully. Each task's future completes with true or
+        // Join: completes successfully only if every sub-task completed
+        // successfully. Each sub-task's future completes with true or
         // exceptionally (dispatchProcessing never completes it false), so allOf
-        // completing without a throwable already means every task succeeded.
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        // completing without a throwable already means every sub-task succeeded.
+        return CompletableFuture.allOf(subTasks.toArray(new CompletableFuture[0]))
                 .handle((v, t) -> t == null);
     }
 
