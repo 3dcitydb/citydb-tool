@@ -218,7 +218,7 @@ public class I3SWriter extends VisWriter {
         }
 
         // Parallel: encode geometry + write features/attributes per node.
-        Set<Integer> effectiveMeshIndices = processNodesParallel(allNodes, meshNodeIndices,
+        Set<Integer> effectiveMeshIndices = nodeAssembler().processNodesParallel(allNodes, meshNodeIndices,
                 node -> writeNodeOutput(node, layerDir, attrFields, hasColors, enableShading,
                         styleRegistry));
 
@@ -268,7 +268,7 @@ public class I3SWriter extends VisWriter {
                                     boolean layerHasColors,
                                     boolean enableShading,
                                     ObjectStyleRegistry styleRegistry) throws VisExportException {
-        return writeNode(node, AtlasMode.SINGLE_ATLAS, "I3S", (prepared, features) -> {
+        return nodeAssembler().writeNode(node, AtlasMode.SINGLE_ATLAS, "I3S", (prepared, features) -> {
             node.setMesh(prepared.mesh());
             I3SGeometryEncoder.NodeGeometryResult geomResult =
                     geometryEncoder.writeNodeGeometry(layerDir, node, layerHasColors,

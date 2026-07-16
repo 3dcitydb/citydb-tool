@@ -187,7 +187,7 @@ public class SceneNode {
      * <p>
      * Consumed by:
      * <ul>
-     *   <li>{@code VisWriter.prepareNodeMesh}: forces single-atlas
+     *   <li>{@code NodeAssembler.prepareNodeMesh}: forces single-atlas
      *       {@code RESCALE} fallback regardless of the user's
      *       {@code --atlas-fallback} so the preview always fits one page.</li>
      *   <li>{@code TilesetSerializer} (3D Tiles): emits {@code refine=REPLACE}
