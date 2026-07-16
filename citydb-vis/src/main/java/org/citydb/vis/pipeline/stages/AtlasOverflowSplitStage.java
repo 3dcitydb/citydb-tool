@@ -7,7 +7,7 @@ package org.citydb.vis.pipeline.stages;
 
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasOverflowMode;
-import org.citydb.vis.appearance.TextureAtlas;
+import org.citydb.vis.appearance.TextureAtlasBuilder;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
@@ -51,7 +51,7 @@ import java.util.concurrent.TimeUnit;
  * emit). The fallback paths and per-leaf packing are identical between the
  * two modes; only the cell-root retention differs.
  * <p>
- * Replaces the silent global texture rescale that {@link TextureAtlas#build}
+ * Replaces the silent global texture rescale that {@link TextureAtlasBuilder#build}
  * otherwise applies inside the writer's {@code prepareNodeMesh} step. Each
  * resulting leaf packs its self-contained subset of the parent's textures into
  * a single page at full resolution. Two fallbacks keep recursion bounded:
@@ -334,7 +334,7 @@ public final class AtlasOverflowSplitStage implements Stage {
             if (texIds.isEmpty()) continue;
 
             Map<Integer, float[]> uvExtents = merged.computeUVExtents();
-            if (!TextureAtlas.wouldOverflow(texIds, textureStore,
+            if (!TextureAtlasBuilder.wouldOverflow(texIds, textureStore,
                     textureScale, maxAtlasSize, uvExtents)) {
                 continue;
             }
