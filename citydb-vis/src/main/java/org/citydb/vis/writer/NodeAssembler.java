@@ -9,6 +9,7 @@ import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.TextureAtlas;
+import org.citydb.vis.appearance.TextureAtlasBuilder;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
@@ -121,11 +122,11 @@ public final class NodeAssembler {
                 // on the cheaper single-atlas path.
                 boolean useMulti = !lodPreview
                         && mode == AtlasMode.AUTO
-                        && TextureAtlas.wouldOverflow(uniqueTexIds, stores.getTextureStore(),
+                        && TextureAtlasBuilder.wouldOverflow(uniqueTexIds, stores.getTextureStore(),
                                 formatOptions.getTextureScale(),
                                 formatOptions.getMaxAtlasSize(), uvExtents);
                 if (useMulti) {
-                    atlases = TextureAtlas.buildMulti(
+                    atlases = TextureAtlasBuilder.buildMulti(
                             uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
                             formatOptions.getMaxAtlasSize(), uvExtents);
                 } else {
@@ -141,7 +142,7 @@ public final class NodeAssembler {
                     AtlasFallbackStrategy strategy = lodPreview
                             ? AtlasFallbackStrategy.RESCALE
                             : formatOptions.getAtlasFallbackStrategy();
-                    TextureAtlas single = TextureAtlas.build(
+                    TextureAtlas single = TextureAtlasBuilder.build(
                             uniqueTexIds, stores.getTextureStore(), formatOptions.getTextureScale(),
                             formatOptions.getMaxAtlasSize(), uvExtents, needsWhitePixel,
                             strategy);

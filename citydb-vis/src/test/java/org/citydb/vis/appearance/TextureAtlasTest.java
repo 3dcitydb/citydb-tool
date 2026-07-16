@@ -27,11 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Regression tests for the {@code compositeAtlas} / {@code computeUvRegions}
- * extraction. They drive the public {@code build} and {@code buildMulti}
- * entry points with real on-disk textures so both refactored helpers run, and
- * pin the white-pixel behaviour: the sentinel is excluded from
- * {@link TextureAtlas#getTextureIds()} on the single-page path and never
- * surfaces on the multi-page ({@code composePage}) path.
+ * extraction. They drive the public {@link TextureAtlasBuilder#build} and
+ * {@link TextureAtlasBuilder#buildMulti} entry points with real on-disk
+ * textures so both refactored helpers run, and pin the white-pixel behaviour:
+ * the sentinel is excluded from {@link TextureAtlas#getTextureIds()} on the
+ * single-page path and never surfaces on the multi-page ({@code composePage})
+ * path.
  */
 class TextureAtlasTest {
 
@@ -63,7 +64,7 @@ class TextureAtlasTest {
         int t2 = registerTexture("c.png", 8, 16, Color.BLUE);
         List<Integer> ids = List.of(t0, t1, t2);
 
-        TextureAtlas atlas = TextureAtlas.build(ids, store, 1.0, 1024, null,
+        TextureAtlas atlas = TextureAtlasBuilder.build(ids, store, 1.0, 1024, null,
                 false, AtlasFallbackStrategy.RESCALE);
 
         assertNotNull(atlas);
@@ -78,7 +79,7 @@ class TextureAtlasTest {
         store = newStore();
         int t0 = registerTexture("a.png", 16, 16, Color.RED);
 
-        TextureAtlas atlas = TextureAtlas.build(List.of(t0), store, 1.0, 1024, null,
+        TextureAtlas atlas = TextureAtlasBuilder.build(List.of(t0), store, 1.0, 1024, null,
                 true, AtlasFallbackStrategy.RESCALE);
         assertNotNull(atlas);
 
@@ -118,7 +119,7 @@ class TextureAtlasTest {
         int t2 = registerTexture("c.png", 32, 8, Color.BLUE);
         List<Integer> ids = List.of(t0, t1, t2);
 
-        List<TextureAtlas> pages = TextureAtlas.buildMulti(ids, store, 1.0, 1024, null);
+        List<TextureAtlas> pages = TextureAtlasBuilder.buildMulti(ids, store, 1.0, 1024, null);
 
         assertFalse(pages.isEmpty());
         Set<Integer> covered = new HashSet<>();
