@@ -7,7 +7,7 @@ package org.citydb.vis.appearance;
 
 /**
  * Strategy for atlas page generation per node. Selected by each writer
- * subclass and passed to {@code VisWriter.prepareNodeMesh} as a hint to
+ * subclass and passed to {@code NodeAssembler.prepareNodeMesh} as a hint to
  * pick between the single-page and multi-page atlas builders. Distinct
  * from {@link AtlasFallbackStrategy} (which controls how a single page
  * resolves overflow) — the two compose: a writer first decides whether
