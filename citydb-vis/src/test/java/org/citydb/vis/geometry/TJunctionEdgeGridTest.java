@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Characterization tests for {@link TJunctionEdgeGrid}, the uniform hash grid
- * that feeds {@code TriangleMesh.resolveTJunctions}. Its correctness is
+ * that feeds {@code TJunctionResolver}. Its correctness is
  * invisible at the surface (a wrong grid only shows up as cracks between
  * adjacent polygons), so these pin the behaviours the DDA insertion relies on:
  * <ul>
