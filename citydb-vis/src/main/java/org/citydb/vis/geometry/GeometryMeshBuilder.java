@@ -53,7 +53,22 @@ public final class GeometryMeshBuilder {
                                      long featureId,
                                      Name defaultSurfaceType,
                                      RingAttributes ringAttributes) {
-        PolygonTriangulator triangulator = new PolygonTriangulator();
+        return build(geometryProperties, featureId, defaultSurfaceType, ringAttributes, false);
+    }
+
+    /**
+     * Build variant with an explicit unit model: {@code localMeters} marks
+     * geometry in local Cartesian meters (implicit-geometry prototype
+     * templates) rather than EPSG:4326, switching the triangulator and the
+     * T-junction pass to identity degree-to-meter scaling. The metric
+     * tolerances themselves are unit-independent and stay unchanged.
+     */
+    public static TriangleMesh build(List<GeometryProperty> geometryProperties,
+                                     long featureId,
+                                     Name defaultSurfaceType,
+                                     RingAttributes ringAttributes,
+                                     boolean localMeters) {
+        PolygonTriangulator triangulator = new PolygonTriangulator(localMeters);
         TriangleMesh mesh = new TriangleMesh();
 
         // Process properties most-specific-owner-first so that the
@@ -98,9 +113,16 @@ public final class GeometryMeshBuilder {
             // overlapping geometry would either explode the algorithm's
             // split-application loop or weld topologically independent
             // components into shared edges (the wrong thing to do).
-            double[] center = mesh.computeCenter();
-            double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
-            double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
+            double scaleX;
+            double scaleY;
+            if (localMeters) {
+                scaleX = 1.0;
+                scaleY = 1.0;
+            } else {
+                double[] center = mesh.computeCenter();
+                scaleX = GeoTransform.metersPerDegreeLon(center[1]);
+                scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
+            }
             mesh.resolveTJunctions(scaleX, scaleY, T_JUNCTION_TOLERANCE_METERS);
             mesh.removeDuplicateTriangles();
         }

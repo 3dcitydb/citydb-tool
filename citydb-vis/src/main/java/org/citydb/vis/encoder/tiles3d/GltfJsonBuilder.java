@@ -27,20 +27,32 @@ import java.util.Map;
  * supplied in four groups — buffer layout, textures, primitives, metadata —
  * and {@link #build()} produces the UTF-8-encoded JSON bytes.
  * <p>
- * The document has a single scene containing a single node that references
- * a single mesh. The mesh carries one primitive per atlas page (each backed
- * by its own textured PBR material), one plain primitive per distinct
+ * The document has a single scene containing the merged-mesh node (present
+ * when the node has explicit geometry) followed by one node+mesh per
+ * GPU-instanced (prototype × style) group, each carrying
+ * {@code EXT_mesh_gpu_instancing} + {@code EXT_instance_features}. The
+ * merged mesh carries one primitive per atlas page (each backed by its own
+ * textured PBR material), one plain primitive per distinct
  * {@link DefaultObjectStyle} used by no-appearance surfaces in the node
  * (each backed by its own PBR material), and an optional X3DMaterial-
  * colored primitive. The atlas-page split lets a node whose texture
  * footprint exceeds {@code --max-atlas-size} render across multiple pages
  * instead of being globally downscaled; the per-style plain split lets
  * per-feature-type colors render without further mesh-level work. All
- * primitives share the {@code EXT_structural_metadata} property table.
+ * primitives — mesh-backed and instanced — share the
+ * {@code EXT_structural_metadata} property table.
  */
 final class GltfJsonBuilder {
     private static final int COMPONENT_TYPE_FLOAT = 5126;
     private static final int COMPONENT_TYPE_UNSIGNED_INT = 5125;
+    /**
+     * {@code Primitive.atlasPage} sentinel for an instanced prototype's
+     * textured primitive: it samples the prototype's own single-page atlas
+     * (embedded per instanced node via {@code InstancedNode.bvAtlas}), not
+     * one of the node's atlas pages. Owned here because this class does the
+     * material routing on it; {@code GlbEncoder} references it directly.
+     */
+    static final int INSTANCED_TEXTURED_PAGE = -3;
 
     // Buffer layout
     private List<GltfBufferView> bufferViews;
@@ -53,8 +65,15 @@ final class GltfJsonBuilder {
     // Primitives
     private List<Primitive> primitives = List.of();
 
-    // Metadata
-    private int featureCount;
+    // GPU-instanced nodes (one per prototype × style group); empty when the
+    // node carries no instanced content.
+    private List<InstancedNode> instancedNodes = List.of();
+
+    // Metadata. propertyRowCount = total property-table rows (the main
+    // mesh's face-range rows plus per-instance rows appended after them);
+    // each primitive's EXT_mesh_features featureCount is carried on the
+    // Primitive itself (spec: unique features per feature-id attribute).
+    private int propertyRowCount;
     private List<AttrField> attrFields;
     private List<PropertyTableBufferViews> propBvs;
 
@@ -86,9 +105,15 @@ final class GltfJsonBuilder {
         return this;
     }
 
-    GltfJsonBuilder metadata(int featureCount, List<AttrField> attrFields,
+    GltfJsonBuilder instancedNodes(List<InstancedNode> instancedNodes) {
+        this.instancedNodes = instancedNodes;
+        return this;
+    }
+
+    GltfJsonBuilder metadata(int propertyRowCount,
+                             List<AttrField> attrFields,
                              List<PropertyTableBufferViews> propBvs) {
-        this.featureCount = featureCount;
+        this.propertyRowCount = propertyRowCount;
         this.attrFields = attrFields;
         this.propBvs = propBvs;
         return this;
@@ -102,9 +127,9 @@ final class GltfJsonBuilder {
     byte[] build() {
         JSONObject root = new JSONObject();
         writeAsset(root);
-        writeScene(root);
 
-        List<PrimitiveAccessors> accessors = writeAccessors(root);
+        AccessorLayout accessors = writeAccessors(root);
+        writeScene(root, accessors);
         writeBufferViews(root);
         writeBuffers(root);
         MaterialIndices materials = writeMaterials(root);
@@ -125,68 +150,145 @@ final class GltfJsonBuilder {
         root.put("asset", asset);
     }
 
-    private static void writeScene(JSONObject root) {
+    /**
+     * Emit the scene graph: one node for the merged mesh (index 0, present
+     * only when the node has main primitives) followed by one node per
+     * instanced batch, each carrying {@code EXT_mesh_gpu_instancing} (TRS +
+     * per-instance {@code _FEATURE_ID_0} attributes) and
+     * {@code EXT_instance_features} referencing the shared property table.
+     * Mesh indices parallel node order.
+     */
+    private void writeScene(JSONObject root, AccessorLayout accessors) {
         root.put("scene", 0);
+        JSONArray sceneNodes = new JSONArray();
+        JSONArray nodes = new JSONArray();
+
+        if (!primitives.isEmpty()) {
+            JSONObject node = new JSONObject();
+            node.put("mesh", nodes.size());
+            sceneNodes.add(nodes.size());
+            nodes.add(node);
+        }
+        for (int i = 0; i < instancedNodes.size(); i++) {
+            InstancedNode in = instancedNodes.get(i);
+            int[] trs = accessors.instancedTrs.get(i);
+            JSONObject node = new JSONObject();
+            node.put("mesh", nodes.size());
+
+            JSONObject instancingExt = new JSONObject();
+            JSONObject instAttributes = new JSONObject();
+            instAttributes.put("TRANSLATION", trs[0]);
+            instAttributes.put("ROTATION", trs[1]);
+            instAttributes.put("SCALE", trs[2]);
+            instAttributes.put("_FEATURE_ID_0", trs[3]);
+            instancingExt.put("attributes", instAttributes);
+
+            JSONObject instanceFeaturesExt = new JSONObject();
+            JSONArray featureIdsArr = new JSONArray();
+            JSONObject featureIdDef = new JSONObject();
+            featureIdDef.put("featureCount", in.instanceCount);
+            featureIdDef.put("attribute", 0);
+            featureIdDef.put("propertyTable", 0);
+            featureIdsArr.add(featureIdDef);
+            instanceFeaturesExt.put("featureIds", featureIdsArr);
+
+            JSONObject nodeExtensions = new JSONObject();
+            nodeExtensions.put("EXT_mesh_gpu_instancing", instancingExt);
+            nodeExtensions.put("EXT_instance_features", instanceFeaturesExt);
+            node.put("extensions", nodeExtensions);
+
+            sceneNodes.add(nodes.size());
+            nodes.add(node);
+        }
+
         JSONArray scenes = new JSONArray();
         JSONObject scene = new JSONObject();
-        scene.put("nodes", new JSONArray().fluentAdd(0));
+        scene.put("nodes", sceneNodes);
         scenes.add(scene);
         root.put("scenes", scenes);
-
-        JSONArray nodes = new JSONArray();
-        JSONObject node = new JSONObject();
-        node.put("mesh", 0);
-        nodes.add(node);
         root.put("nodes", nodes);
     }
 
-    private List<PrimitiveAccessors> writeAccessors(JSONObject root) {
+    private AccessorLayout writeAccessors(JSONObject root) {
         JSONArray accessors = new JSONArray();
-        List<PrimitiveAccessors> result = new ArrayList<>(primitives.size());
-        int accIdx = 0;
+        List<PrimitiveAccessors> main = new ArrayList<>(primitives.size());
         for (Primitive p : primitives) {
-            accessors.add(makeAccessor(p.bvPositions, COMPONENT_TYPE_FLOAT, p.vertexCount,
-                    "VEC3", p.posMin, p.posMax));
-            int accPosition = accIdx++;
+            main.add(addPrimitiveAccessors(accessors, p));
+        }
 
-            int accNormal = -1;
-            if (p.bvNormals >= 0) {
-                accessors.add(makeAccessor(p.bvNormals, COMPONENT_TYPE_FLOAT, p.vertexCount,
-                        "VEC3", null, null));
-                accNormal = accIdx++;
+        List<List<PrimitiveAccessors>> instanced = new ArrayList<>(instancedNodes.size());
+        List<int[]> instancedTrs = new ArrayList<>(instancedNodes.size());
+        for (InstancedNode in : instancedNodes) {
+            List<PrimitiveAccessors> perPrim = new ArrayList<>(in.primitives.size());
+            for (Primitive p : in.primitives) {
+                perPrim.add(addPrimitiveAccessors(accessors, p));
             }
+            instanced.add(perPrim);
 
-            int accTexCoord = -1;
-            if (p.bvUvs >= 0) {
-                accessors.add(makeAccessor(p.bvUvs, COMPONENT_TYPE_FLOAT, p.vertexCount,
-                        "VEC2", null, null));
-                accTexCoord = accIdx++;
-            }
-
-            int accColor = -1;
-            if (p.bvColors >= 0) {
-                accessors.add(makeAccessor(p.bvColors, COMPONENT_TYPE_FLOAT, p.vertexCount,
-                        "VEC4", null, null));
-                accColor = accIdx++;
-            }
-
-            accessors.add(makeAccessor(p.bvIndices, COMPONENT_TYPE_UNSIGNED_INT, p.vertexCount,
-                    "SCALAR", null, null));
-            int accIndices = accIdx++;
-
-            // _FEATURE_ID_0 is a vertex attribute, so it must use a glTF-core
-            // vertex-attribute component type (FLOAT here — UNSIGNED_INT is
-            // only legal on indices). Encoded values are still integral row
-            // indices into the property table.
-            accessors.add(makeAccessor(p.bvFeatureIds, COMPONENT_TYPE_FLOAT, p.vertexCount,
-                    "SCALAR", null, null));
-            int accFeatureId = accIdx++;
-
-            result.add(new PrimitiveAccessors(accPosition, accNormal, accTexCoord, accColor,
-                    accIndices, accFeatureId));
+            accessors.add(makeAccessor(in.bvTranslation, COMPONENT_TYPE_FLOAT,
+                    in.instanceCount, "VEC3", in.tMin, in.tMax));
+            int accT = accessors.size() - 1;
+            accessors.add(makeAccessor(in.bvRotation, COMPONENT_TYPE_FLOAT,
+                    in.instanceCount, "VEC4", null, null));
+            int accR = accessors.size() - 1;
+            accessors.add(makeAccessor(in.bvScale, COMPONENT_TYPE_FLOAT,
+                    in.instanceCount, "VEC3", null, null));
+            int accS = accessors.size() - 1;
+            // Per-instance feature ids share the FLOAT widening rationale of
+            // the per-vertex attribute (integral property-table row indices).
+            accessors.add(makeAccessor(in.bvFeatureIds, COMPONENT_TYPE_FLOAT,
+                    in.instanceCount, "SCALAR", null, null));
+            int accF = accessors.size() - 1;
+            instancedTrs.add(new int[]{accT, accR, accS, accF});
         }
         root.put("accessors", accessors);
-        return result;
+        return new AccessorLayout(main, instanced, instancedTrs);
+    }
+
+    private static PrimitiveAccessors addPrimitiveAccessors(JSONArray accessors, Primitive p) {
+        accessors.add(makeAccessor(p.bvPositions, COMPONENT_TYPE_FLOAT, p.vertexCount,
+                "VEC3", p.posMin, p.posMax));
+        int accPosition = accessors.size() - 1;
+
+        int accNormal = -1;
+        if (p.bvNormals >= 0) {
+            accessors.add(makeAccessor(p.bvNormals, COMPONENT_TYPE_FLOAT, p.vertexCount,
+                    "VEC3", null, null));
+            accNormal = accessors.size() - 1;
+        }
+
+        int accTexCoord = -1;
+        if (p.bvUvs >= 0) {
+            accessors.add(makeAccessor(p.bvUvs, COMPONENT_TYPE_FLOAT, p.vertexCount,
+                    "VEC2", null, null));
+            accTexCoord = accessors.size() - 1;
+        }
+
+        int accColor = -1;
+        if (p.bvColors >= 0) {
+            accessors.add(makeAccessor(p.bvColors, COMPONENT_TYPE_FLOAT, p.vertexCount,
+                    "VEC4", null, null));
+            accColor = accessors.size() - 1;
+        }
+
+        accessors.add(makeAccessor(p.bvIndices, COMPONENT_TYPE_UNSIGNED_INT, p.vertexCount,
+                "SCALAR", null, null));
+        int accIndices = accessors.size() - 1;
+
+        // _FEATURE_ID_0 is a vertex attribute, so it must use a glTF-core
+        // vertex-attribute component type (FLOAT here — UNSIGNED_INT is
+        // only legal on indices). Encoded values are still integral row
+        // indices into the property table. Instanced prototype primitives
+        // (bvFeatureIds < 0) carry no per-vertex ids.
+        int accFeatureId = -1;
+        if (p.bvFeatureIds >= 0) {
+            accessors.add(makeAccessor(p.bvFeatureIds, COMPONENT_TYPE_FLOAT, p.vertexCount,
+                    "SCALAR", null, null));
+            accFeatureId = accessors.size() - 1;
+        }
+
+        return new PrimitiveAccessors(accPosition, accNormal, accTexCoord, accColor,
+                accIndices, accFeatureId);
     }
 
     private void writeBufferViews(JSONObject root) {
@@ -213,9 +315,34 @@ final class GltfJsonBuilder {
     }
 
     /**
+     * Finish a glTF material from a (possibly populated) PBR block: apply the
+     * project defaults (metallic 0, roughness 1, double-sided), optionally mark
+     * {@code alphaMode=BLEND}, and — when {@code --enable-shading} is off — add
+     * the unlit extension. The unlit extension matters because NORMAL-less
+     * primitives would otherwise have CesiumJS auto-derive flat normals and dim
+     * the surface; with shading on, the primitive carries normals and renders
+     * PBR-shaded. Shared by the textured / plain / colored material paths.
+     */
+    private JSONObject finishMaterial(JSONObject pbr, boolean blend) {
+        pbr.put("metallicFactor", 0.0);
+        pbr.put("roughnessFactor", 1.0);
+        JSONObject material = new JSONObject();
+        material.put("pbrMetallicRoughness", pbr);
+        if (blend) {
+            material.put("alphaMode", "BLEND");
+        }
+        material.put("doubleSided", true);
+        if (!enableShading) {
+            addUnlitExtension(material);
+        }
+        return material;
+    }
+
+    /**
      * Emit one textured material per referenced atlas page (each with a
      * baseColorTexture pointing at its own atlas), plus up to two untextured
-     * materials. All three material flavours follow {@code --enable-shading}:
+     * materials and one textured material per distinct instanced prototype
+     * atlas. All material flavours follow {@code --enable-shading}:
      * <ul>
      *   <li><b>textured</b> — PBR-shaded under {@code --enable-shading};
      *       otherwise carries {@code KHR_materials_unlit}. With NORMAL on,
@@ -243,38 +370,14 @@ final class GltfJsonBuilder {
      *       below 1 — vertex {@code COLOR_0} multiplies into baseColor so
      *       BLEND is required for transparency to render.</li>
      * </ul>
-     * All three materials carry {@code doubleSided: true}. CityGML imports
+     * All materials carry {@code doubleSided: true}. CityGML imports
      * routinely have inconsistent triangle winding on walls; the glTF default
      * (single-sided, back-face culled) would silently drop those triangles
      * from one viewing side. Mirrors the I3S writer's {@code cullFace="none"}
      * decision (see I3S {@code MaterialDefinition} javadoc).
-     * Returns the resolved material indices keyed by atlas page so
-     * {@link #writeMeshes} can reference them.
+     * Returns the resolved material indices so {@link #writeMeshes} can
+     * reference them.
      */
-    /**
-     * Finish a glTF material from a (possibly populated) PBR block: apply the
-     * project defaults (metallic 0, roughness 1, double-sided), optionally mark
-     * {@code alphaMode=BLEND}, and — when {@code --enable-shading} is off — add
-     * the unlit extension. The unlit extension matters because NORMAL-less
-     * primitives would otherwise have CesiumJS auto-derive flat normals and dim
-     * the surface; with shading on, the primitive carries normals and renders
-     * PBR-shaded. Shared by the textured / plain / colored material paths.
-     */
-    private JSONObject finishMaterial(JSONObject pbr, boolean blend) {
-        pbr.put("metallicFactor", 0.0);
-        pbr.put("roughnessFactor", 1.0);
-        JSONObject material = new JSONObject();
-        material.put("pbrMetallicRoughness", pbr);
-        if (blend) {
-            material.put("alphaMode", "BLEND");
-        }
-        material.put("doubleSided", true);
-        if (!enableShading) {
-            addUnlitExtension(material);
-        }
-        return material;
-    }
-
     private MaterialIndices writeMaterials(JSONObject root) {
         JSONArray materials = new JSONArray();
         int pageCount = bvTextures.size();
@@ -290,9 +393,16 @@ final class GltfJsonBuilder {
         LinkedHashSet<DefaultObjectStyle> plainStyles = new LinkedHashSet<>();
         boolean needColored = false;
         boolean coloredNeedsBlend = false;
-        for (Primitive p : primitives) {
+        List<Primitive> allPrimitives = new ArrayList<>(primitives);
+        for (InstancedNode in : instancedNodes) {
+            allPrimitives.addAll(in.primitives);
+        }
+        for (Primitive p : allPrimitives) {
             if (p.atlasPage >= 0) {
                 pageUsed[p.atlasPage] = true;
+            } else if (p.atlasPage == INSTANCED_TEXTURED_PAGE) {
+                // Handled per instanced atlas below — one material per
+                // distinct prototype atlas bufferView.
             } else if (p.bvColors >= 0) {
                 needColored = true;
                 if (p.anyAlphaBelowOne) {
@@ -304,6 +414,7 @@ final class GltfJsonBuilder {
                 plainStyles.add(p.plainStyle);
             }
         }
+        LinkedHashSet<Integer> instancedAtlasBvs = distinctInstancedAtlasBvs();
 
         // Pass 2: emit materials in fixed order — textured (per atlas
         // page), plain (per distinct style), colored — and record indices.
@@ -343,8 +454,23 @@ final class GltfJsonBuilder {
             materials.add(finishMaterial(new JSONObject(), coloredNeedsBlend));
         }
 
+        // One textured material per distinct instanced prototype atlas; their
+        // texture slots continue after the node atlas pages (writeTextures
+        // appends the images in the same order).
+        Map<Integer, Integer> instancedTexturedByBvAtlas = new HashMap<>();
+        for (int bvAtlas : instancedAtlasBvs) {
+            JSONObject pbr = new JSONObject();
+            JSONObject baseColorTexture = new JSONObject();
+            baseColorTexture.put("index", textureSlot++);
+            baseColorTexture.put("texCoord", 0);
+            pbr.put("baseColorTexture", baseColorTexture);
+            instancedTexturedByBvAtlas.put(bvAtlas, materials.size());
+            materials.add(finishMaterial(pbr, false));
+        }
+
         root.put("materials", materials);
-        return new MaterialIndices(texturedIdx, plainIdxByStyle, untexturedColoredIdx);
+        return new MaterialIndices(texturedIdx, plainIdxByStyle, untexturedColoredIdx,
+                instancedTexturedByBvAtlas);
     }
 
     private void addUnlitExtension(JSONObject material) {
@@ -355,25 +481,52 @@ final class GltfJsonBuilder {
     }
 
     /**
+     * Distinct instanced prototype atlas bufferViews in node order. The single
+     * source of the texture-slot sequence shared by {@link #writeMaterials}
+     * (slot assignment, after the node atlas pages) and {@link #writeTextures}
+     * (image/texture emission in the same order).
+     */
+    private LinkedHashSet<Integer> distinctInstancedAtlasBvs() {
+        LinkedHashSet<Integer> instancedAtlasBvs = new LinkedHashSet<>();
+        for (InstancedNode in : instancedNodes) {
+            if (in.bvAtlas >= 0) {
+                instancedAtlasBvs.add(in.bvAtlas);
+            }
+        }
+        return instancedAtlasBvs;
+    }
+
+    private static void addImageTexture(JSONArray images, JSONArray textures, int bufferView) {
+        JSONObject image = new JSONObject();
+        image.put("bufferView", bufferView);
+        image.put("mimeType", "image/jpeg");
+        images.add(image);
+
+        JSONObject texture = new JSONObject();
+        texture.put("sampler", 0);
+        texture.put("source", images.size() - 1);
+        textures.add(texture);
+    }
+
+    /**
      * Emit one {@code images}/{@code textures} entry per referenced atlas
-     * page, all sharing a single sampler. Texture indices are assigned
-     * densely in page order so they line up with the {@code textureSlot}
-     * counter used by {@link #writeMaterials}.
+     * page, followed by one per distinct instanced prototype atlas, all
+     * sharing a single sampler. Texture indices are assigned densely in this
+     * order so they line up with the {@code textureSlot} counter used by
+     * {@link #writeMaterials}.
      */
     private void writeTextures(JSONObject root) {
         JSONArray images = new JSONArray();
         JSONArray textures = new JSONArray();
         for (int bv : bvTextures) {
             if (bv < 0) continue;
-            JSONObject image = new JSONObject();
-            image.put("bufferView", bv);
-            image.put("mimeType", "image/jpeg");
-            images.add(image);
-
-            JSONObject texture = new JSONObject();
-            texture.put("sampler", 0);
-            texture.put("source", images.size() - 1);
-            textures.add(texture);
+            addImageTexture(images, textures, bv);
+        }
+        // Instanced prototype atlases follow the node atlas pages, in the
+        // same distinctInstancedAtlasBvs() order writeMaterials used to
+        // assign their texture slots.
+        for (int bv : distinctInstancedAtlasBvs()) {
+            addImageTexture(images, textures, bv);
         }
         if (textures.isEmpty()) {
             return;
@@ -390,45 +543,85 @@ final class GltfJsonBuilder {
         root.put("textures", textures);
     }
 
-    private void writeMeshes(JSONObject root, List<PrimitiveAccessors> accessors,
+    private void writeMeshes(JSONObject root, AccessorLayout accessors,
                              MaterialIndices materials) {
         JSONArray meshes = new JSONArray();
-        JSONObject mesh = new JSONObject();
-        JSONArray primitivesArr = new JSONArray();
 
-        for (int i = 0; i < primitives.size(); i++) {
-            Primitive p = primitives.get(i);
-            PrimitiveAccessors acc = accessors.get(i);
-            JSONObject primitive = new JSONObject();
+        if (!primitives.isEmpty()) {
+            JSONArray primitivesArr = new JSONArray();
+            for (int i = 0; i < primitives.size(); i++) {
+                primitivesArr.add(writePrimitiveJson(primitives.get(i),
+                        accessors.main.get(i), materials, -1));
+            }
+            JSONObject mesh = new JSONObject();
+            mesh.put("primitives", primitivesArr);
+            meshes.add(mesh);
+        }
 
-            JSONObject attributes = new JSONObject();
-            attributes.put("POSITION", acc.position);
-            if (acc.normal >= 0) {
-                attributes.put("NORMAL", acc.normal);
+        for (int n = 0; n < instancedNodes.size(); n++) {
+            InstancedNode in = instancedNodes.get(n);
+            List<PrimitiveAccessors> perPrim = accessors.instanced.get(n);
+            JSONArray primitivesArr = new JSONArray();
+            for (int i = 0; i < in.primitives.size(); i++) {
+                primitivesArr.add(writePrimitiveJson(in.primitives.get(i),
+                        perPrim.get(i), materials, in.bvAtlas));
             }
-            if (acc.texCoord >= 0) {
-                attributes.put("TEXCOORD_0", acc.texCoord);
-            }
-            if (acc.color >= 0) {
-                attributes.put("COLOR_0", acc.color);
-            }
+            JSONObject mesh = new JSONObject();
+            mesh.put("primitives", primitivesArr);
+            meshes.add(mesh);
+        }
+
+        root.put("meshes", meshes);
+    }
+
+    /**
+     * One glTF primitive object. Per-vertex {@code _FEATURE_ID_0} plus the
+     * {@code EXT_mesh_features} declaration are emitted only when the
+     * primitive carries a feature-id buffer — instanced prototype primitives
+     * don't (their feature identity is per instance, declared on the node
+     * via {@code EXT_instance_features}).
+     */
+    private JSONObject writePrimitiveJson(Primitive p, PrimitiveAccessors acc,
+                                          MaterialIndices materials, int instancedAtlasBv) {
+        JSONObject primitive = new JSONObject();
+
+        JSONObject attributes = new JSONObject();
+        attributes.put("POSITION", acc.position);
+        if (acc.normal >= 0) {
+            attributes.put("NORMAL", acc.normal);
+        }
+        if (acc.texCoord >= 0) {
+            attributes.put("TEXCOORD_0", acc.texCoord);
+        }
+        if (acc.color >= 0) {
+            attributes.put("COLOR_0", acc.color);
+        }
+        if (acc.featureId >= 0) {
             attributes.put("_FEATURE_ID_0", acc.featureId);
-            primitive.put("attributes", attributes);
-            primitive.put("indices", acc.indices);
-            int materialIdx;
-            if (p.atlasPage >= 0) {
-                materialIdx = materials.textured[p.atlasPage];
-            } else if (p.bvColors >= 0) {
-                materialIdx = materials.untexturedColored;
-            } else {
-                materialIdx = materials.untexturedPlainByStyle.get(p.plainStyle);
-            }
-            primitive.put("material", materialIdx);
+        }
+        primitive.put("attributes", attributes);
+        primitive.put("indices", acc.indices);
+        int materialIdx;
+        if (p.atlasPage >= 0) {
+            materialIdx = materials.textured[p.atlasPage];
+        } else if (p.atlasPage == INSTANCED_TEXTURED_PAGE) {
+            materialIdx = materials.instancedTexturedByBvAtlas.get(instancedAtlasBv);
+        } else if (p.bvColors >= 0) {
+            materialIdx = materials.untexturedColored;
+        } else {
+            materialIdx = materials.untexturedPlainByStyle.get(p.plainStyle);
+        }
+        primitive.put("material", materialIdx);
 
+        if (acc.featureId >= 0) {
             JSONObject meshFeaturesExt = new JSONObject();
             JSONArray featureIdsArr = new JSONArray();
             JSONObject featureIdDef = new JSONObject();
-            featureIdDef.put("featureCount", featureCount);
+            // Per the EXT_mesh_features spec, featureCount is the number of
+            // unique features identified by THIS primitive's attribute — the
+            // per-page/per-style split means each primitive references only a
+            // subset of the node's property-table rows.
+            featureIdDef.put("featureCount", p.featureCount);
             featureIdDef.put("attribute", 0);
             featureIdDef.put("propertyTable", 0);
             featureIdsArr.add(featureIdDef);
@@ -437,13 +630,9 @@ final class GltfJsonBuilder {
             JSONObject primExtensions = new JSONObject();
             primExtensions.put("EXT_mesh_features", meshFeaturesExt);
             primitive.put("extensions", primExtensions);
-
-            primitivesArr.add(primitive);
         }
 
-        mesh.put("primitives", primitivesArr);
-        meshes.add(mesh);
-        root.put("meshes", meshes);
+        return primitive;
     }
 
     private void writeExtensions(JSONObject root) {
@@ -453,8 +642,24 @@ final class GltfJsonBuilder {
         root.put("extensions", rootExtensions);
 
         JSONArray extUsed = new JSONArray();
-        extUsed.add("EXT_mesh_features");
+        if (!primitives.isEmpty()) {
+            extUsed.add("EXT_mesh_features");
+        }
         extUsed.add("EXT_structural_metadata");
+        if (!instancedNodes.isEmpty()) {
+            extUsed.add("EXT_mesh_gpu_instancing");
+            extUsed.add("EXT_instance_features");
+            // EXT_mesh_gpu_instancing has no un-instanced fallback: a loader
+            // ignoring it would render each prototype exactly once at the
+            // node origin — silent data loss. The extension spec therefore
+            // says files using it should list it in extensionsRequired so
+            // non-supporting loaders fail cleanly instead. EXT_instance_features
+            // stays optional: without it the geometry still renders correctly,
+            // only per-instance picking degrades.
+            JSONArray extRequired = new JSONArray();
+            extRequired.add("EXT_mesh_gpu_instancing");
+            root.put("extensionsRequired", extRequired);
+        }
         if (unlitUsed) {
             extUsed.add("KHR_materials_unlit");
         }
@@ -486,7 +691,7 @@ final class GltfJsonBuilder {
         JSONArray propTables = new JSONArray();
         JSONObject propTable = new JSONObject();
         propTable.put("class", "feature");
-        propTable.put("count", featureCount);
+        propTable.put("count", propertyRowCount);
 
         JSONObject propTableProps = new JSONObject();
         for (int i = 0; i < attrFields.size(); i++) {
@@ -545,15 +750,39 @@ final class GltfJsonBuilder {
      * anyAlphaBelowOne} flips the untextured colored material to
      * {@code alphaMode=BLEND}.
      */
-    record Primitive(int atlasPage, int vertexCount, float[] posMin, float[] posMax,
+    record Primitive(int atlasPage, int vertexCount, int featureCount,
+                     float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvColors,
                      int bvIndices, int bvFeatureIds,
                      boolean anyAlphaBelowOne,
                      DefaultObjectStyle plainStyle) {
     }
 
+    /**
+     * One GPU-instanced glTF node: the prototype's primitives (all with
+     * {@code bvFeatureIds == -1}) plus the {@code EXT_mesh_gpu_instancing}
+     * attribute buffer views. {@code tMin}/{@code tMax} are the TRANSLATION
+     * accessor's per-axis bounds.
+     */
+    record InstancedNode(List<Primitive> primitives, int instanceCount,
+                         int bvTranslation, int bvRotation, int bvScale, int bvFeatureIds,
+                         int bvAtlas,
+                         float[] tMin, float[] tMax) {
+    }
+
     private record PrimitiveAccessors(int position, int normal, int texCoord, int color,
                                       int indices, int featureId) {
+    }
+
+    /**
+     * Accessor indices produced by {@link #writeAccessors}: per main
+     * primitive, per instanced-node primitive, and per instanced node the
+     * TRS + instance-feature-id accessor quadruple
+     * {@code [TRANSLATION, ROTATION, SCALE, _FEATURE_ID_0]}.
+     */
+    private record AccessorLayout(List<PrimitiveAccessors> main,
+                                  List<List<PrimitiveAccessors>> instanced,
+                                  List<int[]> instancedTrs) {
     }
 
     /**
@@ -567,6 +796,7 @@ final class GltfJsonBuilder {
      */
     private record MaterialIndices(int[] textured,
                                    Map<DefaultObjectStyle, Integer> untexturedPlainByStyle,
-                                   int untexturedColored) {
+                                   int untexturedColored,
+                                   Map<Integer, Integer> instancedTexturedByBvAtlas) {
     }
 }
