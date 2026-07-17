@@ -13,8 +13,11 @@ import org.citydb.vis.appearance.TextureAtlasBuilder;
 import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
+import org.citydb.vis.model.InstanceBatch;
+import org.citydb.vis.model.InstancedFeature;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.store.AttributeStore;
+import org.citydb.vis.store.InstanceStore;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.VisExportStores;
 import org.slf4j.Logger;
@@ -23,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -60,13 +64,19 @@ public final class NodeAssembler {
     // white-pixel sentinel for intra-feature mixed cells. See VisWriter's
     // atlasNeedsWhitePixelSentinel().
     private final boolean atlasNeedsWhitePixelSentinel;
+    // Resolves instance entries' prototype ids to their shared template mesh
+    // and atlas. Always non-null; stays empty for writers without an
+    // instancing path (I3S), whose nodes never carry instance entries.
+    private final PrototypeRegistry prototypeRegistry;
 
     NodeAssembler(VisExportStores stores, VisFormatOptions formatOptions,
-                  int numberOfThreads, boolean atlasNeedsWhitePixelSentinel) {
+                  int numberOfThreads, boolean atlasNeedsWhitePixelSentinel,
+                  PrototypeRegistry prototypeRegistry) {
         this.stores = stores;
         this.formatOptions = formatOptions;
         this.numberOfThreads = numberOfThreads;
         this.atlasNeedsWhitePixelSentinel = atlasNeedsWhitePixelSentinel;
+        this.prototypeRegistry = prototypeRegistry;
     }
 
     /**
@@ -77,18 +87,50 @@ public final class NodeAssembler {
      * multi-atlas case (3D Tiles, where GLB supports multiple materials per
      * mesh). Empty when the node carries no textured triangles or every
      * referenced texture failed to load.
+     * <p>
+     * {@code entries} holds the mesh-backed node entries only; GPU-instanced
+     * entries are delivered as {@code instanceBatches} (one batch per
+     * referenced prototype, with per-instance placement and attributes) and
+     * are always empty for writers without an instancing path (I3S).
+     * {@code instanceAtlases} is index-aligned with {@code instanceBatches}:
+     * the prototype's own single-page atlas, or {@code null} for untextured
+     * prototypes.
      */
     public record PreparedNode(List<NodeEntry> entries, TriangleMesh mesh,
-                               List<TextureAtlas> atlases) {
+                               List<TextureAtlas> atlases,
+                               List<InstanceBatch> instanceBatches,
+                               List<TextureAtlas> instanceAtlases) {
     }
 
     /**
      * Prepare a node's mesh data: load and merge meshes from the sharded
-     * store, build texture atlas(es), and remap UV coordinates.
+     * store, build texture atlas(es), and remap UV coordinates. Instance
+     * entries (negative pseudo mesh handles) are collected into per-prototype
+     * {@link InstanceBatch}es instead of being merged.
      */
     private PreparedNode prepareNodeMesh(SceneNode node, AtlasMode mode) throws VisExportException {
         try {
-            List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(node.getIndex());
+            List<NodeEntry> allEntries = stores.getNodeEntryStore().loadNode(node.getIndex());
+
+            List<NodeEntry> entries = allEntries;
+            List<InstanceBatch> instanceBatches = List.of();
+            List<TextureAtlas> instanceAtlases = List.of();
+            if (containsInstanceEntries(allEntries)) {
+                entries = new ArrayList<>(allEntries.size());
+                List<NodeEntry> instanceEntries = new ArrayList<>();
+                for (NodeEntry entry : allEntries) {
+                    if (InstanceStore.isInstanceHandle(entry.meshHandle())) {
+                        instanceEntries.add(entry);
+                    } else {
+                        entries.add(entry);
+                    }
+                }
+                instanceBatches = buildInstanceBatches(instanceEntries);
+                instanceAtlases = new ArrayList<>(instanceBatches.size());
+                for (InstanceBatch batch : instanceBatches) {
+                    instanceAtlases.add(prototypeRegistry.atlas(batch.prototypeId()));
+                }
+            }
 
             TriangleMesh merged = new TriangleMesh();
             for (NodeEntry entry : entries) {
@@ -160,10 +202,59 @@ public final class NodeAssembler {
             }
             node.setTextured(!atlases.isEmpty());
 
-            return new PreparedNode(entries, merged, atlases);
+            return new PreparedNode(entries, merged, atlases, instanceBatches, instanceAtlases);
         } catch (IOException e) {
             throw new VisExportException("Failed to prepare node " + node.getIndex() + ".", e);
         }
+    }
+
+    private static boolean containsInstanceEntries(List<NodeEntry> entries) {
+        for (NodeEntry entry : entries) {
+            if (InstanceStore.isInstanceHandle(entry.meshHandle())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Resolve instance entries into per-prototype batches, loading each
+     * instance's placement payload and attribute row. Batch order follows the
+     * first-encounter order of prototypes within the node so tile output stays
+     * deterministic.
+     */
+    private List<InstanceBatch> buildInstanceBatches(List<NodeEntry> instanceEntries)
+            throws IOException {
+        InstanceStore instanceStore = stores.getInstanceStore();
+        AttributeStore attrStore = stores.getAttrStore();
+        Map<Integer, List<InstancedFeature>> byPrototype = new LinkedHashMap<>();
+        for (NodeEntry entry : instanceEntries) {
+            InstanceStore.InstanceRecord record =
+                    instanceStore.load(InstanceStore.toIndex(entry.meshHandle()));
+            AttributeStore.FeatureAttrs attrs = attrStore.load(entry.attrOffset());
+            byPrototype.computeIfAbsent(record.prototypeId(), k -> new ArrayList<>())
+                    .add(new InstancedFeature(
+                            new double[]{record.anchorX(), record.anchorY(), record.anchorZ()},
+                            record.rotation(), record.scale(), record.styleColor(),
+                            new FeatureData(entry.id(), attrs.objectId(), attrs.featureType(),
+                                    attrs.attributes())));
+        }
+
+        List<InstanceBatch> batches = new ArrayList<>(byPrototype.size());
+        for (Map.Entry<Integer, List<InstancedFeature>> group : byPrototype.entrySet()) {
+            PrototypeRegistry.Prototype prototype = prototypeRegistry.get(group.getKey());
+            if (prototype == null) {
+                // Cannot happen in a consistent run (every stored instance
+                // references a registered prototype); guard so a stale store
+                // doesn't NPE deep in the encoder.
+                logger.warn("Dropping {} instance(s) referencing unknown prototype {}.",
+                        group.getValue().size(), group.getKey());
+                continue;
+            }
+            batches.add(new InstanceBatch(prototype.id(), prototype.mesh(),
+                    prototypeRegistry.weldTolerance(prototype.id()), group.getValue()));
+        }
+        return batches;
     }
 
     /**

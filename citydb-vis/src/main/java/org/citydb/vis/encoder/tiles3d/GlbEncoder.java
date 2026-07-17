@@ -12,19 +12,27 @@ import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.FeatureData;
+import org.citydb.vis.model.InstanceBatch;
+import org.citydb.vis.model.InstancedFeature;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.citydb.vis.util.ColorUtils;
 import org.citydb.vis.util.GeoTransform;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Encodes a scene node's geometry, textures, and per-feature metadata into a
@@ -73,6 +81,21 @@ import java.util.Map;
  * every cell so Earth curvature does not lift distant cells off the ground.
  */
 public class GlbEncoder {
+    private static final Logger logger = LoggerFactory.getLogger(GlbEncoder.class);
+
+    // Per-prototype welded/routed/array-built geometry, computed once per
+    // export and shared across every GLB (and style group) referencing the
+    // prototype. Keyed by mesh identity: prototype meshes are frozen after
+    // PrototypeRegistry.buildAtlases, and the other build inputs are
+    // per-prototype constants by construction (weld tolerance frozen by
+    // buildAtlases, atlas bytes canonicalized by the writer's JPEG cache,
+    // style registry and shading flag writer-lifetime). Concurrent: encode()
+    // runs on the parallel node fan-out; populated via get/putIfAbsent so a
+    // heavyweight build never runs under the map's bin lock — a racing
+    // duplicate build is idempotent and the losers adopt the winner.
+    private final Map<TriangleMesh, BatchGeometry> prototypeGeometryCache =
+            new ConcurrentHashMap<>();
+
     /**
      * Encode a mesh node into a GLB byte array. Returns {@code null} if the
      * mesh is empty after welding/degenerate filtering.
@@ -101,10 +124,13 @@ public class GlbEncoder {
     public byte[] encode(SceneNode node, List<byte[]> atlasBytesList,
                          Map<Integer, Integer> texIdToPage,
                          List<FeatureData> features, List<AttrField> attrFields,
+                         List<InstanceBatch> instanceBatches,
+                         List<byte[]> instanceAtlasBytes,
                          double[] cellCenter,
                          ObjectStyleRegistry styleRegistry,
                          boolean enableShading) throws IOException {
         TriangleMesh mesh = node.getMesh();
+        boolean hasInstances = instanceBatches != null && !instanceBatches.isEmpty();
         boolean hasTexture = mesh.hasTexCoords() && !atlasBytesList.isEmpty();
         if (!hasTexture) {
             node.setTextured(false);
@@ -114,84 +140,103 @@ public class GlbEncoder {
         VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(mesh,
                 mbs.getCenterX(), mbs.getCenterY(), mbs.getCenterZ());
         node.setOutputVertexCount(weld.vertexCount());
-        if (weld.isEmpty()) {
+        if (weld.isEmpty() && !hasInstances) {
             node.setMesh(null);
             return null;
         }
 
         CellFrame frame = CellFrame.from(mbs, cellCenter);
 
-        // Classify valid triangles into format-neutral routing facts once
-        // (texture id, X3DMaterial-colored flag, resolved style, face-range
-        // row), then bucket them into the GLB's primitive flavours: one
-        // textured primitive per atlas page, one "plain" primitive per
-        // distinct DefaultObjectStyle (PBR-shaded, default baseColor), and one
-        // "colored" primitive (X3DMaterial vertex colors, unlit). A CityGML
-        // 3.0 Building with mixed RoofSurface / WallSurface / GroundSurface
-        // boundaries therefore emits one plain primitive (and one material)
-        // per distinct style used. The face-range index carried on each routed
-        // triangle lets the per-vertex _FEATURE_ID_0 reference the shared
-        // property table regardless of which primitive the triangle lands in —
-        // two non-contiguous runs of the same feature become two distinct
-        // property table rows.
-        List<RoutedTriangle> routed = TriangleRouter.route(mesh, weld, styleRegistry);
-
         int pageCount = atlasBytesList.size();
-        List<List<RoutedTriangle>> texturedTrisByPage = new ArrayList<>(pageCount);
-        for (int i = 0; i < pageCount; i++) {
-            texturedTrisByPage.add(new ArrayList<>());
-        }
-        // LinkedHashMap so emitted plain primitives appear in the order the
-        // styles were first encountered — stable across runs for a given
-        // input.
-        Map<DefaultObjectStyle, List<RoutedTriangle>> untexturedPlainTrisByStyle = new LinkedHashMap<>();
-        List<RoutedTriangle> untexturedColoredTris = new ArrayList<>();
-        for (RoutedTriangle rt : routed) {
-            if (hasTexture && rt.textured()) {
-                Integer page = texIdToPage.get(rt.textureId());
-                // A texId missing from the map means the atlas builder dropped
-                // this texture (e.g. corrupt source). Route the triangle to an
-                // untextured bucket so the feature still renders.
-                if (page != null) {
-                    texturedTrisByPage.get(page).add(rt);
-                    continue;
+        List<PrimitiveArrays> primitives = new ArrayList<>();
+        int featureCount = 0;
+        if (!weld.isEmpty()) {
+            // Classify valid triangles into format-neutral routing facts once
+            // (texture id, X3DMaterial-colored flag, resolved style, face-range
+            // row), then bucket them into the GLB's primitive flavours: one
+            // textured primitive per atlas page, one "plain" primitive per
+            // distinct DefaultObjectStyle (PBR-shaded, default baseColor), and one
+            // "colored" primitive (X3DMaterial vertex colors, unlit). A CityGML
+            // 3.0 Building with mixed RoofSurface / WallSurface / GroundSurface
+            // boundaries therefore emits one plain primitive (and one material)
+            // per distinct style used. The face-range index carried on each routed
+            // triangle lets the per-vertex _FEATURE_ID_0 reference the shared
+            // property table regardless of which primitive the triangle lands in —
+            // two non-contiguous runs of the same feature become two distinct
+            // property table rows.
+            List<RoutedTriangle> routed = TriangleRouter.route(mesh, weld, styleRegistry);
+
+            List<List<RoutedTriangle>> texturedTrisByPage = new ArrayList<>(pageCount);
+            for (int i = 0; i < pageCount; i++) {
+                texturedTrisByPage.add(new ArrayList<>());
+            }
+            // LinkedHashMap so emitted plain primitives appear in the order the
+            // styles were first encountered — stable across runs for a given
+            // input.
+            Map<DefaultObjectStyle, List<RoutedTriangle>> untexturedPlainTrisByStyle = new LinkedHashMap<>();
+            List<RoutedTriangle> untexturedColoredTris = new ArrayList<>();
+            for (RoutedTriangle rt : routed) {
+                if (hasTexture && rt.textured()) {
+                    Integer page = texIdToPage.get(rt.textureId());
+                    // A texId missing from the map means the atlas builder dropped
+                    // this texture (e.g. corrupt source). Route the triangle to an
+                    // untextured bucket so the feature still renders.
+                    if (page != null) {
+                        texturedTrisByPage.get(page).add(rt);
+                        continue;
+                    }
+                }
+                if (rt.colored()) {
+                    untexturedColoredTris.add(rt);
+                } else {
+                    untexturedPlainTrisByStyle.computeIfAbsent(rt.style(), k -> new ArrayList<>()).add(rt);
                 }
             }
-            if (rt.colored()) {
-                untexturedColoredTris.add(rt);
-            } else {
-                untexturedPlainTrisByStyle.computeIfAbsent(rt.style(), k -> new ArrayList<>()).add(rt);
-            }
-        }
 
-        int featureCount = weld.faceRanges().size();
+            featureCount = weld.faceRanges().size();
 
-        // One primitive per non-empty atlas page + one plain primitive per
-        // distinct DefaultObjectStyle in use + an optional colored primitive.
-        // An empty page can arise when every triangle routed to it was dropped
-        // by the weld/degenerate filter; its material + texture would still be
-        // referenced in the glTF JSON, but no primitive would draw it, so we
-        // simply skip it below and the JSON builder sees a compact set of
-        // primitives.
-        List<PrimitiveArrays> primitives =
-                new ArrayList<>(pageCount + untexturedPlainTrisByStyle.size() + 1);
-        for (int p = 0; p < pageCount; p++) {
-            List<RoutedTriangle> tris = texturedTrisByPage.get(p);
-            if (!tris.isEmpty()) {
-                primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, null, frame, enableShading));
+            // One primitive per non-empty atlas page + one plain primitive per
+            // distinct DefaultObjectStyle in use + an optional colored primitive.
+            // An empty page can arise when every triangle routed to it was dropped
+            // by the weld/degenerate filter; its material + texture would still be
+            // referenced in the glTF JSON, but no primitive would draw it, so we
+            // simply skip it below and the JSON builder sees a compact set of
+            // primitives.
+            for (int p = 0; p < pageCount; p++) {
+                List<RoutedTriangle> tris = texturedTrisByPage.get(p);
+                if (!tris.isEmpty()) {
+                    primitives.add(buildPrimitiveArrays(mesh, weld, tris, p, null, frame,
+                            enableShading, true));
+                }
             }
-        }
-        for (Map.Entry<DefaultObjectStyle, List<RoutedTriangle>> e : untexturedPlainTrisByStyle.entrySet()) {
-            if (!e.getValue().isEmpty()) {
-                primitives.add(buildPrimitiveArrays(mesh, weld, e.getValue(),
-                        UNTEXTURED_PLAIN_PAGE, e.getKey(), frame, enableShading));
+            for (Map.Entry<DefaultObjectStyle, List<RoutedTriangle>> e : untexturedPlainTrisByStyle.entrySet()) {
+                if (!e.getValue().isEmpty()) {
+                    primitives.add(buildPrimitiveArrays(mesh, weld, e.getValue(),
+                            UNTEXTURED_PLAIN_PAGE, e.getKey(), frame, enableShading, true));
+                }
             }
-        }
-        if (!untexturedColoredTris.isEmpty()) {
-            primitives.add(buildPrimitiveArrays(mesh, weld, untexturedColoredTris,
-                    UNTEXTURED_COLORED_PAGE, null, frame, enableShading));
+            if (!untexturedColoredTris.isEmpty()) {
+                primitives.add(buildPrimitiveArrays(mesh, weld, untexturedColoredTris,
+                        UNTEXTURED_COLORED_PAGE, null, frame, enableShading, true));
+            }
         }
         node.setMesh(null); // release source mesh; no longer needed
+
+        // Property-table rows: the mesh's face ranges first, then one row per
+        // instance (appended by buildInstancedNodes in emission order, so the
+        // per-instance _FEATURE_ID_0 values line up).
+        List<FeatureData> propFeatures = featureCount < features.size()
+                ? FeatureData.reorderByIds(features, weld.rangeFeatureIds())
+                : features;
+        List<InstancedNodeData> instancedNodes = List.of();
+        if (hasInstances) {
+            propFeatures = new ArrayList<>(propFeatures);
+            instancedNodes = buildInstancedNodes(instanceBatches, instanceAtlasBytes,
+                    cellCenter, styleRegistry, enableShading, propFeatures);
+            if (primitives.isEmpty() && instancedNodes.isEmpty()) {
+                return null;
+            }
+        }
 
         BinBufferBuilder bin = new BinBufferBuilder();
         List<PrimitiveBufferIds> primitiveBvs = new ArrayList<>(primitives.size());
@@ -209,9 +254,46 @@ public class GlbEncoder {
             bvTextures.add(pageInUse[p] ? bin.addRawBytes(atlasBytesList.get(p)) : -1);
         }
 
-        List<FeatureData> propFeatures = featureCount < features.size()
-                ? FeatureData.reorderByIds(features, weld.rangeFeatureIds())
-                : features;
+        List<GltfJsonBuilder.InstancedNode> jsonInstancedNodes =
+                new ArrayList<>(instancedNodes.size());
+        // A batch's prototype geometry (and atlas JPEG) is shared by its
+        // per-style node splits: write the buffer views once per distinct
+        // BatchGeometry and let every split's primitives reference them —
+        // only the material (style) differs per split.
+        Map<BatchGeometry, BatchGeometryBuffers> geometryBuffers = new IdentityHashMap<>();
+        for (InstancedNodeData ind : instancedNodes) {
+            BatchGeometry geometry = ind.geometry;
+            BatchGeometryBuffers buffers = geometryBuffers.get(geometry);
+            if (buffers == null) {
+                buffers = new BatchGeometryBuffers(
+                        geometry.textured != null ? writePrimitiveBuffers(bin, geometry.textured) : null,
+                        geometry.plain != null ? writePrimitiveBuffers(bin, geometry.plain) : null,
+                        geometry.colored != null ? writePrimitiveBuffers(bin, geometry.colored) : null,
+                        geometry.atlasBytes != null ? bin.addRawBytes(geometry.atlasBytes) : -1);
+                geometryBuffers.put(geometry, buffers);
+            }
+
+            List<GltfJsonBuilder.Primitive> prims = new ArrayList<>(3);
+            if (geometry.textured != null) {
+                prims.add(toJsonPrimitive(geometry.textured, buffers.textured, null));
+            }
+            if (geometry.plain != null) {
+                prims.add(toJsonPrimitive(geometry.plain, buffers.plain, ind.style));
+            }
+            if (geometry.colored != null) {
+                prims.add(toJsonPrimitive(geometry.colored, buffers.colored, null));
+            }
+            jsonInstancedNodes.add(new GltfJsonBuilder.InstancedNode(
+                    prims,
+                    ind.instanceCount,
+                    bin.addInstanceFloat32Array(ind.translations),
+                    bin.addInstanceFloat32Array(ind.rotations),
+                    bin.addInstanceFloat32Array(ind.scales),
+                    bin.addInstanceFloat32Array(ind.featureIds),
+                    buffers.bvAtlas,
+                    ind.tMin, ind.tMax));
+        }
+
         List<PropertyTableBufferViews> propBvs = new ArrayList<>();
         for (AttrField field : attrFields) {
             propBvs.add(encodePropertyField(bin, field, propFeatures));
@@ -222,11 +304,183 @@ public class GlbEncoder {
                 .bufferViews(bin.getBufferViews(), binData.length)
                 .textures(bvTextures)
                 .primitives(toJsonPrimitives(primitives, primitiveBvs))
-                .metadata(featureCount, attrFields, propBvs)
+                .instancedNodes(jsonInstancedNodes)
+                .metadata(propFeatures.size(), attrFields, propBvs)
                 .enableShading(enableShading)
                 .build();
 
         return GlbContainer.assemble(jsonData, binData);
+    }
+
+    /**
+     * Turn each prototype batch into one instanced-node payload per distinct
+     * per-instance style. The style-independent prototype geometry (welded,
+     * routed, and built into primitive arrays in the local meter frame — no
+     * per-vertex feature ids, feature identity is per instance via
+     * {@code EXT_instance_features}) is computed once per prototype for the
+     * writer's lifetime and shared across GLBs and style groups; each group
+     * only assembles its TRS + feature-id instance attribute arrays. Appends
+     * one property-table row per instance to {@code propFeatures}; the
+     * appended row index is the instance's {@code _FEATURE_ID_0} value.
+     */
+    private List<InstancedNodeData> buildInstancedNodes(
+            List<InstanceBatch> instanceBatches, List<byte[]> instanceAtlasBytes,
+            double[] cellCenter,
+            ObjectStyleRegistry styleRegistry, boolean enableShading,
+            List<FeatureData> propFeatures) {
+        List<InstancedNodeData> out = new ArrayList<>();
+        for (int b = 0; b < instanceBatches.size(); b++) {
+            InstanceBatch batch = instanceBatches.get(b);
+            byte[] atlasBytes = instanceAtlasBytes != null && b < instanceAtlasBytes.size()
+                    ? instanceAtlasBytes.get(b) : null;
+            BatchGeometry geometry = prototypeGeometryCache.get(batch.prototypeMesh());
+            if (geometry == null) {
+                geometry = buildBatchGeometry(batch, atlasBytes, styleRegistry, enableShading);
+                BatchGeometry existing =
+                        prototypeGeometryCache.putIfAbsent(batch.prototypeMesh(), geometry);
+                if (existing != null) {
+                    geometry = existing;
+                }
+            }
+            if (geometry.isEmpty()) {
+                // Warned at build time (racing builders may each warn once);
+                // instances of this prototype are dropped in every node that
+                // references it.
+                continue;
+            }
+
+            // Group the batch's instances by their ingest-resolved style —
+            // one glTF node (and one plain material) per distinct style.
+            // DefaultObjectStyle is value-equal over the color, so it serves
+            // as the map key directly. The style binds only to the plain
+            // primitive, so a prototype without one (fully textured and/or
+            // X3DMaterial-colored) keeps all instances in a single node.
+            Map<DefaultObjectStyle, List<InstancedFeature>> byStyle = new LinkedHashMap<>();
+            if (geometry.plain() == null) {
+                byStyle.put(DefaultObjectStyle.defaults(), batch.instances());
+            } else {
+                for (InstancedFeature instance : batch.instances()) {
+                    float[] c = instance.styleColor();
+                    byStyle.computeIfAbsent(
+                            DefaultObjectStyle.defaults().setColor(c[0], c[1], c[2], c[3]),
+                            k -> new ArrayList<>()).add(instance);
+                }
+            }
+
+            for (Map.Entry<DefaultObjectStyle, List<InstancedFeature>> group : byStyle.entrySet()) {
+                List<InstancedFeature> instances = group.getValue();
+                int count = instances.size();
+                float[] translations = new float[count * 3];
+                float[] rotations = new float[count * 4];
+                float[] scales = new float[count * 3];
+                float[] featureIds = new float[count];
+                float[] tMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
+                float[] tMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                for (int i = 0; i < count; i++) {
+                    InstancedFeature instance = instances.get(i);
+                    InstanceTransformEncoder.InstanceTrs trs = InstanceTransformEncoder.encode(
+                            instance.anchor(), instance.rotation(), instance.scale(), cellCenter);
+                    for (int k = 0; k < 3; k++) {
+                        translations[i * 3 + k] = trs.translation()[k];
+                        scales[i * 3 + k] = trs.scale()[k];
+                        tMin[k] = Math.min(tMin[k], trs.translation()[k]);
+                        tMax[k] = Math.max(tMax[k], trs.translation()[k]);
+                    }
+                    for (int k = 0; k < 4; k++) {
+                        rotations[i * 4 + k] = trs.rotation()[k];
+                    }
+                    featureIds[i] = propFeatures.size();
+                    propFeatures.add(instance.feature());
+                }
+                out.add(new InstancedNodeData(geometry, group.getKey(), count,
+                        translations, rotations, scales, featureIds, tMin, tMax));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Build a prototype's style-independent geometry once: weld in the local
+     * meter frame at the batch's scale-adjusted tolerance, route triangles,
+     * and bake the (up to three) primitive array sets. The plain primitive is
+     * built without a style — the per-group style binds at material level in
+     * {@code toJsonPrimitive}.
+     */
+    private static BatchGeometry buildBatchGeometry(InstanceBatch batch,
+                                                    byte[] atlasBytes,
+                                                    ObjectStyleRegistry styleRegistry,
+                                                    boolean enableShading) {
+        TriangleMesh proto = batch.prototypeMesh();
+        VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(proto, 0, 0, 0, true,
+                batch.weldTolerance());
+        if (weld.isEmpty()) {
+            logger.warn("Implicit-geometry template {} welded to empty at tolerance {} — " +
+                    "all of its instances are dropped from the 3D Tiles output.",
+                    batch.prototypeId(), batch.weldTolerance());
+            return BatchGeometry.EMPTY;
+        }
+        List<RoutedTriangle> routed = TriangleRouter.route(proto, weld, styleRegistry);
+        List<RoutedTriangle> texturedTris = new ArrayList<>();
+        List<RoutedTriangle> plainTris = new ArrayList<>();
+        List<RoutedTriangle> coloredTris = new ArrayList<>();
+        for (RoutedTriangle rt : routed) {
+            // Textured triangles sample the prototype's own single-page
+            // atlas (UVs already remapped at atlas-build time). Without an
+            // atlas (untextured prototype, or every source texture failed)
+            // they degrade to the plain bucket so the shape still renders.
+            if (rt.textured() && atlasBytes != null) {
+                texturedTris.add(rt);
+            } else if (rt.colored()) {
+                coloredTris.add(rt);
+            } else {
+                plainTris.add(rt);
+            }
+        }
+
+        CellFrame identity = CellFrame.identity();
+        PrimitiveArrays textured = texturedTris.isEmpty() ? null
+                : buildPrimitiveArrays(proto, weld, texturedTris,
+                        GltfJsonBuilder.INSTANCED_TEXTURED_PAGE, null, identity,
+                        enableShading, false);
+        PrimitiveArrays plain = plainTris.isEmpty() ? null
+                : buildPrimitiveArrays(proto, weld, plainTris,
+                        UNTEXTURED_PLAIN_PAGE, null, identity, enableShading, false);
+        PrimitiveArrays colored = coloredTris.isEmpty() ? null
+                : buildPrimitiveArrays(proto, weld, coloredTris,
+                        UNTEXTURED_COLORED_PAGE, null, identity, enableShading, false);
+        return new BatchGeometry(textured, plain, colored,
+                textured != null ? atlasBytes : null);
+    }
+
+    /**
+     * A prototype's style-independent primitive array sets (each {@code null}
+     * when the prototype has no triangles of that flavour) plus its atlas
+     * JPEG ({@code null} when untextured). Shared across GLBs and style
+     * groups; identity is what {@code geometryBuffers} dedups on.
+     */
+    private record BatchGeometry(PrimitiveArrays textured, PrimitiveArrays plain,
+                                 PrimitiveArrays colored, byte[] atlasBytes) {
+        static final BatchGeometry EMPTY = new BatchGeometry(null, null, null, null);
+
+        boolean isEmpty() {
+            return textured == null && plain == null && colored == null;
+        }
+    }
+
+    /** Buffer view ids of one {@link BatchGeometry}, written once per GLB. */
+    private record BatchGeometryBuffers(PrimitiveBufferIds textured, PrimitiveBufferIds plain,
+                                        PrimitiveBufferIds colored, int bvAtlas) {
+    }
+
+    /**
+     * Assembled per-(prototype, style) instanced-node payload: the shared
+     * prototype geometry, the group's plain-material style, and the group's
+     * instance attribute arrays.
+     */
+    private record InstancedNodeData(BatchGeometry geometry, DefaultObjectStyle style,
+                                     int instanceCount,
+                                     float[] translations, float[] rotations, float[] scales,
+                                     float[] featureIds, float[] tMin, float[] tMax) {
     }
 
     /**
@@ -243,10 +497,15 @@ public class GlbEncoder {
         // glTF core forbids UNSIGNED_INT on vertex attributes (only allowed on
         // indices). EXT_mesh_features's _FEATURE_ID_n is a vertex attribute,
         // so we widen to FLOAT — supports up to 2^24 unique IDs per node, more
-        // than enough for property-table row indices.
-        float[] featureIdsFloat = new float[p.featureIds.length];
-        for (int i = 0; i < p.featureIds.length; i++) featureIdsFloat[i] = p.featureIds[i];
-        int bvFeatureIds = bin.addFloat32Array(featureIdsFloat);
+        // than enough for property-table row indices. Instanced prototype
+        // primitives carry no per-vertex ids (featureIds == null) — their
+        // feature identity is per instance via EXT_instance_features.
+        int bvFeatureIds = -1;
+        if (p.featureIds != null) {
+            float[] featureIdsFloat = new float[p.featureIds.length];
+            for (int i = 0; i < p.featureIds.length; i++) featureIdsFloat[i] = p.featureIds[i];
+            bvFeatureIds = bin.addFloat32Array(featureIdsFloat);
+        }
         return new PrimitiveBufferIds(bvPositions, bvNormals, bvUvs, bvColors,
                 bvIndices, bvFeatureIds);
     }
@@ -255,15 +514,24 @@ public class GlbEncoder {
             List<PrimitiveArrays> primitives, List<PrimitiveBufferIds> bvs) {
         List<GltfJsonBuilder.Primitive> out = new ArrayList<>(primitives.size());
         for (int i = 0; i < primitives.size(); i++) {
-            PrimitiveArrays p = primitives.get(i);
-            PrimitiveBufferIds b = bvs.get(i);
-            out.add(new GltfJsonBuilder.Primitive(
-                    p.atlasPage,
-                    p.vertexCount, p.posMin, p.posMax,
-                    b.positions, b.normals, b.uvs, b.colors, b.indices, b.featureIds,
-                    p.anyAlphaBelowOne, p.plainStyle));
+            out.add(toJsonPrimitive(primitives.get(i), bvs.get(i), null));
         }
         return out;
+    }
+
+    /**
+     * Bind one primitive's arrays and buffer views into the JSON-builder
+     * shape. {@code styleOverride} lets instanced style groups share one
+     * style-independent plain geometry set while binding their own material;
+     * {@code null} keeps the style baked into the arrays (main mesh path).
+     */
+    private static GltfJsonBuilder.Primitive toJsonPrimitive(
+            PrimitiveArrays p, PrimitiveBufferIds b, DefaultObjectStyle styleOverride) {
+        return new GltfJsonBuilder.Primitive(
+                p.atlasPage,
+                p.vertexCount, p.uniqueFeatureCount, p.posMin, p.posMax,
+                b.positions, b.normals, b.uvs, b.colors, b.indices, b.featureIds,
+                p.anyAlphaBelowOne, styleOverride != null ? styleOverride : p.plainStyle);
     }
 
     /**
@@ -271,13 +539,17 @@ public class GlbEncoder {
      * Rewrites welded positions from ENU (meters, East/North/Up) into glTF
      * Y-up (X=East, Y=Up, Z=-North), collects per-axis min/max for the
      * POSITION accessor, and emits {@code TEXCOORD_0} (textured) /
-     * {@code COLOR_0} (X3DMaterial) / {@code NORMAL} (plain only)
-     * accordingly. {@code atlasPage}: {@code >=0} = textured (atlas page
-     * index, unlit); {@link #UNTEXTURED_PLAIN_PAGE} = untextured-no-color
-     * (PBR-shaded, NORMAL emitted); {@link #UNTEXTURED_COLORED_PAGE} =
-     * untextured-with-X3DMaterial (unlit, COLOR_0 emitted, no NORMAL). The
-     * resulting array's {@code anyAlphaBelowOne} flag drives
-     * {@code alphaMode=BLEND} downstream.
+     * {@code COLOR_0} (X3DMaterial) accordingly; {@code NORMAL} is emitted on
+     * every path when {@code --enable-shading} is on (textured paths carry
+     * the up-direction trick, see the in-body comment) and on none otherwise.
+     * {@code atlasPage}: {@code >=0} = textured against a node atlas page;
+     * {@link GltfJsonBuilder#INSTANCED_TEXTURED_PAGE} = textured against the
+     * instanced prototype's own atlas; {@link #UNTEXTURED_PLAIN_PAGE} =
+     * untextured-no-color (per-style material);
+     * {@link #UNTEXTURED_COLORED_PAGE} = untextured-with-X3DMaterial
+     * ({@code COLOR_0} emitted). The resulting array's
+     * {@code anyAlphaBelowOne} flag drives {@code alphaMode=BLEND}
+     * downstream.
      */
     private static PrimitiveArrays buildPrimitiveArrays(TriangleMesh mesh,
                                                         VertexWelder.WeldResult weld,
@@ -285,13 +557,19 @@ public class GlbEncoder {
                                                         int atlasPage,
                                                         DefaultObjectStyle plainStyle,
                                                         CellFrame frame,
-                                                        boolean enableShading) {
-        boolean textured = atlasPage >= 0;
+                                                        boolean enableShading,
+                                                        boolean perVertexFeatureIds) {
+        boolean textured = atlasPage >= 0 || atlasPage == GltfJsonBuilder.INSTANCED_TEXTURED_PAGE;
         boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
         // NORMAL emitted on every path when --enable-shading is on. Textured
         // primitives use the up-direction trick (constant +Y in local frame,
         // see normal-write block below) so walls and roofs render at uniform
-        // brightness — matches the I3S writer's behaviour.
+        // brightness — matches the I3S writer's behaviour. Known limitation
+        // on the instanced path: the constant +Y is in PROTOTYPE-LOCAL space
+        // and the GPU rotates it by each instance's ROTATION attribute, so
+        // pitched/rolled instances shade as if lit from their local up. Exact
+        // for the dominant upright (yaw-only) case; a per-instance world-up
+        // is not expressible with shared per-vertex normals.
         boolean emitNormals = enableShading;
         int vertexCount = triEntries.size() * 3;
         float[] positions = new float[vertexCount * 3];
@@ -299,7 +577,7 @@ public class GlbEncoder {
         float[] uvs = textured ? new float[vertexCount * 2] : null;
         float[] colors = emitColors ? new float[vertexCount * 4] : null;
         int[] indices = new int[vertexCount]; // triangle soup: 0,1,2,3,...
-        int[] featureIds = new int[vertexCount];
+        int[] featureIds = perVertexFeatureIds ? new int[vertexCount] : null;
         float[] posMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
         float[] posMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
         boolean anyAlphaBelowOne = false;
@@ -307,12 +585,21 @@ public class GlbEncoder {
         float[][] weldedPositions = weld.weldedPositions();
         List<int[]> triangles = mesh.getTriangles();
 
+        // Distinct property-table rows referenced by THIS primitive —
+        // EXT_mesh_features defines featureCount per feature-id attribute,
+        // not per node, and after the per-page/per-style split each
+        // primitive sees only a subset of the node's rows.
+        Set<Integer> uniqueFeatures = perVertexFeatureIds ? new HashSet<>() : null;
+
         int idx = 0;
         for (RoutedTriangle entry : triEntries) {
             int ti = entry.triangleIndex();
             int base = ti * 3;
             int[] tri = triangles.get(ti);
             int fIdx = entry.faceIndex();
+            if (uniqueFeatures != null) {
+                uniqueFeatures.add(fIdx);
+            }
             for (int j = 0; j < 3; j++) {
                 float[] wp = weldedPositions[base + j];
                 int srcIdx = tri[j];
@@ -371,14 +658,17 @@ public class GlbEncoder {
                     }
                 }
                 indices[idx] = idx;
-                featureIds[idx] = fIdx;
+                if (featureIds != null) {
+                    featureIds[idx] = fIdx;
+                }
                 idx++;
             }
         }
 
         return new PrimitiveArrays(atlasPage, vertexCount, positions, normals, uvs,
-                colors, indices, featureIds, posMin, posMax, anyAlphaBelowOne,
-                plainStyle);
+                colors, indices, featureIds,
+                uniqueFeatures != null ? uniqueFeatures.size() : 0,
+                posMin, posMax, anyAlphaBelowOne, plainStyle);
     }
 
     /**
@@ -392,6 +682,16 @@ public class GlbEncoder {
      */
     private record CellFrame(double scaleX, double scaleY,
                              float offsetX, float offsetY, float offsetZ) {
+        /**
+         * Identity frame for instanced prototype meshes: their welded
+         * positions are already local Cartesian meters centered on the
+         * template origin, so no degree scaling and no cell offset apply —
+         * placement happens per instance via the TRS attributes.
+         */
+        static CellFrame identity() {
+            return new CellFrame(1.0, 1.0, 0f, 0f, 0f);
+        }
+
         static CellFrame from(BoundingVolume mbs, double[] cellCenter) {
             double scaleX = GeoTransform.metersPerDegreeLon(cellCenter[1]);
             double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
@@ -416,11 +716,14 @@ public class GlbEncoder {
      */
     private static final int UNTEXTURED_PLAIN_PAGE = -1;
     private static final int UNTEXTURED_COLORED_PAGE = -2;
+    // The instanced-textured sentinel is owned by GltfJsonBuilder (which does
+    // the material routing on it); this class references it directly.
 
     private record PrimitiveArrays(int atlasPage, int vertexCount,
                                    float[] positions, float[] normals, float[] uvs,
                                    float[] colors,
                                    int[] indices, int[] featureIds,
+                                   int uniqueFeatureCount,
                                    float[] posMin, float[] posMax,
                                    boolean anyAlphaBelowOne,
                                    DefaultObjectStyle plainStyle) {
