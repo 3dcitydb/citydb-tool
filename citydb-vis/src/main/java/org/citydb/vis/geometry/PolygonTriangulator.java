@@ -39,6 +39,12 @@ import java.util.Set;
 public class PolygonTriangulator {
     private static final double TOLERANCE = 1e-7;
 
+    // When true, input coordinates are local Cartesian meters (implicit-geometry
+    // prototype templates) instead of EPSG:4326, so the degree-to-meter scaling
+    // becomes the identity. All geometric tests already run in the scaled
+    // (metric) space, so this is the only switch the two unit models need.
+    private final boolean localMeters;
+
     private record RingData(List<double[]> positions, List<double[]> scaledPositions,
                             List<float[]> uvs) {}
 
@@ -60,6 +66,14 @@ public class PolygonTriangulator {
     private final Set<Polygon> seenInstances =
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<String> seenIds = new HashSet<>();
+
+    public PolygonTriangulator() {
+        this(false);
+    }
+
+    public PolygonTriangulator(boolean localMeters) {
+        this.localMeters = localMeters;
+    }
 
     public TriangleMesh triangulate(Geometry<?> geometry, long featureId, Name surfaceType,
                                     RingAttributes ringAttributes) {
@@ -99,7 +113,7 @@ public class PolygonTriangulator {
         return polygons;
     }
 
-    private static void triangulatePolygon(Polygon polygon, long featureId, Name surfaceType,
+    private void triangulatePolygon(Polygon polygon, long featureId, Name surfaceType,
                                     TriangleMesh mesh, RingAttributes ringAttributes) {
         // Unpack the per-ring appearance lookups (any may be null when the
         // feature carries no data of that kind).
@@ -125,14 +139,21 @@ public class PolygonTriangulator {
         // already drops material entries for rings that have a texture id.
         float[] polyColor = ringColorMap != null ? ringColorMap.get(exteriorRing) : null;
 
-        // Compute centroid latitude for degree-to-meter conversion
-        double centroidLat = 0;
-        for (Coordinate c : outerPoints) {
-            centroidLat += c.getY();
+        // Compute centroid latitude for degree-to-meter conversion; identity
+        // when the input is already in local Cartesian meters.
+        double scaleX, scaleY;
+        if (localMeters) {
+            scaleX = 1.0;
+            scaleY = 1.0;
+        } else {
+            double centroidLat = 0;
+            for (Coordinate c : outerPoints) {
+                centroidLat += c.getY();
+            }
+            centroidLat /= outerPoints.size();
+            scaleX = GeoTransform.metersPerDegreeLon(centroidLat);
+            scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
         }
-        centroidLat /= outerPoints.size();
-        double scaleX = GeoTransform.metersPerDegreeLon(centroidLat);
-        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
 
         // Build the outer ring (without the closing duplicate vertex) in
         // both original (degrees/meters) and scaled (all-meters) form.
