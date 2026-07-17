@@ -35,6 +35,7 @@ import org.citydb.vis.terrain.CesiumWorldTerrainProvider;
 import org.citydb.vis.terrain.TerrainElevationProvider;
 import org.citydb.vis.geometry.ImplicitInstanceTransformer;
 import org.citydb.vis.geometry.RingAttributes;
+import org.citydb.vis.geometry.TrsDecomposition;
 import org.citydb.vis.pipeline.ExportPipeline;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.stages.AggregationStage;
@@ -108,6 +109,10 @@ public abstract class VisWriter implements FeatureWriter {
     // via nodeAssembler(). Built lazily on first use so atlasNeedsWhitePixelSentinel()
     // (a subclass override) is read only after the subclass is fully constructed.
     private NodeAssembler nodeAssembler;
+    // GPU-instancing prototype registry. Cheap to construct, so it is created
+    // eagerly for every writer; it stays empty (and buildAtlases is a no-op)
+    // for writers without an instancing path (I3S).
+    private final PrototypeRegistry prototypeRegistry;
 
     private volatile boolean shouldRun = true;
 
@@ -160,10 +165,17 @@ public abstract class VisWriter implements FeatureWriter {
         // Matches the project-wide default used by Exporter and CityGML/CityJSON
         // readers: fall back to all available cores with a floor of 2 so
         // containers pinned to a single vCPU still get some parallelism.
+        // Ceiling: the thread count becomes the mesh-store shard count
+        // (handle encoding caps at ShardedMeshStore.MAX_SHARDS) AND the
+        // parallelism of several ForkJoinPools downstream, whose hard cap is
+        // 32767 — one below MAX_SHARDS. Clamp to the lower of the two so an
+        // absurd --threads value degrades gracefully instead of throwing
+        // IllegalArgumentException from store or pool construction.
         int requestedThreads = writeOptions.getNumberOfThreads();
-        this.cpuCores = requestedThreads > 0
-                ? requestedThreads
-                : Math.max(2, Runtime.getRuntime().availableProcessors());
+        this.cpuCores = Math.min(ShardedMeshStore.MAX_SHARDS - 1,
+                requestedThreads > 0
+                        ? requestedThreads
+                        : Math.max(2, Runtime.getRuntime().availableProcessors()));
         this.service = ExecutorHelper.newFixedAndBlockingThreadPool(cpuCores, 100);
         this.countLatch = new CountLatch();
 
@@ -178,6 +190,10 @@ public abstract class VisWriter implements FeatureWriter {
                     : createFallbackTempDir(outputFile);
             this.stores = new VisExportStores(cpuCores, tempDir);
         } catch (IOException e) {
+            // The thread pool is already up and close() will never run
+            // (construction fails here) — release it before rethrowing,
+            // mirroring the terrain-provider failure path below.
+            service.shutdownNow();
             throw new WriteException("Failed to create disk-backed stores.", e);
         }
 
@@ -198,6 +214,7 @@ public abstract class VisWriter implements FeatureWriter {
             this.terrainProvider = null;
         }
         this.featureProcessor = new FeatureProcessor(stores, formatOptions, attributeEncoder, terrainProvider);
+        this.prototypeRegistry = new PrototypeRegistry(stores.getTextureStore());
     }
 
     // ---- Protected accessors for subclasses ---------------------------------
@@ -291,13 +308,22 @@ public abstract class VisWriter implements FeatureWriter {
             // tree once. Scoped to this feature: implicit prototypes are
             // typically reused across features, but caching globally would
             // need a thread-safe map keyed by prototype identity — not worth
-            // the complexity unless profiling shows a hot spot.
+            // the complexity unless profiling shows a hot spot. Only consulted
+            // on the baked fallback path; the instancing path caches appearance
+            // globally inside the PrototypeRegistry.
             Map<ImplicitGeometry, RingAppearance> protoAppearanceCache = new IdentityHashMap<>();
+
+            // Instances of one feature share objectId/featureType/attributes, so
+            // the instanced path persists the attribute blob once per feature
+            // (lazily, on the first successfully instanced occurrence) instead
+            // of once per instance. Single-element holder: this loop runs
+            // sequentially on the caller thread.
+            long[] instanceAttrOffset = {-1};
 
             for (ImplicitGeometryProperty property : implicitProperties) {
                 CompletableFuture<Boolean> instance = dispatchImplicitInstance(
                         property, objectId, featureType, featureTypeNamespace,
-                        attributes, protoAppearanceCache);
+                        attributes, protoAppearanceCache, instanceAttrOffset);
                 if (instance != null) {
                     subTasks.add(instance);
                 }
@@ -356,7 +382,8 @@ public abstract class VisWriter implements FeatureWriter {
             ImplicitGeometryProperty property,
             String objectId, String featureType, String featureTypeNamespace,
             Map<String, Object> attributes,
-            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache) {
+            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache,
+            long[] instanceAttrOffset) {
         ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
         if (implicitGeometry == null) {
             logger.debug("Skipping implicit-geometry-property without inline prototype on feature {}.",
@@ -377,6 +404,20 @@ public abstract class VisWriter implements FeatureWriter {
             logger.debug("Skipping implicit instance on feature {} — missing transformation matrix or reference point.",
                     objectId);
             return null;
+        }
+
+        // GPU-instancing path: register the shared template once and store
+        // only the per-instance placement. Falls back to baking below when
+        // the template is not instanceable or the matrix cannot be expressed
+        // as rotation·scale (shear / mirroring).
+        if (supportsImplicitGeometryInstancing()) {
+            CompletableFuture<Boolean> instanced = tryDispatchInstanced(
+                    implicitGeometry, transformationMatrix, referencePoint,
+                    objectId, featureType, featureTypeNamespace, attributes,
+                    instanceAttrOffset);
+            if (instanced != null) {
+                return instanced;
+            }
         }
 
         RingAppearance protoAppearance = protoAppearanceCache.computeIfAbsent(
@@ -411,6 +452,91 @@ public abstract class VisWriter implements FeatureWriter {
                 instanceAppearance.forTriangulation());
     }
 
+    /**
+     * GPU-instancing dispatch: resolve the template through the
+     * {@link PrototypeRegistry} and decompose the transformation matrix; on
+     * success persist only the placement payload via
+     * {@link FeatureProcessor#processInstance}. Returns {@code null} when the
+     * instance cannot be expressed as prototype + TRS (caller falls back to
+     * the baked path).
+     * <p>
+     * The instance deliberately does <b>not</b> set the per-feature texture
+     * flag even for textured prototypes: its textures live in the prototype's
+     * own atlas and never contribute to the node atlas, so for the
+     * mixed-texture and atlas-overflow split stages the instance counts as
+     * untextured content.
+     */
+    private CompletableFuture<Boolean> tryDispatchInstanced(
+            ImplicitGeometry implicitGeometry, Matrix4x4 transformationMatrix,
+            Point referencePoint, String objectId, String featureType,
+            String featureTypeNamespace, Map<String, Object> attributes,
+            long[] instanceAttrOffset) {
+        PrototypeRegistry.Prototype prototype =
+                prototypeRegistry.getOrRegister(implicitGeometry);
+        if (prototype == null) {
+            return null;
+        }
+        TrsDecomposition.Result trs = TrsDecomposition.decompose(transformationMatrix);
+        if (trs == null) {
+            logger.debug("Baking implicit instance on feature {} — transformation matrix " +
+                    "contains shear or mirroring.", objectId);
+            return null;
+        }
+        prototypeRegistry.recordInstanceScale(prototype.id(), trs.scale());
+
+        // Persist the shared attribute blob once per feature, on the first
+        // successfully instanced occurrence (baked fallbacks store their own).
+        long attrOffset = instanceAttrOffset[0];
+        if (attrOffset < 0) {
+            try {
+                attrOffset = stores.getAttrStore().store(objectId, featureType, attributes);
+                attributeEncoder.trackFieldTypes(attributes);
+                instanceAttrOffset[0] = attrOffset;
+            } catch (IOException e) {
+                shouldRun = false;
+                CompletableFuture<Boolean> failed = new CompletableFuture<>();
+                failed.completeExceptionally(
+                        new WriteException("Failed to persist instance attributes.", e));
+                return failed;
+            }
+        }
+        long finalAttrOffset = attrOffset;
+
+        // Resolve the per-feature-type style while the qualified type name is
+        // still at hand (the attribute store keeps only the local name) and
+        // capture its color in the instance payload.
+        float[] styleColor = formatOptions.getStyleRegistry()
+                .resolve(Name.of(featureType, featureTypeNamespace)).color();
+
+        long instanceId = featureIdCounter.incrementAndGet();
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        countLatch.increment();
+        service.execute(() -> {
+            try {
+                featureProcessor.processInstance(instanceId, objectId, finalAttrOffset,
+                        prototype, transformationMatrix, trs, referencePoint, styleColor);
+                result.complete(true);
+            } catch (Throwable e) {
+                shouldRun = false;
+                result.completeExceptionally(new WriteException("Failed to process instance.", e));
+            } finally {
+                countLatch.decrement();
+            }
+        });
+        return result;
+    }
+
+    /**
+     * Whether this writer emits GPU-instanced implicit geometry (glTF
+     * {@code EXT_mesh_gpu_instancing}). Default {@code false}; overridden by
+     * {@code Tiles3DWriter} based on the {@code --implicit-geometry-instancing}
+     * option. I3S has no instancing concept, so its writer keeps the baked
+     * path.
+     */
+    protected boolean supportsImplicitGeometryInstancing() {
+        return false;
+    }
+
     @Override
     public void cancel() {
         shouldRun = false;
@@ -442,6 +568,11 @@ public abstract class VisWriter implements FeatureWriter {
                     new AggregationStage()
             ).run(ctx);
 
+            // Build the per-prototype texture atlases now: texture BLOBs are
+            // on disk (write phase complete) and the parallel node fan-out
+            // hasn't started (the build mutates shared prototype meshes).
+            prototypeRegistry.buildAtlases(formatOptions);
+
             // --- Phase 5: Format-specific output ---
             writeOutput(ctx);
         } catch (VisExportException e) {
@@ -467,7 +598,8 @@ public abstract class VisWriter implements FeatureWriter {
     protected final NodeAssembler nodeAssembler() {
         if (nodeAssembler == null) {
             nodeAssembler = new NodeAssembler(
-                    stores, formatOptions, cpuCores, atlasNeedsWhitePixelSentinel());
+                    stores, formatOptions, cpuCores, atlasNeedsWhitePixelSentinel(),
+                    prototypeRegistry);
         }
         return nodeAssembler;
     }
