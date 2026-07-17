@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -72,8 +73,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Tiles3DWriter extends VisWriter {
     private final Logger logger = LoggerFactory.getLogger(Tiles3DWriter.class);
+    private final Tiles3DFormatOptions formatOptions;
     private final GlbEncoder glbEncoder;
     private final TilesetSerializer tilesetSerializer;
+    // JPEG bytes per prototype atlas, shared across the parallel per-node
+    // writes (identity-keyed: atlas instances are canonical per prototype).
+    private final Map<TextureAtlas, byte[]> protoAtlasJpegCache = new ConcurrentHashMap<>();
 
     public Tiles3DWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
         this(validateOutputFile(outputFile, "3D Tiles"),
@@ -88,8 +93,19 @@ public class Tiles3DWriter extends VisWriter {
                           AttributeEncoder attributeEncoder,
                           WriteOptions writeOptions) throws WriteException {
         super(outputFile, formatOptions, attributeEncoder, writeOptions);
+        this.formatOptions = formatOptions;
         this.glbEncoder = new GlbEncoder();
         this.tilesetSerializer = new TilesetSerializer();
+    }
+
+    /**
+     * GPU instancing for implicit geometries is off by default;
+     * {@code --implicit-geometry-instancing} opts in, replacing per-instance
+     * baked meshes with shared prototype meshes.
+     */
+    @Override
+    protected boolean supportsImplicitGeometryInstancing() {
+        return formatOptions.isImplicitGeometryInstancing();
     }
 
     /**
@@ -255,10 +271,38 @@ public class Tiles3DWriter extends VisWriter {
                 }
             }
 
+            // Serialize each instanced prototype's own atlas to JPEG bytes,
+            // index-aligned with the batches (null = untextured prototype).
+            // Cached per atlas: the same prototype recurs across many cells
+            // and the JPEG encode is identical every time. Deliberately NOT
+            // computeIfAbsent — its lambda cannot throw the checked
+            // IOException that must reach writeNode's VisExportException
+            // wrapper (the WriteException boundary). A racing duplicate
+            // encode is idempotent and putIfAbsent keeps one canonical copy.
+            List<byte[]> instanceAtlasBytes = new ArrayList<>(prepared.instanceBatches().size());
+            for (TextureAtlas protoAtlas : prepared.instanceAtlases()) {
+                if (protoAtlas == null) {
+                    instanceAtlasBytes.add(null);
+                    continue;
+                }
+                byte[] bytes = protoAtlasJpegCache.get(protoAtlas);
+                if (bytes == null) {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    protoAtlas.write(baos);
+                    bytes = baos.toByteArray();
+                    byte[] existing = protoAtlasJpegCache.putIfAbsent(protoAtlas, bytes);
+                    if (existing != null) {
+                        bytes = existing;
+                    }
+                }
+                instanceAtlasBytes.add(bytes);
+            }
+
             // Encode GLB
             node.setMesh(prepared.mesh());
             byte[] glb = glbEncoder.encode(node, atlasBytesList, texIdToPage,
-                    features, attrFields, cellAnchor,
+                    features, attrFields, prepared.instanceBatches(), instanceAtlasBytes,
+                    cellAnchor,
                     getFormatOptions().getStyleRegistry(),
                     getFormatOptions().isEnableShading());
             if (glb == null) {
