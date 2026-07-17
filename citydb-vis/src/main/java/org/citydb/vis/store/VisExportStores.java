@@ -36,6 +36,7 @@ public class VisExportStores implements AutoCloseable {
     private final ShardedMeshStore meshStore;
     private final AttributeStore attrStore;
     private final TextureStore textureStore;
+    private final InstanceStore instanceStore;
     private NodeEntryStore nodeEntryStore;
 
     /**
@@ -62,6 +63,7 @@ public class VisExportStores implements AutoCloseable {
         this.meshStore = new ShardedMeshStore(cpuCores, tempDir);
         this.attrStore = new AttributeStore(tempDir);
         this.textureStore = new TextureStore(tempDir);
+        this.instanceStore = new InstanceStore(tempDir);
     }
 
     public Path getTempDir() {
@@ -82,6 +84,10 @@ public class VisExportStores implements AutoCloseable {
 
     public TextureStore getTextureStore() {
         return textureStore;
+    }
+
+    public InstanceStore getInstanceStore() {
+        return instanceStore;
     }
 
     public NodeEntryStore getNodeEntryStore() {
@@ -113,6 +119,7 @@ public class VisExportStores implements AutoCloseable {
         closeQuietly("spatial entry store", spatialEntryStore);
         closeQuietly("mesh store", meshStore);
         closeQuietly("attribute store", attrStore);
+        closeQuietly("instance store", instanceStore);
         textureStore.close();
         FileHelper.deleteDirectoryTree(tempDir, cpuCores);
     }

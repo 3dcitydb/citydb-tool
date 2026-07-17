@@ -21,13 +21,33 @@ import java.nio.file.Path;
  * <p>
  * Handles encode both the shard index and the file offset:
  * upper 16 bits = shardId, lower 48 bits = offset within the shard file.
- * This supports up to 65,536 shards and 256 TB per shard.
+ * This supports up to 32,768 shards (the sign bit must stay clear — see
+ * below) and 256 TB per shard.
+ * <p>
+ * <b>Handles are always non-negative.</b> {@link InstanceStore} encodes
+ * GPU-instance records as <em>negative</em> pseudo mesh handles, so the sign
+ * bit is the discriminator between the two stores throughout the pipeline
+ * ({@code InstanceStore.isInstanceHandle}). The constructor enforces the
+ * shard ceiling and {@link #load} rejects negative handles rather than
+ * mis-reading an instance record as a shard/offset pair.
  */
 public class ShardedMeshStore implements Closeable {
+    /**
+     * Shard ids at or above 2^15 would set bit 63 in {@code encodeHandle} and
+     * produce a negative handle, colliding with {@link InstanceStore}'s
+     * encoding. Public so callers deriving the shard count from user input
+     * (thread count) can clamp before construction instead of failing here.
+     */
+    public static final int MAX_SHARDS = 1 << 15;
+
     private final MeshStore[] shards;
     private final int shardCount;
 
     public ShardedMeshStore(int shardCount, Path tempDir) throws IOException {
+        if (shardCount < 1 || shardCount > MAX_SHARDS) {
+            throw new IllegalArgumentException("Shard count must be in [1, " + MAX_SHARDS +
+                    "] to keep mesh handles non-negative, but was " + shardCount + ".");
+        }
         this.shardCount = shardCount;
         this.shards = new MeshStore[shardCount];
         try {
@@ -57,6 +77,10 @@ public class ShardedMeshStore implements Closeable {
      * Load a mesh from the encoded handle. Thread-safe — uses positional reads.
      */
     public TriangleMesh load(long handle) throws IOException {
+        if (handle < 0) {
+            throw new IllegalArgumentException("Negative mesh handle " + handle +
+                    " — this is an InstanceStore pseudo handle, not a mesh handle.");
+        }
         int shard = decodeShardId(handle);
         long offset = decodeOffset(handle);
         return shards[shard].load(offset);
