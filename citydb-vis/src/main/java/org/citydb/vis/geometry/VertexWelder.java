@@ -24,6 +24,12 @@ import java.util.Map;
  * seams where adjacent polygons meet with different UVs.
  */
 public class VertexWelder {
+    /**
+     * Default weld distance in meters (2 cm). Callers welding geometry whose
+     * unit scale differs from the output scale (implicit-geometry templates
+     * that are scaled per instance) pass an adjusted tolerance instead.
+     */
+    public static final float DEFAULT_WELD_TOLERANCE = 0.02f;
 
     /**
      * Weld vertex positions using a spatial hash grid. Returns a flat array
@@ -38,9 +44,36 @@ public class VertexWelder {
      */
     public static float[][] weld(TriangleMesh mesh, double centerX,
                                  double centerY, double centerZ) {
-        double scaleX = GeoTransform.metersPerDegreeLon(centerY);
-        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
-        float weldTolerance = 0.02f; // 2 cm
+        return weld(mesh, centerX, centerY, centerZ, false);
+    }
+
+    /**
+     * Weld variant with an explicit unit model: {@code localMeters} marks a
+     * mesh whose positions are local Cartesian meters (implicit-geometry
+     * prototype templates) rather than EPSG:4326 degrees, making the
+     * degree-to-meter scaling the identity. The metric weld tolerance and the
+     * returned centered Float32 positions are unaffected — in meters mode the
+     * output offsets simply are meters already.
+     */
+    public static float[][] weld(TriangleMesh mesh, double centerX,
+                                 double centerY, double centerZ, boolean localMeters) {
+        return weld(mesh, centerX, centerY, centerZ, localMeters, DEFAULT_WELD_TOLERANCE);
+    }
+
+    /**
+     * Weld variant with an explicit tolerance, expressed in the mesh's own
+     * length unit. Used by the GPU-instancing path, which welds templates in
+     * template-local units before the per-instance scale applies: the caller
+     * scales the tolerance so its WORLD-space equivalent matches the default
+     * for the largest instance — tighter than the default in template units
+     * for scaled-up templates, legitimately looser for scaled-down ones. Do
+     * not clamp it to the default.
+     */
+    public static float[][] weld(TriangleMesh mesh, double centerX,
+                                 double centerY, double centerZ, boolean localMeters,
+                                 float weldTolerance) {
+        double scaleX = localMeters ? 1.0 : GeoTransform.metersPerDegreeLon(centerY);
+        double scaleY = localMeters ? 1.0 : GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
         float weldTolerance2 = weldTolerance * weldTolerance;
         boolean hasUV = mesh.hasTexCoords();
         boolean hasColor = mesh.hasColors();
@@ -174,7 +207,24 @@ public class VertexWelder {
     public static WeldResult weldAndFilter(TriangleMesh mesh,
                                            double centerX, double centerY,
                                            double centerZ) {
-        float[][] weldedPositions = weld(mesh, centerX, centerY, centerZ);
+        return weldAndFilter(mesh, centerX, centerY, centerZ, false);
+    }
+
+    /** See {@link #weld(TriangleMesh, double, double, double, boolean)}. */
+    public static WeldResult weldAndFilter(TriangleMesh mesh,
+                                           double centerX, double centerY,
+                                           double centerZ, boolean localMeters) {
+        return weldAndFilter(mesh, centerX, centerY, centerZ, localMeters,
+                DEFAULT_WELD_TOLERANCE);
+    }
+
+    /** See {@link #weld(TriangleMesh, double, double, double, boolean, float)}. */
+    public static WeldResult weldAndFilter(TriangleMesh mesh,
+                                           double centerX, double centerY,
+                                           double centerZ, boolean localMeters,
+                                           float weldTolerance) {
+        float[][] weldedPositions = weld(mesh, centerX, centerY, centerZ, localMeters,
+                weldTolerance);
 
         List<int[]> allTriangles = mesh.getTriangles();
         List<Long> triFeatureIds = mesh.getFeatureIds();

@@ -40,6 +40,16 @@ public class BinBufferBuilder {
         return appendInt32(values, GltfBufferView.TARGET_NONE);
     }
 
+    /**
+     * Add a float32 instance-attribute array ({@code EXT_mesh_gpu_instancing}
+     * TRANSLATION / ROTATION / SCALE / feature ids). No GPU target: instance
+     * attributes are not core vertex attributes, so the ARRAY_BUFFER hint
+     * would be misleading.
+     */
+    public int addInstanceFloat32Array(float[] values) {
+        return appendFloat32(values, GltfBufferView.TARGET_NONE);
+    }
+
     /** Add a float64 property-table column (no GPU target). */
     public int addFloat64Array(double[] values) {
         align(8);

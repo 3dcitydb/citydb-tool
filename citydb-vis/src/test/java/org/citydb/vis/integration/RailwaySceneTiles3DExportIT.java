@@ -12,8 +12,13 @@ import org.citydb.vis.config.Tiles3DFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -34,7 +39,8 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
 
     @Test
     void exportsAllFeaturesToTileset(@TempDir Path tempDir) throws Exception {
-        Path sceneDir = runExport(tempDir, new Tiles3DAdapter(), new Tiles3DFormatOptions(), ".3dtiles");
+        Path sceneDir = runExport(tempDir, new Tiles3DAdapter(),
+                new Tiles3DFormatOptions().setImplicitGeometryInstancing(true), ".3dtiles");
 
         // The 3D Tiles writer writes the entry-point tileset.json at the scene
         // root and the GLB tiles under <scene>/tiles. Assert the tileset is
@@ -75,6 +81,63 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
             assertFalse(glbs.isEmpty(), "No .glb tiles were written under " + tilesDir);
             assertTrue(glbs.stream().anyMatch(RailwaySceneTiles3DExportIT::isNonEmpty),
                     "Every .glb tile is empty — geometry/texture encoding produced no content.");
+
+            // The railway scene carries 15 implicit-geometry instances of 3
+            // templates (SolitaryVegetationObject trees). With GPU instancing
+            // enabled on the format options, at least one GLB must place them
+            // via EXT_mesh_gpu_instancing — zero instanced tiles would mean
+            // every instance silently fell back to the baked path.
+            assertTrue(glbs.stream().anyMatch(RailwaySceneTiles3DExportIT::hasInstancingMarker),
+                    "No .glb carries EXT_mesh_gpu_instancing although the scene contains " +
+                            "implicit geometries — the instancing path fell back to baking.");
+
+            // Optional debug hand-off: when VIS_IT_KEEP_SCENE_DIR is set, copy
+            // the whole scene there so it can be inspected / viewed after the
+            // @TempDir is wiped.
+            String keepDir = System.getenv("VIS_IT_KEEP_SCENE_DIR");
+            if (keepDir != null && !keepDir.isBlank()) {
+                copyTree(sceneDir, Path.of(keepDir));
+            }
+        }
+    }
+
+    /**
+     * Whether the GLB declares {@code EXT_mesh_gpu_instancing}. Reads only the
+     * JSON chunk (12-byte GLB header + 8-byte chunk header + chunk length),
+     * not the whole file — textured tiles carry multi-MB embedded atlases.
+     */
+    private static boolean hasInstancingMarker(Path glb) {
+        try (InputStream in = Files.newInputStream(glb);
+             DataInputStream data = new DataInputStream(in)) {
+            // readFully (not skipBytes, which may skip short) for the 12-byte
+            // GLB header and the 4-byte chunk type; bound-check the chunk
+            // length so a corrupt file yields false rather than a
+            // NegativeArraySizeException/OOME escaping the IOException catch.
+            data.readFully(new byte[12]); // magic + version + total length
+            int jsonLength = Integer.reverseBytes(data.readInt()); // little-endian
+            data.readFully(new byte[4]); // chunk type
+            if (jsonLength <= 0 || jsonLength > Files.size(glb)) {
+                return false;
+            }
+            byte[] json = new byte[jsonLength];
+            data.readFully(json);
+            return new String(json, StandardCharsets.UTF_8).contains("EXT_mesh_gpu_instancing");
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static void copyTree(Path source, Path target) throws IOException {
+        try (Stream<Path> paths = Files.walk(source)) {
+            for (Path p : paths.toList()) {
+                Path dest = target.resolve(source.relativize(p).toString());
+                if (Files.isDirectory(p)) {
+                    Files.createDirectories(dest);
+                } else {
+                    Files.createDirectories(dest.getParent());
+                    Files.copy(p, dest, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
         }
     }
 
@@ -118,7 +181,7 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
     private static boolean isNonEmpty(Path glb) {
         try {
             return Files.size(glb) > 0;
-        } catch (java.io.IOException e) {
+        } catch (IOException e) {
             return false;
         }
     }
