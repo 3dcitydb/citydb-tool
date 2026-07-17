@@ -75,6 +75,18 @@ public final class ImplicitInstanceTransformer {
     public static Result transform(Geometry<?> prototype,
                                    Matrix4x4 transformationMatrix,
                                    Point referencePoint) {
+        Result copied = copy(prototype);
+        applyTransform(collectRings(copied.geometry()), transformationMatrix, referencePoint);
+        return copied;
+    }
+
+    /**
+     * Deep-copy the prototype geometry without placing it, keeping the local
+     * Cartesian meter coordinates, plus the prototype-ring → copy-ring identity
+     * bridge. Used by the GPU-instancing path, which triangulates the template
+     * once in local meters and defers placement to per-instance TRS attributes.
+     */
+    public static Result copy(Geometry<?> prototype) {
         Geometry<?> copy = deepCopy(prototype);
 
         // Build prototype-ring → copy-ring identity map by parallel walks.
@@ -90,8 +102,6 @@ public final class ImplicitInstanceTransformer {
         for (int i = 0; i < oldRings.size(); i++) {
             ringMap.put(oldRings.get(i), newRings.get(i));
         }
-
-        applyTransform(newRings, transformationMatrix, referencePoint);
 
         return new Result(copy, ringMap);
     }
