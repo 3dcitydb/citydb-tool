@@ -164,7 +164,7 @@ public abstract class ImportController implements Command {
                 InputFile inputFile = inputFiles.get(i);
                 logger.info("[{}|{}] Importing file {}.", i + 1, inputFiles.size(), inputFile.getContentFile());
 
-                try (FeatureReader reader = ioAdapter.createReader(inputFile, readOptions)) {
+                try (inputFile; FeatureReader reader = ioAdapter.createReader(inputFile, readOptions)) {
                     if (importMode != ImportMode.IMPORT_ALL) {
                         logger.debug("Checking database for duplicate features...");
                         DuplicateController.Result result = duplicateController.processDuplicates(reader, filter);
