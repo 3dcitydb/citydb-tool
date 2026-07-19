@@ -8,27 +8,28 @@ package org.citydb.core.file.input;
 import org.apache.tika.mime.MediaType;
 import org.citydb.core.file.FileType;
 import org.citydb.core.file.InputFile;
+import org.citydb.core.file.helper.SharedZipFileSystem;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collections;
 import java.util.Objects;
 
 public class ZipInputFile extends InputFile {
     private final String entryName;
     private final URI fileURI;
-    private FileSystem fileSystem;
+    private final SharedZipFileSystem fileSystem;
+    private boolean closed;
 
     public ZipInputFile(String entryName, Path zipFile, URI fileURI, MediaType mediaType) {
         super(zipFile, FileType.ARCHIVE, mediaType);
         this.entryName = Objects.requireNonNull(entryName, "The entry name must not be null.");
         this.fileURI = Objects.requireNonNull(fileURI, "The file URI must not be null.");
+        fileSystem = SharedZipFileSystem.acquire(fileURI);
     }
 
     public ZipInputFile(String entryName, Path zipFile, URI fileURI) {
@@ -64,29 +65,18 @@ public class ZipInputFile extends InputFile {
     }
 
     private FileSystem getFileSystem() {
-        if (fileSystem == null) {
-            try {
-                fileSystem = FileSystems.getFileSystem(fileURI);
-            } catch (Throwable e) {
-                //
-            }
+        try {
+            return fileSystem.getFileSystem();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to open ZIP file " + getFile() + ".", e);
         }
-
-        if (fileSystem == null) {
-            try {
-                fileSystem = FileSystems.newFileSystem(fileURI, Collections.emptyMap());
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to open ZIP file " + getFile() + ".");
-            }
-        }
-
-        return fileSystem;
     }
 
     @Override
     public void close() throws IOException {
-        if (fileSystem != null) {
-            fileSystem.close();
+        if (!closed) {
+            closed = true;
+            fileSystem.release();
         }
     }
 }
