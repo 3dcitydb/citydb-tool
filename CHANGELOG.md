@@ -6,6 +6,10 @@
 - Optimized preprocessing of implicit geometries during CityGML/CityJSON imports to improve performance and reduce
   memory usage.
 
+### Fixed
+- Input files are now closed properly during imports, preventing resource leaks.
+- Fixed incorrect entry names when creating ZIP input files through the `InputFiles` helper.
+
 ## [1.3.2] - 2026-05-31
 
 ### Fixed
