@@ -8,10 +8,7 @@ package org.citydb.vis.attribute;
 import org.citydb.model.property.Attribute;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Function;
 
 /**
@@ -62,18 +59,8 @@ enum ValueType {
     CONTENT("content", a -> a.getGenericContent().orElse(null)),
     MIME_TYPE("mimeType", a -> a.getGenericContentMimeType().orElse(null));
 
-    // TreeMap with String.CASE_INSENSITIVE_ORDER so lookup ignores case
-    // (e.g. 'uri' / 'URI' / 'Uri' all resolve) while preserving the
-    // canonical token strings ('mimeType' stays mixed-case) for display
-    // in error messages via tokens().
-    private static final Map<String, ValueType> BY_TOKEN;
-    static {
-        Map<String, ValueType> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (ValueType vt : values()) {
-            map.put(vt.token, vt);
-        }
-        BY_TOKEN = Collections.unmodifiableMap(map);
-    }
+    private static final CaseInsensitiveLookup<ValueType> BY_TOKEN =
+            CaseInsensitiveLookup.of(values(), vt -> vt.token);
 
     private final String token;
     private final Function<Attribute, Object> extractor;
@@ -81,10 +68,6 @@ enum ValueType {
     ValueType(String token, Function<Attribute, Object> extractor) {
         this.token = token;
         this.extractor = extractor;
-    }
-
-    String token() {
-        return token;
     }
 
     Object extract(Attribute attr) {
@@ -100,11 +83,11 @@ enum ValueType {
      * etc.
      */
     static ValueType forToken(String token) {
-        return token == null ? null : BY_TOKEN.get(token);
+        return BY_TOKEN.get(token);
     }
 
     /** Snapshot of every supported token, for the parser's "Allowed: ..." error hint. */
     static Set<String> tokens() {
-        return BY_TOKEN.keySet();
+        return BY_TOKEN.names();
     }
 }

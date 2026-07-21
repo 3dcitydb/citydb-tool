@@ -110,77 +110,59 @@ public class TriangleMesh {
     }
 
     public int addVertex(double x, double y, double z, float nx, float ny, float nz) {
-        int index = positions.size();
-        positions.add(new double[]{x, y, z});
-        normals.add(new float[]{nx, ny, nz});
-        // If the mesh already has UVs/colors, pad this vertex so the
-        // texCoords.size()/colors.size() == positions.size() invariant holds.
-        if (hasTexCoords) {
-            texCoords.add(new float[]{0f, 0f});
-        }
-        if (hasColors) {
-            colors.add(WHITE_RGBA.clone());
-        }
-        return index;
+        return addVertexInternal(x, y, z, nx, ny, nz, null, null);
     }
 
     public int addVertex(double x, double y, double z, float nx, float ny, float nz,
                          float u, float v) {
-        int index = positions.size();
-        positions.add(new double[]{x, y, z});
-        normals.add(new float[]{nx, ny, nz});
-        // First UV vertex for this mesh: backfill any earlier non-UV vertices
-        // with {0,0} so the texCoords.size() == positions.size() invariant holds.
-        if (!hasTexCoords) {
-            while (texCoords.size() < index) {
-                texCoords.add(new float[]{0f, 0f});
-            }
-            hasTexCoords = true;
-        }
-        texCoords.add(new float[]{u, v});
-        if (hasColors) {
-            colors.add(WHITE_RGBA.clone());
-        }
-        return index;
+        return addVertexInternal(x, y, z, nx, ny, nz, new float[]{u, v}, null);
     }
 
     public int addVertex(double x, double y, double z, float nx, float ny, float nz,
                          float r, float g, float b, float a) {
-        int index = positions.size();
-        positions.add(new double[]{x, y, z});
-        normals.add(new float[]{nx, ny, nz});
-        if (hasTexCoords) {
-            texCoords.add(new float[]{0f, 0f});
-        }
-        if (!hasColors) {
-            while (colors.size() < index) {
-                colors.add(WHITE_RGBA.clone());
-            }
-            hasColors = true;
-        }
-        colors.add(new float[]{r, g, b, a});
-        return index;
+        return addVertexInternal(x, y, z, nx, ny, nz, null, new float[]{r, g, b, a});
     }
 
     public int addVertex(double x, double y, double z, float nx, float ny, float nz,
                          float u, float v, float r, float g, float b, float a) {
+        return addVertexInternal(x, y, z, nx, ny, nz, new float[]{u, v},
+                new float[]{r, g, b, a});
+    }
+
+    /**
+     * Shared vertex insertion maintaining the invariant that whenever
+     * {@code hasTexCoords}/{@code hasColors} is true, the respective list is
+     * exactly {@code positions.size()} long: the first UV/color vertex
+     * backfills all earlier vertices with the neutral value, and a vertex
+     * without UV/color pads itself when the mesh already carries that lane.
+     */
+    private int addVertexInternal(double x, double y, double z, float nx, float ny, float nz,
+                                  float[] uv, float[] rgba) {
         int index = positions.size();
         positions.add(new double[]{x, y, z});
         normals.add(new float[]{nx, ny, nz});
-        if (!hasTexCoords) {
-            while (texCoords.size() < index) {
-                texCoords.add(new float[]{0f, 0f});
+        if (uv != null) {
+            if (!hasTexCoords) {
+                while (texCoords.size() < index) {
+                    texCoords.add(new float[]{0f, 0f});
+                }
+                hasTexCoords = true;
             }
-            hasTexCoords = true;
+            texCoords.add(uv);
+        } else if (hasTexCoords) {
+            texCoords.add(new float[]{0f, 0f});
         }
-        texCoords.add(new float[]{u, v});
-        if (!hasColors) {
-            while (colors.size() < index) {
-                colors.add(WHITE_RGBA.clone());
+        if (rgba != null) {
+            if (!hasColors) {
+                while (colors.size() < index) {
+                    colors.add(WHITE_RGBA.clone());
+                }
+                hasColors = true;
             }
-            hasColors = true;
+            colors.add(rgba);
+        } else if (hasColors) {
+            colors.add(WHITE_RGBA.clone());
         }
-        colors.add(new float[]{r, g, b, a});
         return index;
     }
 

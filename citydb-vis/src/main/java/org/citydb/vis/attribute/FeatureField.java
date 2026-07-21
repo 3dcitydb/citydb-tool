@@ -8,10 +8,7 @@ package org.citydb.vis.attribute;
 import org.citydb.model.feature.Feature;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Function;
 
 /**
@@ -36,17 +33,8 @@ enum FeatureField {
     LAST_MODIFICATION_DATE("lastModificationDate",
             f -> f.getLastModificationDate().map(OffsetDateTime::toString).orElse(null));
 
-    // Case-insensitive lookup (matches the table / aggregate / value-type-cast
-    // keywords). TreeMap keeps the canonical camelCase strings as keys so
-    // names() / "Allowed: ..." error hints display the official spelling.
-    private static final Map<String, FeatureField> BY_NAME;
-    static {
-        Map<String, FeatureField> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (FeatureField ff : values()) {
-            map.put(ff.fieldName, ff);
-        }
-        BY_NAME = Collections.unmodifiableMap(map);
-    }
+    private static final CaseInsensitiveLookup<FeatureField> BY_NAME =
+            CaseInsensitiveLookup.of(values(), ff -> ff.fieldName);
 
     private final String fieldName;
     private final Function<Feature, Object> extractor;
@@ -56,21 +44,17 @@ enum FeatureField {
         this.extractor = extractor;
     }
 
-    String fieldName() {
-        return fieldName;
-    }
-
     Object extract(Feature feature) {
         return extractor.apply(feature);
     }
 
     /** Resolve the user-facing name (camelCase, case-insensitive) to a constant, or null if unknown. */
     static FeatureField forName(String name) {
-        return name == null ? null : BY_NAME.get(name);
+        return BY_NAME.get(name);
     }
 
     /** Snapshot of every supported field name, used by the parser for the "Allowed: ..." error hint. */
     static Set<String> names() {
-        return BY_NAME.keySet();
+        return BY_NAME.names();
     }
 }

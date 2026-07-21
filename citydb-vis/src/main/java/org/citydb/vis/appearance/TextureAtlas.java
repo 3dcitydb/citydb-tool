@@ -49,7 +49,7 @@ public class TextureAtlas {
     /**
      * Final scale applied to source textures. Equal to the user's
      * {@code --texture-scale} request when no rescale fired; less than
-     * the request when overflow forced a Phase 1 / Phase 3 rescale loop.
+     * the request when overflow forced a Phase 1 or post-expansion rescale.
      * Callers compare against {@code formatOptions.getTextureScale()} to
      * detect a {@code --texture-scale} violation.
      */
