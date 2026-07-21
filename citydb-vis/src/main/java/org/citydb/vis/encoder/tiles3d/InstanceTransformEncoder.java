@@ -31,9 +31,9 @@ import org.citydb.vis.util.GeoTransform;
  * matching it keeps instanced trees seamlessly aligned with their baked
  * neighbours, and toggling {@code --implicit-geometry-instancing} does not
  * move instance <em>placement</em> (the two paths can still differ in weld
- * granularity and shading normals; see {@code GlbEncoder.buildBatchGeometry}
- * and the textured up-normal note in
- * {@code GlbEncoder.buildPrimitiveArrays}). For the same
+ * granularity and shading normals; see
+ * {@code InstancedNodeEncoder.buildBatchGeometry} and the textured up-normal
+ * note in {@code GlbPrimitiveBuilder.build}). For the same
  * reason no anchor-vs-cell ENU alignment rotation is applied: the baked path
  * treats the whole cell as one flat tangent plane.
  * <p>
