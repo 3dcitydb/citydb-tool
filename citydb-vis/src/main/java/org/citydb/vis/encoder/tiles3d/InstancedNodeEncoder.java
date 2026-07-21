@@ -33,6 +33,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * computed once per prototype and cached for the encoder's lifetime, shared
  * across every GLB and style group referencing the prototype.
  * <p>
+ * A textured prototype carries one textured primitive per atlas page (usually
+ * one; several when its textures overflow {@code --max-atlas-size} and the
+ * atlas spilled to multiple pages), mirroring the main mesh's per-page
+ * primitive split.
+ * <p>
  * Package-private companion of {@link GlbEncoder}, which owns the surrounding
  * node encode flow; I3S has no instancing concept and bakes instances instead.
  */
@@ -44,36 +49,44 @@ final class InstancedNodeEncoder {
     // prototype. Keyed by mesh identity: prototype meshes are frozen after
     // PrototypeRegistry.buildAtlases, and the other build inputs are
     // per-prototype constants by construction (weld tolerance frozen by
-    // buildAtlases, atlas bytes canonicalized by the writer's JPEG cache,
-    // style registry and shading flag writer-lifetime). Concurrent: encoding
-    // runs on the parallel node fan-out; populated via get/putIfAbsent so a
-    // heavyweight build never runs under the map's bin lock — a racing
-    // duplicate build is idempotent and the losers adopt the winner.
+    // buildAtlases, atlas page bytes and texId→page map canonicalized by the
+    // writer's per-page JPEG cache, style registry and shading flag
+    // writer-lifetime). Concurrent: encoding runs on the parallel node
+    // fan-out; populated via get/putIfAbsent so a heavyweight build never
+    // runs under the map's bin lock — a racing duplicate build is idempotent
+    // and the losers adopt the winner.
     private final Map<TriangleMesh, BatchGeometry> prototypeGeometryCache =
             new ConcurrentHashMap<>();
 
     /**
-     * A prototype's style-independent primitive array sets (each {@code null}
-     * when the prototype has no triangles of that flavour) plus its atlas
-     * JPEG ({@code null} when untextured). Shared across GLBs and style
-     * groups; identity is what {@link #writeBuffers}'s dedup map keys on.
+     * A prototype's style-independent primitive array sets plus its atlas
+     * pages. {@code texturedPages} holds one primitive per atlas page that
+     * received at least one routed triangle, index-aligned with
+     * {@code pageBytes} (the page's JPEG). {@code plain}/{@code colored} are
+     * {@code null} when the prototype has no triangles of that flavour.
+     * Shared across GLBs and style groups; identity is what
+     * {@link #writeBuffers}'s dedup map keys on.
      */
-    private record BatchGeometry(GlbPrimitiveBuilder.PrimitiveArrays textured,
+    private record BatchGeometry(List<GlbPrimitiveBuilder.PrimitiveArrays> texturedPages,
+                                 List<byte[]> pageBytes,
                                  GlbPrimitiveBuilder.PrimitiveArrays plain,
-                                 GlbPrimitiveBuilder.PrimitiveArrays colored,
-                                 byte[] atlasBytes) {
-        static final BatchGeometry EMPTY = new BatchGeometry(null, null, null, null);
+                                 GlbPrimitiveBuilder.PrimitiveArrays colored) {
+        static final BatchGeometry EMPTY = new BatchGeometry(List.of(), List.of(), null, null);
 
         boolean isEmpty() {
-            return textured == null && plain == null && colored == null;
+            return texturedPages.isEmpty() && plain == null && colored == null;
         }
     }
 
-    /** Buffer view ids of one {@link BatchGeometry}, written once per GLB. */
-    private record BatchGeometryBuffers(GlbPrimitiveBuilder.PrimitiveBufferIds textured,
+    /**
+     * Buffer view ids of one {@link BatchGeometry}, written once per GLB:
+     * per-page primitive buffers + atlas bufferViews (index-aligned with
+     * {@code BatchGeometry.texturedPages}) plus the plain/colored buffers.
+     */
+    private record BatchGeometryBuffers(List<GlbPrimitiveBuilder.PrimitiveBufferIds> texturedPages,
+                                        List<Integer> bvAtlasPages,
                                         GlbPrimitiveBuilder.PrimitiveBufferIds plain,
-                                        GlbPrimitiveBuilder.PrimitiveBufferIds colored,
-                                        int bvAtlas) {
+                                        GlbPrimitiveBuilder.PrimitiveBufferIds colored) {
     }
 
     /**
@@ -97,18 +110,18 @@ final class InstancedNodeEncoder {
      * the appended row index is the instance's {@code _FEATURE_ID_0} value.
      */
     List<InstancedNodeData> build(
-            List<InstanceBatch> instanceBatches, List<byte[]> instanceAtlasBytes,
+            List<InstanceBatch> instanceBatches, List<InstancedAtlas> instanceAtlases,
             double[] cellCenter,
             ObjectStyleRegistry styleRegistry, boolean enableShading,
             List<FeatureData> propFeatures) {
         List<InstancedNodeData> out = new ArrayList<>();
         for (int b = 0; b < instanceBatches.size(); b++) {
             InstanceBatch batch = instanceBatches.get(b);
-            byte[] atlasBytes = instanceAtlasBytes != null && b < instanceAtlasBytes.size()
-                    ? instanceAtlasBytes.get(b) : null;
+            InstancedAtlas atlas = instanceAtlases != null && b < instanceAtlases.size()
+                    ? instanceAtlases.get(b) : null;
             BatchGeometry geometry = prototypeGeometryCache.get(batch.prototypeMesh());
             if (geometry == null) {
-                geometry = buildBatchGeometry(batch, atlasBytes, styleRegistry, enableShading);
+                geometry = buildBatchGeometry(batch, atlas, styleRegistry, enableShading);
                 BatchGeometry existing =
                         prototypeGeometryCache.putIfAbsent(batch.prototypeMesh(), geometry);
                 if (existing != null) {
@@ -174,10 +187,13 @@ final class InstancedNodeEncoder {
 
     /**
      * Write the instanced nodes' buffer views into the BIN and bind them into
-     * the JSON-builder shape. A batch's prototype geometry (and atlas JPEG)
-     * is shared by its per-style node splits: the buffer views are written
-     * once per distinct {@link BatchGeometry} and every split's primitives
-     * reference them — only the material (style) differs per split.
+     * the JSON-builder shape. A batch's prototype geometry (and atlas page
+     * JPEGs) is shared by its per-style node splits: the buffer views are
+     * written once per distinct {@link BatchGeometry} and every split's
+     * primitives reference them — only the material (style) differs per
+     * split. Each textured primitive carries its page's atlas bufferView on
+     * {@code Primitive.bvInstancedAtlas} for the JSON builder's material
+     * routing.
      */
     static List<GltfJsonBuilder.InstancedNode> writeBuffers(
             List<InstancedNodeData> instancedNodes, BinBufferBuilder bin) {
@@ -188,29 +204,36 @@ final class InstancedNodeEncoder {
             BatchGeometry geometry = ind.geometry();
             BatchGeometryBuffers buffers = geometryBuffers.get(geometry);
             if (buffers == null) {
+                List<GlbPrimitiveBuilder.PrimitiveBufferIds> texturedPages =
+                        new ArrayList<>(geometry.texturedPages().size());
+                List<Integer> bvAtlasPages = new ArrayList<>(geometry.texturedPages().size());
+                for (int p = 0; p < geometry.texturedPages().size(); p++) {
+                    texturedPages.add(GlbPrimitiveBuilder.writeBuffers(bin,
+                            geometry.texturedPages().get(p)));
+                    bvAtlasPages.add(bin.addRawBytes(geometry.pageBytes().get(p)));
+                }
                 buffers = new BatchGeometryBuffers(
-                        geometry.textured() != null
-                                ? GlbPrimitiveBuilder.writeBuffers(bin, geometry.textured()) : null,
+                        texturedPages, bvAtlasPages,
                         geometry.plain() != null
                                 ? GlbPrimitiveBuilder.writeBuffers(bin, geometry.plain()) : null,
                         geometry.colored() != null
-                                ? GlbPrimitiveBuilder.writeBuffers(bin, geometry.colored()) : null,
-                        geometry.atlasBytes() != null ? bin.addRawBytes(geometry.atlasBytes()) : -1);
+                                ? GlbPrimitiveBuilder.writeBuffers(bin, geometry.colored()) : null);
                 geometryBuffers.put(geometry, buffers);
             }
 
-            List<GltfJsonBuilder.Primitive> prims = new ArrayList<>(3);
-            if (geometry.textured() != null) {
-                prims.add(GlbPrimitiveBuilder.toJsonPrimitive(geometry.textured(),
-                        buffers.textured(), null));
+            List<GltfJsonBuilder.Primitive> prims =
+                    new ArrayList<>(geometry.texturedPages().size() + 2);
+            for (int p = 0; p < geometry.texturedPages().size(); p++) {
+                prims.add(GlbPrimitiveBuilder.toJsonPrimitive(geometry.texturedPages().get(p),
+                        buffers.texturedPages().get(p), null, buffers.bvAtlasPages().get(p)));
             }
             if (geometry.plain() != null) {
                 prims.add(GlbPrimitiveBuilder.toJsonPrimitive(geometry.plain(),
-                        buffers.plain(), ind.style()));
+                        buffers.plain(), ind.style(), -1));
             }
             if (geometry.colored() != null) {
                 prims.add(GlbPrimitiveBuilder.toJsonPrimitive(geometry.colored(),
-                        buffers.colored(), null));
+                        buffers.colored(), null, -1));
             }
             jsonInstancedNodes.add(new GltfJsonBuilder.InstancedNode(
                     prims,
@@ -219,7 +242,6 @@ final class InstancedNodeEncoder {
                     bin.addInstanceFloat32Array(ind.rotations()),
                     bin.addInstanceFloat32Array(ind.scales()),
                     bin.addInstanceFloat32Array(ind.featureIds()),
-                    buffers.bvAtlas(),
                     ind.tMin(), ind.tMax()));
         }
         return jsonInstancedNodes;
@@ -228,12 +250,14 @@ final class InstancedNodeEncoder {
     /**
      * Build a prototype's style-independent geometry once: weld in the local
      * meter frame at the batch's scale-adjusted tolerance, route triangles,
-     * and bake the (up to three) primitive array sets. The plain primitive is
-     * built without a style — the per-group style binds at material level in
+     * and bake the primitive array sets — one textured primitive per atlas
+     * page holding routed triangles, plus optional plain/colored primitives.
+     * The plain primitive is built without a style — the per-group style
+     * binds at material level in
      * {@link GlbPrimitiveBuilder#toJsonPrimitive}.
      */
     private static BatchGeometry buildBatchGeometry(InstanceBatch batch,
-                                                    byte[] atlasBytes,
+                                                    InstancedAtlas atlas,
                                                     ObjectStyleRegistry styleRegistry,
                                                     boolean enableShading) {
         TriangleMesh proto = batch.prototypeMesh();
@@ -246,17 +270,29 @@ final class InstancedNodeEncoder {
             return BatchGeometry.EMPTY;
         }
         List<RoutedTriangle> routed = TriangleRouter.route(proto, weld, styleRegistry);
-        List<RoutedTriangle> texturedTris = new ArrayList<>();
+        int pageCount = atlas != null ? atlas.pageBytes().size() : 0;
+        List<List<RoutedTriangle>> texturedTrisByPage = new ArrayList<>(pageCount);
+        for (int i = 0; i < pageCount; i++) {
+            texturedTrisByPage.add(new ArrayList<>());
+        }
         List<RoutedTriangle> plainTris = new ArrayList<>();
         List<RoutedTriangle> coloredTris = new ArrayList<>();
         for (RoutedTriangle rt : routed) {
-            // Textured triangles sample the prototype's own single-page
-            // atlas (UVs already remapped at atlas-build time). Without an
-            // atlas (untextured prototype, or every source texture failed)
-            // they degrade to the plain bucket so the shape still renders.
-            if (rt.textured() && atlasBytes != null) {
-                texturedTris.add(rt);
-            } else if (rt.colored()) {
+            // Textured triangles sample the prototype's own atlas pages (UVs
+            // already remapped at atlas-build time), routed per page like the
+            // main mesh path. A texId missing from the page map means the
+            // atlas builder dropped the texture (e.g. corrupt source); such
+            // triangles — and every textured triangle of an atlas-less
+            // prototype — degrade to the plain bucket so the shape still
+            // renders.
+            if (rt.textured() && atlas != null) {
+                Integer page = atlas.texIdToPage().get(rt.textureId());
+                if (page != null) {
+                    texturedTrisByPage.get(page).add(rt);
+                    continue;
+                }
+            }
+            if (rt.colored()) {
                 coloredTris.add(rt);
             } else {
                 plainTris.add(rt);
@@ -264,10 +300,18 @@ final class InstancedNodeEncoder {
         }
 
         CellFrame identity = CellFrame.identity();
-        GlbPrimitiveBuilder.PrimitiveArrays textured = texturedTris.isEmpty() ? null
-                : GlbPrimitiveBuilder.build(proto, weld, texturedTris,
-                        GltfJsonBuilder.INSTANCED_TEXTURED_PAGE, null, identity,
-                        enableShading, false);
+        List<GlbPrimitiveBuilder.PrimitiveArrays> texturedPages = new ArrayList<>();
+        List<byte[]> pageBytes = new ArrayList<>();
+        for (int p = 0; p < pageCount; p++) {
+            List<RoutedTriangle> tris = texturedTrisByPage.get(p);
+            if (tris.isEmpty()) {
+                continue;
+            }
+            texturedPages.add(GlbPrimitiveBuilder.build(proto, weld, tris,
+                    GltfJsonBuilder.INSTANCED_TEXTURED_PAGE, null, identity,
+                    enableShading, false));
+            pageBytes.add(atlas.pageBytes().get(p));
+        }
         GlbPrimitiveBuilder.PrimitiveArrays plain = plainTris.isEmpty() ? null
                 : GlbPrimitiveBuilder.build(proto, weld, plainTris,
                         GlbPrimitiveBuilder.UNTEXTURED_PLAIN_PAGE, null, identity,
@@ -276,7 +320,6 @@ final class InstancedNodeEncoder {
                 : GlbPrimitiveBuilder.build(proto, weld, coloredTris,
                         GlbPrimitiveBuilder.UNTEXTURED_COLORED_PAGE, null, identity,
                         enableShading, false);
-        return new BatchGeometry(textured, plain, colored,
-                textured != null ? atlasBytes : null);
+        return new BatchGeometry(texturedPages, pageBytes, plain, colored);
     }
 }
