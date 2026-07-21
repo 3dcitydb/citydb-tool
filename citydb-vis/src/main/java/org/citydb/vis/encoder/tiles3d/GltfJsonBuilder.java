@@ -50,7 +50,8 @@ final class GltfJsonBuilder {
      * textured primitive: it samples the prototype's own single-page atlas
      * (embedded per instanced node via {@code InstancedNode.bvAtlas}), not
      * one of the node's atlas pages. Owned here because this class does the
-     * material routing on it; {@code GlbEncoder} references it directly.
+     * material routing on it; {@code GlbPrimitiveBuilder} and
+     * {@code InstancedNodeEncoder} reference it directly.
      */
     static final int INSTANCED_TEXTURED_PAGE = -3;
 
