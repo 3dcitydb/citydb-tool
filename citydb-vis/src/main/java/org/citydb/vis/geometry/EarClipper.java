@@ -34,7 +34,6 @@ final class EarClipper {
         List<int[]> triangles = new ArrayList<>();
         int n = vertices.size();
 
-        if (n < 3) return triangles;
         if (n == 3) {
             triangles.add(new int[]{0, 1, 2});
             return triangles;

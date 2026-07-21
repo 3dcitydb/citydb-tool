@@ -127,7 +127,7 @@ public class I3SJsonSerializer {
     /**
      * Write per-attribute statistics resources to
      * {@code layers/0/statistics/f_K/0/index.json}, one per declared
-     * attribute field. Required to satisfy the I3S 1.9SLPK validator's
+     * attribute field. Required to satisfy the I3S 1.9 SLPK validator's
      * advisory {@code MISSING_ATTRIBUTE_STATS_DECL} check on every
      * field that has a corresponding {@code statisticsInfo} entry. If
      * the layer-level stats accumulator missed an attribute (e.g. all
