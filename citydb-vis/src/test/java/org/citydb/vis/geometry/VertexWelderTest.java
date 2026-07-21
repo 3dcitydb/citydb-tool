@@ -108,6 +108,6 @@ class VertexWelderTest {
         int b2 = mesh.addVertex(0, -0.001, 0, UP_X, UP_Y, UP_Z, 0f, 1f);
         mesh.addTriangle(b0, b1, b2, 2L, 0, false, WALL);
 
-        return VertexWelder.weld(mesh, 0, 0, 0);
+        return VertexWelder.weld(mesh, 0, 0, 0, false, VertexWelder.DEFAULT_WELD_TOLERANCE);
     }
 }

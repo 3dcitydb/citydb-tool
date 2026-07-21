@@ -89,7 +89,7 @@ public class ShardedMeshStore implements Closeable {
     /** True if any stored mesh carries vertex colors (X3DMaterial baking). */
     public boolean hasColors() {
         for (MeshStore shard : shards) {
-            if (shard != null && shard.hasColors()) {
+            if (shard.hasColors()) {
                 return true;
             }
         }

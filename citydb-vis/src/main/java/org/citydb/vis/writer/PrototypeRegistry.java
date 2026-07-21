@@ -111,11 +111,6 @@ public class PrototypeRegistry {
         return byId.get(prototypeId);
     }
 
-    /** Number of registered (instanceable) prototypes. */
-    public int size() {
-        return byId.size();
-    }
-
     private Optional<Prototype> process(ImplicitGeometry implicitGeometry) {
         Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
         if (geometry == null) {

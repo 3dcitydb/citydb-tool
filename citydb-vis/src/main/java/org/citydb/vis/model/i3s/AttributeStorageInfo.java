@@ -6,6 +6,7 @@
 package org.citydb.vis.model.i3s;
 
 import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.AttrType;
 
 import com.alibaba.fastjson2.annotation.JSONType;
 
@@ -25,30 +26,23 @@ public class AttributeStorageInfo {
         info.key = "f_" + index;
         info.name = field.name();
 
-        switch (field.type()) {
-            case OID -> {
-                info.header = List.of(new HeaderEntry("count", "UInt32"));
-                info.ordering = List.of("attributeValues");
-                info.attributeValues = ValueInfo.of("Oid32", 1);
-            }
-            case INT -> {
-                info.header = List.of(new HeaderEntry("count", "UInt32"));
-                info.ordering = List.of("attributeValues");
-                info.attributeValues = ValueInfo.of("Int32", 1);
-            }
-            case DOUBLE -> {
-                info.header = List.of(new HeaderEntry("count", "UInt32"));
-                info.ordering = List.of("attributeValues");
-                info.attributeValues = ValueInfo.of("Float64", 1);
-            }
-            case STRING -> {
-                info.header = List.of(
-                        new HeaderEntry("count", "UInt32"),
-                        new HeaderEntry("attributeValuesByteCount", "UInt32"));
-                info.ordering = List.of("attributeByteCounts", "attributeValues");
-                info.attributeByteCounts = ValueInfo.of("UInt32", 1);
-                info.attributeValues = ValueInfo.string();
-            }
+        if (field.type() == AttrType.STRING) {
+            info.header = List.of(
+                    new HeaderEntry("count", "UInt32"),
+                    new HeaderEntry("attributeValuesByteCount", "UInt32"));
+            info.ordering = List.of("attributeByteCounts", "attributeValues");
+            info.attributeByteCounts = ValueInfo.of("UInt32", 1);
+            info.attributeValues = ValueInfo.string();
+        } else {
+            String valueType = switch (field.type()) {
+                case OID -> "Oid32";
+                case INT -> "Int32";
+                case DOUBLE -> "Float64";
+                default -> throw new IllegalStateException("Unexpected type: " + field.type());
+            };
+            info.header = List.of(new HeaderEntry("count", "UInt32"));
+            info.ordering = List.of("attributeValues");
+            info.attributeValues = ValueInfo.of(valueType, 1);
         }
 
         return info;

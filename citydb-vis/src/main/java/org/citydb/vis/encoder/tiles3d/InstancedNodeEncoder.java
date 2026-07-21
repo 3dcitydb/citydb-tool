@@ -117,8 +117,7 @@ final class InstancedNodeEncoder {
         List<InstancedNodeData> out = new ArrayList<>();
         for (int b = 0; b < instanceBatches.size(); b++) {
             InstanceBatch batch = instanceBatches.get(b);
-            InstancedAtlas atlas = instanceAtlases != null && b < instanceAtlases.size()
-                    ? instanceAtlases.get(b) : null;
+            InstancedAtlas atlas = instanceAtlases.get(b);
             BatchGeometry geometry = prototypeGeometryCache.get(batch.prototypeMesh());
             if (geometry == null) {
                 geometry = buildBatchGeometry(batch, atlas, styleRegistry, enableShading);
@@ -271,39 +270,19 @@ final class InstancedNodeEncoder {
         }
         List<RoutedTriangle> routed = TriangleRouter.route(proto, weld, styleRegistry);
         int pageCount = atlas != null ? atlas.pageBytes().size() : 0;
-        List<List<RoutedTriangle>> texturedTrisByPage = new ArrayList<>(pageCount);
-        for (int i = 0; i < pageCount; i++) {
-            texturedTrisByPage.add(new ArrayList<>());
-        }
-        List<RoutedTriangle> plainTris = new ArrayList<>();
-        List<RoutedTriangle> coloredTris = new ArrayList<>();
-        for (RoutedTriangle rt : routed) {
-            // Textured triangles sample the prototype's own atlas pages (UVs
-            // already remapped at atlas-build time), routed per page like the
-            // main mesh path. A texId missing from the page map means the
-            // atlas builder dropped the texture (e.g. corrupt source); such
-            // triangles — and every textured triangle of an atlas-less
-            // prototype — degrade to the plain bucket so the shape still
-            // renders.
-            if (rt.textured() && atlas != null) {
-                Integer page = atlas.texIdToPage().get(rt.textureId());
-                if (page != null) {
-                    texturedTrisByPage.get(page).add(rt);
-                    continue;
-                }
-            }
-            if (rt.colored()) {
-                coloredTris.add(rt);
-            } else {
-                plainTris.add(rt);
-            }
-        }
+        // Textured triangles sample the prototype's own atlas pages (UVs
+        // already remapped at atlas-build time), routed per page like the
+        // main mesh path.
+        TriangleRouter.PageBuckets buckets = TriangleRouter.bucketByPage(routed, pageCount,
+                atlas != null ? atlas.texIdToPage() : null);
+        List<RoutedTriangle> plainTris = buckets.plain();
+        List<RoutedTriangle> coloredTris = buckets.colored();
 
         CellFrame identity = CellFrame.identity();
         List<GlbPrimitiveBuilder.PrimitiveArrays> texturedPages = new ArrayList<>();
         List<byte[]> pageBytes = new ArrayList<>();
         for (int p = 0; p < pageCount; p++) {
-            List<RoutedTriangle> tris = texturedTrisByPage.get(p);
+            List<RoutedTriangle> tris = buckets.texturedByPage().get(p);
             if (tris.isEmpty()) {
                 continue;
             }

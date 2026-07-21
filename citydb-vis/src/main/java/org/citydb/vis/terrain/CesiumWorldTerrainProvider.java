@@ -247,15 +247,30 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
 
     // ---- ion handshake ------------------------------------------------------
 
+    /**
+     * GET the given URL with a 30 s timeout and the given header
+     * name/value pairs, returning the raw (possibly gzip-compressed)
+     * response. Status-code policy stays with the caller.
+     */
+    private HttpResponse<byte[]> httpGet(String url, String... headers)
+            throws IOException, InterruptedException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(30))
+                .GET();
+        for (int i = 0; i < headers.length; i += 2) {
+            builder.header(headers[i], headers[i + 1]);
+        }
+        return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+    }
+
+    private static JSONObject parseJsonBody(byte[] body) throws IOException {
+        return JSON.parseObject(new String(decompress(body), StandardCharsets.UTF_8));
+    }
+
     private JSONObject fetchIonEndpoint(String ionToken) throws VisExportException {
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(ION_ENDPOINT + ionToken))
-                    .timeout(Duration.ofSeconds(30))
-                    .header("Accept", "application/json")
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = httpClient.send(request,
-                    HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<byte[]> response = httpGet(ION_ENDPOINT + ionToken,
+                    "Accept", "application/json");
             if (response.statusCode() == 401 || response.statusCode() == 403) {
                 throw new VisExportException("Cesium ion rejected the token (HTTP " +
                         response.statusCode() + "). Check --cesium-ion-token and that the " +
@@ -265,7 +280,7 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
                 throw new VisExportException("Cesium ion endpoint request failed (HTTP " +
                         response.statusCode() + ").");
             }
-            return JSON.parseObject(new String(decompress(response.body()), StandardCharsets.UTF_8));
+            return parseJsonBody(response.body());
         } catch (IOException e) {
             throw new VisExportException("Failed to contact Cesium ion for World Terrain.", e);
         } catch (InterruptedException e) {
@@ -277,19 +292,14 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
     private JSONObject fetchLayerJson(String baseUrl) throws VisExportException {
         String url = baseUrl.endsWith("/") ? baseUrl + "layer.json" : baseUrl + "/layer.json";
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(30))
-                    .header("Authorization", "Bearer " + assetToken)
-                    .header("Accept", "application/json")
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = httpClient.send(request,
-                    HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<byte[]> response = httpGet(url,
+                    "Authorization", "Bearer " + assetToken,
+                    "Accept", "application/json");
             if (response.statusCode() != 200) {
                 throw new VisExportException("Cesium World Terrain layer.json request " +
                         "failed (HTTP " + response.statusCode() + ").");
             }
-            return JSON.parseObject(new String(decompress(response.body()), StandardCharsets.UTF_8));
+            return parseJsonBody(response.body());
         } catch (IOException e) {
             throw new VisExportException("Failed to download Cesium World Terrain layer.json.", e);
         } catch (InterruptedException e) {
@@ -361,14 +371,9 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
                 .replace("{x}", Integer.toString(x))
                 .replace("{y}", Integer.toString(y));
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                    .timeout(Duration.ofSeconds(30))
-                    .header("Authorization", "Bearer " + assetToken)
-                    .header("Accept", acceptHeader)
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = httpClient.send(request,
-                    HttpResponse.BodyHandlers.ofByteArray());
+            HttpResponse<byte[]> response = httpGet(url,
+                    "Authorization", "Bearer " + assetToken,
+                    "Accept", acceptHeader);
             if (response.statusCode() != 200) {
                 logger.debug("Terrain tile {}/{}/{} unavailable (HTTP {}).",
                         level, x, y, response.statusCode());

@@ -41,10 +41,8 @@ public class Store {
         store.rootNode = "./nodes/root";
 
         double[] layerExtent = sceneLayer.getExtent();
-        if (layerExtent != null) {
-            store.extent = new double[]{
-                    layerExtent[0], layerExtent[1], layerExtent[3], layerExtent[4]};
-        }
+        store.extent = new double[]{
+                layerExtent[0], layerExtent[1], layerExtent[3], layerExtent[4]};
 
         store.indexCRS = EPSG_4326_URI;
         store.vertexCRS = EPSG_4326_URI;
@@ -76,11 +74,12 @@ public class Store {
                     new HeaderEntry("vertexCount", "UInt32"),
                     new HeaderEntry("featureCount", "UInt32"));
             schema.topology = "PerAttributeArray";
-            // Declared for ArcGIS Pro compatibility — its loader rejects the
-            // scene layer if defaultGeometrySchema is absent. The actual
-            // per-node binary follows the schema declared on each
-            // {@link GeometryDefinition.LegacyBuffer}; this top-level
-            // schema is a backward-compat placeholder only.
+            // ArcGIS Pro's loader requires defaultGeometrySchema to be
+            // present and rejects the scene layer without it — an external
+            // Esri contract, not a leftover of our own. The authoritative
+            // per-node binary layout is the one declared on each
+            // {@link GeometryDefinition.LegacyBuffer}; this top-level schema
+            // only satisfies that presence check.
             schema.ordering = List.of("position", "normal", "uv0", "color");
             schema.vertexAttributes = VertexAttributes.full();
             schema.featureAttributeOrder = List.of("id", "faceRange");

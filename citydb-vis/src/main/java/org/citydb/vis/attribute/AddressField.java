@@ -7,10 +7,7 @@ package org.citydb.vis.attribute;
 
 import org.citydb.model.address.Address;
 
-import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Function;
 
 /**
@@ -35,17 +32,8 @@ enum AddressField {
     // uses), giving a human-readable cell.
     FREE_TEXT("freeText", a -> AttributeEncoder.formatArrayValue(a.getFreeText().orElse(null)));
 
-    // Case-insensitive lookup (matches the table / aggregate / value-type-cast
-    // keywords). TreeMap keeps the canonical camelCase strings as keys so
-    // names() / "Allowed: ..." error hints display the official spelling.
-    private static final Map<String, AddressField> BY_NAME;
-    static {
-        Map<String, AddressField> map = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (AddressField af : values()) {
-            map.put(af.fieldName, af);
-        }
-        BY_NAME = Collections.unmodifiableMap(map);
-    }
+    private static final CaseInsensitiveLookup<AddressField> BY_NAME =
+            CaseInsensitiveLookup.of(values(), af -> af.fieldName);
 
     private final String fieldName;
     private final Function<Address, Object> extractor;
@@ -55,21 +43,17 @@ enum AddressField {
         this.extractor = extractor;
     }
 
-    String fieldName() {
-        return fieldName;
-    }
-
     Object extract(Address address) {
         return extractor.apply(address);
     }
 
     /** Resolve the user-facing name (camelCase, case-insensitive) to a constant, or null if unknown. */
     static AddressField forName(String name) {
-        return name == null ? null : BY_NAME.get(name);
+        return BY_NAME.get(name);
     }
 
     /** Snapshot of every supported field name, used by the parser for the "Allowed: ..." error hint. */
     static Set<String> names() {
-        return BY_NAME.keySet();
+        return BY_NAME.names();
     }
 }

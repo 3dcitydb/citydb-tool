@@ -19,7 +19,7 @@ import java.util.List;
  * <p>
  * The {@code geometryData} array references the layer's per-node
  * geometry buffer file; with the single-buffer layout it always points
- * at {@code ./geometries/0} (the uncompressed legacy I3S 1.9binary).
+ * at {@code ./geometries/0} (the uncompressed legacy I3S 1.9 binary).
  */
 @JSONType(alphabetic = false)
 public record NodeFeatureDocument(List<FeatureEntry> featureData,
