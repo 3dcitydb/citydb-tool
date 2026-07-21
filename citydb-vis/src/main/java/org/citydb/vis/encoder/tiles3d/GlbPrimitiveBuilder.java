@@ -233,13 +233,19 @@ final class GlbPrimitiveBuilder {
      * shape. {@code styleOverride} lets instanced style groups share one
      * style-independent plain geometry set while binding their own material;
      * {@code null} keeps the style baked into the arrays (main mesh path).
+     * {@code bvInstancedAtlas} is the atlas-page bufferView an instanced
+     * textured primitive samples; {@code -1} on every other flavour
+     * (including all main-mesh primitives, whose textured material is routed
+     * by {@code atlasPage} instead).
      */
     static GltfJsonBuilder.Primitive toJsonPrimitive(
-            PrimitiveArrays p, PrimitiveBufferIds b, DefaultObjectStyle styleOverride) {
+            PrimitiveArrays p, PrimitiveBufferIds b, DefaultObjectStyle styleOverride,
+            int bvInstancedAtlas) {
         return new GltfJsonBuilder.Primitive(
                 p.atlasPage(),
                 p.vertexCount(), p.uniqueFeatureCount(), p.posMin(), p.posMax(),
                 b.positions(), b.normals(), b.uvs(), b.colors(), b.indices(), b.featureIds(),
+                bvInstancedAtlas,
                 p.anyAlphaBelowOne(), styleOverride != null ? styleOverride : p.plainStyle());
     }
 }
