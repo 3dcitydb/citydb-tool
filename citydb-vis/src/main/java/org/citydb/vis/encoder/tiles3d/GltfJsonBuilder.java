@@ -47,11 +47,12 @@ final class GltfJsonBuilder {
     private static final int COMPONENT_TYPE_UNSIGNED_INT = 5125;
     /**
      * {@code Primitive.atlasPage} sentinel for an instanced prototype's
-     * textured primitive: it samples the prototype's own single-page atlas
-     * (embedded per instanced node via {@code InstancedNode.bvAtlas}), not
-     * one of the node's atlas pages. Owned here because this class does the
-     * material routing on it; {@code GlbPrimitiveBuilder} and
-     * {@code InstancedNodeEncoder} reference it directly.
+     * textured primitive: it samples one of the prototype's own atlas pages
+     * (embedded once per GLB and referenced per primitive via
+     * {@code Primitive.bvInstancedAtlas}), not one of the node's atlas pages.
+     * Owned here because this class does the material routing on it;
+     * {@code GlbPrimitiveBuilder} and {@code InstancedNodeEncoder} reference
+     * it directly.
      */
     static final int INSTANCED_TEXTURED_PAGE = -3;
 
@@ -343,7 +344,7 @@ final class GltfJsonBuilder {
      * Emit one textured material per referenced atlas page (each with a
      * baseColorTexture pointing at its own atlas), plus up to two untextured
      * materials and one textured material per distinct instanced prototype
-     * atlas. All material flavours follow {@code --enable-shading}:
+     * atlas page. All material flavours follow {@code --enable-shading}:
      * <ul>
      *   <li><b>textured</b> — PBR-shaded under {@code --enable-shading};
      *       otherwise carries {@code KHR_materials_unlit}. With NORMAL on,
@@ -455,9 +456,9 @@ final class GltfJsonBuilder {
             materials.add(finishMaterial(new JSONObject(), coloredNeedsBlend));
         }
 
-        // One textured material per distinct instanced prototype atlas; their
-        // texture slots continue after the node atlas pages (writeTextures
-        // appends the images in the same order).
+        // One textured material per distinct instanced prototype atlas page;
+        // their texture slots continue after the node atlas pages
+        // (writeTextures appends the images in the same order).
         Map<Integer, Integer> instancedTexturedByBvAtlas = new HashMap<>();
         for (int bvAtlas : instancedAtlasBvs) {
             JSONObject pbr = new JSONObject();
@@ -482,16 +483,19 @@ final class GltfJsonBuilder {
     }
 
     /**
-     * Distinct instanced prototype atlas bufferViews in node order. The single
-     * source of the texture-slot sequence shared by {@link #writeMaterials}
-     * (slot assignment, after the node atlas pages) and {@link #writeTextures}
-     * (image/texture emission in the same order).
+     * Distinct instanced prototype atlas-page bufferViews in primitive
+     * encounter order. The single source of the texture-slot sequence shared
+     * by {@link #writeMaterials} (slot assignment, after the node atlas
+     * pages) and {@link #writeTextures} (image/texture emission in the same
+     * order).
      */
     private LinkedHashSet<Integer> distinctInstancedAtlasBvs() {
         LinkedHashSet<Integer> instancedAtlasBvs = new LinkedHashSet<>();
         for (InstancedNode in : instancedNodes) {
-            if (in.bvAtlas >= 0) {
-                instancedAtlasBvs.add(in.bvAtlas);
+            for (Primitive p : in.primitives) {
+                if (p.bvInstancedAtlas >= 0) {
+                    instancedAtlasBvs.add(p.bvInstancedAtlas);
+                }
             }
         }
         return instancedAtlasBvs;
@@ -552,7 +556,7 @@ final class GltfJsonBuilder {
             JSONArray primitivesArr = new JSONArray();
             for (int i = 0; i < primitives.size(); i++) {
                 primitivesArr.add(writePrimitiveJson(primitives.get(i),
-                        accessors.main.get(i), materials, -1));
+                        accessors.main.get(i), materials));
             }
             JSONObject mesh = new JSONObject();
             mesh.put("primitives", primitivesArr);
@@ -565,7 +569,7 @@ final class GltfJsonBuilder {
             JSONArray primitivesArr = new JSONArray();
             for (int i = 0; i < in.primitives.size(); i++) {
                 primitivesArr.add(writePrimitiveJson(in.primitives.get(i),
-                        perPrim.get(i), materials, in.bvAtlas));
+                        perPrim.get(i), materials));
             }
             JSONObject mesh = new JSONObject();
             mesh.put("primitives", primitivesArr);
@@ -583,7 +587,7 @@ final class GltfJsonBuilder {
      * via {@code EXT_instance_features}).
      */
     private JSONObject writePrimitiveJson(Primitive p, PrimitiveAccessors acc,
-                                          MaterialIndices materials, int instancedAtlasBv) {
+                                          MaterialIndices materials) {
         JSONObject primitive = new JSONObject();
 
         JSONObject attributes = new JSONObject();
@@ -606,7 +610,7 @@ final class GltfJsonBuilder {
         if (p.atlasPage >= 0) {
             materialIdx = materials.textured[p.atlasPage];
         } else if (p.atlasPage == INSTANCED_TEXTURED_PAGE) {
-            materialIdx = materials.instancedTexturedByBvAtlas.get(instancedAtlasBv);
+            materialIdx = materials.instancedTexturedByBvAtlas.get(p.bvInstancedAtlas);
         } else if (p.bvColors >= 0) {
             materialIdx = materials.untexturedColored;
         } else {
@@ -749,25 +753,30 @@ final class GltfJsonBuilder {
      * carry UV (no color), X3DMaterial-colored primitives carry COLOR_0 (no
      * UV), and the untextured-plain path carries neither. {@code
      * anyAlphaBelowOne} flips the untextured colored material to
-     * {@code alphaMode=BLEND}.
+     * {@code alphaMode=BLEND}. {@code bvInstancedAtlas} is the atlas-page
+     * bufferView an instanced textured primitive ({@code atlasPage ==}
+     * {@link #INSTANCED_TEXTURED_PAGE}) samples; {@code -1} on every other
+     * primitive flavour.
      */
     record Primitive(int atlasPage, int vertexCount, int featureCount,
                      float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvColors,
                      int bvIndices, int bvFeatureIds,
+                     int bvInstancedAtlas,
                      boolean anyAlphaBelowOne,
                      DefaultObjectStyle plainStyle) {
     }
 
     /**
      * One GPU-instanced glTF node: the prototype's primitives (all with
-     * {@code bvFeatureIds == -1}) plus the {@code EXT_mesh_gpu_instancing}
-     * attribute buffer views. {@code tMin}/{@code tMax} are the TRANSLATION
-     * accessor's per-axis bounds.
+     * {@code bvFeatureIds == -1}; textured ones carry their atlas page's
+     * bufferView on {@code Primitive.bvInstancedAtlas}) plus the
+     * {@code EXT_mesh_gpu_instancing} attribute buffer views.
+     * {@code tMin}/{@code tMax} are the TRANSLATION accessor's per-axis
+     * bounds.
      */
     record InstancedNode(List<Primitive> primitives, int instanceCount,
                          int bvTranslation, int bvRotation, int bvScale, int bvFeatureIds,
-                         int bvAtlas,
                          float[] tMin, float[] tMax) {
     }
 

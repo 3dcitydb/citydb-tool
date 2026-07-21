@@ -12,6 +12,9 @@ import org.citydb.vis.config.Tiles3DFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,8 +42,9 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
 
     @Test
     void exportsAllFeaturesToTileset(@TempDir Path tempDir) throws Exception {
-        Path sceneDir = runExport(tempDir, new Tiles3DAdapter(),
-                new Tiles3DFormatOptions().setImplicitGeometryInstancing(true), ".3dtiles");
+        Tiles3DFormatOptions formatOptions = new Tiles3DFormatOptions()
+                .setImplicitGeometryInstancing(true);
+        Path sceneDir = runExport(tempDir, new Tiles3DAdapter(), formatOptions, ".3dtiles");
 
         // The 3D Tiles writer writes the entry-point tileset.json at the scene
         // root and the GLB tiles under <scene>/tiles. Assert the tileset is
@@ -91,6 +95,15 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
                     "No .glb carries EXT_mesh_gpu_instancing although the scene contains " +
                             "implicit geometries — the instancing path fell back to baking.");
 
+            // Quality contract: no embedded image — node atlas page OR
+            // instanced prototype atlas page — may exceed --max-atlas-size.
+            // The prototype-atlas path must obey the same page cap as node
+            // atlases (rules alignment); a violation here means one of the
+            // builder paths bypassed the user's settings again.
+            for (Path glb : glbs) {
+                assertAtlasPagesWithinCap(glb, formatOptions.getMaxAtlasSize());
+            }
+
             // Optional debug hand-off: when VIS_IT_KEEP_SCENE_DIR is set, copy
             // the whole scene there so it can be inspected / viewed after the
             // @TempDir is wiped.
@@ -99,6 +112,46 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
                 copyTree(sceneDir, Path.of(keepDir));
             }
         }
+    }
+
+    /**
+     * Decode every embedded image of the GLB (via {@code images[].bufferView}
+     * into the BIN chunk) and assert its dimensions do not exceed the page
+     * cap. Covers node atlas pages and instanced prototype atlas pages alike.
+     */
+    private static void assertAtlasPagesWithinCap(Path glb, int maxAtlasSize) throws IOException {
+        byte[] bytes = Files.readAllBytes(glb);
+        int jsonLength = readIntLE(bytes, 12); // little-endian chunk length
+        JSONObject root = com.alibaba.fastjson2.JSON.parseObject(
+                new String(bytes, 20, jsonLength, StandardCharsets.UTF_8));
+        JSONArray images = root.getJSONArray("images");
+        if (images == null) {
+            return;
+        }
+        JSONArray bufferViews = root.getJSONArray("bufferViews");
+        int binStart = 20 + jsonLength + 8; // skip the BIN chunk's own header
+        for (int i = 0; i < images.size(); i++) {
+            Integer bv = images.getJSONObject(i).getInteger("bufferView");
+            if (bv == null) {
+                continue;
+            }
+            JSONObject view = bufferViews.getJSONObject(bv);
+            int offset = view.getIntValue("byteOffset");
+            int length = view.getIntValue("byteLength");
+            BufferedImage img = ImageIO.read(
+                    new ByteArrayInputStream(bytes, binStart + offset, length));
+            assertTrue(img != null,
+                    "Embedded image " + i + " of " + glb + " failed to decode.");
+            assertTrue(img.getWidth() <= maxAtlasSize && img.getHeight() <= maxAtlasSize,
+                    "Embedded image " + i + " of " + glb + " is " + img.getWidth() + "x"
+                            + img.getHeight() + ", exceeding --max-atlas-size " + maxAtlasSize
+                            + " — an atlas build path bypassed the page cap.");
+        }
+    }
+
+    private static int readIntLE(byte[] bytes, int offset) {
+        return (bytes[offset] & 0xff) | ((bytes[offset + 1] & 0xff) << 8)
+                | ((bytes[offset + 2] & 0xff) << 16) | ((bytes[offset + 3] & 0xff) << 24);
     }
 
     /**
