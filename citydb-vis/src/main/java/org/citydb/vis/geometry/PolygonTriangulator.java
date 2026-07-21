@@ -27,6 +27,12 @@ import java.util.Set;
  * Handles EPSG:4326 coordinates (lon/lat in degrees, height in meters)
  * by converting to local meters for triangulation math.
  * <p>
+ * This class owns polygon collection/dedup, plane derivation (normal +
+ * dominant projection axis), winding normalization, and mesh emission; the
+ * two algorithmic steps are delegated to package-private companions —
+ * {@link HoleBridger} merges interior rings into the outer ring via keyhole
+ * bridging, and {@link EarClipper} triangulates the resulting single ring.
+ * <p>
  * Instances carry per-feature polygon-deduplication state: CityGML
  * {@code xlink:href} references to shared surfaces (e.g., a wall polygon
  * reachable from both a LoD2 Solid and its BoundarySurface child) produce
@@ -37,16 +43,11 @@ import java.util.Set;
  * dedup spans every geometry property of that feature.
  */
 public class PolygonTriangulator {
-    private static final double TOLERANCE = 1e-7;
-
     // When true, input coordinates are local Cartesian meters (implicit-geometry
     // prototype templates) instead of EPSG:4326, so the degree-to-meter scaling
     // becomes the identity. All geometric tests already run in the scaled
     // (metric) space, so this is the only switch the two unit models need.
     private final boolean localMeters;
-
-    private record RingData(List<double[]> positions, List<double[]> scaledPositions,
-                            List<float[]> uvs) {}
 
     // Per-feature dedup state. State persists across triangulate() calls on
     // the same instance so dedup covers a feature's full geometry (each
@@ -157,14 +158,14 @@ public class PolygonTriangulator {
 
         // Build the outer ring (without the closing duplicate vertex) in
         // both original (degrees/meters) and scaled (all-meters) form.
-        List<double[]> outerRing = toDoubleArray(outerPoints);
+        List<double[]> outerRing = RingMathUtil.toDoubleArray(outerPoints);
         if (outerRing.size() > 1) {
             outerRing.remove(outerRing.size() - 1);
         }
         if (outerRing.size() < 3) {
             return;
         }
-        List<double[]> outerScaled = scaleRing(outerRing, scaleX, scaleY);
+        List<double[]> outerScaled = RingMathUtil.scaleRing(outerRing, scaleX, scaleY);
 
         // Compute the polygon plane (normal + dominant axis) from the OUTER
         // ring alone — interior rings are coplanar and share this projection.
@@ -180,7 +181,7 @@ public class PolygonTriangulator {
 
         List<float[]> outerUVRing = null;
         if (hasUV) {
-            outerUVRing = toUVArray(outerTexCoords);
+            outerUVRing = RingMathUtil.toUVArray(outerTexCoords);
             if (outerUVRing.size() > 1) {
                 outerUVRing.remove(outerUVRing.size() - 1);
             }
@@ -193,11 +194,11 @@ public class PolygonTriangulator {
         List<double[]> scaledRing;
         List<float[]> uvRing;
         if (polygon.hasInteriorRings()) {
-            RingData bridged = bridgeHolesWithUV(outerRing, outerScaled, outerUVRing,
-                    polygon.getInteriorRings(), texCoordMap, scaleX, scaleY, projAxis);
-            ring = bridged.positions;
-            scaledRing = bridged.scaledPositions;
-            uvRing = bridged.uvs;
+            HoleBridger.BridgedRing bridged = HoleBridger.bridge(outerRing, outerScaled,
+                    outerUVRing, polygon.getInteriorRings(), texCoordMap, scaleX, scaleY, projAxis);
+            ring = bridged.positions();
+            scaledRing = bridged.scaledPositions();
+            uvRing = bridged.uvs();
         } else {
             ring = outerRing;
             scaledRing = outerScaled;
@@ -228,7 +229,7 @@ public class PolygonTriangulator {
         }
 
         // Ear clipping using scaled coordinates (requires CCW winding)
-        List<int[]> triangleIndices = earClip(scaledRing, projAxis);
+        List<int[]> triangleIndices = EarClipper.clip(scaledRing, projAxis);
 
         // Add vertices using ORIGINAL coordinates (degrees/meters) for output.
         // A polygon never carries both UV and material color (extractor drops
@@ -287,7 +288,7 @@ public class PolygonTriangulator {
         }
 
         double length = Math.sqrt(nx * nx + ny * ny + nz * nz);
-        if (length < TOLERANCE) {
+        if (length < RingMathUtil.TOLERANCE) {
             return new float[]{0, 0, 0};
         }
 
@@ -295,7 +296,8 @@ public class PolygonTriangulator {
     }
 
     private static boolean isZeroVector(float[] v) {
-        return Math.abs(v[0]) < TOLERANCE && Math.abs(v[1]) < TOLERANCE && Math.abs(v[2]) < TOLERANCE;
+        return Math.abs(v[0]) < RingMathUtil.TOLERANCE && Math.abs(v[1]) < RingMathUtil.TOLERANCE
+                && Math.abs(v[2]) < RingMathUtil.TOLERANCE;
     }
 
     private static int getDominantAxis(float[] normal) {
@@ -308,486 +310,7 @@ public class PolygonTriangulator {
         return 2;
     }
 
-    private static double[] project2D(double[] point, int projAxis) {
-        return switch (projAxis) {
-            case 0 -> new double[]{point[1], point[2]};
-            case 1 -> new double[]{point[0], point[2]};
-            default -> new double[]{point[0], point[1]};
-        };
-    }
-
-    /**
-     * Maximum projected u-coordinate of a ring's vertices in the polygon's
-     * dominant projection plane. Used to order interior rings before
-     * keyhole-bridging so the easternmost hole goes first.
-     */
-    private static double maxProjectedU(LinearRing ring, double scaleX, double scaleY, int projAxis) {
-        double max = Double.NEGATIVE_INFINITY;
-        for (Coordinate c : ring.getPoints()) {
-            double[] scaled = {c.getX() * scaleX, c.getY() * scaleY, c.getZ()};
-            double u = project2D(scaled, projAxis)[0];
-            if (u > max) max = u;
-        }
-        return max;
-    }
-
-    private static RingData bridgeHolesWithUV(
-            List<double[]> outerRing, List<double[]> outerScaled, List<float[]> outerUVs,
-            List<LinearRing> holes, Map<LinearRing, List<TextureCoordinate>> texCoordMap,
-            double scaleX, double scaleY, int projAxis) {
-        List<double[]> result = new ArrayList<>(outerRing);
-        List<double[]> resultScaled = new ArrayList<>(outerScaled);
-        List<float[]> uvResult = outerUVs != null ? new ArrayList<>(outerUVs) : null;
-
-        // Outer winding sign in the projection plane — used to ensure each
-        // hole is wound opposite. Without this, GML data that stores both
-        // exterior and interior with the same winding would produce a
-        // self-intersecting keyhole bridge and the hole would be filled.
-        double outerWindingSign = Math.signum(signedArea2D(resultScaled, projAxis));
-
-        // Sort holes by their rightmost projected u (descending) so that the
-        // easternmost hole bridges to the outer ring first and each subsequent
-        // hole naturally bridges to a previously-bridged hole's vertex,
-        // forming a chain. Without this, a hole stored mid-row in the GML
-        // would bridge directly to the outer ring (because no other hole
-        // exists yet in the merged ring), and later holes east of it would
-        // fail to find a clean bridge target — falling back to stacking
-        // multiple bridges on the same outer corner, which the ear-clip
-        // fallback path then triangulates into hole-filling triangles.
-        List<LinearRing> sortedHoles = new ArrayList<>(holes);
-        sortedHoles.sort((a, b) -> Double.compare(maxProjectedU(b, scaleX, scaleY, projAxis),
-                maxProjectedU(a, scaleX, scaleY, projAxis)));
-
-        for (LinearRing hole : sortedHoles) {
-            List<double[]> holePoints = toDoubleArray(hole.getPoints());
-            if (holePoints.size() > 1) {
-                holePoints.remove(holePoints.size() - 1);
-            }
-            if (holePoints.size() < 3) {
-                continue;
-            }
-            List<double[]> holeScaled = scaleRing(holePoints, scaleX, scaleY);
-
-            // Look up UV for this hole ring.
-            // Note: holePoints has already had its closing-coordinate duplicate
-            // removed above, so the `>` here is equivalent to the outer ring's
-            // `>= outerPoints.size()` check (which runs before its own removal).
-            // Both require UVs to have N+1 entries (i.e. UV list includes the
-            // closing-coordinate duplication, matching the ring's raw size).
-            List<float[]> holeUVs = null;
-            if (uvResult != null && texCoordMap != null) {
-                List<TextureCoordinate> holeTexCoords = texCoordMap.get(hole);
-                if (holeTexCoords != null && holeTexCoords.size() > holePoints.size()) {
-                    holeUVs = toUVArray(holeTexCoords);
-                    if (holeUVs.size() > 1) {
-                        holeUVs.remove(holeUVs.size() - 1);
-                    }
-                }
-            }
-
-            // Enforce opposite winding to outer in the projection plane.
-            if (outerWindingSign != 0
-                    && Math.signum(signedArea2D(holeScaled, projAxis)) == outerWindingSign) {
-                Collections.reverse(holePoints);
-                Collections.reverse(holeScaled);
-                if (holeUVs != null) {
-                    Collections.reverse(holeUVs);
-                }
-            }
-
-            // Find the rightmost point of the hole in projected 2D.
-            int holeIdx = 0;
-            double maxU = Double.NEGATIVE_INFINITY;
-            for (int i = 0; i < holeScaled.size(); i++) {
-                double u = project2D(holeScaled.get(i), projAxis)[0];
-                if (u > maxU) {
-                    maxU = u;
-                    holeIdx = i;
-                }
-            }
-
-            int outerIdx = findClosestVisible(resultScaled, holeScaled,
-                    holeScaled.get(holeIdx), projAxis);
-
-            // Bridge: insert hole into outer ring at the connection point.
-            // Maintain three parallel arrays (original positions, scaled
-            // positions, UVs) so subsequent operations have all the data
-            // they need.
-            List<double[]> merged = new ArrayList<>(result.size() + holePoints.size() + 2);
-            List<double[]> mergedScaled = new ArrayList<>(resultScaled.size() + holeScaled.size() + 2);
-            List<float[]> mergedUV = uvResult != null
-                    ? new ArrayList<>(result.size() + holePoints.size() + 2) : null;
-
-            for (int i = 0; i <= outerIdx; i++) {
-                merged.add(result.get(i));
-                mergedScaled.add(resultScaled.get(i));
-                if (mergedUV != null) mergedUV.add(uvResult.get(i));
-            }
-            for (int i = 0; i < holePoints.size(); i++) {
-                int idx = (holeIdx + i) % holePoints.size();
-                merged.add(holePoints.get(idx));
-                mergedScaled.add(holeScaled.get(idx));
-                if (mergedUV != null) {
-                    mergedUV.add(holeUVs != null ? holeUVs.get(idx) : new float[]{0f, 0f});
-                }
-            }
-            // Close the hole bridge
-            merged.add(holePoints.get(holeIdx));
-            mergedScaled.add(holeScaled.get(holeIdx));
-            if (mergedUV != null) {
-                mergedUV.add(holeUVs != null ? holeUVs.get(holeIdx) : new float[]{0f, 0f});
-            }
-            merged.add(result.get(outerIdx));
-            mergedScaled.add(resultScaled.get(outerIdx));
-            if (mergedUV != null) mergedUV.add(uvResult.get(outerIdx));
-
-            for (int i = outerIdx + 1; i < result.size(); i++) {
-                merged.add(result.get(i));
-                mergedScaled.add(resultScaled.get(i));
-                if (mergedUV != null) mergedUV.add(uvResult.get(i));
-            }
-
-            result = merged;
-            resultScaled = mergedScaled;
-            uvResult = mergedUV;
-        }
-
-        return new RingData(result, resultScaled, uvResult);
-    }
-
-    private static List<double[]> scaleRing(List<double[]> ring, double scaleX, double scaleY) {
-        List<double[]> scaled = new ArrayList<>(ring.size());
-        for (double[] pt : ring) {
-            scaled.add(new double[]{pt[0] * scaleX, pt[1] * scaleY, pt[2]});
-        }
-        return scaled;
-    }
-
-    private static double signedArea2D(List<double[]> ring, int projAxis) {
-        double area = 0;
-        int n = ring.size();
-        for (int i = 0; i < n; i++) {
-            double[] a = project2D(ring.get(i), projAxis);
-            double[] b = project2D(ring.get((i + 1) % n), projAxis);
-            area += (b[0] - a[0]) * (b[1] + a[1]);
-        }
-        return area;
-    }
-
-    private static List<float[]> toUVArray(List<TextureCoordinate> texCoords) {
-        List<float[]> result = new ArrayList<>(texCoords.size());
-        for (TextureCoordinate tc : texCoords) {
-            // CityGML: T=0 at bottom (OGC convention).
-            // glTF (I3S / 3D Tiles): V=0 at top. Flip V axis.
-            result.add(new float[]{tc.getS(), 1.0f - tc.getT()});
-        }
-        return result;
-    }
-
-    /**
-     * Find the closest point on the outer ring that is visible from the hole point,
-     * i.e. the bridge segment does not cross any existing edge of the ring.
-     * Distances and intersections are measured in the polygon's dominant 2D
-     * projection so the test is valid on any plane (including vertical walls).
-     * <p>
-     * Vertices that are already bridge endpoints (appear more than once at the
-     * same projected position in the merged ring) are skipped: connecting two
-     * holes to the same vertex would visit it three times in the merged ring
-     * and ear-clip would produce overlapping, hole-filling triangles.
-     */
-    private static int findClosestVisible(List<double[]> ringScaled,
-                                          List<double[]> currentHoleScaled,
-                                          double[] holePointScaled, int projAxis) {
-        double[] hp2 = project2D(holePointScaled, projAxis);
-        boolean[] isBridgeEndpoint = markBridgeEndpoints(ringScaled, projAxis);
-        int closest = findClosestVisibleFiltered(ringScaled, currentHoleScaled, hp2,
-                projAxis, isBridgeEndpoint);
-        if (closest < 0) {
-            // No non-bridge-endpoint candidate is visible — fall back to
-            // allowing any vertex so we still produce something.
-            closest = findClosestVisibleFiltered(ringScaled, currentHoleScaled, hp2,
-                    projAxis, null);
-        }
-        return Math.max(closest, 0);
-    }
-
-    private static int findClosestVisibleFiltered(List<double[]> ringScaled,
-                                                  List<double[]> currentHoleScaled, double[] hp2,
-                                                  int projAxis, boolean[] skip) {
-        double minDist = Double.MAX_VALUE;
-        int closest = -1;
-        for (int i = 0; i < ringScaled.size(); i++) {
-            if (skip != null && skip[i]) {
-                continue;
-            }
-            double[] r2 = project2D(ringScaled.get(i), projAxis);
-            double dx = r2[0] - hp2[0];
-            double dy = r2[1] - hp2[1];
-            double dist = dx * dx + dy * dy;
-            if (dist >= minDist) {
-                continue;
-            }
-            if (bridgeCrossesEdge(ringScaled, hp2[0], hp2[1], r2[0], r2[1], i, projAxis)) {
-                continue;
-            }
-            // Also reject candidates whose bridge passes through the hole
-            // we are currently bridging in. Its edges are not yet part of
-            // the merged ring, so the merged-ring check above misses them
-            // — but a bridge that exits via the hole's far side would
-            // self-intersect once the hole is inserted.
-            if (bridgeCrossesHole(hp2[0], hp2[1], r2[0], r2[1], currentHoleScaled, projAxis)) {
-                continue;
-            }
-            minDist = dist;
-            closest = i;
-        }
-        return closest;
-    }
-
-    private static boolean bridgeCrossesHole(double px, double py, double qx, double qy,
-                                             List<double[]> holeScaled, int projAxis) {
-        int n = holeScaled.size();
-        for (int i = 0; i < n; i++) {
-            int j = (i + 1) % n;
-            double[] a2 = project2D(holeScaled.get(i), projAxis);
-            double[] b2 = project2D(holeScaled.get(j), projAxis);
-            if (segmentsIntersectStrict(px, py, qx, qy, a2[0], a2[1], b2[0], b2[1])) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean[] markBridgeEndpoints(List<double[]> ringScaled, int projAxis) {
-        int n = ringScaled.size();
-        boolean[] flagged = new boolean[n];
-        double[][] projected = new double[n][];
-        for (int i = 0; i < n; i++) {
-            projected[i] = project2D(ringScaled.get(i), projAxis);
-        }
-        for (int i = 0; i < n; i++) {
-            if (flagged[i]) continue;
-            for (int j = i + 1; j < n; j++) {
-                if (coincident2D(projected[i], projected[j])) {
-                    flagged[i] = true;
-                    flagged[j] = true;
-                }
-            }
-        }
-        return flagged;
-    }
-
-    /**
-     * Check if the bridge segment (px,py)→(qx,qy) crosses any edge of the ring,
-     * excluding edges that share the vertex at {@code skipVertex}. Inputs are
-     * already in the polygon's 2D projection.
-     */
-    private static boolean bridgeCrossesEdge(List<double[]> ringScaled,
-                                             double px, double py, double qx, double qy,
-                                             int skipVertex, int projAxis) {
-        int n = ringScaled.size();
-        for (int i = 0; i < n; i++) {
-            int j = (i + 1) % n;
-            if (i == skipVertex || j == skipVertex) continue;
-
-            double[] a2 = project2D(ringScaled.get(i), projAxis);
-            double[] b2 = project2D(ringScaled.get(j), projAxis);
-
-            if (segmentsIntersectStrict(px, py, qx, qy, a2[0], a2[1], b2[0], b2[1])) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** Strict segment intersection test (excludes endpoint touching). */
-    private static boolean segmentsIntersectStrict(double p1x, double p1y, double p2x, double p2y,
-                                                   double p3x, double p3y, double p4x, double p4y) {
-        double d1 = cross2D(p3x, p3y, p4x, p4y, p1x, p1y);
-        double d2 = cross2D(p3x, p3y, p4x, p4y, p2x, p2y);
-        double d3 = cross2D(p1x, p1y, p2x, p2y, p3x, p3y);
-        double d4 = cross2D(p1x, p1y, p2x, p2y, p4x, p4y);
-
-        return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0))
-                && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
-    }
-
-    /** Cross product of vectors (o→a) × (o→b). */
-    private static double cross2D(double ox, double oy, double ax, double ay,
-                                  double bx, double by) {
-        return (ax - ox) * (by - oy) - (ay - oy) * (bx - ox);
-    }
-
-    /**
-     * Whether any polygon vertex other than the candidate triple
-     * ({@code prevIdx}, {@code i}, {@code nextIdx}, indices into {@code indices})
-     * lies inside triangle (a, b, c) in the projection plane. Vertices
-     * coincident with a corner are keyhole-bridge duplicates and ignored —
-     * counting them as "inside" would block legitimate ears and leave a bridged
-     * hole filled. Shared by the normal ear test and the forced-triple fallback
-     * in {@link #earClip}; {@code a}/{@code b}/{@code c} are the already-projected
-     * corners the caller derived from the triple.
-     */
-    private static boolean triangleContainsOtherVertex(
-            List<Integer> indices, List<double[]> vertices, int projAxis,
-            int prevIdx, int i, int nextIdx,
-            double[] a, double[] b, double[] c) {
-        for (int j = 0; j < indices.size(); j++) {
-            if (j == prevIdx || j == i || j == nextIdx) {
-                continue;
-            }
-            double[] p = project2D(vertices.get(indices.get(j)), projAxis);
-            if (coincident2D(p, a) || coincident2D(p, b) || coincident2D(p, c)) {
-                continue;
-            }
-            if (pointInTriangle(p, a, b, c)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Ear clipping triangulation algorithm.
-     * Operates on scaled coordinates (meters) for correct geometric tests.
-     */
-    private static List<int[]> earClip(List<double[]> vertices, int projAxis) {
-        List<int[]> triangles = new ArrayList<>();
-        int n = vertices.size();
-
-        if (n < 3) return triangles;
-        if (n == 3) {
-            triangles.add(new int[]{0, 1, 2});
-            return triangles;
-        }
-
-        List<Integer> indices = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            indices.add(i);
-        }
-
-        int attempts = 0;
-        int maxAttempts = n * n;
-
-        while (indices.size() > 2 && attempts < maxAttempts) {
-            boolean earFound = false;
-
-            for (int i = 0; i < indices.size(); i++) {
-                int prevIdx = (i - 1 + indices.size()) % indices.size();
-                int nextIdx = (i + 1) % indices.size();
-
-                int prev = indices.get(prevIdx);
-                int curr = indices.get(i);
-                int next = indices.get(nextIdx);
-
-                double[] a = project2D(vertices.get(prev), projAxis);
-                double[] b = project2D(vertices.get(curr), projAxis);
-                double[] c = project2D(vertices.get(next), projAxis);
-
-                if (cross2D(a, b, c) <= TOLERANCE) {
-                    attempts++;
-                    continue;
-                }
-
-                boolean isEar = !triangleContainsOtherVertex(
-                        indices, vertices, projAxis, prevIdx, i, nextIdx, a, b, c);
-
-                if (isEar) {
-                    triangles.add(new int[]{prev, curr, next});
-                    indices.remove(i);
-                    earFound = true;
-                    break;
-                }
-
-                attempts++;
-            }
-
-            if (!earFound) {
-                if (indices.size() > 2) {
-                    // Fallback: find a non-degenerate triple that does NOT contain
-                    // any other polygon vertex — same containment check as the
-                    // normal ear path, but also accepting concave (CW) triples.
-                    boolean forced = false;
-                    for (int i = 0; i < indices.size() && !forced; i++) {
-                        int prevIdx = (i - 1 + indices.size()) % indices.size();
-                        int nextIdx = (i + 1) % indices.size();
-                        double[] a = project2D(vertices.get(indices.get(prevIdx)), projAxis);
-                        double[] b = project2D(vertices.get(indices.get(i)), projAxis);
-                        double[] c = project2D(vertices.get(indices.get(nextIdx)), projAxis);
-                        double cross = cross2D(a, b, c);
-                        if (Math.abs(cross) > TOLERANCE) {
-                            // Containment check: skip if any other vertex is
-                            // inside — same predicate as the normal ear path,
-                            // but here also accepting concave (CW) triples.
-                            boolean valid = !triangleContainsOtherVertex(
-                                    indices, vertices, projAxis, prevIdx, i, nextIdx, a, b, c);
-                            if (valid) {
-                                if (cross > 0) {
-                                    triangles.add(new int[]{indices.get(prevIdx), indices.get(i), indices.get(nextIdx)});
-                                } else {
-                                    triangles.add(new int[]{indices.get(nextIdx), indices.get(i), indices.get(prevIdx)});
-                                }
-                                indices.remove(i);
-                                forced = true;
-                            }
-                        }
-                    }
-                    if (!forced) {
-                        // All remaining vertices are collinear or all triples
-                        // contain other vertices — remove most-collinear vertex
-                        // to simplify the polygon and retry
-                        int removeIdx = 0;
-                        double minAbsCross = Double.MAX_VALUE;
-                        for (int i = 0; i < indices.size(); i++) {
-                            int prevIdx = (i - 1 + indices.size()) % indices.size();
-                            int nextIdx = (i + 1) % indices.size();
-                            double[] a = project2D(vertices.get(indices.get(prevIdx)), projAxis);
-                            double[] b = project2D(vertices.get(indices.get(i)), projAxis);
-                            double[] c = project2D(vertices.get(indices.get(nextIdx)), projAxis);
-                            double absCross = Math.abs(cross2D(a, b, c));
-                            if (absCross < minAbsCross) {
-                                minAbsCross = absCross;
-                                removeIdx = i;
-                            }
-                        }
-                        indices.remove(removeIdx);
-                    }
-                }
-                attempts++;
-            }
-        }
-
-        return triangles;
-    }
-
-    private static double cross2D(double[] a, double[] b, double[] c) {
-        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-    }
-
-    private static boolean coincident2D(double[] a, double[] b) {
-        return Math.abs(a[0] - b[0]) < TOLERANCE && Math.abs(a[1] - b[1]) < TOLERANCE;
-    }
-
-    private static boolean pointInTriangle(double[] p, double[] a, double[] b, double[] c) {
-        double d1 = cross2D(a, b, p);
-        double d2 = cross2D(b, c, p);
-        double d3 = cross2D(c, a, p);
-
-        boolean hasNeg = (d1 < -TOLERANCE) || (d2 < -TOLERANCE) || (d3 < -TOLERANCE);
-        boolean hasPos = (d1 > TOLERANCE) || (d2 > TOLERANCE) || (d3 > TOLERANCE);
-
-        return !(hasNeg && hasPos);
-    }
-
     private static boolean isCCW(List<double[]> ring, int projAxis) {
-        return signedArea2D(ring, projAxis) < 0;
-    }
-
-    private static List<double[]> toDoubleArray(List<Coordinate> coordinates) {
-        List<double[]> result = new ArrayList<>(coordinates.size());
-        for (Coordinate c : coordinates) {
-            result.add(new double[]{c.getX(), c.getY(), c.getZ()});
-        }
-        return result;
+        return RingMathUtil.signedArea2D(ring, projAxis) < 0;
     }
 }

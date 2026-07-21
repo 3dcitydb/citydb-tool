@@ -1,0 +1,40 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * Copyright Stuttgart University of Applied Sciences <https://www.hft-stuttgart.de>
+ */
+
+package org.citydb.vis.encoder.tiles3d;
+
+import org.citydb.vis.scene.BoundingVolume;
+import org.citydb.vis.util.GeoTransform;
+
+/**
+ * Scale/offset from node-local meters to cell-centered ENU meters.
+ * Welded positions are relative to the node center; the offset shifts them
+ * into the cell-centered frame that the cell root's per-cell ENU-to-ECEF
+ * tile transform maps into global ECEF. Because the anchor is the cell
+ * center (not the whole dataset), positions stay small (bounded by the
+ * cell extent) and the tangent plane is re-established at every cell, so
+ * Earth curvature no longer lifts far-from-center cells off the ground.
+ */
+record CellFrame(double scaleX, double scaleY,
+                 float offsetX, float offsetY, float offsetZ) {
+    /**
+     * Identity frame for instanced prototype meshes: their welded
+     * positions are already local Cartesian meters centered on the
+     * template origin, so no degree scaling and no cell offset apply —
+     * placement happens per instance via the TRS attributes.
+     */
+    static CellFrame identity() {
+        return new CellFrame(1.0, 1.0, 0f, 0f, 0f);
+    }
+
+    static CellFrame from(BoundingVolume mbs, double[] cellCenter) {
+        double scaleX = GeoTransform.metersPerDegreeLon(cellCenter[1]);
+        double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
+        float offsetX = (float) ((mbs.getCenterX() - cellCenter[0]) * scaleX);
+        float offsetY = (float) ((mbs.getCenterY() - cellCenter[1]) * scaleY);
+        float offsetZ = (float) (mbs.getCenterZ() - cellCenter[2]);
+        return new CellFrame(scaleX, scaleY, offsetX, offsetY, offsetZ);
+    }
+}
