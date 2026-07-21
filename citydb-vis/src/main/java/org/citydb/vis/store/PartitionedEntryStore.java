@@ -94,7 +94,7 @@ public class PartitionedEntryStore implements Closeable {
             int count = entry.getValue()[0];
             cellIndex.put(key, new CellSegment(cumulativeOffset, count));
             writePositions.put(key, new long[]{cumulativeOffset});
-            cumulativeOffset += (long) count * SpatialEntryStore.RECORD_SIZE;
+            cumulativeOffset += (long) count * SpatialEntry.RECORD_SIZE;
         }
 
         // --- Create output file ---
@@ -105,7 +105,7 @@ public class PartitionedEntryStore implements Closeable {
 
         // --- Pass 2: scatter ---
         try {
-            ByteBuffer recordBuf = BufferUtils.allocateLittleEndian(SpatialEntryStore.RECORD_SIZE);
+            ByteBuffer recordBuf = BufferUtils.allocateLittleEndian(SpatialEntry.RECORD_SIZE);
             it = source.iterator();
             while (it.hasNext()) {
                 SpatialEntry e = it.next();
@@ -114,15 +114,7 @@ public class PartitionedEntryStore implements Closeable {
                 long pos = posHolder[0];
 
                 recordBuf.clear();
-                recordBuf.putLong(e.id());
-                recordBuf.putDouble(e.centerX());
-                recordBuf.putDouble(e.centerY());
-                double[] bbox = e.bbox();
-                for (int i = 0; i < 6; i++) {
-                    recordBuf.putDouble(bbox[i]);
-                }
-                recordBuf.putLong(e.meshHandle());
-                recordBuf.putLong(e.attrOffset());
+                e.writeTo(recordBuf);
                 recordBuf.flip();
 
                 while (recordBuf.hasRemaining()) {
@@ -154,27 +146,14 @@ public class PartitionedEntryStore implements Closeable {
      */
     public List<SpatialEntry> loadCell(long cellKey) throws IOException {
         CellSegment seg = cellIndex.get(cellKey);
-        if (seg == null || seg.count == 0) {
-            return List.of();
-        }
-
-        int bytes = seg.count * SpatialEntryStore.RECORD_SIZE;
+        int bytes = seg.count * SpatialEntry.RECORD_SIZE;
         ByteBuffer buf = BufferUtils.allocateLittleEndian(bytes);
         FileHelper.readFully(channel, buf, seg.fileOffset);
         buf.flip();
 
         List<SpatialEntry> result = new ArrayList<>(seg.count);
         for (int i = 0; i < seg.count; i++) {
-            long id = buf.getLong();
-            double centerX = buf.getDouble();
-            double centerY = buf.getDouble();
-            double[] bbox = new double[6];
-            for (int j = 0; j < 6; j++) {
-                bbox[j] = buf.getDouble();
-            }
-            long meshHandle = buf.getLong();
-            long attrOffset = buf.getLong();
-            result.add(new SpatialEntry(id, centerX, centerY, bbox, meshHandle, attrOffset));
+            result.add(SpatialEntry.readFrom(buf));
         }
         return result;
     }
@@ -189,10 +168,11 @@ public class PartitionedEntryStore implements Closeable {
 
     private static long cellKey(SpatialEntry entry, double[] extent,
                                 int gridDim, double cellWidth, double cellHeight) {
-        int gx = Math.max(0, Math.min(
-                (int) ((entry.centerX() - extent[0]) / cellWidth), gridDim - 1));
-        int gy = Math.max(0, Math.min(
-                (int) ((entry.centerY() - extent[1]) / cellHeight), gridDim - 1));
+        // extent is the true AABB of these same entries, so centerX/Y never
+        // fall below extent[0]/[1]; only the upper clamp is live (a point
+        // exactly on the max edge would otherwise index gridDim).
+        int gx = Math.min((int) ((entry.centerX() - extent[0]) / cellWidth), gridDim - 1);
+        int gy = Math.min((int) ((entry.centerY() - extent[1]) / cellHeight), gridDim - 1);
         return (long) gy * gridDim + gx;
     }
 

@@ -41,11 +41,7 @@ import java.util.NoSuchElementException;
  * {@link #close()}, no further reads or writes are permitted.
  */
 public class SpatialEntryStore implements Closeable {
-    /**
-     * Fixed record size in bytes:
-     * id(8) + centerX(8) + centerY(8) + bbox[6](48) + meshHandle(8) + attrOffset(8)
-     */
-    static final int RECORD_SIZE = 88;
+    private static final int RECORD_SIZE = SpatialEntry.RECORD_SIZE;
     private static final int CHUNK_ENTRIES = 4096;
 
     private final Shard[] shards;
@@ -123,15 +119,7 @@ public class SpatialEntryStore implements Closeable {
 
         synchronized void store(SpatialEntry entry) throws IOException {
             ByteBuffer buf = BufferUtils.allocateLittleEndian(RECORD_SIZE);
-            buf.putLong(entry.id());
-            buf.putDouble(entry.centerX());
-            buf.putDouble(entry.centerY());
-            double[] bbox = entry.bbox();
-            for (int i = 0; i < 6; i++) {
-                buf.putDouble(bbox[i]);
-            }
-            buf.putLong(entry.meshHandle());
-            buf.putLong(entry.attrOffset());
+            entry.writeTo(buf);
             buf.flip();
 
             long pos = writePosition;
@@ -201,22 +189,14 @@ public class SpatialEntryStore implements Closeable {
         public SpatialEntry next() {
             if (!hasNext()) throw new NoSuchElementException();
 
-            long id = buf.getLong();
-            double centerX = buf.getDouble();
-            double centerY = buf.getDouble();
-            double[] bbox = new double[6];
-            for (int i = 0; i < 6; i++) {
-                bbox[i] = buf.getDouble();
-            }
-            long meshHandle = buf.getLong();
-            long attrOffset = buf.getLong();
+            SpatialEntry entry = SpatialEntry.readFrom(buf);
 
             bufferIndex++;
             if (bufferIndex >= bufferEntries) {
                 loadNextChunk();
             }
 
-            return new SpatialEntry(id, centerX, centerY, bbox, meshHandle, attrOffset);
+            return entry;
         }
 
         private void loadNextChunk() {

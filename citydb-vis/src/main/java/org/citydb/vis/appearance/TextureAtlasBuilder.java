@@ -81,8 +81,7 @@ public final class TextureAtlasBuilder {
             tileOffsets.put(TextureAtlas.WHITE_PIXEL_TEX_ID, new float[]{0f, 0f, 1f, 1f});
         }
 
-        double scale = Math.min(1.0, Math.max(0.01, textureScale));
-        return buildSingleAtlas(metas, scale, maxAtlasSize, tileOffsets, textureStore, fallback);
+        return buildSingleAtlas(metas, textureScale, maxAtlasSize, tileOffsets, textureStore, fallback);
     }
 
     /**
@@ -113,12 +112,7 @@ public final class TextureAtlasBuilder {
             if (only.tilesU == 1 && only.tilesV == 1) return false;
         }
 
-        double scale = Math.min(1.0, Math.max(0.01, textureScale));
-        org.citydb.textureAtlas.model.TextureAtlas packed = packAtScale(metas, scale, maxAtlasSize);
-        for (AtlasRegion r : packed.getRegions()) {
-            if (r.level > 0) return true;
-        }
-        return false;
+        return hasAnyOverflow(packAtScale(metas, textureScale, maxAtlasSize));
     }
 
     /**
@@ -142,7 +136,10 @@ public final class TextureAtlasBuilder {
         gatherMetaTiled(textureIds, textureStore, uvExtents, metas, tileOffsets);
         if (metas.isEmpty()) return List.of();
 
-        double baseScale = Math.min(1.0, Math.max(0.01, textureScale));
+        // textureScale is already clamped to [0.01, 1.0] by
+        // VisFormatOptions.setTextureScale — the single validation point on
+        // both the CLI and the JSON-config path.
+        double baseScale = textureScale;
 
         // Shrink only individual textures that, at baseScale, would exceed
         // maxAtlasSize on their own — they could not land on any page
@@ -152,15 +149,10 @@ public final class TextureAtlasBuilder {
                 TextureAtlasCreator.BASIC, false);
         for (int i = 0; i < metas.size(); i++) {
             TextureMeta m = metas.get(i);
-            double s = baseScale;
-            int w = Math.max(1, (int) (m.effectiveWidth() * s));
-            int h = Math.max(1, (int) (m.effectiveHeight() * s));
-            if (w > maxAtlasSize || h > maxAtlasSize) {
-                s *= (double) maxAtlasSize / Math.max(w, h);
-                w = Math.max(1, (int) (m.effectiveWidth() * s));
-                h = Math.max(1, (int) (m.effectiveHeight() * s));
-            }
-            packer.addRegion(String.valueOf(m.texId), w, h);
+            int w = Math.max(1, (int) (m.effectiveWidth() * baseScale));
+            int h = Math.max(1, (int) (m.effectiveHeight() * baseScale));
+            int[] wh = clampToMax(w, h, maxAtlasSize);
+            packer.addRegion(String.valueOf(m.texId), wh[0], wh[1]);
             texIdToIdx.put(m.texId, i);
         }
         org.citydb.textureAtlas.model.TextureAtlas packed = packer.pack(false);
@@ -409,12 +401,8 @@ public final class TextureAtlasBuilder {
             double effectiveScale = m.texId == TextureAtlas.WHITE_PIXEL_TEX_ID ? 1.0 : scale;
             int w = Math.max(1, (int) (m.effectiveWidth() * effectiveScale));
             int h = Math.max(1, (int) (m.effectiveHeight() * effectiveScale));
-            if (w > maxAtlasSize || h > maxAtlasSize) {
-                double clamp = (double) maxAtlasSize / Math.max(w, h);
-                w = Math.max(1, (int) (w * clamp));
-                h = Math.max(1, (int) (h * clamp));
-            }
-            packer.addRegion(String.valueOf(m.texId), w, h);
+            int[] wh = clampToMax(w, h, maxAtlasSize);
+            packer.addRegion(String.valueOf(m.texId), wh[0], wh[1]);
         }
         return packer.pack(false);
     }
@@ -436,6 +424,16 @@ public final class TextureAtlasBuilder {
      * can always upload the resulting page.
      */
     private static final int ABSOLUTE_MAX_ATLAS_SIZE = 16384;
+
+    /** Clamp (w, h) proportionally so neither edge exceeds {@code maxAtlasSize}. */
+    private static int[] clampToMax(int w, int h, int maxAtlasSize) {
+        if (w > maxAtlasSize || h > maxAtlasSize) {
+            double clamp = (double) maxAtlasSize / Math.max(w, h);
+            w = Math.max(1, (int) (w * clamp));
+            h = Math.max(1, (int) (h * clamp));
+        }
+        return new int[]{w, h};
+    }
 
     /** Whether any packed region was spilled onto a higher BSP level. */
     private static boolean hasAnyOverflow(org.citydb.textureAtlas.model.TextureAtlas packed) {
@@ -614,13 +612,10 @@ public final class TextureAtlasBuilder {
                                                         int maxAtlasSize,
                                                         Map<Integer, float[]> tileOffsets,
                                                         TextureStore textureStore) throws IOException {
-        int targetW = Math.max(1, (int) (m.srcWidth * scale));
-        int targetH = Math.max(1, (int) (m.srcHeight * scale));
-        if (targetW > maxAtlasSize || targetH > maxAtlasSize) {
-            double clamp = (double) maxAtlasSize / Math.max(targetW, targetH);
-            targetW = Math.max(1, (int) (targetW * clamp));
-            targetH = Math.max(1, (int) (targetH * clamp));
-        }
+        int[] target = clampToMax(Math.max(1, (int) (m.srcWidth * scale)),
+                Math.max(1, (int) (m.srcHeight * scale)), maxAtlasSize);
+        int targetW = target[0];
+        int targetH = target[1];
 
         int subsample = pickSubsample(m.srcWidth, m.srcHeight, targetW, targetH);
         BufferedImage src;

@@ -58,7 +58,7 @@ public class MaterialDefinition {
      */
     public static MaterialDefinition untextured(DefaultObjectStyle style) {
         MaterialDefinition material = pbr(null);
-        if (style != null && style.hasNonDefaultColor()) {
+        if (style.hasNonDefaultColor()) {
             float[] linear = style.toLinearRgba();
             material.pbrMetallicRoughness = new PbrMetallicRoughness(null,
                     List.of(linear[0], linear[1], linear[2], linear[3]), 0);
@@ -118,11 +118,9 @@ public class MaterialDefinition {
      * See {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder} javadoc.
      */
     public static MaterialDefinition coloredShaded(boolean blend) {
-        MaterialDefinition material = pbr(null);
-        if (blend) {
-            material.alphaMode = ALPHA_MODE_BLEND;
-        }
-        return material;
+        // Same material JSON as colored(); the shading difference lives in the
+        // paired GeometryDefinition (NORMAL present), not in the material.
+        return colored(blend);
     }
 
     private static MaterialDefinition pbr(BaseColorTexture baseColor) {

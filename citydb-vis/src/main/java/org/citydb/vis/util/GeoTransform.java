@@ -73,39 +73,49 @@ public class GeoTransform {
             double m00 = -sinLon,            m01 = -sinLat * cosLon, m02 = cosLat * cosLon;
             double m10 =  cosLon,            m11 = -sinLat * sinLon, m12 = cosLat * sinLon;
             double m20 =  0,                 m21 =  cosLat,          m22 = sinLat;
-            // Shepperd / Shoemake matrix-to-quaternion: pick the branch that
-            // maximises the divisor so the result stays well-conditioned at
-            // all latitudes (the trace-positive branch alone collapses near
-            // the equator / poles for this particular rotation family).
-            double qx, qy, qz, qw;
-            double trace = m00 + m11 + m22;
-            if (trace > 0) {
-                double s = Math.sqrt(trace + 1.0) * 2;
-                qw = 0.25 * s;
-                qx = (m21 - m12) / s;
-                qy = (m02 - m20) / s;
-                qz = (m10 - m01) / s;
-            } else if (m00 > m11 && m00 > m22) {
-                double s = Math.sqrt(1.0 + m00 - m11 - m22) * 2;
-                qw = (m21 - m12) / s;
-                qx = 0.25 * s;
-                qy = (m01 + m10) / s;
-                qz = (m02 + m20) / s;
-            } else if (m11 > m22) {
-                double s = Math.sqrt(1.0 + m11 - m00 - m22) * 2;
-                qw = (m02 - m20) / s;
-                qx = (m01 + m10) / s;
-                qy = 0.25 * s;
-                qz = (m12 + m21) / s;
-            } else {
-                double s = Math.sqrt(1.0 + m22 - m00 - m11) * 2;
-                qw = (m10 - m01) / s;
-                qx = (m02 + m20) / s;
-                qy = (m12 + m21) / s;
-                qz = 0.25 * s;
-            }
-            return new double[]{qx, qy, qz, qw};
+            return matrixToQuaternion(m00, m01, m02, m10, m11, m12, m20, m21, m22);
         }
+    }
+
+    /**
+     * Rotation matrix (row-major args) → unit quaternion [x, y, z, w].
+     * Shepperd / Shoemake branch selection: pick the branch that maximises
+     * the divisor so the result stays well-conditioned for any rotation
+     * (the trace-positive branch alone collapses for some rotation families,
+     * e.g. ENU→ECEF near the equator / poles).
+     */
+    public static double[] matrixToQuaternion(double m00, double m01, double m02,
+                                              double m10, double m11, double m12,
+                                              double m20, double m21, double m22) {
+        double x, y, z, w;
+        double trace = m00 + m11 + m22;
+        if (trace > 0) {
+            double s = Math.sqrt(trace + 1.0) * 2;
+            w = 0.25 * s;
+            x = (m21 - m12) / s;
+            y = (m02 - m20) / s;
+            z = (m10 - m01) / s;
+        } else if (m00 > m11 && m00 > m22) {
+            double s = Math.sqrt(1.0 + m00 - m11 - m22) * 2;
+            w = (m21 - m12) / s;
+            x = 0.25 * s;
+            y = (m01 + m10) / s;
+            z = (m02 + m20) / s;
+        } else if (m11 > m22) {
+            double s = Math.sqrt(1.0 + m11 - m00 - m22) * 2;
+            w = (m02 - m20) / s;
+            x = (m01 + m10) / s;
+            y = 0.25 * s;
+            z = (m12 + m21) / s;
+        } else {
+            double s = Math.sqrt(1.0 + m22 - m00 - m11) * 2;
+            w = (m10 - m01) / s;
+            x = (m02 + m20) / s;
+            y = (m12 + m21) / s;
+            z = 0.25 * s;
+        }
+        double norm = Math.sqrt(x * x + y * y + z * z + w * w);
+        return new double[]{x / norm, y / norm, z / norm, w / norm};
     }
 
     public static double[] enuToEcefMatrix(double[] center) {

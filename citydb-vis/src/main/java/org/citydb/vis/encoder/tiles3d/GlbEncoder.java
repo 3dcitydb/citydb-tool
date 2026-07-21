@@ -117,7 +117,7 @@ public class GlbEncoder {
                          ObjectStyleRegistry styleRegistry,
                          boolean enableShading) throws IOException {
         TriangleMesh mesh = node.getMesh();
-        boolean hasInstances = instanceBatches != null && !instanceBatches.isEmpty();
+        boolean hasInstances = !instanceBatches.isEmpty();
         boolean hasTexture = mesh.hasTexCoords() && !atlasBytesList.isEmpty();
         if (!hasTexture) {
             node.setTextured(false);
@@ -217,33 +217,16 @@ public class GlbEncoder {
             Map<Integer, Integer> texIdToPage, int pageCount, boolean hasTexture,
             CellFrame frame, ObjectStyleRegistry styleRegistry, boolean enableShading) {
         List<RoutedTriangle> routed = TriangleRouter.route(mesh, weld, styleRegistry);
-
-        List<List<RoutedTriangle>> texturedTrisByPage = new ArrayList<>(pageCount);
-        for (int i = 0; i < pageCount; i++) {
-            texturedTrisByPage.add(new ArrayList<>());
-        }
+        TriangleRouter.PageBuckets buckets = TriangleRouter.bucketByPage(routed, pageCount,
+                hasTexture ? texIdToPage : null);
         // LinkedHashMap so emitted plain primitives appear in the order the
         // styles were first encountered — stable across runs for a given
         // input.
         Map<DefaultObjectStyle, List<RoutedTriangle>> untexturedPlainTrisByStyle = new LinkedHashMap<>();
-        List<RoutedTriangle> untexturedColoredTris = new ArrayList<>();
-        for (RoutedTriangle rt : routed) {
-            if (hasTexture && rt.textured()) {
-                Integer page = texIdToPage.get(rt.textureId());
-                // A texId missing from the map means the atlas builder dropped
-                // this texture (e.g. corrupt source). Route the triangle to an
-                // untextured bucket so the feature still renders.
-                if (page != null) {
-                    texturedTrisByPage.get(page).add(rt);
-                    continue;
-                }
-            }
-            if (rt.colored()) {
-                untexturedColoredTris.add(rt);
-            } else {
-                untexturedPlainTrisByStyle.computeIfAbsent(rt.style(), k -> new ArrayList<>()).add(rt);
-            }
+        for (RoutedTriangle rt : buckets.plain()) {
+            untexturedPlainTrisByStyle.computeIfAbsent(rt.style(), k -> new ArrayList<>()).add(rt);
         }
+        List<RoutedTriangle> untexturedColoredTris = buckets.colored();
 
         // One primitive per non-empty atlas page + one plain primitive per
         // distinct DefaultObjectStyle in use + an optional colored primitive.
@@ -254,7 +237,7 @@ public class GlbEncoder {
         // primitives.
         List<GlbPrimitiveBuilder.PrimitiveArrays> primitives = new ArrayList<>();
         for (int p = 0; p < pageCount; p++) {
-            List<RoutedTriangle> tris = texturedTrisByPage.get(p);
+            List<RoutedTriangle> tris = buckets.texturedByPage().get(p);
             if (!tris.isEmpty()) {
                 primitives.add(GlbPrimitiveBuilder.build(mesh, weld, tris, p, null, frame,
                         enableShading, true));
