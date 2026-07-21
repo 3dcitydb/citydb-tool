@@ -93,13 +93,14 @@ public final class NodeAssembler {
      * referenced prototype, with per-instance placement and attributes) and
      * are always empty for writers without an instancing path (I3S).
      * {@code instanceAtlases} is index-aligned with {@code instanceBatches}:
-     * the prototype's own single-page atlas, or {@code null} for untextured
-     * prototypes.
+     * the prototype's own atlas pages (usually one; several when the
+     * prototype's textures overflow {@code --max-atlas-size}), or an empty
+     * list for untextured prototypes.
      */
     public record PreparedNode(List<NodeEntry> entries, TriangleMesh mesh,
                                List<TextureAtlas> atlases,
                                List<InstanceBatch> instanceBatches,
-                               List<TextureAtlas> instanceAtlases) {
+                               List<List<TextureAtlas>> instanceAtlases) {
     }
 
     /**
@@ -114,7 +115,7 @@ public final class NodeAssembler {
 
             List<NodeEntry> entries = allEntries;
             List<InstanceBatch> instanceBatches = List.of();
-            List<TextureAtlas> instanceAtlases = List.of();
+            List<List<TextureAtlas>> instanceAtlases = List.of();
             if (containsInstanceEntries(allEntries)) {
                 entries = new ArrayList<>(allEntries.size());
                 List<NodeEntry> instanceEntries = new ArrayList<>();
@@ -128,7 +129,7 @@ public final class NodeAssembler {
                 instanceBatches = buildInstanceBatches(instanceEntries);
                 instanceAtlases = new ArrayList<>(instanceBatches.size());
                 for (InstanceBatch batch : instanceBatches) {
-                    instanceAtlases.add(prototypeRegistry.atlas(batch.prototypeId()));
+                    instanceAtlases.add(prototypeRegistry.atlases(batch.prototypeId()));
                 }
             }
 
