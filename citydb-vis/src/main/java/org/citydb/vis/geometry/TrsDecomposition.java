@@ -6,6 +6,7 @@
 package org.citydb.vis.geometry;
 
 import org.citydb.model.common.Matrix4x4;
+import org.citydb.vis.util.GeoTransform;
 
 /**
  * Decomposes the 3×3 part of a CityGML implicit-geometry transformation
@@ -84,47 +85,8 @@ public final class TrsDecomposition {
             return null;
         }
 
-        return new Result(toQuaternion(r00, r01, r02, r10, r11, r12, r20, r21, r22),
+        return new Result(GeoTransform.matrixToQuaternion(
+                r00, r01, r02, r10, r11, r12, r20, r21, r22),
                 new double[]{sx, sy, sz});
-    }
-
-    /**
-     * Rotation matrix (row-major args) → unit quaternion [x, y, z, w].
-     * Shepperd-style branch selection keeps the divisor well-conditioned for
-     * any rotation. Public because the GLB instance-transform encoder reuses
-     * it for the composed cell-frame rotation.
-     */
-    public static double[] toQuaternion(double r00, double r01, double r02,
-                                        double r10, double r11, double r12,
-                                        double r20, double r21, double r22) {
-        double x, y, z, w;
-        double trace = r00 + r11 + r22;
-        if (trace > 0) {
-            double s = Math.sqrt(trace + 1.0) * 2;
-            w = 0.25 * s;
-            x = (r21 - r12) / s;
-            y = (r02 - r20) / s;
-            z = (r10 - r01) / s;
-        } else if (r00 > r11 && r00 > r22) {
-            double s = Math.sqrt(1.0 + r00 - r11 - r22) * 2;
-            w = (r21 - r12) / s;
-            x = 0.25 * s;
-            y = (r01 + r10) / s;
-            z = (r02 + r20) / s;
-        } else if (r11 > r22) {
-            double s = Math.sqrt(1.0 + r11 - r00 - r22) * 2;
-            w = (r02 - r20) / s;
-            x = (r01 + r10) / s;
-            y = 0.25 * s;
-            z = (r12 + r21) / s;
-        } else {
-            double s = Math.sqrt(1.0 + r22 - r00 - r11) * 2;
-            w = (r10 - r01) / s;
-            x = (r02 + r20) / s;
-            y = (r12 + r21) / s;
-            z = 0.25 * s;
-        }
-        double norm = Math.sqrt(x * x + y * y + z * z + w * w);
-        return new double[]{x / norm, y / norm, z / norm, w / norm};
     }
 }

@@ -50,13 +50,6 @@ public final class AggregationStage implements Stage {
         List<SceneNode> allNodes = ctx.allNodes();
         SceneNode globalRoot = allNodes.get(0);
 
-        // Nothing to aggregate when the dataset has no cells. VisWriter.close
-        // normally short-circuits on empty input before the pipeline runs,
-        // but guarding keeps the stage safe if that contract ever changes.
-        if (globalRoot.getChildren().isEmpty()) {
-            return;
-        }
-
         int firstSyntheticIndex = allNodes.size();
         AtomicInteger indexer = new AtomicInteger(firstSyntheticIndex);
         SceneNode aggRoot = CellAggregator.build(globalRoot.getChildren(),

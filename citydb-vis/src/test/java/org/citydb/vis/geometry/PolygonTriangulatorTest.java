@@ -48,7 +48,7 @@ class PolygonTriangulatorTest {
 
     private static TriangleMesh triangulate(Polygon polygon) {
         // No appearance data: all three lanes null (untextured, uncolored).
-        return new PolygonTriangulator()
+        return new PolygonTriangulator(false)
                 .triangulate(polygon, 1L, WALL, new RingAttributes(null, null, null));
     }
 

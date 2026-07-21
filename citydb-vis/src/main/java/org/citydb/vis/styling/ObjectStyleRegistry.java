@@ -193,9 +193,7 @@ public final class ObjectStyleRegistry {
         }
 
         public Builder defaultStyle(DefaultObjectStyle defaultStyle) {
-            if (defaultStyle != null) {
-                this.defaultStyle = defaultStyle;
-            }
+            this.defaultStyle = defaultStyle;
             return this;
         }
 

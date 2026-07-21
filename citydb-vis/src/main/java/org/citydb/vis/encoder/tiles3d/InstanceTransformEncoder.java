@@ -5,7 +5,6 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import org.citydb.vis.geometry.TrsDecomposition;
 import org.citydb.vis.util.GeoTransform;
 
 /**
@@ -68,7 +67,7 @@ final class InstanceTransformEncoder {
                 {r[2][0], r[2][2], -r[2][1]},
                 {-r[1][0], -r[1][2], r[1][1]}
         };
-        double[] q = TrsDecomposition.toQuaternion(
+        double[] q = GeoTransform.matrixToQuaternion(
                 g[0][0], g[0][1], g[0][2],
                 g[1][0], g[1][1], g[1][2],
                 g[2][0], g[2][1], g[2][2]);

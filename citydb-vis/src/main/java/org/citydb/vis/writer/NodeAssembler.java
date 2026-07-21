@@ -245,12 +245,12 @@ public final class NodeAssembler {
         for (Map.Entry<Integer, List<InstancedFeature>> group : byPrototype.entrySet()) {
             PrototypeRegistry.Prototype prototype = prototypeRegistry.get(group.getKey());
             if (prototype == null) {
-                // Cannot happen in a consistent run (every stored instance
-                // references a registered prototype); guard so a stale store
-                // doesn't NPE deep in the encoder.
-                logger.warn("Dropping {} instance(s) referencing unknown prototype {}.",
-                        group.getValue().size(), group.getKey());
-                continue;
+                // Every stored instance references a prototype registered in
+                // this run; a miss means the instance store and the registry
+                // desynced — a programming error that must surface, not a
+                // condition to silently drop instances over.
+                throw new IllegalStateException("Instance store references unknown prototype "
+                        + group.getKey() + " (" + group.getValue().size() + " instance(s)).");
             }
             batches.add(new InstanceBatch(prototype.id(), prototype.mesh(),
                     prototypeRegistry.weldTolerance(prototype.id()), group.getValue()));
@@ -279,10 +279,9 @@ public final class NodeAssembler {
     /**
      * Format-specific body of a per-node write, run by {@link #writeNode} after
      * the shared prepare/load/log steps and inside its uniform
-     * {@link IOException}→{@link VisExportException} wrapper.
-     *
-     * @return {@code false} if the node yielded no writable geometry and should
-     *         be dropped (mirrors the encoders' {@code null} result)
+     * {@link IOException}→{@link VisExportException} wrapper. Returns
+     * {@code false} if the node yielded no writable geometry and should be
+     * dropped (mirrors the encoders' {@code null} result).
      */
     @FunctionalInterface
     public interface NodeBody {

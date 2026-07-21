@@ -33,13 +33,14 @@ public record StatisticsResource(Stats stats) {
 
         static Stats from(AttributeStats.Result r) {
             if (r.isNumeric()) {
+                boolean empty = r.numericCount() == 0;
                 return new Stats(r.totalValuesCount(),
-                        r.numericCount() == 0 ? null : r.min(),
-                        r.numericCount() == 0 ? null : r.max(),
-                        r.numericCount() == 0 ? null : r.avg(),
-                        r.numericCount() == 0 ? null : r.stddev(),
-                        r.numericCount() == 0 ? null : r.sum(),
-                        r.numericCount() == 0 ? null : r.variance(),
+                        empty ? null : r.min(),
+                        empty ? null : r.max(),
+                        empty ? null : r.avg(),
+                        empty ? null : r.stddev(),
+                        empty ? null : r.sum(),
+                        empty ? null : r.variance(),
                         null);
             }
             List<MostFrequentValue> entries = new ArrayList<>(r.frequency().size());

@@ -35,39 +35,27 @@ public class VertexWelder {
      * Weld vertex positions using a spatial hash grid. Returns a flat array
      * of Float32 positions indexed by {@code [triIndex * 3 + vertIndex]},
      * with positions relative to the given center (already subtracted).
+     * <p>
+     * {@code localMeters} marks a mesh whose positions are local Cartesian
+     * meters (implicit-geometry prototype templates) rather than EPSG:4326
+     * degrees, making the degree-to-meter scaling the identity. The metric
+     * weld tolerance and the returned centered Float32 positions are
+     * unaffected — in meters mode the output offsets simply are meters
+     * already.
+     * <p>
+     * {@code weldTolerance} is expressed in the mesh's own length unit. The
+     * GPU-instancing path welds templates in template-local units before the
+     * per-instance scale applies: the caller scales the tolerance so its
+     * WORLD-space equivalent matches the default for the largest instance —
+     * tighter than the default in template units for scaled-up templates,
+     * legitimately looser for scaled-down ones. Do not clamp it to the
+     * default.
      *
      * @param mesh    source triangle mesh
      * @param centerX center longitude (degrees)
      * @param centerY center latitude (degrees)
      * @param centerZ center altitude (meters)
      * @return welded positions array, one entry per triangle vertex
-     */
-    public static float[][] weld(TriangleMesh mesh, double centerX,
-                                 double centerY, double centerZ) {
-        return weld(mesh, centerX, centerY, centerZ, false);
-    }
-
-    /**
-     * Weld variant with an explicit unit model: {@code localMeters} marks a
-     * mesh whose positions are local Cartesian meters (implicit-geometry
-     * prototype templates) rather than EPSG:4326 degrees, making the
-     * degree-to-meter scaling the identity. The metric weld tolerance and the
-     * returned centered Float32 positions are unaffected — in meters mode the
-     * output offsets simply are meters already.
-     */
-    public static float[][] weld(TriangleMesh mesh, double centerX,
-                                 double centerY, double centerZ, boolean localMeters) {
-        return weld(mesh, centerX, centerY, centerZ, localMeters, DEFAULT_WELD_TOLERANCE);
-    }
-
-    /**
-     * Weld variant with an explicit tolerance, expressed in the mesh's own
-     * length unit. Used by the GPU-instancing path, which welds templates in
-     * template-local units before the per-instance scale applies: the caller
-     * scales the tolerance so its WORLD-space equivalent matches the default
-     * for the largest instance — tighter than the default in template units
-     * for scaled-up templates, legitimately looser for scaled-down ones. Do
-     * not clamp it to the default.
      */
     public static float[][] weld(TriangleMesh mesh, double centerX,
                                  double centerY, double centerZ, boolean localMeters,
@@ -210,7 +198,10 @@ public class VertexWelder {
         return weldAndFilter(mesh, centerX, centerY, centerZ, false);
     }
 
-    /** See {@link #weld(TriangleMesh, double, double, double, boolean)}. */
+    /**
+     * See {@link #weld(TriangleMesh, double, double, double, boolean, float)};
+     * uses {@link #DEFAULT_WELD_TOLERANCE}.
+     */
     public static WeldResult weldAndFilter(TriangleMesh mesh,
                                            double centerX, double centerY,
                                            double centerZ, boolean localMeters) {

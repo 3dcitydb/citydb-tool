@@ -13,6 +13,7 @@ import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
+import org.citydb.vis.util.BoundingBoxUtils;
 import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.ColorUtils;
 import org.citydb.vis.util.GeoTransform;
@@ -26,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Encodes I3S node meshes into the uncompressed legacy I3S 1.9binary
+ * Encodes I3S node meshes into the uncompressed legacy I3S 1.9 binary
  * buffer at {@code nodes/N/geometries/0} — a single buffer per node,
  * consumed by both ArcGIS Pro / Online and CesiumJS. Attribute layout per
  * slot (NORMAL gated by {@code --enable-shading}):
@@ -393,29 +394,24 @@ public class I3SGeometryEncoder {
         List<int[]> faceRanges = weld.faceRanges();
         List<double[]> aabbs = new ArrayList<>(faceRanges.size());
         for (int[] range : faceRanges) {
-            double minX = Double.POSITIVE_INFINITY, minY = Double.POSITIVE_INFINITY,
-                    minZ = Double.POSITIVE_INFINITY;
-            double maxX = Double.NEGATIVE_INFINITY, maxY = Double.NEGATIVE_INFINITY,
-                    maxZ = Double.NEGATIVE_INFINITY;
+            double[] acc = BoundingBoxUtils.emptyAabb();
             for (int i = range[0]; i <= range[1]; i++) {
                 int base = validTri.get(i) * 3;
                 for (int j = 0; j < 3; j++) {
                     float[] p = welded[base + j];
-                    if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
-                    if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
-                    if (p[2] < minZ) minZ = p[2]; if (p[2] > maxZ) maxZ = p[2];
+                    BoundingBoxUtils.expandToPoint(acc, p[0], p[1], p[2]);
                 }
             }
             aabbs.add(new double[]{
-                    minX + centerX, minY + centerY, minZ + centerZ,
-                    maxX + centerX, maxY + centerY, maxZ + centerZ});
+                    acc[0] + centerX, acc[1] + centerY, acc[2] + centerZ,
+                    acc[3] + centerX, acc[4] + centerY, acc[5] + centerZ});
         }
         return aabbs;
     }
 
     /**
      * Write the uncompressed legacy geometry buffer ({@code geometries/0}).
-     * Binary layout per the I3S 1.9defaultGeometrySchema:
+     * Binary layout per the I3S 1.9 defaultGeometrySchema:
      * <pre>
      *   UInt32 LE  vertexCount, featureCount
      *   Float32 LE × 3 × vertexCount   positions  (X/Y deg-offset, Z meters)

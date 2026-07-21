@@ -91,6 +91,12 @@ public class GeometryDefinition {
      * (e.g. {@code normal} on the unlit variants, {@code color} on
      * untextured slots) are skipped during JSON serialization, mirroring
      * their absence in the binary stream.
+     * <p>
+     * This layout is the authoritative per-node schema, but the same
+     * physical layout is declared a second time — in a different JSON
+     * shape — as the layer-level {@code defaultGeometrySchema} in
+     * {@link Store.GeometrySchema#full()} (required by ArcGIS Pro's
+     * loader). When changing the layout here, update that copy in sync.
      */
     @JSONType(alphabetic = false)
     public static class LegacyBuffer {

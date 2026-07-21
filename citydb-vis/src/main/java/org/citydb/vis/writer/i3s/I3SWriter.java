@@ -37,7 +37,7 @@ import java.util.Set;
  * Writes city model features to the OGC I3S (Indexed 3D Scene Layer) format.
  * <p>
  * Extends the format-agnostic {@link VisWriter} pipeline with I3S-specific
- * output: the uncompressed legacy I3S 1.9binary geometry buffer, I3S JSON
+ * output: the uncompressed legacy I3S 1.9 binary geometry buffer, I3S JSON
  * metadata (scene layer descriptor, node pages, per-node features), binary
  * attribute buffers, and texture files.
  * <p>
@@ -62,12 +62,6 @@ import java.util.Set;
  */
 public class I3SWriter extends VisWriter {
     private static final int EPSG_4326 = 4326;
-
-    // LOD threshold derives from VisFormatOptions.screenPixelThreshold via
-    // lodThresholdFor(r) to align the I3S refine boundary with the 3D Tiles
-    // one — both refine at projected MBS radius > screenPixelThreshold pixels.
-    // See lodThresholdFor below. Must be an integer — ArcGIS rejects float
-    // values in node pages.
 
     private final Logger logger = LoggerFactory.getLogger(I3SWriter.class);
     private final I3SAttributeEncoder i3sAttributeEncoder;
@@ -178,7 +172,8 @@ public class I3SWriter extends VisWriter {
      * <p>
      * Both formats refine when the projected MBS radius exceeds
      * {@code screenPixelThreshold} pixels. The projected disk's area is
-     * {@code π × r²}, which is what I3S compares against.
+     * {@code π × r²}, which is what I3S compares against. The result must
+     * be an integer — ArcGIS rejects float values in node pages.
      */
     private static int lodThresholdFor(double pixelThreshold) {
         return (int) Math.round(Math.PI * pixelThreshold * pixelThreshold);
