@@ -88,6 +88,9 @@ public class GlbEncoder {
      * @param atlasBytesList JPEG bytes per atlas page (index matches
      *                       {@code texIdToPage} values), empty if untextured
      * @param texIdToPage    texture id → atlas page index; empty if untextured
+     * @param instanceAtlases per-batch prototype atlas pages (index-aligned
+     *                        with {@code instanceBatches}; {@code null} entry
+     *                        = untextured prototype)
      * @param features       per-feature attribute data
      * @param attrFields     finalized attribute field definitions
      * @param cellCenter     [centerLon, centerLat, centerAlt] of this node's
@@ -109,7 +112,7 @@ public class GlbEncoder {
                          Map<Integer, Integer> texIdToPage,
                          List<FeatureData> features, List<AttrField> attrFields,
                          List<InstanceBatch> instanceBatches,
-                         List<byte[]> instanceAtlasBytes,
+                         List<InstancedAtlas> instanceAtlases,
                          double[] cellCenter,
                          ObjectStyleRegistry styleRegistry,
                          boolean enableShading) throws IOException {
@@ -150,7 +153,7 @@ public class GlbEncoder {
         List<InstancedNodeEncoder.InstancedNodeData> instancedNodes = List.of();
         if (hasInstances) {
             propFeatures = new ArrayList<>(propFeatures);
-            instancedNodes = instancedNodeEncoder.build(instanceBatches, instanceAtlasBytes,
+            instancedNodes = instancedNodeEncoder.build(instanceBatches, instanceAtlases,
                     cellCenter, styleRegistry, enableShading, propFeatures);
             if (primitives.isEmpty() && instancedNodes.isEmpty()) {
                 return null;
@@ -277,7 +280,7 @@ public class GlbEncoder {
             List<GlbPrimitiveBuilder.PrimitiveBufferIds> bvs) {
         List<GltfJsonBuilder.Primitive> out = new ArrayList<>(primitives.size());
         for (int i = 0; i < primitives.size(); i++) {
-            out.add(GlbPrimitiveBuilder.toJsonPrimitive(primitives.get(i), bvs.get(i), null));
+            out.add(GlbPrimitiveBuilder.toJsonPrimitive(primitives.get(i), bvs.get(i), null, -1));
         }
         return out;
     }

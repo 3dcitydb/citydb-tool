@@ -467,7 +467,7 @@ public final class TextureAtlasBuilder {
         if (metas.size() == 1) {
             TextureMeta m = metas.get(0);
             if (m.tilesU == 1 && m.tilesV == 1) {
-                return buildSingleTextureAtlas(m, maxAtlasSize, tileOffsets, textureStore);
+                return buildSingleTextureAtlas(m, scale, maxAtlasSize, tileOffsets, textureStore);
             }
             // Single texture with tiling — fall through to atlas compositing
         }
@@ -596,15 +596,33 @@ public final class TextureAtlasBuilder {
     }
 
     /**
-     * Fast path for a single untiled texture: decode subsampled to at most
-     * {@code maxAtlasSize}, further downscale via {@code drawImage} if the
-     * decoder can't subsample enough (rare; only for 8×maxAtlasSize+ sources).
-     * Never allocates the full-resolution bitmap.
+     * Fast path for a single untiled texture: decode subsampled to roughly the
+     * target size ({@code source × scale}, clamped to {@code maxAtlasSize}),
+     * then downscale via {@code drawImage} to the exact target when the
+     * decoder's power-of-two subsampling leaves a gap. Never allocates the
+     * full-resolution bitmap.
+     * <p>
+     * {@code scale} is the user's {@code --texture-scale}: it applies here
+     * exactly as it does to every texture in the multi-texture packing paths,
+     * so the output quality contract does not depend on how many textures a
+     * node (or an instanced prototype) happens to carry. The additional
+     * {@code maxAtlasSize} clamp mirrors {@link #buildMulti}'s per-texture
+     * clamp and is reported the same way (not as a scale violation —
+     * {@code actualScale} stays at the honored {@code scale}).
      */
-    private static TextureAtlas buildSingleTextureAtlas(TextureMeta m, int maxAtlasSize,
+    private static TextureAtlas buildSingleTextureAtlas(TextureMeta m, double scale,
+                                                        int maxAtlasSize,
                                                         Map<Integer, float[]> tileOffsets,
                                                         TextureStore textureStore) throws IOException {
-        int subsample = pickSubsample(m.srcWidth, m.srcHeight, maxAtlasSize, maxAtlasSize);
+        int targetW = Math.max(1, (int) (m.srcWidth * scale));
+        int targetH = Math.max(1, (int) (m.srcHeight * scale));
+        if (targetW > maxAtlasSize || targetH > maxAtlasSize) {
+            double clamp = (double) maxAtlasSize / Math.max(targetW, targetH);
+            targetW = Math.max(1, (int) (targetW * clamp));
+            targetH = Math.max(1, (int) (targetH * clamp));
+        }
+
+        int subsample = pickSubsample(m.srcWidth, m.srcHeight, targetW, targetH);
         BufferedImage src;
         try {
             src = textureStore.loadImage(m.texId, subsample);
@@ -616,28 +634,20 @@ public final class TextureAtlasBuilder {
         if (src == null) return null;
 
         BufferedImage finalImg;
-        if (src.getWidth() <= maxAtlasSize && src.getHeight() <= maxAtlasSize) {
+        if (src.getWidth() <= targetW && src.getHeight() <= targetH) {
             finalImg = TextureStore.toOpaqueRgb(src);
         } else {
-            double s = (double) maxAtlasSize
-                    / Math.max(src.getWidth(), src.getHeight());
-            int tw = Math.max(1, (int) (src.getWidth() * s));
-            int th = Math.max(1, (int) (src.getHeight() * s));
-            finalImg = new BufferedImage(tw, th, BufferedImage.TYPE_INT_RGB);
+            finalImg = new BufferedImage(targetW, targetH, BufferedImage.TYPE_INT_RGB);
             Graphics2D g = finalImg.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
                     RenderingHints.VALUE_INTERPOLATION_BILINEAR);
             g.setColor(Color.WHITE);
-            g.fillRect(0, 0, tw, th);
-            g.drawImage(src, 0, 0, tw, th, null);
+            g.fillRect(0, 0, targetW, targetH);
+            g.drawImage(src, 0, 0, targetW, targetH, null);
             g.dispose();
         }
         Map<Integer, float[]> regions = Map.of(m.texId, new float[]{0f, 0f, 1f, 1f});
-        // actualScale=1.0: no global rescale loop applied. The single-texture
-        // fast path may downscale the bitmap to fit maxAtlasSize, but that is
-        // independent of the user's --texture-scale (which only governs the
-        // multi-texture rescale loop in buildSingleAtlas).
-        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of(), null, 1.0);
+        return new TextureAtlas(regions, finalImg, tileOffsets, Set.of(), null, scale);
     }
 
     /**

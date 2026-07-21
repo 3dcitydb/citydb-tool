@@ -19,6 +19,7 @@ import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.appearance.TextureAtlasBuilder;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.encoder.tiles3d.GlbEncoder;
+import org.citydb.vis.encoder.tiles3d.InstancedAtlas;
 import org.citydb.vis.encoder.tiles3d.TilePaths;
 import org.citydb.vis.encoder.tiles3d.TilesetSerializer;
 import org.citydb.vis.model.AttrField;
@@ -76,8 +77,9 @@ public class Tiles3DWriter extends VisWriter {
     private final Tiles3DFormatOptions formatOptions;
     private final GlbEncoder glbEncoder;
     private final TilesetSerializer tilesetSerializer;
-    // JPEG bytes per prototype atlas, shared across the parallel per-node
-    // writes (identity-keyed: atlas instances are canonical per prototype).
+    // JPEG bytes per prototype atlas page, shared across the parallel
+    // per-node writes (identity-keyed: page instances are canonical per
+    // prototype).
     private final Map<TextureAtlas, byte[]> protoAtlasJpegCache = new ConcurrentHashMap<>();
 
     public Tiles3DWriter(OutputFile outputFile, WriteOptions options) throws WriteException {
@@ -271,37 +273,47 @@ public class Tiles3DWriter extends VisWriter {
                 }
             }
 
-            // Serialize each instanced prototype's own atlas to JPEG bytes,
-            // index-aligned with the batches (null = untextured prototype).
-            // Cached per atlas: the same prototype recurs across many cells
-            // and the JPEG encode is identical every time. Deliberately NOT
-            // computeIfAbsent — its lambda cannot throw the checked
-            // IOException that must reach writeNode's VisExportException
-            // wrapper (the WriteException boundary). A racing duplicate
-            // encode is idempotent and putIfAbsent keeps one canonical copy.
-            List<byte[]> instanceAtlasBytes = new ArrayList<>(prepared.instanceBatches().size());
-            for (TextureAtlas protoAtlas : prepared.instanceAtlases()) {
-                if (protoAtlas == null) {
-                    instanceAtlasBytes.add(null);
+            // Serialize each instanced prototype's atlas pages to JPEG bytes
+            // and index its texture ids by page, index-aligned with the
+            // batches (null = untextured prototype). Cached per page: the
+            // same prototype recurs across many cells and the JPEG encode is
+            // identical every time. Deliberately NOT computeIfAbsent — its
+            // lambda cannot throw the checked IOException that must reach
+            // writeNode's VisExportException wrapper (the WriteException
+            // boundary). A racing duplicate encode is idempotent and
+            // putIfAbsent keeps one canonical copy.
+            List<InstancedAtlas> instanceAtlases = new ArrayList<>(prepared.instanceBatches().size());
+            for (List<TextureAtlas> protoPages : prepared.instanceAtlases()) {
+                if (protoPages.isEmpty()) {
+                    instanceAtlases.add(null);
                     continue;
                 }
-                byte[] bytes = protoAtlasJpegCache.get(protoAtlas);
-                if (bytes == null) {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    protoAtlas.write(baos);
-                    bytes = baos.toByteArray();
-                    byte[] existing = protoAtlasJpegCache.putIfAbsent(protoAtlas, bytes);
-                    if (existing != null) {
-                        bytes = existing;
+                List<byte[]> pageBytes = new ArrayList<>(protoPages.size());
+                Map<Integer, Integer> protoTexIdToPage = new HashMap<>();
+                for (int p = 0; p < protoPages.size(); p++) {
+                    TextureAtlas page = protoPages.get(p);
+                    byte[] bytes = protoAtlasJpegCache.get(page);
+                    if (bytes == null) {
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        page.write(baos);
+                        bytes = baos.toByteArray();
+                        byte[] existing = protoAtlasJpegCache.putIfAbsent(page, bytes);
+                        if (existing != null) {
+                            bytes = existing;
+                        }
+                    }
+                    pageBytes.add(bytes);
+                    for (int texId : page.getTextureIds()) {
+                        protoTexIdToPage.put(texId, p);
                     }
                 }
-                instanceAtlasBytes.add(bytes);
+                instanceAtlases.add(new InstancedAtlas(pageBytes, protoTexIdToPage));
             }
 
             // Encode GLB
             node.setMesh(prepared.mesh());
             byte[] glb = glbEncoder.encode(node, atlasBytesList, texIdToPage,
-                    features, attrFields, prepared.instanceBatches(), instanceAtlasBytes,
+                    features, attrFields, prepared.instanceBatches(), instanceAtlases,
                     cellAnchor,
                     getFormatOptions().getStyleRegistry(),
                     getFormatOptions().isEnableShading());
