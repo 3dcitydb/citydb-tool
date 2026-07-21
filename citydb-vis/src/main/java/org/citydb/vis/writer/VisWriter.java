@@ -13,15 +13,9 @@ import org.citydb.core.file.OutputFile;
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
-import org.citydb.model.common.Matrix4x4;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Envelope;
-import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.LinearRing;
-import org.citydb.model.geometry.Point;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.util.GeometryInfo;
@@ -33,9 +27,7 @@ import org.citydb.vis.config.VisFormatOptions;
 import org.citydb.vis.attribute.AttributeEncoder;
 import org.citydb.vis.terrain.CesiumWorldTerrainProvider;
 import org.citydb.vis.terrain.TerrainElevationProvider;
-import org.citydb.vis.geometry.ImplicitInstanceTransformer;
 import org.citydb.vis.geometry.RingAttributes;
-import org.citydb.vis.geometry.TrsDecomposition;
 import org.citydb.vis.pipeline.ExportPipeline;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.stages.AggregationStage;
@@ -55,7 +47,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -303,29 +294,44 @@ public abstract class VisWriter implements FeatureWriter {
         }
 
         if (!implicitProperties.isEmpty()) {
-            // Cache appearance extraction per prototype identity so a feature
-            // with N instances of the same prototype walks the appearance
-            // tree once. Scoped to this feature: implicit prototypes are
-            // typically reused across features, but caching globally would
-            // need a thread-safe map keyed by prototype identity — not worth
-            // the complexity unless profiling shows a hot spot. Only consulted
-            // on the baked fallback path; the instancing path caches appearance
-            // globally inside the PrototypeRegistry.
-            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache = new IdentityHashMap<>();
-
-            // Instances of one feature share objectId/featureType/attributes, so
-            // the instanced path persists the attribute blob once per feature
-            // (lazily, on the first successfully instanced occurrence) instead
-            // of once per instance. Single-element holder: this loop runs
-            // sequentially on the caller thread.
-            long[] instanceAttrOffset = {-1};
+            // Per-feature planner: decides instanced vs. baked per instance
+            // and prepares the processing inputs; the async dispatch stays
+            // here. Planning runs sequentially on the caller thread.
+            ImplicitInstancePlanner planner = new ImplicitInstancePlanner(
+                    stores, attributeEncoder, formatOptions.getStyleRegistry(),
+                    prototypeRegistry, featureIdCounter,
+                    supportsImplicitGeometryInstancing(),
+                    objectId, featureType, featureTypeNamespace, attributes);
 
             for (ImplicitGeometryProperty property : implicitProperties) {
-                CompletableFuture<Boolean> instance = dispatchImplicitInstance(
-                        property, objectId, featureType, featureTypeNamespace,
-                        attributes, protoAppearanceCache, instanceAttrOffset);
-                if (instance != null) {
-                    subTasks.add(instance);
+                ImplicitInstancePlanner.Plan plan;
+                try {
+                    plan = planner.plan(property);
+                } catch (IOException e) {
+                    shouldRun = false;
+                    CompletableFuture<Boolean> failed = new CompletableFuture<>();
+                    failed.completeExceptionally(
+                            new WriteException("Failed to persist instance attributes.", e));
+                    subTasks.add(failed);
+                    continue;
+                }
+                if (plan == null) {
+                    // Silently skipped (pure reference, library object, or
+                    // missing transformation/reference point) — the planner
+                    // logged the reason at DEBUG.
+                    continue;
+                }
+                if (plan instanceof ImplicitInstancePlanner.InstancedPlan instanced) {
+                    subTasks.add(dispatchInstance(instanced));
+                } else if (plan instanceof ImplicitInstancePlanner.BakedPlan baked) {
+                    // Pass envelope=null so process() recomputes the bbox from
+                    // the transformed mesh — the parent feature's envelope
+                    // covers all its explicit + implicit content combined and
+                    // would not match the single-instance footprint that
+                    // spatial partitioning needs.
+                    subTasks.add(dispatchProcessing(baked.instanceId(), objectId,
+                            featureType, featureTypeNamespace, null, attributes,
+                            List.of(baked.wrapped()), baked.ringAttributes()));
                 }
             }
         }
@@ -367,154 +373,19 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     /**
-     * Materialize one CityGML implicit-geometry instance into a world-space
-     * mesh, allocate it a fresh featureId so spatial partitioning sees its
-     * own bbox, and dispatch the same {@link FeatureProcessor#process} path
-     * used for explicit geometries. The instance shares the parent feature's
-     * objectId / featureType / attributes so picking still resolves to the
-     * CityGML feature even though the spatial entry is distinct.
-     * <p>
-     * Returns {@code null} when the instance is silently skipped (pure
-     * reference, library object, or missing transformation/reference point);
-     * a DEBUG line records each skip reason.
+     * Async dispatch of a GPU-instancing plan via
+     * {@link FeatureProcessor#processInstance}, mirroring
+     * {@link #dispatchProcessing}'s latch/error handling.
      */
-    private CompletableFuture<Boolean> dispatchImplicitInstance(
-            ImplicitGeometryProperty property,
-            String objectId, String featureType, String featureTypeNamespace,
-            Map<String, Object> attributes,
-            Map<ImplicitGeometry, RingAppearance> protoAppearanceCache,
-            long[] instanceAttrOffset) {
-        ImplicitGeometry implicitGeometry = property.getObject().orElse(null);
-        if (implicitGeometry == null) {
-            logger.debug("Skipping implicit-geometry-property without inline prototype on feature {}.",
-                    objectId);
-            return null;
-        }
-        Geometry<?> prototype = implicitGeometry.getGeometry().orElse(null);
-        if (prototype == null) {
-            // libraryObject form (.dae/.obj/...) — vis-export does not parse
-            // external mesh files, would need a separate loader.
-            logger.debug("Skipping library-object implicit geometry on feature {} (no inline mesh).",
-                    objectId);
-            return null;
-        }
-        Matrix4x4 transformationMatrix = property.getTransformationMatrix().orElse(null);
-        Point referencePoint = property.getReferencePoint().orElse(null);
-        if (transformationMatrix == null || referencePoint == null) {
-            logger.debug("Skipping implicit instance on feature {} — missing transformation matrix or reference point.",
-                    objectId);
-            return null;
-        }
-
-        // GPU-instancing path: register the shared template once and store
-        // only the per-instance placement. Falls back to baking below when
-        // the template is not instanceable or the matrix cannot be expressed
-        // as rotation·scale (shear / mirroring).
-        if (supportsImplicitGeometryInstancing()) {
-            CompletableFuture<Boolean> instanced = tryDispatchInstanced(
-                    implicitGeometry, transformationMatrix, referencePoint,
-                    objectId, featureType, featureTypeNamespace, attributes,
-                    instanceAttrOffset);
-            if (instanced != null) {
-                return instanced;
-            }
-        }
-
-        RingAppearance protoAppearance = protoAppearanceCache.computeIfAbsent(
-                implicitGeometry,
-                p -> AppearanceExtractor.extract(p, stores.getTextureStore()));
-
-        ImplicitInstanceTransformer.Result placed = ImplicitInstanceTransformer.transform(
-                prototype, transformationMatrix, referencePoint);
-        RingAppearance instanceAppearance = protoAppearance.remapKeys(placed.ringMap());
-
-        long instanceId = featureIdCounter.incrementAndGet();
-        Map<LinearRing, Integer> instanceTextureIds = instanceAppearance.ringTextureIds();
-        if (instanceTextureIds != null && !instanceTextureIds.isEmpty()) {
-            stores.setFeatureTextured(instanceId);
-        }
-
-        // Wrap the placed prototype copy as a single GeometryProperty. Its
-        // parent walk does not reach a Feature (the copy is a fresh tree
-        // detached from the feature graph), so GeometryMeshBuilder falls
-        // back to defaultSurfaceType — exactly what we want: every triangle
-        // gets the parent feature's type for styling purposes.
-        GeometryProperty wrapped = GeometryProperty.of(
-                Name.of("implicitInstance", Namespaces.CORE),
-                placed.geometry());
-
-        // Pass envelope=null so process() recomputes the bbox from the
-        // transformed mesh — the parent feature's envelope covers all its
-        // explicit + implicit content combined and would not match the
-        // single-instance footprint that spatial partitioning needs.
-        return dispatchProcessing(instanceId, objectId, featureType, featureTypeNamespace,
-                null, attributes, List.of(wrapped),
-                instanceAppearance.forTriangulation());
-    }
-
-    /**
-     * GPU-instancing dispatch: resolve the template through the
-     * {@link PrototypeRegistry} and decompose the transformation matrix; on
-     * success persist only the placement payload via
-     * {@link FeatureProcessor#processInstance}. Returns {@code null} when the
-     * instance cannot be expressed as prototype + TRS (caller falls back to
-     * the baked path).
-     * <p>
-     * The instance deliberately does <b>not</b> set the per-feature texture
-     * flag even for textured prototypes: its textures live in the prototype's
-     * own atlas and never contribute to the node atlas, so for the
-     * mixed-texture and atlas-overflow split stages the instance counts as
-     * untextured content.
-     */
-    private CompletableFuture<Boolean> tryDispatchInstanced(
-            ImplicitGeometry implicitGeometry, Matrix4x4 transformationMatrix,
-            Point referencePoint, String objectId, String featureType,
-            String featureTypeNamespace, Map<String, Object> attributes,
-            long[] instanceAttrOffset) {
-        PrototypeRegistry.Prototype prototype =
-                prototypeRegistry.getOrRegister(implicitGeometry);
-        if (prototype == null) {
-            return null;
-        }
-        TrsDecomposition.Result trs = TrsDecomposition.decompose(transformationMatrix);
-        if (trs == null) {
-            logger.debug("Baking implicit instance on feature {} — transformation matrix " +
-                    "contains shear or mirroring.", objectId);
-            return null;
-        }
-        prototypeRegistry.recordInstanceScale(prototype.id(), trs.scale());
-
-        // Persist the shared attribute blob once per feature, on the first
-        // successfully instanced occurrence (baked fallbacks store their own).
-        long attrOffset = instanceAttrOffset[0];
-        if (attrOffset < 0) {
-            try {
-                attrOffset = stores.getAttrStore().store(objectId, featureType, attributes);
-                attributeEncoder.trackFieldTypes(attributes);
-                instanceAttrOffset[0] = attrOffset;
-            } catch (IOException e) {
-                shouldRun = false;
-                CompletableFuture<Boolean> failed = new CompletableFuture<>();
-                failed.completeExceptionally(
-                        new WriteException("Failed to persist instance attributes.", e));
-                return failed;
-            }
-        }
-        long finalAttrOffset = attrOffset;
-
-        // Resolve the per-feature-type style while the qualified type name is
-        // still at hand (the attribute store keeps only the local name) and
-        // capture its color in the instance payload.
-        float[] styleColor = formatOptions.getStyleRegistry()
-                .resolve(Name.of(featureType, featureTypeNamespace)).color();
-
-        long instanceId = featureIdCounter.incrementAndGet();
+    private CompletableFuture<Boolean> dispatchInstance(
+            ImplicitInstancePlanner.InstancedPlan plan) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
         service.execute(() -> {
             try {
-                featureProcessor.processInstance(instanceId, objectId, finalAttrOffset,
-                        prototype, transformationMatrix, trs, referencePoint, styleColor);
+                featureProcessor.processInstance(plan.instanceId(), plan.objectId(),
+                        plan.attrOffset(), plan.prototype(), plan.transformationMatrix(),
+                        plan.trs(), plan.referencePoint(), plan.styleColor());
                 result.complete(true);
             } catch (Throwable e) {
                 shouldRun = false;
