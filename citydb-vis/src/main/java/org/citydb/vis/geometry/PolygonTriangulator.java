@@ -68,10 +68,6 @@ public class PolygonTriangulator {
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<String> seenIds = new HashSet<>();
 
-    public PolygonTriangulator() {
-        this(false);
-    }
-
     public PolygonTriangulator(boolean localMeters) {
         this.localMeters = localMeters;
     }

@@ -183,8 +183,8 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     /**
      * Default sRGB color (form {@code #rrggbb} or {@code #rrggbbaa}) applied
      * to features on the no-appearance path (CLI {@code --default-color}).
-     * {@code null} means opaque white. Consumed by {@link #resolve} to build
-     * the {@link #styleRegistry}.
+     * {@code null} means opaque white. Consumed by {@link #buildStyleRegistry}
+     * to build the {@link #styleRegistry}.
      */
     public String getDefaultColor() {
         return defaultColor;
@@ -199,7 +199,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
      * Per-feature-type {@code qualifiedName -> hex color} overrides on the
      * no-appearance path (CLI {@code --feature-type-style}). Keys must be
      * qualified feature type names like {@code bldg:Building}; resolved
-     * against the schema hierarchy by {@link #resolve}.
+     * against the schema hierarchy by {@link #buildStyleRegistry}.
      */
     public Map<String, String> getFeatureTypeStyles() {
         return featureTypeStyles;
@@ -212,7 +212,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
 
     /**
      * Raw {@code --attributes} mapping tokens, one per element. Parsed into
-     * the {@link #attributeProjection} by {@link #resolve}. {@code null} or
+     * the {@link #attributeProjection} by {@link #buildAttributeProjection}. {@code null} or
      * empty means "no projection — export every top-level attribute".
      */
     public List<String> getAttributes() {
