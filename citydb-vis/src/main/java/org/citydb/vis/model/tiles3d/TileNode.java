@@ -22,6 +22,8 @@ import java.util.List;
  */
 @JSONType(alphabetic = false)
 public class TileNode {
+    private static final String REFINE_REPLACE = "REPLACE";
+
     private TileBoundingVolume boundingVolume;
     private double geometricError;
     private String refine;
@@ -45,7 +47,7 @@ public class TileNode {
         TileNode tile = new TileNode();
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = geometricError;
-        tile.refine = "REPLACE";
+        tile.refine = REFINE_REPLACE;
 
         if (contentUri != null) {
             tile.content = new TileContent(contentUri);
@@ -72,7 +74,7 @@ public class TileNode {
         tile.boundingVolume = TileBoundingVolume.fromBoundingVolume(node.getBoundingVolume());
         tile.geometricError = geometricError;
         tile.content = new TileContent(uri);
-        tile.refine = "REPLACE";
+        tile.refine = REFINE_REPLACE;
         return tile;
     }
 
@@ -84,7 +86,7 @@ public class TileNode {
         TileNode tile = new TileNode();
         tile.boundingVolume = boundingVolume;
         tile.geometricError = geometricError;
-        tile.refine = "REPLACE";
+        tile.refine = REFINE_REPLACE;
         tile.transform = transform;
         tile.children = new ArrayList<>();
         return tile;

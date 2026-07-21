@@ -12,6 +12,7 @@ import org.citydb.vis.styling.ObjectStyleRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Single source of truth for the format-neutral routing facts of a node's
@@ -59,6 +60,49 @@ public final class TriangleRouter {
         public boolean textured() {
             return textureId >= 0;
         }
+    }
+
+    /**
+     * Routed triangles bucketed into the GLB primitive flavours: one bucket
+     * per atlas page, plus the untextured colored (X3DMaterial vertex colors)
+     * and plain leftovers, each in routed order.
+     */
+    public record PageBuckets(List<List<RoutedTriangle>> texturedByPage,
+                              List<RoutedTriangle> colored,
+                              List<RoutedTriangle> plain) {
+    }
+
+    /**
+     * Bucket routed triangles by atlas page. A textured triangle goes to its
+     * page's bucket; a texId missing from {@code texIdToPage} means the atlas
+     * builder dropped the texture (e.g. corrupt source), so such triangles —
+     * and every textured triangle when {@code texIdToPage} is {@code null}
+     * (no atlas at all) — degrade to the colored/plain buckets so the shape
+     * still renders.
+     */
+    public static PageBuckets bucketByPage(List<RoutedTriangle> routed, int pageCount,
+                                           Map<Integer, Integer> texIdToPage) {
+        List<List<RoutedTriangle>> texturedByPage = new ArrayList<>(pageCount);
+        for (int i = 0; i < pageCount; i++) {
+            texturedByPage.add(new ArrayList<>());
+        }
+        List<RoutedTriangle> colored = new ArrayList<>();
+        List<RoutedTriangle> plain = new ArrayList<>();
+        for (RoutedTriangle rt : routed) {
+            if (rt.textured() && texIdToPage != null) {
+                Integer page = texIdToPage.get(rt.textureId());
+                if (page != null) {
+                    texturedByPage.get(page).add(rt);
+                    continue;
+                }
+            }
+            if (rt.colored()) {
+                colored.add(rt);
+            } else {
+                plain.add(rt);
+            }
+        }
+        return new PageBuckets(texturedByPage, colored, plain);
     }
 
     /**
