@@ -11,6 +11,7 @@ import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.vis.appearance.AppearanceExtractor;
+import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.RingAppearance;
 import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.appearance.TextureAtlasBuilder;
@@ -63,12 +64,12 @@ public class PrototypeRegistry {
             Collections.synchronizedMap(new IdentityHashMap<>());
     private final ConcurrentHashMap<Integer, Prototype> byId = new ConcurrentHashMap<>();
     private final AtomicInteger idCounter = new AtomicInteger();
-    // Per-prototype single-page texture atlas, built once on the close thread
+    // Per-prototype texture atlas pages, built once on the close thread
     // by buildAtlases() BEFORE the parallel node fan-out — the build remaps
     // the shared prototype mesh's UVs in place, which must not race with
     // concurrent encoder reads. Plain map: written single-threaded, read-only
     // afterwards.
-    private final Map<Integer, TextureAtlas> atlasById = new HashMap<>();
+    private final Map<Integer, List<TextureAtlas>> atlasPagesById = new HashMap<>();
     // Largest per-axis instance scale seen per prototype during the write
     // phase. Frozen into weldToleranceById by buildAtlases() at the same
     // phase boundary where atlases freeze.
@@ -169,6 +170,16 @@ public class PrototypeRegistry {
      * and before the parallel node fan-out: the build rewrites the shared
      * prototype mesh's UVs into atlas space in place.
      * <p>
+     * Prototype atlases obey the same quality contract as node atlases —
+     * every texture is scaled by {@code --texture-scale} and no page exceeds
+     * {@code --max-atlas-size}. The page-mode decision mirrors
+     * {@code NodeAssembler}'s AUTO logic for the 3D Tiles writer (the only
+     * writer with an instancing path): under {@code --atlas-fallback=expand} a
+     * prototype whose textures overflow one page spills to multiple pages via
+     * {@link TextureAtlasBuilder#buildMulti} (per-texture clamp at the page
+     * cap) instead of expanding a single page past the user's cap; under
+     * {@code rescale} the textures are shrunk into one capped page.
+     * <p>
      * A prototype whose atlas cannot be built (every source texture failed to
      * load) is downgraded to untextured, mirroring the node-atlas fallback in
      * {@code NodeAssembler}.
@@ -188,20 +199,34 @@ public class PrototypeRegistry {
             if (texIds.isEmpty()) {
                 continue;
             }
-            TextureAtlas atlas;
+            List<TextureAtlas> pages;
             try {
-                atlas = TextureAtlasBuilder.build(texIds, textureStore,
-                        formatOptions.getTextureScale(), formatOptions.getMaxAtlasSize(),
-                        mesh.computeUVExtents(), false,
-                        formatOptions.getAtlasFallbackStrategy());
+                Map<Integer, float[]> uvExtents = mesh.computeUVExtents();
+                boolean useMulti = formatOptions.getAtlasFallbackStrategy() == AtlasFallbackStrategy.EXPAND
+                        && TextureAtlasBuilder.wouldOverflow(texIds, textureStore,
+                                formatOptions.getTextureScale(),
+                                formatOptions.getMaxAtlasSize(), uvExtents);
+                if (useMulti) {
+                    pages = TextureAtlasBuilder.buildMulti(texIds, textureStore,
+                            formatOptions.getTextureScale(), formatOptions.getMaxAtlasSize(),
+                            uvExtents);
+                } else {
+                    TextureAtlas single = TextureAtlasBuilder.build(texIds, textureStore,
+                            formatOptions.getTextureScale(), formatOptions.getMaxAtlasSize(),
+                            uvExtents, false,
+                            formatOptions.getAtlasFallbackStrategy());
+                    pages = single != null ? List.of(single) : List.of();
+                }
             } catch (IOException e) {
                 logger.warn("Failed to build the texture atlas of implicit-geometry " +
                         "template {}: {}", prototype.id(), e.getMessage());
-                atlas = null;
+                pages = List.of();
             }
-            if (atlas != null) {
-                atlas.remapUVs(mesh);
-                atlasById.put(prototype.id(), atlas);
+            if (!pages.isEmpty()) {
+                for (TextureAtlas page : pages) {
+                    page.remapUVs(mesh);
+                }
+                atlasPagesById.put(prototype.id(), pages);
             } else {
                 logger.warn("All textures of implicit-geometry template {} failed to load; " +
                         "its instances render untextured.", prototype.id());
@@ -211,10 +236,13 @@ public class PrototypeRegistry {
     }
 
     /**
-     * The prototype's atlas built by {@link #buildAtlases}, or {@code null}
-     * for untextured prototypes (and atlas-build failures).
+     * The prototype's atlas pages built by {@link #buildAtlases}: one page in
+     * the common fits-one-page case, several when the prototype's textures
+     * overflow the {@code --max-atlas-size} cap under
+     * {@code --atlas-fallback=expand}. Empty for untextured prototypes (and
+     * atlas-build failures).
      */
-    public TextureAtlas atlas(int prototypeId) {
-        return atlasById.get(prototypeId);
+    public List<TextureAtlas> atlases(int prototypeId) {
+        return atlasPagesById.getOrDefault(prototypeId, List.of());
     }
 }
