@@ -20,6 +20,7 @@ import org.citydb.vis.store.AttributeStore;
 import org.citydb.vis.store.InstanceStore;
 import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.VisExportStores;
+import org.citydb.vis.util.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Assembles a complete scene node from the disk-backed shard stores for the
@@ -408,8 +408,9 @@ public final class NodeAssembler {
                 .toList();
 
         Set<Integer> emptyNodeIndices = ConcurrentHashMap.newKeySet();
-        AtomicInteger nodesProcessed = new AtomicInteger(0);
         int total = meshNodes.size();
+        logger.info("Writing {} mesh node(s)...", total);
+        ProgressLogger progress = new ProgressLogger(logger, "Nodes written: {}/{}.", total);
         ForkJoinPool pool = new ForkJoinPool(numberOfThreads);
         try {
             pool.submit(() -> meshNodes.parallelStream().forEach(node -> {
@@ -420,10 +421,7 @@ public final class NodeAssembler {
                 } catch (VisExportException e) {
                     throw new NodeProcessingException(e);
                 }
-                int done = nodesProcessed.incrementAndGet();
-                if (done % 100 == 0 || done == total) {
-                    logger.info("Nodes written: {}/{}.", done, total);
-                }
+                progress.step();
             })).join();
         } catch (NodeProcessingException e) {
             throw e.cause;

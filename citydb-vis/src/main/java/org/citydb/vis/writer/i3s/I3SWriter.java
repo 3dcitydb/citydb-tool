@@ -232,6 +232,7 @@ public class I3SWriter extends VisWriter {
             }
         }
 
+        logger.info("Writing I3S node pages for {} node(s)...", allNodes.size());
         try {
             // Node pages AFTER geometry so vertex counts are accurate
             jsonSerializer.writeNodePages(layerDir, allNodes, effectiveMeshIndices,
