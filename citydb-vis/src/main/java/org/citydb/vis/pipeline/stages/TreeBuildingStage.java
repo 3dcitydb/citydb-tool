@@ -14,6 +14,9 @@ import org.citydb.vis.store.NodeEntry;
 import org.citydb.vis.store.NodeEntryStore;
 import org.citydb.vis.store.PartitionedEntryStore;
 import org.citydb.vis.store.SpatialEntry;
+import org.citydb.vis.util.ProgressLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,6 +41,8 @@ import java.util.Set;
  * {@link PipelineContext#partitioned()} after consumption.
  */
 public final class TreeBuildingStage implements Stage {
+    private final Logger logger = LoggerFactory.getLogger(TreeBuildingStage.class);
+
     @Override
     public void execute(PipelineContext ctx) throws VisExportException {
         try {
@@ -58,7 +63,12 @@ public final class TreeBuildingStage implements Stage {
             allNodes.add(globalRoot);
             int nextIndex = 1;
 
-            for (long cellKey : ctx.partitioned().cellKeys()) {
+            Set<Long> cellKeys = ctx.partitioned().cellKeys();
+            logger.info("Building spatial tree for {} populated grid cell(s)...", cellKeys.size());
+            ProgressLogger progress = new ProgressLogger(logger,
+                    "Grid cells processed: {}/{}.", cellKeys.size());
+
+            for (long cellKey : cellKeys) {
                 List<SpatialEntry> cellEntries = ctx.partitioned().loadCell(cellKey);
                 NodeBuilder.CellLeaf leaf = NodeBuilder.buildCellLeaf(cellEntries);
 
@@ -71,6 +81,7 @@ public final class TreeBuildingStage implements Stage {
                 cellRootGridCoords.put(nextIndex,
                         PartitionedEntryStore.decodeKey(cellKey, gridDim));
                 nextIndex++;
+                progress.step();
             }
 
             ctx.partitioned().close();

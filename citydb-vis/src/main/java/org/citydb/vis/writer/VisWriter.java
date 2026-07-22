@@ -454,6 +454,9 @@ public abstract class VisWriter implements FeatureWriter {
             }
             logger.info("Closing intermediate stores and deleting temp directory.");
             stores.close();
+            // deleteDirectoryTree inside stores.close() is best-effort and
+            // swallows failures, so claim completion, not success.
+            logger.info("Temp directory cleanup finished.");
         }
     }
 
