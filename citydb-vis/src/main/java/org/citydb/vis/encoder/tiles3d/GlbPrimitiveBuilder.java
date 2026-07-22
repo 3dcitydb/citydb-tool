@@ -45,20 +45,25 @@ final class GlbPrimitiveBuilder {
     /**
      * Per-primitive welded vertex arrays plus the accessor facts derived
      * while building them (bounds, unique-feature count, alpha flag).
+     * {@code outlineIndices} is the CESIUM_primitive_outline edge list —
+     * pairs of indices into this primitive's vertex arrays, one pair per
+     * boundary edge — or {@code null} when outline emission is off or no
+     * triangle of the subset carries a boundary edge.
      */
     record PrimitiveArrays(int atlasPage, int vertexCount,
                            float[] positions, float[] normals, float[] uvs,
                            float[] colors,
                            int[] indices, int[] featureIds,
+                           int[] outlineIndices,
                            int uniqueFeatureCount,
                            float[] posMin, float[] posMax,
                            boolean anyAlphaBelowOne,
                            DefaultObjectStyle plainStyle) {
     }
 
-    /** BIN buffer view ids of one primitive's arrays. */
+    /** BIN buffer view ids of one primitive's arrays ({@code -1} = absent). */
     record PrimitiveBufferIds(int positions, int normals, int uvs, int colors,
-                              int indices, int featureIds) {
+                              int indices, int featureIds, int outlines) {
     }
 
     private GlbPrimitiveBuilder() {
@@ -80,6 +85,12 @@ final class GlbPrimitiveBuilder {
      * ({@code COLOR_0} emitted). The resulting array's
      * {@code anyAlphaBelowOne} flag drives {@code alphaMode=BLEND}
      * downstream.
+     * <p>
+     * {@code emitOutlines} additionally collects the CESIUM_primitive_outline
+     * edge list from the mesh's per-triangle outline masks. The triangle-soup
+     * layout makes this a pure index computation: output triangle {@code k}
+     * occupies vertices {@code 3k..3k+2}, so a masked edge {@code e} of that
+     * triangle contributes the pair {@code (3k+e, 3k+(e+1)%3)}.
      */
     static PrimitiveArrays build(TriangleMesh mesh,
                                  VertexWelder.WeldResult weld,
@@ -88,7 +99,8 @@ final class GlbPrimitiveBuilder {
                                  DefaultObjectStyle plainStyle,
                                  CellFrame frame,
                                  boolean enableShading,
-                                 boolean perVertexFeatureIds) {
+                                 boolean perVertexFeatureIds,
+                                 boolean emitOutlines) {
         boolean textured = atlasPage >= 0 || atlasPage == GltfJsonBuilder.INSTANCED_TEXTURED_PAGE;
         boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
         // NORMAL emitted on every path when --enable-shading is on. Textured
@@ -195,10 +207,42 @@ final class GlbPrimitiveBuilder {
             }
         }
 
+        int[] outlineIndices = emitOutlines ? buildOutlineIndices(mesh, triEntries) : null;
+
         return new PrimitiveArrays(atlasPage, vertexCount, positions, normals, uvs,
-                colors, indices, featureIds,
+                colors, indices, featureIds, outlineIndices,
                 uniqueFeatures != null ? uniqueFeatures.size() : 0,
                 posMin, posMax, anyAlphaBelowOne, plainStyle);
+    }
+
+    /**
+     * Collect the outlined edges of the triangle subset as index pairs into
+     * the primitive's own (soup-ordered) vertex arrays. Returns {@code null}
+     * when no triangle carries a boundary edge, so no empty accessor is
+     * emitted downstream.
+     */
+    private static int[] buildOutlineIndices(TriangleMesh mesh, List<RoutedTriangle> triEntries) {
+        int count = 0;
+        for (RoutedTriangle entry : triEntries) {
+            count += 2 * Integer.bitCount(mesh.getTriangleOutlineEdges(entry.triangleIndex()) & 0x7);
+        }
+        if (count == 0) {
+            return null;
+        }
+
+        int[] outlineIndices = new int[count];
+        int oi = 0;
+        for (int k = 0; k < triEntries.size(); k++) {
+            byte mask = mesh.getTriangleOutlineEdges(triEntries.get(k).triangleIndex());
+            int base = k * 3;
+            for (int e = 0; e < 3; e++) {
+                if ((mask & (1 << e)) != 0) {
+                    outlineIndices[oi++] = base + e;
+                    outlineIndices[oi++] = base + (e + 1) % 3;
+                }
+            }
+        }
+        return outlineIndices;
     }
 
     /**
@@ -224,8 +268,9 @@ final class GlbPrimitiveBuilder {
             for (int i = 0; i < p.featureIds().length; i++) featureIdsFloat[i] = p.featureIds()[i];
             bvFeatureIds = bin.addFloat32Array(featureIdsFloat);
         }
+        int bvOutlines = p.outlineIndices() != null ? bin.addUint32Array(p.outlineIndices()) : -1;
         return new PrimitiveBufferIds(bvPositions, bvNormals, bvUvs, bvColors,
-                bvIndices, bvFeatureIds);
+                bvIndices, bvFeatureIds, bvOutlines);
     }
 
     /**
@@ -246,6 +291,7 @@ final class GlbPrimitiveBuilder {
                 p.vertexCount(), p.uniqueFeatureCount(), p.posMin(), p.posMax(),
                 b.positions(), b.normals(), b.uvs(), b.colors(), b.indices(), b.featureIds(),
                 bvInstancedAtlas,
+                b.outlines(), p.outlineIndices() != null ? p.outlineIndices().length : 0,
                 p.anyAlphaBelowOne(), styleOverride != null ? styleOverride : p.plainStyle());
     }
 }

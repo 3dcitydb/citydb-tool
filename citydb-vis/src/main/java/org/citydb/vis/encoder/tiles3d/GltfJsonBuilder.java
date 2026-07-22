@@ -289,8 +289,18 @@ final class GltfJsonBuilder {
             accFeatureId = accessors.size() - 1;
         }
 
+        // CESIUM_primitive_outline edge list: index pairs into the same
+        // vertex arrays as the triangle indices, so UNSIGNED_INT is legal
+        // here (it is an index accessor, not a vertex attribute).
+        int accOutline = -1;
+        if (p.bvOutlines >= 0) {
+            accessors.add(makeAccessor(p.bvOutlines, COMPONENT_TYPE_UNSIGNED_INT,
+                    p.outlineCount, "SCALAR", null, null));
+            accOutline = accessors.size() - 1;
+        }
+
         return new PrimitiveAccessors(accPosition, accNormal, accTexCoord, accColor,
-                accIndices, accFeatureId);
+                accIndices, accFeatureId, accOutline);
     }
 
     private void writeBufferViews(JSONObject root) {
@@ -618,6 +628,7 @@ final class GltfJsonBuilder {
         }
         primitive.put("material", materialIdx);
 
+        JSONObject primExtensions = new JSONObject();
         if (acc.featureId >= 0) {
             JSONObject meshFeaturesExt = new JSONObject();
             JSONArray featureIdsArr = new JSONArray();
@@ -631,9 +642,16 @@ final class GltfJsonBuilder {
             featureIdDef.put("propertyTable", 0);
             featureIdsArr.add(featureIdDef);
             meshFeaturesExt.put("featureIds", featureIdsArr);
-
-            JSONObject primExtensions = new JSONObject();
             primExtensions.put("EXT_mesh_features", meshFeaturesExt);
+        }
+        if (acc.outline >= 0) {
+            // CESIUM_primitive_outline: the referenced accessor holds pairs
+            // of vertex indices, each pair one edge to render as an outline.
+            JSONObject outlineExt = new JSONObject();
+            outlineExt.put("indices", acc.outline);
+            primExtensions.put("CESIUM_primitive_outline", outlineExt);
+        }
+        if (!primExtensions.isEmpty()) {
             primitive.put("extensions", primExtensions);
         }
 
@@ -667,6 +685,16 @@ final class GltfJsonBuilder {
         }
         if (unlitUsed) {
             extUsed.add("KHR_materials_unlit");
+        }
+        // CESIUM_primitive_outline goes into extensionsUsed only: a loader
+        // that ignores it still renders the geometry correctly, the outlines
+        // just don't draw — graceful degradation, unlike gpu_instancing.
+        boolean outlineUsed = primitives.stream().anyMatch(p -> p.bvOutlines >= 0)
+                || instancedNodes.stream()
+                        .flatMap(n -> n.primitives().stream())
+                        .anyMatch(p -> p.bvOutlines >= 0);
+        if (outlineUsed) {
+            extUsed.add("CESIUM_primitive_outline");
         }
         root.put("extensionsUsed", extUsed);
     }
@@ -757,12 +785,19 @@ final class GltfJsonBuilder {
      * bufferView an instanced textured primitive ({@code atlasPage ==}
      * {@link #INSTANCED_TEXTURED_PAGE}) samples; {@code -1} on every other
      * primitive flavour.
+     * <p>
+     * {@code bvOutlines}/{@code outlineCount}: bufferView and index count of
+     * the CESIUM_primitive_outline edge list ({@code -1}/{@code 0} when the
+     * primitive carries no outline). The count is carried explicitly because
+     * the outline accessor is the only one whose element count differs from
+     * {@code vertexCount}.
      */
     record Primitive(int atlasPage, int vertexCount, int featureCount,
                      float[] posMin, float[] posMax,
                      int bvPositions, int bvNormals, int bvUvs, int bvColors,
                      int bvIndices, int bvFeatureIds,
                      int bvInstancedAtlas,
+                     int bvOutlines, int outlineCount,
                      boolean anyAlphaBelowOne,
                      DefaultObjectStyle plainStyle) {
     }
@@ -781,7 +816,7 @@ final class GltfJsonBuilder {
     }
 
     private record PrimitiveAccessors(int position, int normal, int texCoord, int color,
-                                      int indices, int featureId) {
+                                      int indices, int featureId, int outline) {
     }
 
     /**

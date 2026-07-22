@@ -15,6 +15,7 @@ import org.citydb.model.walker.ModelWalker;
 import org.citydb.vis.util.GeoTransform;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -189,16 +190,23 @@ public class PolygonTriangulator {
         List<double[]> ring;
         List<double[]> scaledRing;
         List<float[]> uvRing;
+        // Boundary-edge flags of the (possibly bridged) ring: flag i covers
+        // edge i -> (i + 1) % n. A null value means "every edge is a boundary
+        // edge" — the hole-free case, where no bridges exist. Feeds the
+        // per-triangle outline-edge mask (CESIUM_primitive_outline).
+        BitSet boundaryEdges;
         if (polygon.hasInteriorRings()) {
             HoleBridger.BridgedRing bridged = HoleBridger.bridge(outerRing, outerScaled,
                     outerUVRing, polygon.getInteriorRings(), texCoordMap, scaleX, scaleY, projAxis);
             ring = bridged.positions();
             scaledRing = bridged.scaledPositions();
             uvRing = bridged.uvs();
+            boundaryEdges = bridged.boundaryEdges();
         } else {
             ring = outerRing;
             scaledRing = outerScaled;
             uvRing = outerUVRing;
+            boundaryEdges = null;
         }
 
         if (ring.size() < 3) {
@@ -213,6 +221,9 @@ public class PolygonTriangulator {
             Collections.reverse(scaledRing);
             if (uvRing != null) {
                 Collections.reverse(uvRing);
+            }
+            if (boundaryEdges != null) {
+                boundaryEdges = reverseEdgeFlags(boundaryEdges, ring.size());
             }
         }
 
@@ -248,22 +259,76 @@ public class PolygonTriangulator {
         // Add triangles — if original polygon was CW, swap winding to restore face direction.
         // The colored flag flows from the X3DMaterial extractor; see
         // TriangleMesh.isTriangleColored for how the GLB writer consumes it.
+        // The outline-edge mask is computed on the FINAL emitted vertex order
+        // (after the winding swap): outlineMask tests ring adjacency in both
+        // directions, so no bit permutation is needed for reversed polygons.
         boolean polyColored = polyColor != null;
+        int ringSize = ring.size();
         for (int[] tri : triangleIndices) {
-            if (reverseWinding) {
-                mesh.addTriangle(
-                        baseVertex + tri[0],
-                        baseVertex + tri[2],
-                        baseVertex + tri[1],
-                        featureId, polyTextureId, polyColored, surfaceType);
-            } else {
-                mesh.addTriangle(
-                        baseVertex + tri[0],
-                        baseVertex + tri[1],
-                        baseVertex + tri[2],
-                        featureId, polyTextureId, polyColored, surfaceType);
+            int a = tri[0];
+            int b = reverseWinding ? tri[2] : tri[1];
+            int c = reverseWinding ? tri[1] : tri[2];
+            byte outlineEdges = outlineMask(a, b, c, ringSize, boundaryEdges);
+            mesh.addTriangle(
+                    baseVertex + a,
+                    baseVertex + b,
+                    baseVertex + c,
+                    featureId, polyTextureId, polyColored, surfaceType, outlineEdges);
+        }
+    }
+
+    /**
+     * Reverse the per-edge boundary flags alongside a
+     * {@link Collections#reverse} of the ring vertices. Old edge
+     * {@code i -> i+1} becomes the edge leaving new position {@code n-2-i}
+     * (mod n), so {@code newFlag[j] = oldFlag[(n - 2 - j) mod n]} — the old
+     * closing edge {@code n-1 -> 0} stays at new index {@code n-1}.
+     */
+    private static BitSet reverseEdgeFlags(BitSet flags, int n) {
+        BitSet reversed = new BitSet(n);
+        for (int j = 0; j < n; j++) {
+            if (flags.get(((n - 2 - j) % n + n) % n)) {
+                reversed.set(j);
             }
         }
+        return reversed;
+    }
+
+    /**
+     * Outline-edge mask for the emitted triangle {@code (a, b, c)} (indices
+     * into the triangulated ring): a bit is set iff the edge connects two
+     * ring-adjacent vertices AND that ring edge is a polygon boundary edge
+     * (not a keyhole bridge). Triangulation diagonals connect non-adjacent
+     * ring vertices and stay unset. {@code boundaryEdges == null} means the
+     * hole-free case where every ring edge is a boundary edge.
+     */
+    private static byte outlineMask(int a, int b, int c, int n, BitSet boundaryEdges) {
+        byte mask = 0;
+        if (isBoundaryEdge(a, b, n, boundaryEdges)) {
+            mask |= TriangleMesh.OUTLINE_EDGE_01;
+        }
+        if (isBoundaryEdge(b, c, n, boundaryEdges)) {
+            mask |= TriangleMesh.OUTLINE_EDGE_12;
+        }
+        if (isBoundaryEdge(c, a, n, boundaryEdges)) {
+            mask |= TriangleMesh.OUTLINE_EDGE_20;
+        }
+        return mask;
+    }
+
+    /**
+     * Whether the undirected triangle edge {@code (a, b)} coincides with a
+     * boundary ring edge. Adjacency is tested in both ring directions so the
+     * result is independent of the triangle's final winding.
+     */
+    private static boolean isBoundaryEdge(int a, int b, int n, BitSet boundaryEdges) {
+        if ((a + 1) % n == b) {
+            return boundaryEdges == null || boundaryEdges.get(a);
+        }
+        if ((b + 1) % n == a) {
+            return boundaryEdges == null || boundaryEdges.get(b);
+        }
+        return false;
     }
 
     /**
