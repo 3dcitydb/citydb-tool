@@ -10,6 +10,8 @@ import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.store.PartitionedEntryStore;
 import org.citydb.vis.util.GeoTransform;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -33,9 +35,13 @@ import java.io.IOException;
  * {@link TreeBuildingStage} after its entries have been consumed.
  */
 public final class PartitioningStage implements Stage {
+    private final Logger logger = LoggerFactory.getLogger(PartitioningStage.class);
+
     @Override
     public void execute(PipelineContext ctx) throws VisExportException {
         int gridDim = computeGridDim(ctx.extent(), ctx.formatOptions().getGridEdgeLength());
+        logger.info("Partitioning {} spatial entries into a {}×{} grid...",
+                ctx.totalFeatures(), gridDim, gridDim);
 
         try {
             ctx.setPartitioned(PartitionedEntryStore.create(

@@ -10,6 +10,8 @@ import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.scene.CellAggregator;
 import org.citydb.vis.scene.SceneNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,10 +47,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * the resulting cell subtrees as-is.
  */
 public final class AggregationStage implements Stage {
+    private final Logger logger = LoggerFactory.getLogger(AggregationStage.class);
+
     @Override
     public void execute(PipelineContext ctx) throws VisExportException {
         List<SceneNode> allNodes = ctx.allNodes();
         SceneNode globalRoot = allNodes.get(0);
+        logger.info("Building spatial aggregation tree over {} grid cell(s)...",
+                globalRoot.getChildren().size());
 
         int firstSyntheticIndex = allNodes.size();
         AtomicInteger indexer = new AtomicInteger(firstSyntheticIndex);

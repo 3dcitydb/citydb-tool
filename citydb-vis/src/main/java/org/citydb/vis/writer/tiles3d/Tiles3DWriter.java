@@ -193,6 +193,7 @@ public class Tiles3DWriter extends VisWriter {
                 node -> writeNodeGlb(node, tilesDir, tilePaths, attrFields,
                         nodeAnchor.get(node.getIndex())));
 
+        logger.info("Writing sub-tileset files and root tileset.json...");
         try {
             // Write sub-tilesets (tree-based spatial split) starting at the
             // aggregation root; the writer recurses through the aggregation
