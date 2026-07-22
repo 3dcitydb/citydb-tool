@@ -12,7 +12,9 @@ import org.citydb.model.geometry.Polygon;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -152,6 +154,112 @@ class PolygonTriangulatorTest {
         assertEquals(10, mesh.getVertexCount());
         assertEquals(8, mesh.getTriangleCount());
         assertEquals(17.0, totalArea(mesh), 1e-4);
+    }
+
+    // ---- outline-edge mask (CESIUM_primitive_outline provenance) ----
+
+    /**
+     * Collect all outlined triangle edges as winding-independent position-pair
+     * keys, so assertions compare against ring geometry rather than vertex
+     * indices (which shift with bridging duplicates and winding reversal).
+     */
+    private static Set<String> outlinedEdgeKeys(TriangleMesh mesh) {
+        Set<String> keys = new HashSet<>();
+        List<double[]> pos = mesh.getPositions();
+        List<int[]> tris = mesh.getTriangles();
+        for (int t = 0; t < tris.size(); t++) {
+            int[] tri = tris.get(t);
+            byte mask = mesh.getTriangleOutlineEdges(t);
+            for (int e = 0; e < 3; e++) {
+                if ((mask & (1 << e)) != 0) {
+                    keys.add(edgeKey(pos.get(tri[e]), pos.get(tri[(e + 1) % 3])));
+                }
+            }
+        }
+        return keys;
+    }
+
+    private static String edgeKey(double[] p, double[] q) {
+        String a = p[0] + "," + p[1];
+        String b = q[0] + "," + q[1];
+        return a.compareTo(b) <= 0 ? a + "|" + b : b + "|" + a;
+    }
+
+    /** Position-pair keys of a closed ring given as (x,y) corners (no closing duplicate). */
+    private static Set<String> ringEdgeKeys(double[][] corners) {
+        Set<String> keys = new HashSet<>();
+        for (int i = 0; i < corners.length; i++) {
+            double[] p = corners[i];
+            double[] q = corners[(i + 1) % corners.length];
+            keys.add(edgeKey(new double[]{p[0], p[1]}, new double[]{q[0], q[1]}));
+        }
+        return keys;
+    }
+
+    @Test
+    void outlineMarksExactlyTheBoundaryEdges() {
+        double[][] corners = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+        Polygon poly = Polygon.of(ring(
+                corners[0], corners[1], corners[2], corners[3], corners[0]));
+
+        TriangleMesh mesh = triangulate(poly);
+
+        // Each quad triangle has two boundary edges plus the shared diagonal.
+        for (int t = 0; t < mesh.getTriangleCount(); t++) {
+            assertEquals(2, Integer.bitCount(mesh.getTriangleOutlineEdges(t) & 0x7),
+                    "triangle " + t + " must outline exactly its two boundary edges");
+        }
+        // The outlined edges are exactly the four square sides — no diagonal.
+        assertEquals(ringEdgeKeys(corners), outlinedEdgeKeys(mesh));
+    }
+
+    @Test
+    void outlineSurvivesWindingReversal() {
+        // Same square given clockwise: the triangulator reverses the ring
+        // before ear clipping and swaps the emitted winding back. The mask is
+        // computed on the final vertex order, so the outline must be identical.
+        double[][] corners = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+        Polygon poly = Polygon.of(ring(
+                corners[0], corners[1], corners[2], corners[3], corners[0]));
+
+        TriangleMesh mesh = triangulate(poly);
+
+        for (int t = 0; t < mesh.getTriangleCount(); t++) {
+            assertEquals(2, Integer.bitCount(mesh.getTriangleOutlineEdges(t) & 0x7));
+        }
+        assertEquals(ringEdgeKeys(corners), outlinedEdgeKeys(mesh));
+    }
+
+    @Test
+    void outlineSkipsKeyholeBridgesAndDiagonals() {
+        // Same geometry as bridgedHoleFallbackOutputIsStable: outer square
+        // with a centred hole, driving the keyhole-bridge + fallback path.
+        double[][] outerCorners = {{0, 0}, {4, 0}, {4, 4}, {0, 4}};
+        double[][] holeCorners = {{1, 1}, {2, 1}, {2, 2}, {1, 2}};
+        LinearRing outer = ring(
+                outerCorners[0], outerCorners[1], outerCorners[2], outerCorners[3],
+                outerCorners[0]);
+        LinearRing hole = ring(
+                holeCorners[0], holeCorners[1], holeCorners[2], holeCorners[3],
+                holeCorners[0]);
+
+        TriangleMesh mesh = triangulate(Polygon.of(outer, List.of(hole)));
+
+        Set<String> outlined = outlinedEdgeKeys(mesh);
+        Set<String> outerEdges = ringEdgeKeys(outerCorners);
+        Set<String> holeEdges = ringEdgeKeys(holeCorners);
+
+        // Every outlined edge lies on an original ring — never on a bridge
+        // (which connects a hole vertex to an outer vertex) or a diagonal.
+        for (String key : outlined) {
+            assertTrue(outerEdges.contains(key) || holeEdges.contains(key),
+                    "outlined edge " + key + " is not an original ring edge");
+        }
+        // Both rings contribute outline edges (the hole rim is outlined too).
+        assertTrue(outlined.stream().anyMatch(outerEdges::contains),
+                "no outer-ring edge outlined");
+        assertTrue(outlined.stream().anyMatch(holeEdges::contains),
+                "no hole edge outlined");
     }
 
     @Test

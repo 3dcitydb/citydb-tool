@@ -122,6 +122,8 @@ class MeshStore implements Closeable {
      *     int32 localNameLen + bytes localName  (UTF-8)
      *     int32 namespaceLen + bytes namespace  (UTF-8, may be empty)
      *   int16[tc] surfaceTypeIds (index into the per-mesh dictionary)
+     *   byte[tc]  outlineEdges   (boundary-edge mask: bit0 v0-&gt;v1, bit1 v1-&gt;v2,
+     *                             bit2 v2-&gt;v0; see TriangleMesh.OUTLINE_EDGE_*)
      * </pre>
      * The surface-type dictionary is per-mesh and tiny in practice (a few
      * distinct types per feature) so an int16 index is sufficient and keeps
@@ -176,7 +178,8 @@ class MeshStore implements Closeable {
                 + 1L + (hasCol ? (long) vc * 16 : 0)
                 + 4L + (long) tc * 12 + (long) tc * 8 + (long) tc * 4
                 + coloredBytes
-                + dictBytes + (long) tc * 2;
+                + dictBytes + (long) tc * 2
+                + (long) tc; // outlineEdges, one mask byte per triangle
         if (dataSizeLong > Integer.MAX_VALUE - 4) {
             throw new IllegalStateException("Mesh serialized size exceeds 2 GB: " + dataSizeLong);
         }
@@ -244,6 +247,9 @@ class MeshStore implements Closeable {
         }
         for (short id : surfaceTypeIds) {
             buf.putShort(id);
+        }
+        for (int i = 0; i < tc; i++) {
+            buf.put(mesh.getTriangleOutlineEdges(i));
         }
 
         buf.flip();
@@ -361,11 +367,14 @@ class MeshStore implements Closeable {
         for (int i = 0; i < tc; i++) {
             surfaceTypeIds[i] = buf.getShort();
         }
+        byte[] outlineEdges = new byte[tc];
+        buf.get(outlineEdges);
 
         for (int i = 0; i < tc; i++) {
             boolean isColored = colored != null && (colored[i >>> 3] & (1 << (i & 7))) != 0;
             mesh.addTriangle(triangles[i][0], triangles[i][1], triangles[i][2],
-                    featureIds[i], texIds[i], isColored, typeDict[surfaceTypeIds[i]]);
+                    featureIds[i], texIds[i], isColored, typeDict[surfaceTypeIds[i]],
+                    outlineEdges[i]);
         }
         return mesh;
     }

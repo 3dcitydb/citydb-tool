@@ -20,8 +20,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * the {@code TriangleData} struct-of-arrays refactor consolidated. Each test
  * exercises one of the three methods that used to re-implement the alignment by
  * hand ({@code merge}, {@code resolveTJunctions}, {@code removeDuplicateTriangles})
- * plus the basic add/accessor path, asserting that the five lanes
- * (vertices / featureId / textureId / colored / surfaceType) stay index-aligned.
+ * plus the basic add/accessor path, asserting that the six lanes
+ * (vertices / featureId / textureId / colored / surfaceType / outlineEdges)
+ * stay index-aligned.
  */
 class TriangleMeshTest {
 
@@ -164,6 +165,132 @@ class TriangleMeshTest {
         // Lanes remain the same length (alignment invariant).
         assertEquals(mesh.getTriangleCount(), mesh.getFeatureIds().size());
         assertEquals(mesh.getTriangleCount(), mesh.getTriangleTextureIds().size());
+    }
+
+    @Test
+    void outlineEdgeMaskDefaultsToZeroAndSurvivesMergeAndDedup() {
+        // The mask-less addTriangle overload must record an empty mask.
+        TriangleMesh plain = new TriangleMesh();
+        addTri(plain, 1L, -1, false, WALL);
+        assertEquals(0, plain.getTriangleOutlineEdges(0));
+
+        TriangleMesh a = new TriangleMesh();
+        int v0 = a.addVertex(0, 0, 0, 0, 0, 1);
+        int v1 = a.addVertex(1, 0, 0, 0, 0, 1);
+        int v2 = a.addVertex(0, 1, 0, 0, 0, 1);
+        a.addTriangle(v0, v1, v2, 100L, -1, false, ROOF, TriangleMesh.OUTLINE_ALL_EDGES);
+
+        TriangleMesh b = new TriangleMesh();
+        int w0 = b.addVertex(5, 5, 0, 0, 0, 1);
+        int w1 = b.addVertex(6, 5, 0, 0, 0, 1);
+        int w2 = b.addVertex(5, 6, 0, 0, 0, 1);
+        b.addTriangle(w0, w1, w2, 200L, -1, false, WALL, TriangleMesh.OUTLINE_EDGE_12);
+
+        a.merge(b);
+        assertEquals(TriangleMesh.OUTLINE_ALL_EDGES, a.getTriangleOutlineEdges(0));
+        assertEquals(TriangleMesh.OUTLINE_EDGE_12, a.getTriangleOutlineEdges(1));
+
+        // Dedup rebuild keeps the survivor's mask (first-wins across ALL lanes).
+        int v3 = a.addVertex(0, 0, 0, 0, 0, 1);
+        int v4 = a.addVertex(1, 0, 0, 0, 0, 1);
+        int v5 = a.addVertex(0, 1, 0, 0, 0, 1);
+        a.addTriangle(v3, v5, v4, 300L, -1, false, GROUND, TriangleMesh.OUTLINE_EDGE_01);
+        a.removeDuplicateTriangles();
+
+        assertEquals(2, a.getTriangleCount());
+        assertEquals(TriangleMesh.OUTLINE_ALL_EDGES, a.getTriangleOutlineEdges(0));
+        assertEquals(TriangleMesh.OUTLINE_EDGE_12, a.getTriangleOutlineEdges(1));
+    }
+
+    @Test
+    void resolveTJunctionRemapsOutlineEdgeMaskIntoChildren() {
+        // Parent triangle with ALL edges outlined; the T-junction splits the
+        // v0->v1 edge at (5,0). Expected inheritance: both halves of the split
+        // edge stay outlined, the internal edge newVi<->v2 introduced by the
+        // split does not, and the two untouched parent edges keep their bits.
+        TriangleMesh mesh = new TriangleMesh();
+        int a0 = mesh.addVertex(0, 0, 0, 0, 0, 1);
+        int a1 = mesh.addVertex(10, 0, 0, 0, 0, 1);
+        int a2 = mesh.addVertex(0, 10, 0, 0, 0, 1);
+        mesh.addTriangle(a0, a1, a2, 100L, -1, false, ROOF,
+                TriangleMesh.OUTLINE_ALL_EDGES);
+
+        // Junction vertex at the midpoint of a0-a1, owned by a second triangle
+        // whose own split-free mask must remain untouched.
+        int b0 = mesh.addVertex(5, 0, 0, 0, 0, 1);
+        int b1 = mesh.addVertex(5, -5, 0, 0, 0, 1);
+        int b2 = mesh.addVertex(6, -5, 0, 0, 0, 1);
+        mesh.addTriangle(b0, b1, b2, 200L, -1, false, WALL,
+                TriangleMesh.OUTLINE_EDGE_20);
+
+        mesh.resolveTJunctions(1.0, 1.0, 0.01);
+        assertEquals(3, mesh.getTriangleCount());
+
+        // Survivor B keeps its mask verbatim.
+        assertEquals(200L, mesh.getFeatureIds().get(0));
+        assertEquals(TriangleMesh.OUTLINE_EDGE_20, mesh.getTriangleOutlineEdges(0));
+
+        // Identify the children by which original corner they contain:
+        // child1 = (a0, newVi, a2) contains x=0 corners only;
+        // child2 = (newVi, a1, a2) contains the x=10 corner.
+        List<double[]> pos = mesh.getPositions();
+        for (int i = 1; i <= 2; i++) {
+            int[] tri = mesh.getTriangles().get(i);
+            boolean containsA1 = false;
+            for (int v : tri) {
+                containsA1 |= pos.get(v)[0] == 10.0;
+            }
+            if (containsA1) {
+                // child2 = (newVi, a1, a2): newVi->a1 is the outlined split
+                // half, a1->a2 the untouched parent edge, a2->newVi internal.
+                assertEquals(TriangleMesh.OUTLINE_EDGE_01 | TriangleMesh.OUTLINE_EDGE_12,
+                        mesh.getTriangleOutlineEdges(i), "child2 mask");
+            } else {
+                // child1 = (a0, newVi, a2): a0->newVi outlined split half,
+                // newVi->a2 internal, a2->a0 untouched parent edge.
+                assertEquals(TriangleMesh.OUTLINE_EDGE_01 | TriangleMesh.OUTLINE_EDGE_20,
+                        mesh.getTriangleOutlineEdges(i), "child1 mask");
+            }
+        }
+    }
+
+    @Test
+    void resolveTJunctionSplitOfUnoutlinedEdgeStaysUnoutlined() {
+        // Same split geometry, but the split edge v0->v1 itself is NOT
+        // outlined — neither half may gain a bit; the other two parent
+        // edges keep theirs.
+        TriangleMesh mesh = new TriangleMesh();
+        int a0 = mesh.addVertex(0, 0, 0, 0, 0, 1);
+        int a1 = mesh.addVertex(10, 0, 0, 0, 0, 1);
+        int a2 = mesh.addVertex(0, 10, 0, 0, 0, 1);
+        mesh.addTriangle(a0, a1, a2, 100L, -1, false, ROOF,
+                (byte) (TriangleMesh.OUTLINE_EDGE_12 | TriangleMesh.OUTLINE_EDGE_20));
+
+        int b0 = mesh.addVertex(5, 0, 0, 0, 0, 1);
+        int b1 = mesh.addVertex(5, -5, 0, 0, 0, 1);
+        int b2 = mesh.addVertex(6, -5, 0, 0, 0, 1);
+        mesh.addTriangle(b0, b1, b2, 200L, -1, false, WALL, (byte) 0);
+
+        mesh.resolveTJunctions(1.0, 1.0, 0.01);
+        assertEquals(3, mesh.getTriangleCount());
+
+        List<double[]> pos = mesh.getPositions();
+        for (int i = 1; i <= 2; i++) {
+            int[] tri = mesh.getTriangles().get(i);
+            boolean containsA1 = false;
+            for (int v : tri) {
+                containsA1 |= pos.get(v)[0] == 10.0;
+            }
+            if (containsA1) {
+                // child2 = (newVi, a1, a2): only a1->a2 (parent edge 1-2) set.
+                assertEquals(TriangleMesh.OUTLINE_EDGE_12,
+                        mesh.getTriangleOutlineEdges(i), "child2 mask");
+            } else {
+                // child1 = (a0, newVi, a2): only a2->a0 (parent edge 2-0) set.
+                assertEquals(TriangleMesh.OUTLINE_EDGE_20,
+                        mesh.getTriangleOutlineEdges(i), "child1 mask");
+            }
+        }
     }
 
     @Test

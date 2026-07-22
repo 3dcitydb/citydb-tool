@@ -73,7 +73,7 @@ class InstancedNodeEncoderTest {
         List<FeatureData> propFeatures = new ArrayList<>();
         List<InstancedNodeEncoder.InstancedNodeData> nodes = new InstancedNodeEncoder().build(
                 List.of(batch), List.of(atlas), new double[]{0, 0, 0},
-                ObjectStyleRegistry.empty(), false, propFeatures);
+                ObjectStyleRegistry.empty(), false, false, propFeatures);
 
         assertEquals(1, nodes.size(), "fully textured prototype must form a single style group");
         assertEquals(1, propFeatures.size(), "one property-table row per instance");
@@ -115,5 +115,56 @@ class InstancedNodeEncoderTest {
                 meshPrims.getJSONObject(1).getIntValue("material"),
                 "per-page primitives must not share a material");
         assertTrue(root.getJSONArray("extensionsRequired").contains("EXT_mesh_gpu_instancing"));
+    }
+
+    /**
+     * With outline emission enabled, an instanced prototype's primitives must
+     * carry the CESIUM_primitive_outline edge list built from the template
+     * mesh's outline masks — the outline is shared by all instances and
+     * transformed together with the triangles by the GPU.
+     */
+    @Test
+    void prototypeOutlineMasksReachInstancedPrimitives() {
+        TriangleMesh proto = new TriangleMesh();
+        int v0 = proto.addVertex(0, 0, 0, 0, 0, 1, 0f, 0f);
+        int v1 = proto.addVertex(1, 0, 0, 0, 0, 1, 1f, 0f);
+        int v2 = proto.addVertex(0, 1, 0, 0, 0, 1, 0f, 1f);
+        proto.addTriangle(v0, v1, v2, 0L, 0, false, TYPE, TriangleMesh.OUTLINE_ALL_EDGES);
+
+        InstancedFeature instance = new InstancedFeature(
+                new double[]{0, 0, 0}, new float[]{0, 0, 0, 1}, new float[]{1, 1, 1},
+                new float[]{1, 1, 1, 1},
+                new FeatureData(1L, "tree_1", "SolitaryVegetationObject", Map.of()));
+        InstanceBatch batch = new InstanceBatch(0, proto, 0.02f, List.of(instance));
+        InstancedAtlas atlas = new InstancedAtlas(List.of(new byte[]{1, 2, 3}), Map.of(0, 0));
+
+        List<FeatureData> propFeatures = new ArrayList<>();
+        List<InstancedNodeEncoder.InstancedNodeData> nodes = new InstancedNodeEncoder().build(
+                List.of(batch), List.of(atlas), new double[]{0, 0, 0},
+                ObjectStyleRegistry.empty(), false, true, propFeatures);
+        assertEquals(1, nodes.size());
+
+        BinBufferBuilder bin = new BinBufferBuilder();
+        List<GltfJsonBuilder.InstancedNode> instancedNodes =
+                InstancedNodeEncoder.writeBuffers(nodes, bin);
+        GltfJsonBuilder.Primitive prim = instancedNodes.get(0).primitives().get(0);
+        assertTrue(prim.bvOutlines() >= 0, "instanced primitive must carry an outline buffer");
+        assertEquals(6, prim.outlineCount(), "three masked edges -> six indices");
+
+        byte[] binData = bin.toByteArray();
+        byte[] jsonBytes = new GltfJsonBuilder()
+                .bufferViews(bin.getBufferViews(), binData.length)
+                .instancedNodes(instancedNodes)
+                .metadata(propFeatures.size(), List.of(), List.of())
+                .enableShading(false)
+                .build();
+        JSONObject root = JSON.parseObject(new String(jsonBytes, StandardCharsets.UTF_8));
+        assertTrue(root.getJSONArray("extensionsUsed").contains("CESIUM_primitive_outline"),
+                "outline on an instanced primitive must be declared in extensionsUsed");
+        JSONObject primitive = root.getJSONArray("meshes").getJSONObject(0)
+                .getJSONArray("primitives").getJSONObject(0);
+        assertTrue(primitive.getJSONObject("extensions")
+                        .containsKey("CESIUM_primitive_outline"),
+                "instanced primitive JSON must reference the outline accessor");
     }
 }
