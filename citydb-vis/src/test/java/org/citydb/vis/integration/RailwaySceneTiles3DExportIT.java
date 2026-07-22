@@ -43,7 +43,8 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
     @Test
     void exportsAllFeaturesToTileset(@TempDir Path tempDir) throws Exception {
         Tiles3DFormatOptions formatOptions = new Tiles3DFormatOptions()
-                .setImplicitGeometryInstancing(true);
+                .setImplicitGeometryInstancing(true)
+                .setEnableOutline(true);
         Path sceneDir = runExport(tempDir, new Tiles3DAdapter(), formatOptions, ".3dtiles");
 
         // The 3D Tiles writer writes the entry-point tileset.json at the scene
@@ -94,6 +95,14 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
             assertTrue(glbs.stream().anyMatch(RailwaySceneTiles3DExportIT::hasInstancingMarker),
                     "No .glb carries EXT_mesh_gpu_instancing although the scene contains " +
                             "implicit geometries — the instancing path fell back to baking.");
+
+            // With enableOutline set, every main-mesh tile carries
+            // polygon boundary edges, so at least one GLB must declare the
+            // CESIUM_primitive_outline extension.
+            assertTrue(glbs.stream().anyMatch(glb ->
+                            hasJsonMarker(glb, "CESIUM_primitive_outline")),
+                    "No .glb declares CESIUM_primitive_outline although outline " +
+                            "emission is enabled on the format options.");
 
             // Quality contract: no embedded image — node atlas page OR
             // instanced prototype atlas page — may exceed --max-atlas-size.
@@ -154,12 +163,17 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
                 | ((bytes[offset + 2] & 0xff) << 16) | ((bytes[offset + 3] & 0xff) << 24);
     }
 
-    /**
-     * Whether the GLB declares {@code EXT_mesh_gpu_instancing}. Reads only the
-     * JSON chunk (12-byte GLB header + 8-byte chunk header + chunk length),
-     * not the whole file — textured tiles carry multi-MB embedded atlases.
-     */
     private static boolean hasInstancingMarker(Path glb) {
+        return hasJsonMarker(glb, "EXT_mesh_gpu_instancing");
+    }
+
+    /**
+     * Whether the GLB's glTF JSON contains the given marker string. Reads only
+     * the JSON chunk (12-byte GLB header + 8-byte chunk header + chunk
+     * length), not the whole file — textured tiles carry multi-MB embedded
+     * atlases.
+     */
+    private static boolean hasJsonMarker(Path glb, String marker) {
         try (InputStream in = Files.newInputStream(glb);
              DataInputStream data = new DataInputStream(in)) {
             // readFully (not skipBytes, which may skip short) for the 12-byte
@@ -174,7 +188,7 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
             }
             byte[] json = new byte[jsonLength];
             data.readFully(json);
-            return new String(json, StandardCharsets.UTF_8).contains("EXT_mesh_gpu_instancing");
+            return new String(json, StandardCharsets.UTF_8).contains(marker);
         } catch (IOException e) {
             return false;
         }

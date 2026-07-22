@@ -50,8 +50,8 @@ final class InstancedNodeEncoder {
     // PrototypeRegistry.buildAtlases, and the other build inputs are
     // per-prototype constants by construction (weld tolerance frozen by
     // buildAtlases, atlas page bytes and texId→page map canonicalized by the
-    // writer's per-page JPEG cache, style registry and shading flag
-    // writer-lifetime). Concurrent: encoding runs on the parallel node
+    // writer's per-page JPEG cache, style registry and the shading/outline
+    // flags writer-lifetime). Concurrent: encoding runs on the parallel node
     // fan-out; populated via get/putIfAbsent so a heavyweight build never
     // runs under the map's bin lock — a racing duplicate build is idempotent
     // and the losers adopt the winner.
@@ -113,6 +113,7 @@ final class InstancedNodeEncoder {
             List<InstanceBatch> instanceBatches, List<InstancedAtlas> instanceAtlases,
             double[] cellCenter,
             ObjectStyleRegistry styleRegistry, boolean enableShading,
+            boolean enableOutline,
             List<FeatureData> propFeatures) {
         List<InstancedNodeData> out = new ArrayList<>();
         for (int b = 0; b < instanceBatches.size(); b++) {
@@ -120,7 +121,8 @@ final class InstancedNodeEncoder {
             InstancedAtlas atlas = instanceAtlases.get(b);
             BatchGeometry geometry = prototypeGeometryCache.get(batch.prototypeMesh());
             if (geometry == null) {
-                geometry = buildBatchGeometry(batch, atlas, styleRegistry, enableShading);
+                geometry = buildBatchGeometry(batch, atlas, styleRegistry, enableShading,
+                        enableOutline);
                 BatchGeometry existing =
                         prototypeGeometryCache.putIfAbsent(batch.prototypeMesh(), geometry);
                 if (existing != null) {
@@ -258,7 +260,8 @@ final class InstancedNodeEncoder {
     private static BatchGeometry buildBatchGeometry(InstanceBatch batch,
                                                     InstancedAtlas atlas,
                                                     ObjectStyleRegistry styleRegistry,
-                                                    boolean enableShading) {
+                                                    boolean enableShading,
+                                                    boolean enableOutline) {
         TriangleMesh proto = batch.prototypeMesh();
         VertexWelder.WeldResult weld = VertexWelder.weldAndFilter(proto, 0, 0, 0, true,
                 batch.weldTolerance());
@@ -279,6 +282,10 @@ final class InstancedNodeEncoder {
         List<RoutedTriangle> coloredTris = buckets.colored();
 
         CellFrame identity = CellFrame.identity();
+        // Prototype outline: the template mesh is triangulated by the same
+        // PolygonTriangulator as main meshes, so its boundary-edge masks are
+        // present. The edge list is shared by all instances — the GPU
+        // transforms edges together with the triangles.
         List<GlbPrimitiveBuilder.PrimitiveArrays> texturedPages = new ArrayList<>();
         List<byte[]> pageBytes = new ArrayList<>();
         for (int p = 0; p < pageCount; p++) {
@@ -288,17 +295,17 @@ final class InstancedNodeEncoder {
             }
             texturedPages.add(GlbPrimitiveBuilder.build(proto, weld, tris,
                     GltfJsonBuilder.INSTANCED_TEXTURED_PAGE, null, identity,
-                    enableShading, false));
+                    enableShading, false, enableOutline));
             pageBytes.add(atlas.pageBytes().get(p));
         }
         GlbPrimitiveBuilder.PrimitiveArrays plain = plainTris.isEmpty() ? null
                 : GlbPrimitiveBuilder.build(proto, weld, plainTris,
                         GlbPrimitiveBuilder.UNTEXTURED_PLAIN_PAGE, null, identity,
-                        enableShading, false);
+                        enableShading, false, enableOutline);
         GlbPrimitiveBuilder.PrimitiveArrays colored = coloredTris.isEmpty() ? null
                 : GlbPrimitiveBuilder.build(proto, weld, coloredTris,
                         GlbPrimitiveBuilder.UNTEXTURED_COLORED_PAGE, null, identity,
-                        enableShading, false);
+                        enableShading, false, enableOutline);
         return new BatchGeometry(texturedPages, pageBytes, plain, colored);
     }
 }

@@ -21,6 +21,12 @@ public class Tiles3DFormatOptions extends VisFormatOptions {
     // occurrence. Instances that cannot be expressed as prototype +
     // rotation·scale fall back to baking per instance regardless.
     private boolean implicitGeometryInstancing;
+    // CESIUM_primitive_outline: per-primitive edge lists marking original
+    // polygon boundary edges, drawn as outlines by CesiumJS. Default off —
+    // the extension is Cesium-specific (other clients ignore it, geometry
+    // still renders) and outline generation has load-time cost in the
+    // viewer; --enable-outline opts in.
+    private boolean enableOutline;
 
     public boolean isImplicitGeometryInstancing() {
         return implicitGeometryInstancing;
@@ -28,6 +34,15 @@ public class Tiles3DFormatOptions extends VisFormatOptions {
 
     public Tiles3DFormatOptions setImplicitGeometryInstancing(boolean implicitGeometryInstancing) {
         this.implicitGeometryInstancing = implicitGeometryInstancing;
+        return this;
+    }
+
+    public boolean isEnableOutline() {
+        return enableOutline;
+    }
+
+    public Tiles3DFormatOptions setEnableOutline(boolean enableOutline) {
+        this.enableOutline = enableOutline;
         return this;
     }
 }

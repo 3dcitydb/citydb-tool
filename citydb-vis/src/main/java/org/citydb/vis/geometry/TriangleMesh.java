@@ -20,16 +20,28 @@ import java.util.Set;
 public class TriangleMesh {
     private static final float[] WHITE_RGBA = {1f, 1f, 1f, 1f};
 
+    // Bits of the per-triangle outline-edge mask (see TriangleData#outlineEdges):
+    // one bit per directed triangle edge in emission order. A set bit marks the
+    // edge as part of the source polygon's ring boundary (outer or interior
+    // ring), i.e. an edge the CESIUM_primitive_outline extension should draw.
+    // Triangulation diagonals, keyhole-bridge edges and T-junction split edges
+    // stay unset.
+    public static final byte OUTLINE_EDGE_01 = 1;   // v0 -> v1
+    public static final byte OUTLINE_EDGE_12 = 2;   // v1 -> v2
+    public static final byte OUTLINE_EDGE_20 = 4;   // v2 -> v0
+    public static final byte OUTLINE_ALL_EDGES =
+            OUTLINE_EDGE_01 | OUTLINE_EDGE_12 | OUTLINE_EDGE_20;
+
     private final List<double[]> positions;
     private final List<float[]> normals;
     private final List<float[]> texCoords;
     private final List<float[]> colors;
     // Per-triangle attributes (vertex-index triple, featureId, atlas texture
-    // id, X3DMaterial-colored flag, source surface type), kept index-aligned
-    // with one another. The alignment invariant lives entirely inside
-    // TriangleData so the add/copy/rebuild paths in merge, removeDuplicate and
-    // the T-junction pass ({@link TJunctionResolver}) touch one object instead
-    // of five parallel collections.
+    // id, X3DMaterial-colored flag, source surface type, outline-edge mask),
+    // kept index-aligned with one another. The alignment invariant lives
+    // entirely inside TriangleData so the add/copy/rebuild paths in merge,
+    // removeDuplicate and the T-junction pass ({@link TJunctionResolver})
+    // touch one object instead of six parallel collections.
     private TriangleData triangleData;
     private boolean hasTexCoords;
     private boolean hasColors;
@@ -166,9 +178,28 @@ public class TriangleMesh {
         return index;
     }
 
+    /**
+     * Append a triangle with an empty outline-edge mask. Prefer the mask-taking
+     * overload on paths that know the edges' ring provenance
+     * ({@link PolygonTriangulator}); this variant exists for callers without
+     * outline knowledge where "no outlined edge" is the correct conservative
+     * default.
+     */
     public void addTriangle(int v0, int v1, int v2, long featureId, int textureId,
                             boolean colored, Name surfaceType) {
-        triangleData.add(new int[]{v0, v1, v2}, featureId, textureId, colored, surfaceType);
+        addTriangle(v0, v1, v2, featureId, textureId, colored, surfaceType, (byte) 0);
+    }
+
+    /**
+     * Append a triangle with a boundary-edge mask for outline rendering:
+     * a bitwise OR of {@link #OUTLINE_EDGE_01}, {@link #OUTLINE_EDGE_12},
+     * {@link #OUTLINE_EDGE_20} marking which edges lie on the source polygon's
+     * ring boundary.
+     */
+    public void addTriangle(int v0, int v1, int v2, long featureId, int textureId,
+                            boolean colored, Name surfaceType, byte outlineEdges) {
+        triangleData.add(new int[]{v0, v1, v2}, featureId, textureId, colored, surfaceType,
+                outlineEdges);
     }
 
     /**
@@ -183,6 +214,17 @@ public class TriangleMesh {
 
     public List<Integer> getTriangleTextureIds() {
         return Collections.unmodifiableList(triangleData.textureIds);
+    }
+
+    /**
+     * Outline-edge mask of the triangle at {@code triIndex} — a bitwise OR of
+     * {@link #OUTLINE_EDGE_01}/{@link #OUTLINE_EDGE_12}/{@link #OUTLINE_EDGE_20}
+     * marking which edges lie on the source polygon's ring boundary. {@code 0}
+     * when no edge is outlined (interior diagonals only, or the triangle came
+     * through a path without outline provenance).
+     */
+    public byte getTriangleOutlineEdges(int triIndex) {
+        return triangleData.outlineEdges(triIndex);
     }
 
     /**
@@ -233,9 +275,10 @@ public class TriangleMesh {
         }
 
         // Append other's triangles, shifting vertex indices by offset. Each
-        // triangle's attributes (featureId/textureId/colored/surfaceType) are
-        // copied in lockstep by TriangleData, so no per-attribute bookkeeping
-        // (including the manual BitSet shift) is needed here.
+        // triangle's attributes (featureId/textureId/colored/surfaceType/
+        // outlineEdges) are copied in lockstep by TriangleData, so no
+        // per-attribute bookkeeping (including the manual BitSet shift) is
+        // needed here.
         for (int i = 0; i < other.triangleData.size(); i++) {
             int[] tri = other.triangleData.vertices(i);
             triangleData.addCopy(
@@ -295,6 +338,12 @@ public class TriangleMesh {
      * Dedup is exact on {@code Double.doubleToLongBits} — downstream vertex
      * welding in the geometry encoder handles near-duplicates within 2 cm,
      * so upstream rounding would be both redundant and incorrect.
+     * <p>
+     * First-wins applies to ALL attribute lanes, including the outline-edge
+     * mask: when coincident triangles from two polygons carry different
+     * boundary-edge masks, the survivor keeps its own. A missed outline edge
+     * on such a duplicate is a sub-pixel cosmetic detail, not worth an
+     * OR-merge pass here.
      */
     public void removeDuplicateTriangles() {
         if (triangleData.size() <= 1) return;
@@ -409,12 +458,12 @@ public class TriangleMesh {
     /**
      * Struct-of-arrays holder for the per-triangle attribute lanes —
      * vertex-index triple, source featureId, atlas texture id, the
-     * X3DMaterial-colored flag, and the source surface feature type. All five
-     * lanes are kept index-aligned: every {@link #add}/{@link #addCopy}/
-     * {@link #addAll} appends to all of them together, so the alignment
-     * invariant that used to be re-implemented in {@link TriangleMesh#merge},
-     * {@link TriangleMesh#removeDuplicateTriangles} and the T-junction pass
-     * now lives in exactly one place.
+     * X3DMaterial-colored flag, the source surface feature type, and the
+     * outline-edge mask. All six lanes are kept index-aligned: every
+     * {@link #add}/{@link #addCopy}/{@link #addAll} appends to all of them
+     * together, so the alignment invariant that used to be re-implemented in
+     * {@link TriangleMesh#merge}, {@link TriangleMesh#removeDuplicateTriangles}
+     * and the T-junction pass now lives in exactly one place.
      *
      * <p>Struct-of-arrays (rather than a list of record objects) is
      * deliberate: the colored lane is a {@link BitSet} (one bit per triangle)
@@ -440,6 +489,10 @@ public class TriangleMesh {
         // surface). Drives per-feature-type styling on the 3D Tiles plain path.
         // Always non-null when filled in through the standard pipeline.
         private final List<Name> surfaceTypes = new ArrayList<>();
+        // Outline-edge mask, one byte per triangle (bits OUTLINE_EDGE_01/12/20).
+        // Marks edges on the source polygon's ring boundary for
+        // CESIUM_primitive_outline; 0 for paths without outline provenance.
+        private final List<Byte> outlineEdges = new ArrayList<>();
 
         int size() {
             return vertices.size();
@@ -469,9 +522,13 @@ public class TriangleMesh {
             return surfaceTypes.get(i);
         }
 
+        byte outlineEdges(int i) {
+            return outlineEdges.get(i);
+        }
+
         /** Append one triangle with explicit attributes. */
         void add(int[] tri, long featureId, int textureId, boolean isColored,
-                 Name surfaceType) {
+                 Name surfaceType, byte outlineEdgeMask) {
             if (isColored) {
                 colored.set(vertices.size());
             }
@@ -479,6 +536,7 @@ public class TriangleMesh {
             featureIds.add(featureId);
             textureIds.add(textureId);
             surfaceTypes.add(surfaceType);
+            outlineEdges.add(outlineEdgeMask);
         }
 
         /**
@@ -489,7 +547,8 @@ public class TriangleMesh {
          */
         void addCopy(int[] tri, TriangleData src, int srcIdx) {
             add(tri, src.featureIds.get(srcIdx), src.textureIds.get(srcIdx),
-                    src.colored.get(srcIdx), src.surfaceTypes.get(srcIdx));
+                    src.colored.get(srcIdx), src.surfaceTypes.get(srcIdx),
+                    src.outlineEdges.get(srcIdx));
         }
 
         /** Append every triangle of {@code other}, attributes included. */
