@@ -60,6 +60,8 @@ public final class MixedNodeSplitStage implements Stage {
 
         // Snapshot the original index set — we append new nodes during the loop.
         List<Integer> originals = new ArrayList<>(meshNodeIndices);
+        logger.info("Checking {} mesh node(s) for mixed textured/untextured content...",
+                originals.size());
         Set<Integer> updatedMeshIndices = new HashSet<>(meshNodeIndices);
         int nextIndex = allNodes.size();
         int splitCount = 0;

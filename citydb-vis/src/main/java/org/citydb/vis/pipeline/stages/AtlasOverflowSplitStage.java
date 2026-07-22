@@ -19,6 +19,7 @@ import org.citydb.vis.store.ShardedMeshStore;
 import org.citydb.vis.store.TextureStore;
 import org.citydb.vis.store.VisExportStores;
 import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.util.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,6 +138,9 @@ public final class AtlasOverflowSplitStage implements Stage {
         int maxAtlasSize = opts.getMaxAtlasSize();
 
         List<Integer> initialRoots = new ArrayList<>(meshNodeIndices);
+        logger.info("Evaluating atlas overflow for {} cell subtree(s)...", initialRoots.size());
+        ProgressLogger progress = new ProgressLogger(logger,
+                "Cell subtrees evaluated: {}/{}.", initialRoots.size());
 
         // Parallel worker pass: each cell-root subtree is processed end-to-end
         // by one worker. Workers only mutate their own cell-root subtree and
@@ -152,9 +156,11 @@ public final class AtlasOverflowSplitStage implements Stage {
             plans = pool.submit(() -> initialRoots.parallelStream()
                     .map(rootIdx -> {
                         try {
-                            return processCellTree(rootIdx, allNodes, nodeEntryStore,
+                            CellTreePlan plan = processCellTree(rootIdx, allNodes, nodeEntryStore,
                                     meshStore, textureStore, stores,
                                     textureScale, maxAtlasSize);
+                            progress.step();
+                            return plan;
                         } catch (IOException e) {
                             throw new UncheckedIOException(e);
                         }

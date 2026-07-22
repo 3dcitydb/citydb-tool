@@ -8,6 +8,9 @@ package org.citydb.vis.writer.i3s;
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.util.BufferUtils;
+import org.citydb.vis.util.ProgressLogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
@@ -52,6 +55,7 @@ import java.util.zip.ZipOutputStream;
  * @see <a href="https://github.com/Esri/i3s-spec">Esri I3S specification</a>
  */
 public final class SlpkPackager {
+    private static final Logger logger = LoggerFactory.getLogger(SlpkPackager.class);
     /** Size of a ZIP local file header (signature + fields), excluding filename & extra. */
     private static final int LOCAL_FILE_HEADER_SIZE = 30;
     /** Size of a single hash index record: 16 bytes MD5 + 8 bytes offset + 4 bytes size. */
@@ -97,9 +101,12 @@ public final class SlpkPackager {
                     metadata.getBytes(StandardCharsets.UTF_8), records, false);
 
             // All remapped entries
+            ProgressLogger progress = new ProgressLogger(logger,
+                    "SLPK: {}/{} resource(s) packaged.", entries.size());
             for (Entry e : entries) {
                 byte[] data = e.readAndEncode();
                 writeStoredEntry(zip, counting, e.archivePath(), data, records, true);
+                progress.step();
             }
 
             // Hash index must be the last entry
