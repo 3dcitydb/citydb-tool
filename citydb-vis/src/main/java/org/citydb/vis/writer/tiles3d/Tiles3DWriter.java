@@ -317,7 +317,8 @@ public class Tiles3DWriter extends VisWriter {
                     features, attrFields, prepared.instanceBatches(), instanceAtlases,
                     cellAnchor,
                     getFormatOptions().getStyleRegistry(),
-                    getFormatOptions().isEnableShading());
+                    getFormatOptions().isEnableShading(),
+                    formatOptions.isEnableOutline());
             if (glb == null) {
                 return false;
             }
