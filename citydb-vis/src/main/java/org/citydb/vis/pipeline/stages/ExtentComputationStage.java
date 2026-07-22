@@ -9,6 +9,8 @@ import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.pipeline.Stage;
 import org.citydb.vis.store.SpatialEntry;
 import org.citydb.vis.util.BoundingBoxUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 
@@ -19,8 +21,12 @@ import java.util.Iterator;
  * {@link PipelineContext#attrFields()}.
  */
 public final class ExtentComputationStage implements Stage {
+    private final Logger logger = LoggerFactory.getLogger(ExtentComputationStage.class);
+
     @Override
     public void execute(PipelineContext ctx) {
+        logger.info("Computing dataset extent from {} spatial entries...", ctx.totalFeatures());
+
         double[] extent = BoundingBoxUtils.emptyAabb();
         Iterator<SpatialEntry> it = ctx.stores().getSpatialEntryStore().iterator();
         while (it.hasNext()) {
