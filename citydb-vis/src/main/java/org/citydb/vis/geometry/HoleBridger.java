@@ -10,6 +10,7 @@ import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.LinearRing;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,9 +35,14 @@ final class HoleBridger {
     /**
      * The merged ring in all three parallel representations; {@code uvs} is
      * {@code null} when the polygon carries no texture coordinates.
+     * {@code boundaryEdges} marks which merged-ring edges are original polygon
+     * boundary edges: bit {@code i} covers the edge from vertex {@code i} to
+     * vertex {@code (i + 1) % n}. Outer-ring and hole edges are set, the two
+     * keyhole-bridge edges inserted per hole are clear — downstream outline
+     * emission ({@code CESIUM_primitive_outline}) must not draw bridges.
      */
     record BridgedRing(List<double[]> positions, List<double[]> scaledPositions,
-                       List<float[]> uvs) {
+                       List<float[]> uvs, BitSet boundaryEdges) {
     }
 
     static BridgedRing bridge(
@@ -46,6 +52,11 @@ final class HoleBridger {
         List<double[]> result = new ArrayList<>(outerRing);
         List<double[]> resultScaled = new ArrayList<>(outerScaled);
         List<float[]> uvResult = outerUVs != null ? new ArrayList<>(outerUVs) : null;
+        // Every outer-ring edge is a polygon boundary edge; bridges inserted
+        // below clear their bits. Maintained in lockstep with `result` across
+        // hole iterations (flag i covers edge i -> (i + 1) % size).
+        BitSet boundaryEdges = new BitSet(result.size());
+        boundaryEdges.set(0, result.size());
 
         // Outer winding sign in the projection plane — used to ensure each
         // hole is wound opposite. Without this, GML data that stores both
@@ -125,11 +136,18 @@ final class HoleBridger {
             List<double[]> mergedScaled = new ArrayList<>(resultScaled.size() + holeScaled.size() + 2);
             List<float[]> mergedUV = uvResult != null
                     ? new ArrayList<>(result.size() + holePoints.size() + 2) : null;
+            // Boundary flags are appended in vertex order: the flag written
+            // when vertex p is appended covers the merged-ring edge p -> p+1.
+            BitSet mergedFlags = new BitSet(result.size() + holePoints.size() + 2);
+            int flagPos = 0;
 
             for (int i = 0; i <= outerIdx; i++) {
                 merged.add(result.get(i));
                 mergedScaled.add(resultScaled.get(i));
                 if (mergedUV != null) mergedUV.add(uvResult.get(i));
+                // The edge leaving outerIdx is the outgoing bridge to the
+                // hole's entry vertex — never a boundary edge.
+                mergedFlags.set(flagPos++, i < outerIdx && boundaryEdges.get(i));
             }
             for (int i = 0; i < holePoints.size(); i++) {
                 int idx = (holeIdx + i) % holePoints.size();
@@ -138,6 +156,10 @@ final class HoleBridger {
                 if (mergedUV != null) {
                     mergedUV.add(holeUVs != null ? holeUVs.get(idx) : new float[]{0f, 0f});
                 }
+                // All hole edges are boundary edges, including the last listed
+                // vertex's edge to the duplicated entry vertex (the hole's
+                // closing edge holeIdx-1 -> holeIdx).
+                mergedFlags.set(flagPos++);
             }
             // Close the hole bridge
             merged.add(holePoints.get(holeIdx));
@@ -145,22 +167,30 @@ final class HoleBridger {
             if (mergedUV != null) {
                 mergedUV.add(holeUVs != null ? holeUVs.get(holeIdx) : new float[]{0f, 0f});
             }
+            // Returning bridge from the hole entry duplicate back to the outer
+            // ring — not a boundary edge.
+            mergedFlags.set(flagPos++, false);
             merged.add(result.get(outerIdx));
             mergedScaled.add(resultScaled.get(outerIdx));
             if (mergedUV != null) mergedUV.add(uvResult.get(outerIdx));
+            // The duplicated outer vertex takes over the original outer edge
+            // outerIdx -> outerIdx+1 (which the outgoing bridge displaced).
+            mergedFlags.set(flagPos++, boundaryEdges.get(outerIdx));
 
             for (int i = outerIdx + 1; i < result.size(); i++) {
                 merged.add(result.get(i));
                 mergedScaled.add(resultScaled.get(i));
                 if (mergedUV != null) mergedUV.add(uvResult.get(i));
+                mergedFlags.set(flagPos++, boundaryEdges.get(i));
             }
 
             result = merged;
             resultScaled = mergedScaled;
             uvResult = mergedUV;
+            boundaryEdges = mergedFlags;
         }
 
-        return new BridgedRing(result, resultScaled, uvResult);
+        return new BridgedRing(result, resultScaled, uvResult, boundaryEdges);
     }
 
     /**
