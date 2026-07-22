@@ -115,7 +115,8 @@ public class GlbEncoder {
                          List<InstancedAtlas> instanceAtlases,
                          double[] cellCenter,
                          ObjectStyleRegistry styleRegistry,
-                         boolean enableShading) throws IOException {
+                         boolean enableShading,
+                         boolean enableOutline) throws IOException {
         TriangleMesh mesh = node.getMesh();
         boolean hasInstances = !instanceBatches.isEmpty();
         boolean hasTexture = mesh.hasTexCoords() && !atlasBytesList.isEmpty();
@@ -139,7 +140,7 @@ public class GlbEncoder {
         int featureCount = 0;
         if (!weld.isEmpty()) {
             primitives = buildMainPrimitives(mesh, weld, texIdToPage, pageCount,
-                    hasTexture, frame, styleRegistry, enableShading);
+                    hasTexture, frame, styleRegistry, enableShading, enableOutline);
             featureCount = weld.faceRanges().size();
         }
         node.setMesh(null); // release source mesh; no longer needed
@@ -154,7 +155,8 @@ public class GlbEncoder {
         if (hasInstances) {
             propFeatures = new ArrayList<>(propFeatures);
             instancedNodes = instancedNodeEncoder.build(instanceBatches, instanceAtlases,
-                    cellCenter, styleRegistry, enableShading, propFeatures);
+                    cellCenter, styleRegistry, enableShading, enableOutline,
+                    propFeatures);
             if (primitives.isEmpty() && instancedNodes.isEmpty()) {
                 return null;
             }
@@ -215,7 +217,8 @@ public class GlbEncoder {
     private static List<GlbPrimitiveBuilder.PrimitiveArrays> buildMainPrimitives(
             TriangleMesh mesh, VertexWelder.WeldResult weld,
             Map<Integer, Integer> texIdToPage, int pageCount, boolean hasTexture,
-            CellFrame frame, ObjectStyleRegistry styleRegistry, boolean enableShading) {
+            CellFrame frame, ObjectStyleRegistry styleRegistry, boolean enableShading,
+            boolean enableOutline) {
         List<RoutedTriangle> routed = TriangleRouter.route(mesh, weld, styleRegistry);
         TriangleRouter.PageBuckets buckets = TriangleRouter.bucketByPage(routed, pageCount,
                 hasTexture ? texIdToPage : null);
@@ -240,20 +243,20 @@ public class GlbEncoder {
             List<RoutedTriangle> tris = buckets.texturedByPage().get(p);
             if (!tris.isEmpty()) {
                 primitives.add(GlbPrimitiveBuilder.build(mesh, weld, tris, p, null, frame,
-                        enableShading, true));
+                        enableShading, true, enableOutline));
             }
         }
         for (Map.Entry<DefaultObjectStyle, List<RoutedTriangle>> e : untexturedPlainTrisByStyle.entrySet()) {
             if (!e.getValue().isEmpty()) {
                 primitives.add(GlbPrimitiveBuilder.build(mesh, weld, e.getValue(),
                         GlbPrimitiveBuilder.UNTEXTURED_PLAIN_PAGE, e.getKey(), frame,
-                        enableShading, true));
+                        enableShading, true, enableOutline));
             }
         }
         if (!untexturedColoredTris.isEmpty()) {
             primitives.add(GlbPrimitiveBuilder.build(mesh, weld, untexturedColoredTris,
                     GlbPrimitiveBuilder.UNTEXTURED_COLORED_PAGE, null, frame,
-                    enableShading, true));
+                    enableShading, true, enableOutline));
         }
         return primitives;
     }

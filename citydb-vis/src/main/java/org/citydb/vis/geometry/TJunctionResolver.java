@@ -223,7 +223,9 @@ final class TJunctionResolver {
         // Sub-triangles produced by the splits. Each inherits its parent
         // triangle's attributes (featureId/textureId/colored/surfaceType)
         // — a single split never crosses a surface boundary — which
-        // TriangleData.add carries across in lockstep.
+        // TriangleData.add carries across in lockstep. The outline-edge mask
+        // is the exception: it is per-edge, so the split remaps it explicitly
+        // below instead of copying it wholesale.
         TriangleMesh.TriangleData splitChildren = new TriangleMesh.TriangleData();
 
         for (Split split : splits) {
@@ -231,23 +233,44 @@ final class TJunctionResolver {
             if (removed.get(ti)) continue;
 
             int[] tri = data.vertices(ti);
-            int ei1 = tri[split.edgeSlot()];
-            int ei2 = tri[(split.edgeSlot() + 1) % 3];
-            int ei3 = tri[(split.edgeSlot() + 2) % 3];
+            int e = split.edgeSlot();
+            int ei1 = tri[e];
+            int ei2 = tri[(e + 1) % 3];
+            int ei3 = tri[(e + 2) % 3];
             long fid = data.featureId(ti);
             int texId = data.textureId(ti);
             boolean colored = data.isColored(ti);
             Name surfaceType = data.surfaceType(ti);
 
+            // Outline-edge inheritance: rotate the parent's mask into the
+            // split edge's frame — bitA is the split edge itself (slot e),
+            // bitB the following edge ei2->ei3, bitC the preceding ei3->ei1.
+            // Both halves of the split edge keep bitA; the internal edge
+            // newVi<->ei3 introduced by the split is never a boundary edge.
+            byte outline = data.outlineEdges(ti);
+            boolean bitA = (outline & (1 << e)) != 0;
+            boolean bitB = (outline & (1 << ((e + 1) % 3))) != 0;
+            boolean bitC = (outline & (1 << ((e + 2) % 3))) != 0;
+            // child1 = (ei1, newVi, ei3): edges ei1->newVi (bitA),
+            // newVi->ei3 (internal), ei3->ei1 (bitC).
+            byte child1Outline = (byte) ((bitA ? TriangleMesh.OUTLINE_EDGE_01 : 0)
+                    | (bitC ? TriangleMesh.OUTLINE_EDGE_20 : 0));
+            // child2 = (newVi, ei2, ei3): edges newVi->ei2 (bitA),
+            // ei2->ei3 (bitB), ei3->newVi (internal).
+            byte child2Outline = (byte) ((bitA ? TriangleMesh.OUTLINE_EDGE_01 : 0)
+                    | (bitB ? TriangleMesh.OUTLINE_EDGE_12 : 0));
+
             int newVi = insertSplitVertex(split.vertex(), ei1, ei2, (float) split.t());
 
             removed.set(ti);
-            splitChildren.add(new int[]{ei1, newVi, ei3}, fid, texId, colored, surfaceType);
-            splitChildren.add(new int[]{newVi, ei2, ei3}, fid, texId, colored, surfaceType);
+            splitChildren.add(new int[]{ei1, newVi, ei3}, fid, texId, colored, surfaceType,
+                    child1Outline);
+            splitChildren.add(new int[]{newVi, ei2, ei3}, fid, texId, colored, surfaceType,
+                    child2Outline);
         }
 
         // Rebuild: surviving triangles in original order, then the split
-        // children. TriangleData keeps all five attribute lanes aligned,
+        // children. TriangleData keeps all six attribute lanes aligned,
         // so this is a copy of the kept indices plus an append of the
         // children — no manual per-lane re-synchronisation.
         TriangleMesh.TriangleData rebuilt = new TriangleMesh.TriangleData();
