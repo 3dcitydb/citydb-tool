@@ -32,6 +32,15 @@ public class Tiles3DExportCommand extends VisExportController<Tiles3DFormatOptio
                     "the two glTF extensions.")
     private boolean implicitGeometryInstancing;
 
+    @CommandLine.Option(names = "--enable-outline",
+            description = "Emit polygon boundary edges as outlines (glTF " +
+                    "CESIUM_primitive_outline): CesiumJS draws the original polygon " +
+                    "edges of each surface as lines on top of the geometry. The " +
+                    "extension is Cesium-specific — other clients ignore it and render " +
+                    "the geometry unchanged. Adds one edge-index buffer per primitive " +
+                    "and increases viewer load time; omitted by default.")
+    private boolean enableOutline;
+
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(Tiles3DAdapter.class);
@@ -51,6 +60,9 @@ public class Tiles3DExportCommand extends VisExportController<Tiles3DFormatOptio
     protected void applyAdditionalFormatOptions(Tiles3DFormatOptions options) {
         if (Command.hasMatchedOption("--implicit-geometry-instancing", commandSpec)) {
             options.setImplicitGeometryInstancing(implicitGeometryInstancing);
+        }
+        if (Command.hasMatchedOption("--enable-outline", commandSpec)) {
+            options.setEnableOutline(enableOutline);
         }
     }
 }
