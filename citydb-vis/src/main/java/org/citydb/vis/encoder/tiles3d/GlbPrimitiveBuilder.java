@@ -147,7 +147,7 @@ final class GlbPrimitiveBuilder {
                 int srcIdx = tri[j];
                 float east = wp[0] * (float) frame.scaleX() + frame.offsetX();
                 float north = wp[1] * (float) frame.scaleY() + frame.offsetY();
-                float up = wp[2] + frame.offsetZ();
+                float up = wp[2] * (float) frame.scaleZ() + frame.offsetZ();
                 positions[idx * 3] = east;
                 positions[idx * 3 + 1] = up;
                 positions[idx * 3 + 2] = -north;

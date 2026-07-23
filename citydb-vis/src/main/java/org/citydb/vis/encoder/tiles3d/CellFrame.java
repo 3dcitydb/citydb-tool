@@ -17,7 +17,7 @@ import org.citydb.vis.util.GeoTransform;
  * cell extent) and the tangent plane is re-established at every cell, so
  * Earth curvature no longer lifts far-from-center cells off the ground.
  */
-record CellFrame(double scaleX, double scaleY,
+record CellFrame(double scaleX, double scaleY, double scaleZ,
                  float offsetX, float offsetY, float offsetZ) {
     /**
      * Identity frame for instanced prototype meshes: their welded
@@ -26,7 +26,23 @@ record CellFrame(double scaleX, double scaleY,
      * placement happens per instance via the TRS attributes.
      */
     static CellFrame identity() {
-        return new CellFrame(1.0, 1.0, 0f, 0f, 0f);
+        return scaled(1.0);
+    }
+
+    /**
+     * Uniform-scale frame for instanced prototype meshes, used to bake the
+     * prototype's normalization scale into the encoded vertex positions:
+     * CesiumJS computes an instanced model's culling bounds from the
+     * prototype's POSITION extents expanded by the instance TRANSLATION
+     * range only — instance SCALE is ignored, so a scaled-up template
+     * yields a bounding sphere too small by that factor and the model is
+     * frustum-culled (or near-plane-clipped) when the camera comes close.
+     * Encoding the prototype at world size (and dividing each instance's
+     * SCALE accordingly) is placement-equivalent and keeps those bounds
+     * correct.
+     */
+    static CellFrame scaled(double scale) {
+        return new CellFrame(scale, scale, scale, 0f, 0f, 0f);
     }
 
     static CellFrame from(BoundingVolume mbs, double[] cellCenter) {
@@ -35,6 +51,6 @@ record CellFrame(double scaleX, double scaleY,
         float offsetX = (float) ((mbs.getCenterX() - cellCenter[0]) * scaleX);
         float offsetY = (float) ((mbs.getCenterY() - cellCenter[1]) * scaleY);
         float offsetZ = (float) (mbs.getCenterZ() - cellCenter[2]);
-        return new CellFrame(scaleX, scaleY, offsetX, offsetY, offsetZ);
+        return new CellFrame(scaleX, scaleY, 1.0, offsetX, offsetY, offsetZ);
     }
 }
