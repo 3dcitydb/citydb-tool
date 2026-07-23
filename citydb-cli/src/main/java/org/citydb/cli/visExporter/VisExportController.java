@@ -111,9 +111,11 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
      * Hook for subclasses to apply format-specific CLI options that go beyond
      * the shared {@link SceneOptions}. Invoked by {@link #getFormatOptions}
      * after the shared scene options have been applied, so values set here
-     * take precedence over both the config and the scene options.
+     * take precedence over both the config and the scene options. This is
+     * also the place to validate the merged result of such options: unlike
+     * {@link #preprocess}, it sees config-supplied values.
      */
-    protected void applyAdditionalFormatOptions(T options) {
+    protected void applyAdditionalFormatOptions(T options) throws ExecutionException {
     }
 
     /**
