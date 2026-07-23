@@ -227,6 +227,32 @@ public class TriangleMesh {
         return triangleData.outlineEdges(triIndex);
     }
 
+    // Package-private write access for OutlineEdgeMerger.
+    void setTriangleOutlineEdges(int triIndex, byte outlineEdges) {
+        triangleData.setOutlineEdges(triIndex, outlineEdges);
+    }
+
+    /**
+     * Clear outline-edge bits on edges shared by exactly two coplanar
+     * triangles of the same source surface type — the edges that merely
+     * subdivide a flat surface (TIN walls, panelized facades) and would
+     * otherwise render as a wireframe over it. Coplanar boundaries between
+     * different surface types (a door abutting its wall) keep their outline.
+     * {@code scaleX}/{@code scaleY} convert X/Y units to meters for the
+     * coplanarity test — same semantics as {@link #resolveTJunctions}; on
+     * raw degree coordinates every steep surface degenerates to a
+     * near-vertical sheet and a gable roof's ridge would merge away.
+     * {@code maxAngleDegrees} widens the coplanarity test beyond the strict
+     * float-noise floor: 0 merges exactly-coplanar subdivisions only
+     * (CAD-authored data), a positive angle also merges surveyed facets
+     * whose dihedral noise is continuous. Call after
+     * {@link #resolveTJunctions} and {@link #removeDuplicateTriangles};
+     * the algorithm lives in {@link OutlineEdgeMerger}.
+     */
+    public void mergeCoplanarOutlineEdges(double scaleX, double scaleY, double maxAngleDegrees) {
+        OutlineEdgeMerger.merge(this, scaleX, scaleY, maxAngleDegrees);
+    }
+
     /**
      * Whether the triangle at the given index came from an X3DMaterial-colored
      * polygon. Always {@code false} when {@link #hasColors()} is {@code false}.
@@ -524,6 +550,10 @@ public class TriangleMesh {
 
         byte outlineEdges(int i) {
             return outlineEdges.get(i);
+        }
+
+        void setOutlineEdges(int i, byte mask) {
+            outlineEdges.set(i, mask);
         }
 
         /** Append one triangle with explicit attributes. */
