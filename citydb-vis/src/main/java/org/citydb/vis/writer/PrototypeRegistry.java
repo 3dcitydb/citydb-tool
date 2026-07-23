@@ -182,10 +182,13 @@ public class PrototypeRegistry {
 
     /**
      * Finalize the registered prototypes: freeze the scale-dependent weld
-     * tolerance and normalization scale, run the deferred T-junction pass,
-     * and build the per-prototype texture atlases. Prototypes without a
-     * recorded instance scale (every instance fell back to baking) are
-     * skipped — their meshes are never encoded. Must run on the close thread
+     * tolerance and normalization scale, run the deferred T-junction pass
+     * (followed by the coplanar outline-edge merge when
+     * {@code mergeCoplanarOutlineAngle} is non-null — the same post-build pass the
+     * baked path applies in {@code FeatureProcessor}), and build the
+     * per-prototype texture atlases. Prototypes without a recorded instance
+     * scale (every instance fell back to baking) are skipped — their meshes
+     * are never encoded. Must run on the close thread
      * after the write phase (texture BLOBs are batch-written by the DB
      * exporter and may not exist on disk earlier — see {@link TextureStore};
      * the largest per-instance scale is only known once every instance has
@@ -215,7 +218,7 @@ public class PrototypeRegistry {
      * load) is downgraded to untextured, mirroring the node-atlas fallback in
      * {@code NodeAssembler}.
      */
-    public void finalizePrototypes(VisFormatOptions formatOptions) {
+    public void finalizePrototypes(VisFormatOptions formatOptions, Double mergeCoplanarOutlineAngle) {
         for (Prototype prototype : byId.values()) {
             Double recordedScale = maxInstanceScaleById.get(prototype.id());
             if (recordedScale == null) {
@@ -235,6 +238,10 @@ public class PrototypeRegistry {
             mesh.resolveTJunctions(1.0, 1.0,
                     GeometryMeshBuilder.T_JUNCTION_TOLERANCE_METERS / maxScale);
             mesh.removeDuplicateTriangles();
+            if (mergeCoplanarOutlineAngle != null) {
+                // Identity scales: template meshes are local Cartesian.
+                mesh.mergeCoplanarOutlineEdges(1.0, 1.0, mergeCoplanarOutlineAngle);
+            }
             Set<Integer> texIds = new LinkedHashSet<>();
             for (int texId : mesh.getTriangleTextureIds()) {
                 if (texId >= 0) {
