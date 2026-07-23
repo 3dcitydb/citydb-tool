@@ -29,6 +29,7 @@ import org.citydb.vis.util.GeoTransform;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Triangulates a feature's geometry, optionally clamps it to ground, computes
@@ -44,15 +45,23 @@ public final class FeatureProcessor {
     // terrain height baked into each feature. Must be thread-safe (this
     // processor runs once per feature on the writer's async pool).
     private final TerrainElevationProvider terrainProvider;
+    // Writer hook for --outline-merge-coplanar (null = off, else the maximum
+    // dihedral angle in degrees), evaluated per process() call: a supplier
+    // rather than the resolved value because this processor is built in the
+    // VisWriter constructor, before the writer subclass that overrides the
+    // hook is fully constructed.
+    private final Supplier<Double> mergeCoplanarOutlineAngle;
 
     public FeatureProcessor(VisExportStores stores,
                             VisFormatOptions formatOptions,
                             AttributeEncoder attributeEncoder,
-                            TerrainElevationProvider terrainProvider) {
+                            TerrainElevationProvider terrainProvider,
+                            Supplier<Double> mergeCoplanarOutlineAngle) {
         this.stores = stores;
         this.formatOptions = formatOptions;
         this.attributeEncoder = attributeEncoder;
         this.terrainProvider = terrainProvider;
+        this.mergeCoplanarOutlineAngle = mergeCoplanarOutlineAngle;
     }
 
     /**
@@ -83,6 +92,15 @@ public final class FeatureProcessor {
                 ringAttributes);
         if (mesh.isEmpty()) {
             return;
+        }
+        Double mergeMaxAngle = mergeCoplanarOutlineAngle.get();
+        if (mergeMaxAngle != null) {
+            // After build (T-junctions resolved, duplicates removed) so edge
+            // matching runs on the final geometry; degree-to-meter scales as
+            // in the T-junction pass — coplanarity must be tested in meters.
+            double[] center = mesh.computeCenter();
+            mesh.mergeCoplanarOutlineEdges(GeoTransform.metersPerDegreeLon(center[1]),
+                    GeoTransform.WGS84_METERS_PER_DEGREE_LAT, mergeMaxAngle);
         }
 
         ClampMode clampMode = formatOptions.getClampMode();

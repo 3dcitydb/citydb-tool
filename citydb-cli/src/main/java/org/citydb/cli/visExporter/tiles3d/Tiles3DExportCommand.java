@@ -41,6 +41,33 @@ public class Tiles3DExportCommand extends VisExportController<Tiles3DFormatOptio
                     "and increases viewer load time; omitted by default.")
     private boolean enableOutline;
 
+    @CommandLine.Option(names = "--outline-merge-coplanar", arity = "0..1",
+            fallbackValue = "0", paramLabel = "<degrees>",
+            description = "Suppress outlines on edges shared by two coplanar surfaces " +
+                    "of the same feature and surface type: source data that subdivides " +
+                    "one plane into many polygons (triangle meshes, panelized walls) " +
+                    "otherwise renders as a wireframe over the surface. Without a " +
+                    "value, only exactly coplanar surfaces merge (CAD-authored " +
+                    "subdivisions); pass a maximum dihedral angle in degrees to also " +
+                    "merge surveyed facets whose planes carry angular noise (e.g. 5). " +
+                    "Boundaries between different surface types (a door in its wall) " +
+                    "and folds above the angle (roof ridges, facade kinks) keep their " +
+                    "outline. Only takes effect together with --enable-outline.")
+    private Double outlineMergeCoplanar;
+
+    @Override
+    public void preprocess(CommandLine commandLine) throws Exception {
+        if (outlineMergeCoplanar != null
+                && !(outlineMergeCoplanar >= 0 && outlineMergeCoplanar < 90)) {
+            // The negated range check also rejects NaN, which every plain
+            // comparison reports as false.
+            throw new CommandLine.ParameterException(commandLine,
+                    "Error: --outline-merge-coplanar must be an angle between 0 (inclusive) " +
+                            "and 90 degrees (exclusive) but was '" + outlineMergeCoplanar + "'");
+        }
+        super.preprocess(commandLine);
+    }
+
     @Override
     protected IOAdapter getIOAdapter(IOAdapterManager ioManager) {
         return ioManager.getAdapter(Tiles3DAdapter.class);
@@ -57,12 +84,25 @@ public class Tiles3DExportCommand extends VisExportController<Tiles3DFormatOptio
     }
 
     @Override
-    protected void applyAdditionalFormatOptions(Tiles3DFormatOptions options) {
+    protected void applyAdditionalFormatOptions(Tiles3DFormatOptions options)
+            throws ExecutionException {
         if (Command.hasMatchedOption("--implicit-geometry-instancing", commandSpec)) {
             options.setImplicitGeometryInstancing(implicitGeometryInstancing);
         }
         if (Command.hasMatchedOption("--enable-outline", commandSpec)) {
             options.setEnableOutline(enableOutline);
+        }
+        if (Command.hasMatchedOption("--outline-merge-coplanar", commandSpec)) {
+            options.setOutlineMergeCoplanar(outlineMergeCoplanar);
+        }
+
+        // Validate the merged value: unlike the preprocess() check, this also
+        // catches an out-of-range angle supplied through the config file.
+        Double mergeAngle = options.getOutlineMergeCoplanar();
+        if (mergeAngle != null && !(mergeAngle >= 0 && mergeAngle < 90)) {
+            throw new ExecutionException("Error: the coplanar outline merge angle must be " +
+                    "between 0 (inclusive) and 90 degrees (exclusive) but was '" + mergeAngle +
+                    "' (--outline-merge-coplanar or the 3DTiles config).");
         }
     }
 }
