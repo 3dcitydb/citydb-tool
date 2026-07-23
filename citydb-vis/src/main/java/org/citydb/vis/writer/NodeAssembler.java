@@ -253,7 +253,8 @@ public final class NodeAssembler {
                         + group.getKey() + " (" + group.getValue().size() + " instance(s)).");
             }
             batches.add(new InstanceBatch(prototype.id(), prototype.mesh(),
-                    prototypeRegistry.weldTolerance(prototype.id()), group.getValue()));
+                    prototypeRegistry.weldTolerance(prototype.id()),
+                    prototypeRegistry.normalizationScale(prototype.id()), group.getValue()));
         }
         return batches;
     }
