@@ -62,7 +62,7 @@ class InstancedNodeEncoderTest {
                 new double[]{0, 0, 0}, new float[]{0, 0, 0, 1}, new float[]{1, 1, 1},
                 new float[]{1, 1, 1, 1},
                 new FeatureData(1L, "tree_1", "SolitaryVegetationObject", Map.of()));
-        InstanceBatch batch = new InstanceBatch(0, twoTexturePrototype(), 0.02f,
+        InstanceBatch batch = new InstanceBatch(0, twoTexturePrototype(), 0.02f, 1.0,
                 List.of(instance));
         // Two atlas pages, one texture each — the shape buildMulti produces
         // when the textures overflow --max-atlas-size.
@@ -118,6 +118,47 @@ class InstancedNodeEncoderTest {
     }
 
     /**
+     * The prototype's normalization scale must be baked into the encoded
+     * vertex positions with the matching division on each instance's SCALE
+     * attribute: CesiumJS computes instanced culling bounds from POSITION
+     * extents plus the TRANSLATION range, ignoring instance SCALE, so a
+     * template encoded at unit size with SCALE=30 instances gets a bounding
+     * sphere 30× too small and vanishes when the camera comes close.
+     */
+    @Test
+    void normalizationScaleBakedIntoPositionsAndDividedOutOfInstanceScale() {
+        TriangleMesh proto = new TriangleMesh();
+        int v0 = proto.addVertex(0, 0, 0, 0, 0, 1, 0f, 0f);
+        int v1 = proto.addVertex(1, 0, 0, 0, 0, 1, 1f, 0f);
+        int v2 = proto.addVertex(0, 1, 0, 0, 0, 1, 0f, 1f);
+        proto.addTriangle(v0, v1, v2, 0L, 0, false, TYPE);
+
+        InstancedFeature instance = new InstancedFeature(
+                new double[]{0, 0, 0}, new float[]{0, 0, 0, 1}, new float[]{30, 30, 30},
+                new float[]{1, 1, 1, 1},
+                new FeatureData(1L, "tree_1", "SolitaryVegetationObject", Map.of()));
+        InstanceBatch batch = new InstanceBatch(0, proto, 0.02f, 30.0, List.of(instance));
+        InstancedAtlas atlas = new InstancedAtlas(List.of(new byte[]{1, 2, 3}), Map.of(0, 0));
+
+        List<FeatureData> propFeatures = new ArrayList<>();
+        List<InstancedNodeEncoder.InstancedNodeData> nodes = new InstancedNodeEncoder().build(
+                List.of(batch), List.of(atlas), new double[]{0, 0, 0},
+                ObjectStyleRegistry.empty(), false, false, propFeatures);
+        assertEquals(1, nodes.size());
+
+        for (int k = 0; k < 3; k++) {
+            assertEquals(1f, nodes.get(0).scales()[k], 1e-6f,
+                    "instance SCALE must carry only the residual after normalization");
+        }
+
+        List<GltfJsonBuilder.InstancedNode> instancedNodes = InstancedNodeEncoder.writeBuffers(
+                nodes, new BinBufferBuilder());
+        GltfJsonBuilder.Primitive prim = instancedNodes.get(0).primitives().get(0);
+        assertEquals(30f, prim.posMax()[0], 1e-4f,
+                "prototype positions must be encoded at normalization scale");
+    }
+
+    /**
      * With outline emission enabled, an instanced prototype's primitives must
      * carry the CESIUM_primitive_outline edge list built from the template
      * mesh's outline masks — the outline is shared by all instances and
@@ -135,7 +176,7 @@ class InstancedNodeEncoderTest {
                 new double[]{0, 0, 0}, new float[]{0, 0, 0, 1}, new float[]{1, 1, 1},
                 new float[]{1, 1, 1, 1},
                 new FeatureData(1L, "tree_1", "SolitaryVegetationObject", Map.of()));
-        InstanceBatch batch = new InstanceBatch(0, proto, 0.02f, List.of(instance));
+        InstanceBatch batch = new InstanceBatch(0, proto, 0.02f, 1.0, List.of(instance));
         InstancedAtlas atlas = new InstancedAtlas(List.of(new byte[]{1, 2, 3}), Map.of(0, 0));
 
         List<FeatureData> propFeatures = new ArrayList<>();

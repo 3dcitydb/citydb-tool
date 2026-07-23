@@ -65,20 +65,28 @@ public class PrototypeRegistry {
     private final ConcurrentHashMap<Integer, Prototype> byId = new ConcurrentHashMap<>();
     private final AtomicInteger idCounter = new AtomicInteger();
     // Per-prototype texture atlas pages, built once on the close thread
-    // by buildAtlases() BEFORE the parallel node fan-out — the build remaps
-    // the shared prototype mesh's UVs in place, which must not race with
-    // concurrent encoder reads. Plain map: written single-threaded, read-only
-    // afterwards.
+    // by finalizePrototypes() BEFORE the parallel node fan-out — the build
+    // remaps the shared prototype mesh's UVs in place, which must not race
+    // with concurrent encoder reads. Plain map: written single-threaded,
+    // read-only afterwards.
     private final Map<Integer, List<TextureAtlas>> atlasPagesById = new HashMap<>();
     // Largest per-axis instance scale seen per prototype during the write
-    // phase. Frozen into weldToleranceById by buildAtlases() at the same
-    // phase boundary where atlases freeze.
+    // phase. Frozen into weldToleranceById by finalizePrototypes() at the
+    // same phase boundary where atlases freeze.
     private final ConcurrentHashMap<Integer, Double> maxInstanceScaleById = new ConcurrentHashMap<>();
     // Per-prototype weld tolerance in template-local units, computed once by
-    // buildAtlases() so every node batch (and the encoder's per-prototype
-    // geometry cache) sees one immutable value by construction. Plain map:
-    // written single-threaded on the close thread, read-only afterwards.
+    // finalizePrototypes() so every node batch (and the encoder's
+    // per-prototype geometry cache) sees one immutable value by construction.
+    // Plain map: written single-threaded on the close thread, read-only
+    // afterwards.
     private final Map<Integer, Float> weldToleranceById = new HashMap<>();
+    // Per-prototype normalization scale (= largest per-instance scale),
+    // frozen by finalizePrototypes() like the weld tolerance. The 3D Tiles
+    // encoder bakes it into the prototype's vertex positions and divides
+    // each instance's SCALE by it, so instance scales stay <= 1 and
+    // CesiumJS's translation-only instancing bounds remain valid (see
+    // CellFrame.scaled).
+    private final Map<Integer, Double> normalizationScaleById = new HashMap<>();
 
     /**
      * @param id        registry-assigned prototype id, dense from 0
@@ -139,8 +147,8 @@ public class PrototypeRegistry {
 
     /**
      * Record one instance's per-axis scale. The largest recorded scale per
-     * prototype determines the frozen weld tolerance computed by
-     * {@link #buildAtlases}. Called from the write phase only.
+     * prototype determines the frozen weld and T-junction tolerances computed
+     * by {@link #finalizePrototypes}. Called from the write phase only.
      */
     public void recordInstanceScale(int prototypeId, double[] scale) {
         double max = Math.max(scale[0], Math.max(scale[1], scale[2]));
@@ -149,21 +157,49 @@ public class PrototypeRegistry {
 
     /**
      * The prototype's weld tolerance in template-local units, frozen by
-     * {@link #buildAtlases}: the default tolerance divided by the largest
-     * per-instance scale, so the effective world-space tolerance never
-     * exceeds the default for any instance — tighter in template units for
-     * scaled-up templates, looser for scaled-down ones.
+     * {@link #finalizePrototypes}: the default tolerance divided by the
+     * largest per-instance scale, so the effective world-space tolerance
+     * never exceeds the default for any instance — tighter in template units
+     * for scaled-up templates, looser for scaled-down ones.
      */
     public float weldTolerance(int prototypeId) {
         return weldToleranceById.getOrDefault(prototypeId, VertexWelder.DEFAULT_WELD_TOLERANCE);
     }
 
     /**
-     * Build the per-prototype texture atlases. Must run on the close thread
+     * The prototype's normalization scale, frozen by
+     * {@link #finalizePrototypes}: the largest per-instance scale (1 when no
+     * instance was recorded). The 3D Tiles encoder scales the prototype's
+     * encoded positions up by this factor and each instance's SCALE
+     * attribute down by it — placement-equivalent, but it keeps every
+     * instance scale at most 1 so CesiumJS's instancing culling bounds
+     * (computed from POSITION extents + TRANSLATION range, ignoring
+     * instance SCALE) contain the rendered geometry.
+     */
+    public double normalizationScale(int prototypeId) {
+        return normalizationScaleById.getOrDefault(prototypeId, 1.0);
+    }
+
+    /**
+     * Finalize the registered prototypes: freeze the scale-dependent weld
+     * tolerance and normalization scale, run the deferred T-junction pass,
+     * and build the per-prototype texture atlases. Prototypes without a
+     * recorded instance scale (every instance fell back to baking) are
+     * skipped — their meshes are never encoded. Must run on the close thread
      * after the write phase (texture BLOBs are batch-written by the DB
-     * exporter and may not exist on disk earlier — see {@link TextureStore})
-     * and before the parallel node fan-out: the build rewrites the shared
-     * prototype mesh's UVs into atlas space in place.
+     * exporter and may not exist on disk earlier — see {@link TextureStore};
+     * the largest per-instance scale is only known once every instance has
+     * been planned) and before the parallel node fan-out: both the
+     * T-junction pass and the atlas build mutate the shared prototype mesh
+     * in place.
+     * <p>
+     * The T-junction pass cannot run at registration time: the template's
+     * local units are arbitrary, so the metric snap tolerance is only
+     * meaningful once the largest instance scale is known — applied as
+     * {@code tolerance / maxScale} in template units, the same contract as
+     * the weld tolerance. Registration-time resolution with the tolerance
+     * misread as template units deformed dense templates (a ×30-scaled tree
+     * gained 45% spurious surface at its trunk).
      * <p>
      * Prototype atlases obey the same quality contract as node atlases —
      * every texture is scaled by {@code --texture-scale} and no page exceeds
@@ -179,12 +215,26 @@ public class PrototypeRegistry {
      * load) is downgraded to untextured, mirroring the node-atlas fallback in
      * {@code NodeAssembler}.
      */
-    public void buildAtlases(VisFormatOptions formatOptions) {
+    public void finalizePrototypes(VisFormatOptions formatOptions) {
         for (Prototype prototype : byId.values()) {
-            weldToleranceById.put(prototype.id(), (float) (VertexWelder.DEFAULT_WELD_TOLERANCE
-                    / Math.max(maxInstanceScaleById.getOrDefault(prototype.id(), 1.0), 1e-6)));
+            Double recordedScale = maxInstanceScaleById.get(prototype.id());
+            if (recordedScale == null) {
+                // Every instance of this prototype fell back to baking (e.g.
+                // shear in the transformation matrix), so the mesh is never
+                // encoded — and without a recorded scale the metric
+                // tolerances below could not be expressed in template units
+                // anyway. Leave it untouched.
+                continue;
+            }
+            double maxScale = Math.max(recordedScale, 1e-6);
+            weldToleranceById.put(prototype.id(),
+                    (float) (VertexWelder.DEFAULT_WELD_TOLERANCE / maxScale));
+            normalizationScaleById.put(prototype.id(), maxScale);
 
             TriangleMesh mesh = prototype.mesh();
+            mesh.resolveTJunctions(1.0, 1.0,
+                    GeometryMeshBuilder.T_JUNCTION_TOLERANCE_METERS / maxScale);
+            mesh.removeDuplicateTriangles();
             Set<Integer> texIds = new LinkedHashSet<>();
             for (int texId : mesh.getTriangleTextureIds()) {
                 if (texId >= 0) {
@@ -231,7 +281,7 @@ public class PrototypeRegistry {
     }
 
     /**
-     * The prototype's atlas pages built by {@link #buildAtlases}: one page in
+     * The prototype's atlas pages built by {@link #finalizePrototypes}: one page in
      * the common fits-one-page case, several when the prototype's textures
      * overflow the {@code --max-atlas-size} cap under
      * {@code --atlas-fallback=expand}. Empty for untextured prototypes (and

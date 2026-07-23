@@ -101,8 +101,8 @@ public abstract class VisWriter implements FeatureWriter {
     // (a subclass override) is read only after the subclass is fully constructed.
     private NodeAssembler nodeAssembler;
     // GPU-instancing prototype registry. Cheap to construct, so it is created
-    // eagerly for every writer; it stays empty (and buildAtlases is a no-op)
-    // for writers without an instancing path (I3S).
+    // eagerly for every writer; it stays empty (and finalizePrototypes is a
+    // no-op) for writers without an instancing path (I3S).
     private final PrototypeRegistry prototypeRegistry;
 
     private volatile boolean shouldRun = true;
@@ -439,10 +439,12 @@ public abstract class VisWriter implements FeatureWriter {
                     new AggregationStage()
             ).run(ctx);
 
-            // Build the per-prototype texture atlases now: texture BLOBs are
-            // on disk (write phase complete) and the parallel node fan-out
-            // hasn't started (the build mutates shared prototype meshes).
-            prototypeRegistry.buildAtlases(formatOptions);
+            // Finalize the prototypes (frozen tolerances, deferred T-junction
+            // pass, texture atlases) now: texture BLOBs are on disk and every
+            // instance scale is recorded (write phase complete), and the
+            // parallel node fan-out hasn't started (the finalization mutates
+            // shared prototype meshes).
+            prototypeRegistry.finalizePrototypes(formatOptions);
 
             // --- Phase 5: Format-specific output ---
             writeOutput(ctx);
