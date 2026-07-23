@@ -24,7 +24,14 @@ import java.util.List;
  * operates solely on its inputs.
  */
 public final class GeometryMeshBuilder {
-    private static final double T_JUNCTION_TOLERANCE_METERS = 0.02;
+    /**
+     * T-junction snap tolerance in world meters. Public so the prototype
+     * registry can rerun the deferred T-junction pass on implicit-geometry
+     * templates with this tolerance divided by the largest instance scale
+     * (template-local units are arbitrary — the instance matrix defines
+     * their meter size, which is unknown at template registration time).
+     */
+    public static final double T_JUNCTION_TOLERANCE_METERS = 0.02;
 
     private GeometryMeshBuilder() {
     }
@@ -58,10 +65,14 @@ public final class GeometryMeshBuilder {
 
     /**
      * Build variant with an explicit unit model: {@code localMeters} marks
-     * geometry in local Cartesian meters (implicit-geometry prototype
-     * templates) rather than EPSG:4326, switching the triangulator and the
-     * T-junction pass to identity degree-to-meter scaling. The metric
-     * tolerances themselves are unit-independent and stay unchanged.
+     * geometry in local Cartesian template units (implicit-geometry prototype
+     * templates) rather than EPSG:4326, switching the triangulator to
+     * identity degree-to-meter scaling. The T-junction pass is skipped in
+     * this mode: template units are arbitrary — only the per-instance
+     * transformation matrix defines their meter size, so a metric tolerance
+     * cannot be applied at build time. The prototype registry reruns the
+     * pass at its close-phase boundary with the tolerance divided by the
+     * largest observed instance scale.
      */
     public static TriangleMesh build(List<GeometryProperty> geometryProperties,
                                      long featureId,
@@ -113,17 +124,14 @@ public final class GeometryMeshBuilder {
             // overlapping geometry would either explode the algorithm's
             // split-application loop or weld topologically independent
             // components into shared edges (the wrong thing to do).
-            double scaleX;
-            double scaleY;
-            if (localMeters) {
-                scaleX = 1.0;
-                scaleY = 1.0;
-            } else {
+            // Deferred for prototype templates (localMeters) — see the
+            // javadoc above.
+            if (!localMeters) {
                 double[] center = mesh.computeCenter();
-                scaleX = GeoTransform.metersPerDegreeLon(center[1]);
-                scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
+                double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
+                double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
+                mesh.resolveTJunctions(scaleX, scaleY, T_JUNCTION_TOLERANCE_METERS);
             }
-            mesh.resolveTJunctions(scaleX, scaleY, T_JUNCTION_TOLERANCE_METERS);
             mesh.removeDuplicateTriangles();
         }
 

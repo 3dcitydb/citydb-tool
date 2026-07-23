@@ -47,9 +47,9 @@ final class InstancedNodeEncoder {
     // Per-prototype welded/routed/array-built geometry, computed once per
     // export and shared across every GLB (and style group) referencing the
     // prototype. Keyed by mesh identity: prototype meshes are frozen after
-    // PrototypeRegistry.buildAtlases, and the other build inputs are
+    // PrototypeRegistry.finalizePrototypes, and the other build inputs are
     // per-prototype constants by construction (weld tolerance frozen by
-    // buildAtlases, atlas page bytes and texId→page map canonicalized by the
+    // finalizePrototypes, atlas page bytes and texId→page map canonicalized by the
     // writer's per-page JPEG cache, style registry and the shading/outline
     // flags writer-lifetime). Concurrent: encoding runs on the parallel node
     // fan-out; populated via get/putIfAbsent so a heavyweight build never
@@ -163,10 +163,21 @@ final class InstancedNodeEncoder {
                 float[] featureIds = new float[count];
                 float[] tMin = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE};
                 float[] tMax = {-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
+                // The prototype geometry is encoded at normalization scale
+                // (see buildBatchGeometry); each instance's SCALE carries
+                // only the residual so the composed placement is unchanged.
+                // Double division keeps the dominant single-scale case at
+                // exactly 1.0.
+                double normalization = batch.normalizationScale();
                 for (int i = 0; i < count; i++) {
                     InstancedFeature instance = instances.get(i);
+                    float[] s = instance.scale();
                     InstanceTransformEncoder.InstanceTrs trs = InstanceTransformEncoder.encode(
-                            instance.anchor(), instance.rotation(), instance.scale(), cellCenter);
+                            instance.anchor(), instance.rotation(),
+                            new float[]{(float) (s[0] / normalization),
+                                    (float) (s[1] / normalization),
+                                    (float) (s[2] / normalization)},
+                            cellCenter);
                     for (int k = 0; k < 3; k++) {
                         translations[i * 3 + k] = trs.translation()[k];
                         scales[i * 3 + k] = trs.scale()[k];
@@ -281,7 +292,12 @@ final class InstancedNodeEncoder {
         List<RoutedTriangle> plainTris = buckets.plain();
         List<RoutedTriangle> coloredTris = buckets.colored();
 
-        CellFrame identity = CellFrame.identity();
+        // Encode the prototype at its normalization scale — world size for
+        // the largest instance — so CesiumJS's scale-blind instancing bounds
+        // contain the rendered geometry (see CellFrame.scaled); the matching
+        // per-instance SCALE division happens in build(). Welding above runs
+        // on the unscaled mesh with the template-unit tolerance.
+        CellFrame protoFrame = CellFrame.scaled(batch.normalizationScale());
         // Prototype outline: the template mesh is triangulated by the same
         // PolygonTriangulator as main meshes, so its boundary-edge masks are
         // present. The edge list is shared by all instances — the GPU
@@ -294,17 +310,17 @@ final class InstancedNodeEncoder {
                 continue;
             }
             texturedPages.add(GlbPrimitiveBuilder.build(proto, weld, tris,
-                    GltfJsonBuilder.INSTANCED_TEXTURED_PAGE, null, identity,
+                    GltfJsonBuilder.INSTANCED_TEXTURED_PAGE, null, protoFrame,
                     enableShading, false, enableOutline));
             pageBytes.add(atlas.pageBytes().get(p));
         }
         GlbPrimitiveBuilder.PrimitiveArrays plain = plainTris.isEmpty() ? null
                 : GlbPrimitiveBuilder.build(proto, weld, plainTris,
-                        GlbPrimitiveBuilder.UNTEXTURED_PLAIN_PAGE, null, identity,
+                        GlbPrimitiveBuilder.UNTEXTURED_PLAIN_PAGE, null, protoFrame,
                         enableShading, false, enableOutline);
         GlbPrimitiveBuilder.PrimitiveArrays colored = coloredTris.isEmpty() ? null
                 : GlbPrimitiveBuilder.build(proto, weld, coloredTris,
-                        GlbPrimitiveBuilder.UNTEXTURED_COLORED_PAGE, null, identity,
+                        GlbPrimitiveBuilder.UNTEXTURED_COLORED_PAGE, null, protoFrame,
                         enableShading, false, enableOutline);
         return new BatchGeometry(texturedPages, pageBytes, plain, colored);
     }
