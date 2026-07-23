@@ -111,6 +111,16 @@ public class Tiles3DWriter extends VisWriter {
     }
 
     /**
+     * {@code --outline-merge-coplanar} drops outlines on coplanar same-type
+     * subdivision edges; gated on {@code --enable-outline} — without outlines
+     * the mask lane is never emitted and the pass would be wasted work.
+     */
+    @Override
+    protected Double mergeCoplanarOutlineAngle() {
+        return formatOptions.isEnableOutline() ? formatOptions.getOutlineMergeCoplanar() : null;
+    }
+
+    /**
      * 3D Tiles never needs the atlas's white-pixel sentinel: untextured
      * triangles are partitioned into a separate GLB primitive (with its own
      * untextured PBR material) by {@code GlbEncoder} and never sample the

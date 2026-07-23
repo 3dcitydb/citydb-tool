@@ -204,7 +204,11 @@ public abstract class VisWriter implements FeatureWriter {
         } else {
             this.terrainProvider = null;
         }
-        this.featureProcessor = new FeatureProcessor(stores, formatOptions, attributeEncoder, terrainProvider);
+        // The supplier defers the overridable hook until process() runs —
+        // calling it here would read subclass state before the subclass
+        // constructor has finished (same trap the lazy nodeAssembler avoids).
+        this.featureProcessor = new FeatureProcessor(stores, formatOptions, attributeEncoder,
+                terrainProvider, this::mergeCoplanarOutlineAngle);
         this.prototypeRegistry = new PrototypeRegistry(stores.getTextureStore());
     }
 
@@ -408,6 +412,19 @@ public abstract class VisWriter implements FeatureWriter {
         return false;
     }
 
+    /**
+     * Maximum dihedral angle (degrees) for the coplanar outline-edge merge
+     * (see {@link org.citydb.vis.geometry.TriangleMesh#mergeCoplanarOutlineEdges}):
+     * {@code null} disables the merge, 0 merges strictly coplanar
+     * subdivisions only, a positive angle also merges surveyed facets within
+     * it. Overridden by the 3D Tiles writer for its
+     * {@code --outline-merge-coplanar} option; irrelevant for writers that
+     * never emit outlines.
+     */
+    protected Double mergeCoplanarOutlineAngle() {
+        return null;
+    }
+
     @Override
     public void cancel() {
         shouldRun = false;
@@ -444,7 +461,7 @@ public abstract class VisWriter implements FeatureWriter {
             // instance scale is recorded (write phase complete), and the
             // parallel node fan-out hasn't started (the finalization mutates
             // shared prototype meshes).
-            prototypeRegistry.finalizePrototypes(formatOptions);
+            prototypeRegistry.finalizePrototypes(formatOptions, mergeCoplanarOutlineAngle());
 
             // --- Phase 5: Format-specific output ---
             writeOutput(ctx);
