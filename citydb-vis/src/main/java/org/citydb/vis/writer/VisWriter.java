@@ -14,6 +14,7 @@ import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.GeometryProperty;
@@ -253,6 +254,14 @@ public abstract class VisWriter implements FeatureWriter {
         // Extract feature metadata on the caller thread (Feature may not be thread-safe)
         long featureId = featureIdCounter.incrementAndGet();
         String objectId = feature.getObjectId().orElseGet(() -> "feature_" + featureId);
+        // Database-traceable identity for log messages. featureId above is an
+        // export-internal sequential counter (attribute tables, mesh store) and
+        // must not appear in user-facing warnings — it does not match the
+        // FEATURE.ID column. The descriptor carries the real database id; it is
+        // always present for DB exports (vis-export's only source).
+        String featureLabel = "feature '" + objectId + "' (database id="
+                + feature.getDescriptor().map(FeatureDescriptor::getId).map(String::valueOf).orElse("unknown")
+                + ")";
         String featureType = feature.getFeatureType().getLocalName();
         String featureTypeNamespace = feature.getFeatureType().getNamespace();
         Envelope envelope = feature.getEnvelope().orElse(null);
@@ -292,7 +301,7 @@ public abstract class VisWriter implements FeatureWriter {
                 stores.setFeatureTextured(featureId);
             }
 
-            subTasks.add(dispatchProcessing(featureId, objectId, featureType,
+            subTasks.add(dispatchProcessing(featureId, objectId, featureLabel, featureType,
                     featureTypeNamespace, envelope, attributes, geomProps,
                     appearance.forTriangulation()));
         }
@@ -334,6 +343,7 @@ public abstract class VisWriter implements FeatureWriter {
                     // would not match the single-instance footprint that
                     // spatial partitioning needs.
                     subTasks.add(dispatchProcessing(baked.instanceId(), objectId,
+                            featureLabel + " (implicit geometry instance)",
                             featureType, featureTypeNamespace, null, attributes,
                             List.of(baked.wrapped()), baked.ringAttributes()));
                 }
@@ -355,15 +365,16 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     private CompletableFuture<Boolean> dispatchProcessing(
-            long featureId, String objectId, String featureType, String featureTypeNamespace,
+            long featureId, String objectId, String featureLabel,
+            String featureType, String featureTypeNamespace,
             Envelope envelope, Map<String, Object> attributes,
             List<GeometryProperty> geomProps, RingAttributes ringAttributes) {
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         countLatch.increment();
         service.execute(() -> {
             try {
-                featureProcessor.process(featureId, objectId, featureType,
-                        featureTypeNamespace,
+                featureProcessor.process(featureId, objectId, featureLabel,
+                        featureType, featureTypeNamespace,
                         envelope, attributes, geomProps, ringAttributes);
                 result.complete(true);
             } catch (Throwable e) {

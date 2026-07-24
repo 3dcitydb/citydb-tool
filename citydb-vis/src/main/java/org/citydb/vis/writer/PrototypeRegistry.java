@@ -134,7 +134,8 @@ public class PrototypeRegistry {
         TriangleMesh mesh = GeometryMeshBuilder.build(
                 List.of(GeometryProperty.of(Name.of("implicitTemplate", Namespaces.CORE),
                         copied.geometry())),
-                0L, TEMPLATE_SURFACE_TYPE, appearance.forTriangulation(), true);
+                0L, TEMPLATE_SURFACE_TYPE, appearance.forTriangulation(),
+                "implicit geometry template", true);
         if (mesh.isEmpty()) {
             return Optional.empty();
         }
@@ -236,7 +237,8 @@ public class PrototypeRegistry {
 
             TriangleMesh mesh = prototype.mesh();
             mesh.resolveTJunctions(1.0, 1.0,
-                    GeometryMeshBuilder.T_JUNCTION_TOLERANCE_METERS / maxScale);
+                    GeometryMeshBuilder.T_JUNCTION_TOLERANCE_METERS / maxScale,
+                    "prototype template " + prototype.id());
             mesh.removeDuplicateTriangles();
             if (mergeCoplanarOutlineAngle != null) {
                 // Identity scales: template meshes are local Cartesian.

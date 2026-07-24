@@ -332,7 +332,18 @@ public class TriangleMesh {
      *                        range
      */
     public void resolveTJunctions(double scaleX, double scaleY, double toleranceMeters) {
-        TJunctionResolver.resolve(this, scaleX, scaleY, toleranceMeters);
+        resolveTJunctions(scaleX, scaleY, toleranceMeters, "mesh");
+    }
+
+    /**
+     * Variant of {@link #resolveTJunctions(double, double, double)} with an
+     * explicit mesh label (e.g. {@code "feature 'BLDG_0815' (database id=1328)"}
+     * or {@code "prototype template 3"}) that identifies the mesh's source in
+     * the skip warning emitted above the triangle-count ceiling — without it
+     * an oversized feature cannot be traced back to the database.
+     */
+    public void resolveTJunctions(double scaleX, double scaleY, double toleranceMeters, String meshLabel) {
+        TJunctionResolver.resolve(this, scaleX, scaleY, toleranceMeters, meshLabel);
     }
 
     /** Live per-triangle attribute lanes — for same-package collaborators. */

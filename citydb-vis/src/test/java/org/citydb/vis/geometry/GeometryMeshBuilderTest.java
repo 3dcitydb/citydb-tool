@@ -62,7 +62,7 @@ class GeometryMeshBuilderTest {
         // metric tolerance deformed geometry. The mid-edge vertex lies exactly
         // on the left square's edge, so an active pass would split it.
         TriangleMesh mesh = GeometryMeshBuilder.build(tJunctionPair(0.01), 1L,
-                SURFACE_TYPE, new RingAttributes(null, null, null), true);
+                SURFACE_TYPE, new RingAttributes(null, null, null), "test template", true);
 
         // 4-gon (2 tris) + 5-gon (3 tris), unsplit: the pass is deferred to
         // PrototypeRegistry.finalizePrototypes with a scale-corrected tolerance.
@@ -74,7 +74,7 @@ class GeometryMeshBuilderTest {
         // Same topology in degree space: the exact-on-edge vertex is within
         // any positive tolerance, so the left square's edge must be split.
         TriangleMesh mesh = GeometryMeshBuilder.build(tJunctionPair(1e-5), 1L,
-                SURFACE_TYPE, new RingAttributes(null, null, null), false);
+                SURFACE_TYPE, new RingAttributes(null, null, null), "test feature", false);
 
         assertEquals(6, mesh.getTriangleCount());
     }
