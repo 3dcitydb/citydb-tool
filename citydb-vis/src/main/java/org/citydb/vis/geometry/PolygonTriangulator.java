@@ -69,6 +69,17 @@ public class PolygonTriangulator {
             Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<String> seenIds = new HashSet<>();
 
+    // Source-shape statistics across all triangulate() calls on this
+    // instance (one feature). A "triangle polygon" is a hole-free polygon
+    // whose exterior ring has exactly three distinct vertices — the storage
+    // pattern of pre-triangulated mesh data (BIM conversions, TINs stored
+    // as many small polygons). Only polygons accepted for triangulation are
+    // counted; degenerate rings rejected by the early-outs stay out of the
+    // statistics. GeometryMeshBuilder uses the all-triangles signal to
+    // demote the oversized-mesh T-junction warning to DEBUG for such data.
+    private int sourcePolygonCount;
+    private int triangleSourcePolygonCount;
+
     public PolygonTriangulator(boolean localMeters) {
         this.localMeters = localMeters;
     }
@@ -83,6 +94,26 @@ public class PolygonTriangulator {
         }
 
         return mesh;
+    }
+
+    /** Number of non-degenerate source polygons triangulated so far. */
+    public int getSourcePolygonCount() {
+        return sourcePolygonCount;
+    }
+
+    /** Number of those source polygons that are hole-free triangles. */
+    public int getTriangleSourcePolygonCount() {
+        return triangleSourcePolygonCount;
+    }
+
+    /**
+     * Whether every source polygon triangulated so far is a hole-free
+     * triangle — the signature of pre-triangulated mesh data (BIM-converted
+     * buildings, TINs stored as many small polygons). False when no polygon
+     * has been triangulated yet.
+     */
+    public boolean isSourcePreTriangulated() {
+        return sourcePolygonCount > 0 && triangleSourcePolygonCount == sourcePolygonCount;
     }
 
     private List<Polygon> collectPolygons(Geometry<?> geometry) {
@@ -175,6 +206,13 @@ public class PolygonTriangulator {
             return;
         }
         int projAxis = getDominantAxis(normal);
+
+        // Past every degeneracy early-out: the polygon will be triangulated,
+        // so it enters the source-shape statistics.
+        sourcePolygonCount++;
+        if (outerRing.size() == 3 && !polygon.hasInteriorRings()) {
+            triangleSourcePolygonCount++;
+        }
 
         List<float[]> outerUVRing = null;
         if (hasUV) {
