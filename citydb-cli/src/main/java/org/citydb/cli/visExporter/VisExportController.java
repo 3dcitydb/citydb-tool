@@ -72,8 +72,10 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             heading = "Time-based feature history options:%n")
     protected ValidityOptions validityOptions;
 
-    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
-            heading = "Scene options:%n")
+    // No heading here: the scene options render as separately headed
+    // sections (tiling, terrain, texture, styling, attributes) declared
+    // on the nested groups inside SceneOptions.
+    @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE)
     protected SceneOptions sceneOptions;
 
     @CommandLine.ArgGroup(exclusive = false, order = Integer.MAX_VALUE,
@@ -86,6 +88,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
     @Inject
     private CommandHelper helper;
 
+    protected static final int ARG_GROUP_ORDER = 1;
     protected final Logger logger = LoggerFactory.getLogger(VisExportController.class);
 
     private final Object lock = new Object();
