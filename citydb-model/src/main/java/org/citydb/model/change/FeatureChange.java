@@ -11,6 +11,7 @@ import org.citydb.model.common.Identifiable;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.FeatureTypeProvider;
 import org.citydb.model.geometry.Envelope;
+import org.citydb.model.util.CopySession;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
@@ -136,5 +137,24 @@ public class FeatureChange extends Child implements Identifiable, Describable<Fe
     public FeatureChange setDescriptor(FeatureChangeDescriptor descriptor) {
         this.descriptor = descriptor;
         return this;
+    }
+
+    @Override
+    protected FeatureChange createClone(CopySession session) {
+        return new FeatureChange(featureType);
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        FeatureChange change = (FeatureChange) clone;
+        change.objectId = objectId;
+        change.identifier = identifier;
+        change.identifierCodeSpace = identifierCodeSpace;
+        change.envelope = change.asChild(copy(envelope, session));
+        change.transactionType = transactionType;
+        change.transactionDate = transactionDate;
+        change.databaseUser = databaseUser;
+        change.reasonForUpdate = reasonForUpdate;
+        change.descriptor = descriptor != null ? descriptor.copy() : null;
     }
 }

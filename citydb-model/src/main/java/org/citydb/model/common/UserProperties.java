@@ -74,4 +74,13 @@ public class UserProperties implements Serializable {
             properties.clear();
         }
     }
+
+    public UserProperties copy() {
+        UserProperties clone = new UserProperties();
+        if (properties != null) {
+            clone.properties = new HashMap<>(properties);
+        }
+
+        return clone;
+    }
 }

@@ -7,6 +7,7 @@ package org.citydb.model.appearance;
 
 import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -14,6 +15,9 @@ import java.util.Optional;
 public class SurfaceDataProperty extends Child implements InlineOrByReferenceProperty<SurfaceData<?>> {
     private SurfaceData<?> surfaceData;
     private String reference;
+
+    private SurfaceDataProperty() {
+    }
 
     private SurfaceDataProperty(SurfaceData<?> surfaceData) {
         Objects.requireNonNull(surfaceData, "The surface data must not be null.");
@@ -80,5 +84,17 @@ public class SurfaceDataProperty extends Child implements InlineOrByReferencePro
         } else {
             return false;
         }
+    }
+
+    @Override
+    protected SurfaceDataProperty createClone(CopySession session) {
+        return new SurfaceDataProperty();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        SurfaceDataProperty property = (SurfaceDataProperty) clone;
+        property.reference = reference;
+        property.surfaceData = property.asChild(copy(surfaceData, session));
     }
 }

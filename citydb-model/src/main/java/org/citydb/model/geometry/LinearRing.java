@@ -7,12 +7,17 @@ package org.citydb.model.geometry;
 
 import org.citydb.model.common.Child;
 import org.citydb.model.common.Referencable;
+import org.citydb.model.util.CopySession;
 
 import java.util.*;
 
 public class LinearRing extends Child implements Referencable {
-    private String objectId;
     private final List<Coordinate> points;
+    private String objectId;
+
+    private LinearRing(int initialCapacity) {
+        points = new ArrayList<>(initialCapacity);
+    }
 
     private LinearRing(List<Coordinate> points) {
         this.points = Objects.requireNonNull(points, "The point list must not be null.");
@@ -63,10 +68,19 @@ public class LinearRing extends Child implements Referencable {
         return this;
     }
 
-    public LinearRing copy() {
-        return new LinearRing(points.stream()
-                .map(Coordinate::copy)
-                .toArray(Coordinate[]::new))
-                .setObjectId(objectId);
+    @Override
+    protected LinearRing createClone(CopySession session) {
+        LinearRing clone = new LinearRing(points.size());
+        for (Coordinate point : points) {
+            clone.points.add(point.copy());
+        }
+
+        return clone;
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        LinearRing linearRing = (LinearRing) clone;
+        linearRing.objectId = objectId;
     }
 }

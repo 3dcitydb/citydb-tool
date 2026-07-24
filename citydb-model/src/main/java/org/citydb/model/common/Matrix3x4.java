@@ -33,7 +33,7 @@ public class Matrix3x4 extends Matrix {
                 ? Matrix.identity(4, 4)
                 .setSubMatrix(0, Math.min(rows, 3) - 1, 0, Math.min(columns, 4) - 1, matrix)
                 .getSubMatrix(0, 2, 0, 3)
-                : matrix);
+                : matrix.copy());
     }
 
     public static Matrix3x4 ofRowMajor(List<Double> values) {
@@ -51,5 +51,10 @@ public class Matrix3x4 extends Matrix {
 
     public static Matrix3x4 identity() {
         return new Matrix3x4(Matrix.identity(3, 4));
+    }
+
+    @Override
+    public Matrix3x4 copy() {
+        return new Matrix3x4(super.copy());
     }
 }

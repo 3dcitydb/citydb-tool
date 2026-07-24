@@ -6,11 +6,16 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Collections;
 import java.util.List;
 
 public class MultiSolid extends SolidCollection<MultiSolid> {
+
+    private MultiSolid(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     private MultiSolid(List<Solid> solids) {
         super(solids);
@@ -33,11 +38,8 @@ public class MultiSolid extends SolidCollection<MultiSolid> {
     }
 
     @Override
-    public MultiSolid copy() {
-        return new MultiSolid(getSolids().stream()
-                .map(Solid::copy)
-                .toArray(Solid[]::new))
-                .copyPropertiesFrom(this);
+    protected MultiSolid createClone(CopySession session) {
+        return new MultiSolid(getSolids().size());
     }
 
     @Override

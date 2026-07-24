@@ -10,6 +10,8 @@ import java.io.Serializable;
 public abstract class DatabaseDescriptor implements Serializable {
     private final long id;
 
+    public abstract DatabaseDescriptor copy();
+
     public DatabaseDescriptor(long id) {
         this.id = id;
     }

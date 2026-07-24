@@ -30,4 +30,9 @@ public class FeatureChangeDescriptor extends DatabaseDescriptor {
     public Optional<Long> getFeatureId() {
         return Optional.ofNullable(featureId);
     }
+
+    @Override
+    public FeatureChangeDescriptor copy() {
+        return FeatureChangeDescriptor.of(getId(), objectClassId, featureId);
+    }
 }

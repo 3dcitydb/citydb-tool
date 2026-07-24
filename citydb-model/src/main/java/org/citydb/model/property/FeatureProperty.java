@@ -9,6 +9,7 @@ import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -17,6 +18,10 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
     private Feature feature;
     private String reference;
     private RelationType relationType;
+
+    private FeatureProperty(Name name) {
+        super(name);
+    }
 
     private FeatureProperty(Name name, Feature feature, RelationType relationType) {
         super(name, DataType.FEATURE_PROPERTY);
@@ -97,6 +102,21 @@ public class FeatureProperty extends Property<FeatureProperty> implements Inline
         } else {
             return false;
         }
+    }
+
+    @Override
+    protected FeatureProperty createClone(CopySession session) {
+        return new FeatureProperty(getName());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        FeatureProperty property = (FeatureProperty) clone;
+        super.copyPropertiesTo(property, session);
+
+        property.feature = property.asChild(copy(feature, session));
+        property.reference = reference;
+        property.relationType = relationType;
     }
 
     @Override

@@ -8,6 +8,7 @@ package org.citydb.model.feature;
 import org.citydb.model.common.*;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.property.*;
+import org.citydb.model.util.CopySession;
 import org.citydb.model.util.GeometryInfo;
 import org.citydb.model.walker.ModelWalker;
 
@@ -445,6 +446,34 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
     public Feature setDescriptor(FeatureDescriptor descriptor) {
         this.descriptor = descriptor;
         return this;
+    }
+
+    @Override
+    protected Feature createClone(CopySession session) {
+        return new Feature(featureType);
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Feature feature = (Feature) clone;
+        feature.objectId = objectId;
+        feature.identifier = identifier;
+        feature.identifierCodeSpace = identifierCodeSpace;
+        feature.creationDate = creationDate;
+        feature.terminationDate = terminationDate;
+        feature.validFrom = validFrom;
+        feature.validTo = validTo;
+        feature.envelope = feature.asChild(copy(envelope, session));
+        feature.lastModificationDate = lastModificationDate;
+        feature.updatingPerson = updatingPerson;
+        feature.reasonForUpdate = reasonForUpdate;
+        feature.lineage = lineage;
+        feature.attributes = copy(attributes, feature, session);
+        feature.geometries = copy(geometries, feature, session);
+        feature.implicitGeometries = copy(implicitGeometries, feature, session);
+        feature.appearances = copy(appearances, feature, session);
+        feature.addresses = copy(addresses, feature, session);
+        feature.descriptor = descriptor != null ? descriptor.copy() : null;
     }
 
     @Override

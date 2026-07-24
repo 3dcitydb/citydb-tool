@@ -5,7 +5,10 @@
 
 package org.citydb.model.geometry;
 
+import org.citydb.model.common.Child;
+import org.citydb.model.common.ChildList;
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,6 +17,10 @@ import java.util.Objects;
 
 public class MultiLineString extends Geometry<MultiLineString> {
     private final List<LineString> lineStrings;
+
+    private MultiLineString(int initialCapacity) {
+        lineStrings = new ChildList<>(initialCapacity, this);
+    }
 
     private MultiLineString(List<LineString> lineStrings) {
         Objects.requireNonNull(lineStrings, "The line string list must not be null.");
@@ -53,11 +60,18 @@ public class MultiLineString extends Geometry<MultiLineString> {
     }
 
     @Override
-    public MultiLineString copy() {
-        return new MultiLineString(lineStrings.stream()
-                .map(LineString::copy)
-                .toArray(LineString[]::new))
-                .copyPropertiesFrom(this);
+    protected MultiLineString createClone(CopySession session) {
+        return new MultiLineString(lineStrings.size());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        MultiLineString multiLineString = (MultiLineString) clone;
+        super.copyPropertiesTo(multiLineString, session);
+
+        for (LineString lineString : lineStrings) {
+            multiLineString.lineStrings.add(copy(lineString, session));
+        }
     }
 
     @Override

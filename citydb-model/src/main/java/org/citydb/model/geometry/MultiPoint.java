@@ -5,7 +5,10 @@
 
 package org.citydb.model.geometry;
 
+import org.citydb.model.common.Child;
+import org.citydb.model.common.ChildList;
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -14,6 +17,10 @@ import java.util.Objects;
 
 public class MultiPoint extends Geometry<MultiPoint> {
     private final List<Point> points;
+
+    private MultiPoint(int initialCapacity) {
+        points = new ChildList<>(initialCapacity, this);
+    }
 
     private MultiPoint(List<Point> points) {
         Objects.requireNonNull(points, "The point list must not be null.");
@@ -53,11 +60,18 @@ public class MultiPoint extends Geometry<MultiPoint> {
     }
 
     @Override
-    public MultiPoint copy() {
-        return new MultiPoint(points.stream()
-                .map(Point::copy)
-                .toArray(Point[]::new))
-                .copyPropertiesFrom(this);
+    protected MultiPoint createClone(CopySession session) {
+        return new MultiPoint(points.size());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        MultiPoint multiPoint = (MultiPoint) clone;
+        super.copyPropertiesTo(multiPoint, session);
+
+        for (Point point : points) {
+            multiPoint.points.add(copy(point, session));
+        }
     }
 
     @Override

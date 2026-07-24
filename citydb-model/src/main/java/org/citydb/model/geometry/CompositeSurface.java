@@ -6,11 +6,16 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Collections;
 import java.util.List;
 
 public class CompositeSurface extends SurfaceCollection<CompositeSurface> {
+
+    private CompositeSurface(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     private CompositeSurface(List<Polygon> polygons) {
         super(polygons);
@@ -33,11 +38,8 @@ public class CompositeSurface extends SurfaceCollection<CompositeSurface> {
     }
 
     @Override
-    public CompositeSurface copy() {
-        return new CompositeSurface(getPolygons().stream()
-                .map(Polygon::copy)
-                .toArray(Polygon[]::new))
-                .copyPropertiesFrom(this);
+    protected CompositeSurface createClone(CopySession session) {
+        return new CompositeSurface(getPolygons().size());
     }
 
     @Override

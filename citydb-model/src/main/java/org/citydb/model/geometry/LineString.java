@@ -6,6 +6,7 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +15,10 @@ import java.util.Objects;
 
 public class LineString extends Geometry<LineString> {
     private final List<Coordinate> points;
+
+    private LineString(int initialCapacity) {
+        points = new ArrayList<>(initialCapacity);
+    }
 
     private LineString(List<Coordinate> points) {
         this.points = Objects.requireNonNull(points, "The point list must not be null.");
@@ -56,11 +61,13 @@ public class LineString extends Geometry<LineString> {
     }
 
     @Override
-    public LineString copy() {
-        return new LineString(points.stream()
-                .map(Coordinate::copy)
-                .toArray(Coordinate[]::new))
-                .copyPropertiesFrom(this);
+    protected LineString createClone(CopySession session) {
+        LineString clone = new LineString(points.size());
+        for (Coordinate point : points) {
+            clone.points.add(point.copy());
+        }
+
+        return clone;
     }
 
     @Override

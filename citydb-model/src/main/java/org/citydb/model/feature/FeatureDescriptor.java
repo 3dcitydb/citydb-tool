@@ -32,4 +32,10 @@ public class FeatureDescriptor extends DatabaseDescriptor {
         this.sequenceId = sequenceId;
         return this;
     }
+
+    @Override
+    public FeatureDescriptor copy() {
+        return FeatureDescriptor.of(getId(), objectClassId)
+                .setSequenceId(sequenceId);
+    }
 }

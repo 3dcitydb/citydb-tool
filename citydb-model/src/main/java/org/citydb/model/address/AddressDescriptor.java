@@ -16,4 +16,9 @@ public class AddressDescriptor extends DatabaseDescriptor {
     public static AddressDescriptor of(long id) {
         return new AddressDescriptor(id);
     }
+
+    @Override
+    public AddressDescriptor copy() {
+        return AddressDescriptor.of(getId());
+    }
 }

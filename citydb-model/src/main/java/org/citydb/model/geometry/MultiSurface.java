@@ -6,11 +6,16 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Collections;
 import java.util.List;
 
 public class MultiSurface extends SurfaceCollection<MultiSurface> {
+
+    private MultiSurface(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     private MultiSurface(List<Polygon> polygons) {
         super(polygons);
@@ -33,11 +38,8 @@ public class MultiSurface extends SurfaceCollection<MultiSurface> {
     }
 
     @Override
-    public MultiSurface copy() {
-        return new MultiSurface(getPolygons().stream()
-                .map(Polygon::copy)
-                .toArray(Polygon[]::new))
-                .copyPropertiesFrom(this);
+    protected MultiSurface createClone(CopySession session) {
+        return new MultiSurface(getPolygons().size());
     }
 
     @Override

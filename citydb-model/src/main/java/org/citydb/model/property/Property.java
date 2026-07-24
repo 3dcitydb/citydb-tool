@@ -8,6 +8,7 @@ package org.citydb.model.property;
 import org.citydb.model.common.Child;
 import org.citydb.model.common.Describable;
 import org.citydb.model.common.Name;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -21,8 +22,12 @@ public abstract class Property<T extends Property<?>> extends Child implements D
 
     abstract T self();
 
-    Property(Name name, Name dataType) {
+    Property(Name name) {
         this.name = Objects.requireNonNull(name, "The property name must not be null.");
+    }
+
+    Property(Name name, Name dataType) {
+        this(name);
         this.dataType = dataType;
     }
 
@@ -68,5 +73,11 @@ public abstract class Property<T extends Property<?>> extends Child implements D
     public T setDescriptor(PropertyDescriptor descriptor) {
         this.descriptor = descriptor;
         return self();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Property<?> property = (Property<?>) clone;
+        property.descriptor = descriptor != null ? descriptor.copy() : null;
     }
 }

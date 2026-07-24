@@ -22,4 +22,9 @@ public class GeometryDescriptor extends DatabaseDescriptor {
     public long getFeatureId() {
         return featureId;
     }
+
+    @Override
+    public GeometryDescriptor copy() {
+        return GeometryDescriptor.of(getId(), featureId);
+    }
 }

@@ -6,6 +6,7 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 
@@ -36,9 +37,8 @@ public class Point extends Geometry<Point> {
     }
 
     @Override
-    public Point copy() {
-        return new Point(coordinate.copy())
-                .copyPropertiesFrom(this);
+    protected Point createClone(CopySession session) {
+        return new Point(coordinate.copy());
     }
 
     @Override

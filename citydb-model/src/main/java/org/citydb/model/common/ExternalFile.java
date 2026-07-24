@@ -99,6 +99,16 @@ public class ExternalFile implements Referencable, Serializable {
         setObjectId("ID_" + UUID.nameUUIDFromBytes(getFileLocation().getBytes()));
     }
 
+    public ExternalFile copy() {
+        ExternalFile clone = path != null
+                ? new ExternalFile(path)
+                : new ExternalFile(uri);
+
+        return clone.setObjectId(objectId)
+                .setMimeType(mimeType)
+                .setMimeTypeCodeSpace(mimeTypeCodeSpace);
+    }
+
     @Serial
     private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
         stream.defaultReadObject();

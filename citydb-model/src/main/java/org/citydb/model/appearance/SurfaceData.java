@@ -10,6 +10,7 @@ import org.citydb.model.common.Identifiable;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.geometry.Surface;
+import org.citydb.model.util.CopySession;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,8 @@ public abstract class SurfaceData<T extends SurfaceData<?>> extends Child implem
     abstract T self();
 
     public abstract Name getName();
+
+    public abstract List<Surface<?>> getTargets();
 
     @Override
     public Optional<String> getObjectId() {
@@ -66,5 +69,12 @@ public abstract class SurfaceData<T extends SurfaceData<?>> extends Child implem
         return self();
     }
 
-    public abstract List<Surface<?>> getTargets();
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        SurfaceData<?> surfaceData = (SurfaceData<?>) clone;
+        surfaceData.objectId = objectId;
+        surfaceData.identifier = identifier;
+        surfaceData.identifierCodeSpace = identifierCodeSpace;
+        surfaceData.isFront = isFront;
+    }
 }

@@ -8,6 +8,7 @@ package org.citydb.model.geometry;
 import org.citydb.model.common.*;
 import org.citydb.model.property.AppearanceProperty;
 import org.citydb.model.util.AffineTransformer;
+import org.citydb.model.util.CopySession;
 import org.citydb.model.util.IdCreator;
 import org.citydb.model.util.matrix.Matrix;
 
@@ -20,6 +21,9 @@ public class ImplicitGeometry extends Shareable implements Referencable, Visitab
     private ExternalFile libraryObject;
     private String objectId;
     private PropertyMap<AppearanceProperty> appearances;
+
+    private ImplicitGeometry() {
+    }
 
     private ImplicitGeometry(Geometry<?> geometry) {
         Objects.requireNonNull(geometry, "The geometry must not be null.");
@@ -140,6 +144,20 @@ public class ImplicitGeometry extends Shareable implements Referencable, Visitab
         } else {
             return null;
         }
+    }
+
+    @Override
+    protected ImplicitGeometry createClone(CopySession session) {
+        return new ImplicitGeometry();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        ImplicitGeometry implicitGeometry = (ImplicitGeometry) clone;
+        implicitGeometry.geometry = implicitGeometry.asChild(copy(geometry, session));
+        implicitGeometry.libraryObject = libraryObject != null ? libraryObject.copy() : null;
+        implicitGeometry.objectId = objectId;
+        implicitGeometry.appearances = copy(appearances, implicitGeometry, session);
     }
 
     @Override

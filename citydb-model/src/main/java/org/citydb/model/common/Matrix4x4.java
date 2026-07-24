@@ -31,7 +31,7 @@ public class Matrix4x4 extends Matrix {
         int columns = matrix.getColumns();
         return new Matrix4x4(rows != 4 || columns != 4
                 ? Matrix.identity(4, 4).setSubMatrix(0, Math.min(rows, 4) - 1, 0, Math.min(columns, 4) - 1, matrix)
-                : matrix);
+                : matrix.copy());
     }
 
     public static Matrix4x4 ofRowMajor(List<Double> values) {
@@ -49,5 +49,10 @@ public class Matrix4x4 extends Matrix {
 
     public static Matrix4x4 identity() {
         return new Matrix4x4(Matrix.identity(4, 4));
+    }
+
+    @Override
+    public Matrix4x4 copy() {
+        return new Matrix4x4(super.copy());
     }
 }

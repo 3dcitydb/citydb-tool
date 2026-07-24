@@ -6,11 +6,16 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Collections;
 import java.util.List;
 
 public class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> {
+
+    private TriangulatedSurface(int initialCapacity) {
+        super(initialCapacity);
+    }
 
     private TriangulatedSurface(List<Polygon> polygons) {
         super(polygons);
@@ -33,11 +38,8 @@ public class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> 
     }
 
     @Override
-    public TriangulatedSurface copy() {
-        return new TriangulatedSurface(getPolygons().stream()
-                .map(Polygon::copy)
-                .toArray(Polygon[]::new))
-                .copyPropertiesFrom(this);
+    protected TriangulatedSurface createClone(CopySession session) {
+        return new TriangulatedSurface(getPolygons().size());
     }
 
     @Override

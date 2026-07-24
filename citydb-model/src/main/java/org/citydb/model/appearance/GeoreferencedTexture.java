@@ -5,12 +5,10 @@
 
 package org.citydb.model.appearance;
 
-import org.citydb.model.common.Matrix2x2;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Namespaces;
-import org.citydb.model.common.Visitor;
+import org.citydb.model.common.*;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.geometry.Surface;
+import org.citydb.model.util.CopySession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,6 +80,21 @@ public class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
         }
 
         return this;
+    }
+
+    @Override
+    protected GeoreferencedTexture createClone(CopySession session) {
+        return new GeoreferencedTexture();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        GeoreferencedTexture texture = (GeoreferencedTexture) clone;
+        super.copyPropertiesTo(texture, session);
+
+        texture.referencePoint = texture.asChild(copy(referencePoint, session));
+        texture.orientation = orientation != null ? orientation.copy() : null;
+        texture.targets = copy(targets, texture, session);
     }
 
     @Override

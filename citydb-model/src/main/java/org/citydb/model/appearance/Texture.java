@@ -5,7 +5,9 @@
 
 package org.citydb.model.appearance;
 
+import org.citydb.model.common.Child;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.util.CopySession;
 
 import java.util.Optional;
 
@@ -49,5 +51,16 @@ public abstract class Texture<T extends Texture<?>> extends SurfaceData<T> {
     public T setBorderColor(Color borderColor) {
         this.borderColor = borderColor;
         return self();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Texture<?> texture = (Texture<?>) clone;
+        super.copyPropertiesTo(texture, session);
+
+        texture.textureImage = textureImage != null ? textureImage.copy() : null;
+        texture.textureType = textureType;
+        texture.wrapMode = wrapMode;
+        texture.borderColor = borderColor;
     }
 }

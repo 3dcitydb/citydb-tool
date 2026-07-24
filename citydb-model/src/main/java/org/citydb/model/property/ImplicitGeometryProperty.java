@@ -12,6 +12,7 @@ import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
+import org.citydb.model.util.CopySession;
 
 import java.util.List;
 import java.util.Objects;
@@ -23,6 +24,10 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
     private Matrix4x4 transformationMatrix;
     private Point referencePoint;
     private String lod;
+
+    private ImplicitGeometryProperty(Name name) {
+        super(name);
+    }
 
     private ImplicitGeometryProperty(Name name, ImplicitGeometry implicitGeometry) {
         super(name, DataType.IMPLICIT_GEOMETRY_PROPERTY);
@@ -134,6 +139,23 @@ public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty>
         } else {
             return false;
         }
+    }
+
+    @Override
+    protected ImplicitGeometryProperty createClone(CopySession session) {
+        return new ImplicitGeometryProperty(getName());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        ImplicitGeometryProperty property = (ImplicitGeometryProperty) clone;
+        super.copyPropertiesTo(property, session);
+
+        property.implicitGeometry = property.asChild(copy(implicitGeometry, session));
+        property.reference = reference;
+        property.transformationMatrix = transformationMatrix != null ? transformationMatrix.copy() : null;
+        property.referencePoint = property.asChild(copy(referencePoint, session));
+        property.lod = lod;
     }
 
     @Override

@@ -5,10 +5,12 @@
 
 package org.citydb.model.appearance;
 
+import org.citydb.model.common.Child;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.Visitor;
 import org.citydb.model.geometry.Surface;
+import org.citydb.model.util.CopySession;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -122,6 +124,26 @@ public class X3DMaterial extends SurfaceData<X3DMaterial> {
         }
 
         return this;
+    }
+
+    @Override
+    protected X3DMaterial createClone(CopySession session) {
+        return new X3DMaterial();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        X3DMaterial material = (X3DMaterial) clone;
+        super.copyPropertiesTo(material, session);
+
+        material.shininess = shininess;
+        material.transparency = transparency;
+        material.ambientIntensity = ambientIntensity;
+        material.diffuseColor = diffuseColor;
+        material.emissiveColor = emissiveColor;
+        material.specularColor = specularColor;
+        material.isSmooth = isSmooth;
+        material.targets = copy(targets, material, session);
     }
 
     @Override

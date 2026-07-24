@@ -6,6 +6,7 @@
 package org.citydb.model.appearance;
 
 import org.citydb.model.common.*;
+import org.citydb.model.util.CopySession;
 
 import java.util.List;
 import java.util.Optional;
@@ -109,6 +110,22 @@ public class Appearance extends Child implements Identifiable, Visitable, Descri
     public Appearance setDescriptor(AppearanceDescriptor descriptor) {
         this.descriptor = descriptor;
         return this;
+    }
+
+    @Override
+    protected Appearance createClone(CopySession session) {
+        return new Appearance();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Appearance appearance = (Appearance) clone;
+        appearance.objectId = objectId;
+        appearance.identifier = identifier;
+        appearance.identifierCodeSpace = identifierCodeSpace;
+        appearance.theme = theme;
+        appearance.surfaceData = copy(surfaceData, appearance, session);
+        appearance.descriptor = descriptor != null ? descriptor.copy() : null;
     }
 
     @Override

@@ -31,7 +31,7 @@ public class Matrix2x2 extends Matrix {
         int columns = matrix.getColumns();
         return new Matrix2x2(rows != 2 || columns != 2
                 ? Matrix.identity(2, 2).setSubMatrix(0, Math.min(rows, 2) - 1, 0, Math.min(columns, 2) - 1, matrix)
-                : matrix);
+                : matrix.copy());
     }
 
     public static Matrix2x2 ofRowMajor(List<Double> values) {
@@ -49,5 +49,10 @@ public class Matrix2x2 extends Matrix {
 
     public static Matrix2x2 identity() {
         return new Matrix2x2(Matrix.identity(2, 2));
+    }
+
+    @Override
+    public Matrix2x2 copy() {
+        return new Matrix2x2(super.copy());
     }
 }

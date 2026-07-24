@@ -6,6 +6,7 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Child;
+import org.citydb.model.util.CopySession;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -235,5 +236,17 @@ public class Envelope extends Child implements SpatialObject {
         return Polygon.of(LinearRing.of(Arrays.asList(lowerCorner, lowerRight, upperCorner, upperLeft, lowerCorner)))
                 .setSRID(srid)
                 .setSrsIdentifier(srsIdentifier);
+    }
+
+    @Override
+    protected Envelope createClone(CopySession session) {
+        return new Envelope(lowerCorner.copy(), upperCorner.copy());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Envelope envelope = (Envelope) clone;
+        envelope.srid = srid;
+        envelope.srsIdentifier = srsIdentifier;
     }
 }

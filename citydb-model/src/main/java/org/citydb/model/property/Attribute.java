@@ -9,6 +9,7 @@ import org.citydb.model.common.Child;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.PropertyMap;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.util.CopySession;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -199,6 +200,29 @@ public class Attribute extends Property<Attribute> {
         } else {
             return false;
         }
+    }
+
+    @Override
+    protected Attribute createClone(CopySession session) {
+        return new Attribute(getName(), getDataType().orElse(null));
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Attribute attribute = (Attribute) clone;
+        super.copyPropertiesTo(attribute, session);
+
+        attribute.intValue = intValue;
+        attribute.doubleValue = doubleValue;
+        attribute.stringValue = stringValue;
+        attribute.arrayValue = arrayValue != null ? arrayValue.copy() : null;
+        attribute.timeStamp = timeStamp;
+        attribute.uri = uri;
+        attribute.codeSpace = codeSpace;
+        attribute.uom = uom;
+        attribute.genericContent = genericContent;
+        attribute.genericContentMimeType = genericContentMimeType;
+        attribute.properties = copy(properties, attribute, session);
     }
 
     @Override

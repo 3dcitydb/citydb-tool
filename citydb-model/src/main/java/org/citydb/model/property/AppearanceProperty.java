@@ -11,11 +11,16 @@ import org.citydb.model.common.InlineProperty;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 
 public class AppearanceProperty extends Property<AppearanceProperty> implements InlineProperty<Appearance> {
     private Appearance appearance;
+
+    private AppearanceProperty(Name name) {
+        super(name);
+    }
 
     private AppearanceProperty(Name name, Appearance appearance) {
         super(name, DataType.APPEARANCE_PROPERTY);
@@ -53,6 +58,19 @@ public class AppearanceProperty extends Property<AppearanceProperty> implements 
         } else {
             return false;
         }
+    }
+
+    @Override
+    protected AppearanceProperty createClone(CopySession session) {
+        return new AppearanceProperty(getName());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        AppearanceProperty property = (AppearanceProperty) clone;
+        super.copyPropertiesTo(property, session);
+
+        property.appearance = property.asChild(copy(appearance, session));
     }
 
     @Override

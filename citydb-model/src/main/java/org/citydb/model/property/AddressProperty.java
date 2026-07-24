@@ -10,6 +10,7 @@ import org.citydb.model.common.Child;
 import org.citydb.model.common.InlineOrByReferenceProperty;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -17,6 +18,10 @@ import java.util.Optional;
 public class AddressProperty extends Property<AddressProperty> implements InlineOrByReferenceProperty<Address> {
     private Address address;
     private String reference;
+
+    private AddressProperty(Name name) {
+        super(name);
+    }
 
     private AddressProperty(Name name, Address address) {
         super(name, DataType.ADDRESS_PROPERTY);
@@ -88,6 +93,20 @@ public class AddressProperty extends Property<AddressProperty> implements Inline
         } else {
             return false;
         }
+    }
+
+    @Override
+    protected AddressProperty createClone(CopySession session) {
+        return new AddressProperty(getName());
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        AddressProperty property = (AddressProperty) clone;
+        super.copyPropertiesTo(property, session);
+
+        property.address = property.asChild(copy(address, session));
+        property.reference = reference;
     }
 
     @Override

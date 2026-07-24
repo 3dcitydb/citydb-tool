@@ -36,4 +36,11 @@ public class AppearanceDescriptor extends DatabaseDescriptor {
         this.implicitGeometryId = implicitGeometryId;
         return this;
     }
+
+    @Override
+    public AppearanceDescriptor copy() {
+        return AppearanceDescriptor.of(getId())
+                .setFeatureId(featureId)
+                .setImplicitGeometryId(implicitGeometryId);
+    }
 }

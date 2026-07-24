@@ -8,6 +8,7 @@ package org.citydb.model.address;
 import org.citydb.model.common.*;
 import org.citydb.model.geometry.MultiPoint;
 import org.citydb.model.property.ArrayValue;
+import org.citydb.model.util.CopySession;
 
 import java.util.Optional;
 
@@ -176,6 +177,31 @@ public class Address extends Child implements Identifiable, Visitable, Describab
     public Address setDescriptor(AddressDescriptor descriptor) {
         this.descriptor = descriptor;
         return this;
+    }
+
+    @Override
+    protected Address createClone(CopySession session) {
+        return new Address();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Address address = (Address) clone;
+        address.objectId = objectId;
+        address.identifier = identifier;
+        address.identifierCodeSpace = identifierCodeSpace;
+        address.street = street;
+        address.houseNumber = houseNumber;
+        address.poBox = poBox;
+        address.zipCode = zipCode;
+        address.city = city;
+        address.state = state;
+        address.country = country;
+        address.freeText = freeText != null ? freeText.copy() : null;
+        address.multiPoint = address.asChild(copy(multiPoint, session));
+        address.genericContent = genericContent;
+        address.genericContentMimeType = genericContentMimeType;
+        address.descriptor = descriptor != null ? descriptor.copy() : null;
     }
 
     @Override

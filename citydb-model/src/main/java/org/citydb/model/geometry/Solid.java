@@ -6,6 +6,7 @@
 package org.citydb.model.geometry;
 
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 
@@ -39,9 +40,8 @@ public class Solid extends Geometry<Solid> {
     }
 
     @Override
-    public Solid copy() {
-        return new Solid(shell.copy())
-                .copyPropertiesFrom(this);
+    protected Solid createClone(CopySession session) {
+        return new Solid(copy(shell, session));
     }
 
     @Override

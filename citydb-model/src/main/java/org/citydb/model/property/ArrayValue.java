@@ -86,4 +86,8 @@ public class ArrayValue implements Serializable {
         this.values.addAll(values);
         return this;
     }
+
+    public ArrayValue copy() {
+        return ArrayValue.of(new ArrayList<>(values));
+    }
 }

@@ -5,12 +5,10 @@
 
 package org.citydb.model.appearance;
 
-import org.citydb.model.common.Matrix3x4;
-import org.citydb.model.common.Name;
-import org.citydb.model.common.Namespaces;
-import org.citydb.model.common.Visitor;
+import org.citydb.model.common.*;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Surface;
+import org.citydb.model.util.CopySession;
 
 import java.util.*;
 
@@ -108,6 +106,36 @@ public class ParameterizedTexture extends Texture<ParameterizedTexture> {
         }
 
         return targets;
+    }
+
+    @Override
+    protected ParameterizedTexture createClone(CopySession session) {
+        return new ParameterizedTexture();
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        ParameterizedTexture texture = (ParameterizedTexture) clone;
+        super.copyPropertiesTo(texture, session);
+
+        if (textureCoordinates != null) {
+            texture.textureCoordinates = new IdentityHashMap<>(textureCoordinates.size());
+            for (Map.Entry<LinearRing, List<TextureCoordinate>> entry : textureCoordinates.entrySet()) {
+                List<TextureCoordinate> coordinates = new ArrayList<>(entry.getValue().size());
+                for (TextureCoordinate coordinate : entry.getValue()) {
+                    coordinates.add(coordinate.copy());
+                }
+
+                texture.textureCoordinates.put(copy(entry.getKey(), session), coordinates);
+            }
+        }
+
+        if (worldToTextureMappings != null) {
+            texture.worldToTextureMappings = new IdentityHashMap<>(worldToTextureMappings.size());
+            for (Map.Entry<Surface<?>, Matrix3x4> entry : worldToTextureMappings.entrySet()) {
+                texture.worldToTextureMappings.put(copy(entry.getKey(), session), entry.getValue().copy());
+            }
+        }
     }
 
     @Override

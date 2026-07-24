@@ -5,8 +5,10 @@
 
 package org.citydb.model.geometry;
 
+import org.citydb.model.common.Child;
 import org.citydb.model.common.ChildList;
 import org.citydb.model.common.Visitor;
+import org.citydb.model.util.CopySession;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -113,15 +115,16 @@ public class Polygon extends Surface<Polygon> {
     }
 
     @Override
-    public Polygon copy() {
-        return new Polygon(exteriorRing.copy(),
-                interiorRings != null
-                        ? interiorRings.stream()
-                        .map(LinearRing::copy)
-                        .toArray(LinearRing[]::new)
-                        : null,
-                reversed)
-                .copyPropertiesFrom(this);
+    protected Polygon createClone(CopySession session) {
+        return new Polygon(copy(exteriorRing, session), (List<LinearRing>) null, reversed);
+    }
+
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Polygon polygon = (Polygon) clone;
+        super.copyPropertiesTo(polygon, session);
+
+        polygon.interiorRings = copy(interiorRings, polygon, session);
     }
 
     @Override

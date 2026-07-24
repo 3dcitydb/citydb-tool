@@ -9,6 +9,7 @@ import org.citydb.model.common.Child;
 import org.citydb.model.common.Describable;
 import org.citydb.model.common.Referencable;
 import org.citydb.model.common.Visitable;
+import org.citydb.model.util.CopySession;
 import org.citydb.model.walker.ModelWalker;
 
 import java.util.Optional;
@@ -18,8 +19,6 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
     private Integer srid;
     private String srsIdentifier;
     private GeometryDescriptor descriptor;
-
-    public abstract T copy();
 
     public abstract GeometryType getGeometryType();
 
@@ -157,12 +156,12 @@ public abstract class Geometry<T extends Geometry<?>> extends Child implements S
                 .setSrsIdentifier(srsIdentifier);
     }
 
-    T copyPropertiesFrom(Geometry<T> other) {
-        objectId = other.objectId;
-        srid = other.srid;
-        srsIdentifier = other.srsIdentifier;
-        descriptor = other.descriptor;
-
-        return self();
+    @Override
+    protected void copyPropertiesTo(Child clone, CopySession session) {
+        Geometry<?> geometry = (Geometry<?>) clone;
+        geometry.objectId = objectId;
+        geometry.srid = srid;
+        geometry.srsIdentifier = srsIdentifier;
+        geometry.descriptor = descriptor != null ? descriptor.copy() : null;
     }
 }

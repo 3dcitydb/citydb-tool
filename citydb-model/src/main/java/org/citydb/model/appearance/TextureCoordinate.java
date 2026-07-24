@@ -60,4 +60,8 @@ public class TextureCoordinate implements Serializable {
         this.t = t;
         return this;
     }
+
+    public TextureCoordinate copy() {
+        return new TextureCoordinate(s, t);
+    }
 }
