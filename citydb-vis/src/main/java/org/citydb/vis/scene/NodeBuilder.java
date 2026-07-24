@@ -21,7 +21,7 @@ import java.util.List;
  *       {@link org.citydb.vis.store.PartitionedEntryStore}. Cell size is
  *       driven entirely by the configured {@code --grid-edge-length}.</li>
  *   <li><b>Cell = leaf</b> (here): each populated grid cell becomes a single
- *       leaf {@link SceneNode} holding all its features. The 3D Tiles
+ *       leaf {@link SceneNode} holding all its features. The format-agnostic
  *       {@link org.citydb.vis.scene.CellAggregator} sits above
  *       these leaves to provide the hierarchical structure.</li>
  * </ol>
