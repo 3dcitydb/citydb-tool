@@ -81,18 +81,21 @@ final class TJunctionResolver {
     /**
      * Resolve T-junctions on {@code mesh} in place. See
      * {@link TriangleMesh#resolveTJunctions} for parameter semantics.
+     * {@code meshLabel} identifies the mesh's source (e.g. the owning
+     * feature's database id) in the skip warning so oversized features can
+     * be traced back to the database.
      */
     static void resolve(TriangleMesh mesh, double scaleX, double scaleY,
-                        double toleranceMeters) {
+                        double toleranceMeters, String meshLabel) {
         if (mesh.getVertexCount() < 3 || mesh.isEmpty()) {
             return;
         }
 
         if (mesh.getTriangleCount() > MAX_TRIANGLES) {
-            logger.warn("Skipping T-junction resolution for oversized feature "
-                    + "mesh (triangles={} > {}). Sub-pixel cracks at shared "
+            logger.warn("Skipping T-junction resolution for oversized mesh "
+                    + "of {} (triangles={} > {}). Sub-pixel cracks at shared "
                     + "edges (if any) will not be resolved.",
-                    mesh.getTriangleCount(), MAX_TRIANGLES);
+                    meshLabel, mesh.getTriangleCount(), MAX_TRIANGLES);
             return;
         }
 
