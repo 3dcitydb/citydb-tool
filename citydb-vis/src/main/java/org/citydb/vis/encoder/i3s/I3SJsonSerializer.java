@@ -7,6 +7,7 @@ package org.citydb.vis.encoder.i3s;
 
 import org.citydb.vis.util.JsonHelper;
 import org.citydb.vis.model.AttrField;
+import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.i3s.AttributeStats;
 import org.citydb.vis.model.i3s.FeatureEntry;
@@ -143,7 +144,7 @@ public class I3SJsonSerializer {
                 // Field declared but never observed (e.g. every feature
                 // had null for it). Emit an empty stats record so the
                 // resource still exists and the validator stays quiet.
-                result = field.type() == org.citydb.vis.model.AttrType.STRING
+                result = field.type() == AttrType.STRING
                         ? AttributeStats.forString().toResult()
                         : AttributeStats.forNumeric().toResult();
             }

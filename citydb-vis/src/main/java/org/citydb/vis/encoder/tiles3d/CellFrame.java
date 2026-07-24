@@ -9,8 +9,12 @@ import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.util.GeoTransform;
 
 /**
- * Scale/offset from node-local meters to cell-centered ENU meters.
- * Welded positions are relative to the node center; the offset shifts them
+ * Scale/offset from node-local coordinates to cell-centered ENU meters.
+ * Welded positions are relative to the node center as EPSG:4326 degree
+ * offsets (X/Y) plus meters (Z); {@link #from} converts the degree axes
+ * with per-cell meters-per-degree factors, while the {@link #identity}/
+ * {@link #scaled} prototype variants take positions already in meters.
+ * The offset shifts the result
  * into the cell-centered frame that the cell root's per-cell ENU-to-ECEF
  * tile transform maps into global ECEF. Because the anchor is the cell
  * center (not the whole dataset), positions stay small (bounded by the

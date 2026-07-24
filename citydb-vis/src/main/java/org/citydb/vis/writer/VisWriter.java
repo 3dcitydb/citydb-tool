@@ -65,10 +65,12 @@ import java.util.function.Supplier;
  *       Feature extraction → triangulation → disk-backed stores
  *       ({@link ShardedMeshStore}, {@link AttributeStore},
  *       {@link org.citydb.vis.store.SpatialEntryStore}).</li>
- *   <li><b>Close phase 1–5</b>: extent computation → grid partitioning →
+ *   <li><b>Close phase 1–6</b>: extent computation → grid partitioning →
  *       per-cell leaf build → optional mixed-texture push-down split →
- *       spatial aggregation wrap. Driven by the {@link ExportPipeline}.</li>
- *   <li><b>Close phase 5</b> (format-specific): delegated to
+ *       optional atlas-overflow split → spatial aggregation wrap. Driven by
+ *       the {@link ExportPipeline}, followed by prototype finalization for
+ *       instanced geometry.</li>
+ *   <li><b>Close phase 7</b> (format-specific): delegated to
  *       {@link #writeOutput} for geometry encoding, metadata serialization,
  *       and texture output in the target format.</li>
  * </ol>
@@ -474,7 +476,7 @@ public abstract class VisWriter implements FeatureWriter {
             // shared prototype meshes).
             prototypeRegistry.finalizePrototypes(formatOptions, mergeCoplanarOutlineAngle());
 
-            // --- Phase 5: Format-specific output ---
+            // --- Phase 7: Format-specific output ---
             writeOutput(ctx);
         } catch (VisExportException e) {
             throw new WriteException("Failed to write scene layer.", e);
