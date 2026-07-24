@@ -32,8 +32,10 @@ import java.util.concurrent.atomic.AtomicLong;
  * {@link #finalizeFields} during close. Thread-safe — uses concurrent
  * data structures.
  * <p>
- * Subclasses add format-specific binary encoding (e.g., I3S binary
- * attribute buffers, 3D Tiles batch table / EXT_structural_metadata).
+ * The I3S writer subclasses this to add binary attribute-buffer encoding
+ * and per-attribute statistics; the 3D Tiles writer uses this class
+ * directly and encodes {@code EXT_structural_metadata} property tables
+ * separately in the encoder layer.
  * <p>
  * An optional {@link AttributeProjection} narrows extraction to a
  * declarative mapping list. Without a projection every top-level
