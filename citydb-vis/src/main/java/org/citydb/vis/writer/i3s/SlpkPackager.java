@@ -285,8 +285,9 @@ public final class SlpkPackager {
 
     /**
      * Compute the MD5 hash key for a resource path.
-     * Strips {@code .json.gz}, {@code .bin.gz}, {@code .json}, {@code .bin}
-     * extensions and lowercases the path — matches what ArcGIS expects.
+     * Strips {@code .json.gz}, {@code .bin.gz}, {@code .json}, {@code .bin},
+     * {@code .jpg}, {@code .jpeg}, {@code .png} extensions and lowercases
+     * the path — matches what ArcGIS expects.
      */
     private static byte[] hashKey(String archivePath) {
         String key = archivePath.toLowerCase(Locale.ROOT);

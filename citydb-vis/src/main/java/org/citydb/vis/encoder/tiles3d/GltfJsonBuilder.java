@@ -352,9 +352,10 @@ final class GltfJsonBuilder {
 
     /**
      * Emit one textured material per referenced atlas page (each with a
-     * baseColorTexture pointing at its own atlas), plus up to two untextured
-     * materials and one textured material per distinct instanced prototype
-     * atlas page. All material flavours follow {@code --enable-shading}:
+     * baseColorTexture pointing at its own atlas), one plain material per
+     * distinct {@link DefaultObjectStyle}, at most one colored material, and
+     * one textured material per distinct instanced prototype atlas page. All
+     * material flavours follow {@code --enable-shading}:
      * <ul>
      *   <li><b>textured</b> — PBR-shaded under {@code --enable-shading};
      *       otherwise carries {@code KHR_materials_unlit}. With NORMAL on,

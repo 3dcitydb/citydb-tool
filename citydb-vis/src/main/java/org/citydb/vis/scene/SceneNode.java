@@ -15,9 +15,10 @@ import java.util.List;
  * hierarchy). Used by all visualization export formats (I3S, 3D Tiles, etc.).
  * <p>
  * The hierarchy is built with an edge-length-driven grid: each populated
- * grid cell becomes a single leaf scene node. Format-specific layers (e.g.,
- * the 3D Tiles {@link org.citydb.vis.scene.CellAggregator}) may
- * wrap the cell roots in additional structure above the global root.
+ * grid cell becomes a single leaf scene node. The format-agnostic
+ * {@link org.citydb.vis.scene.CellAggregator} wraps the cell
+ * roots in additional structure above the global root, which both writers
+ * consume (3D Tiles tile tree, I3S node-page refinement cascade).
  */
 public class SceneNode {
     private int index;
