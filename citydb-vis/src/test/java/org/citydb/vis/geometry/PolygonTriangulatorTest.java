@@ -273,4 +273,63 @@ class PolygonTriangulatorTest {
 
         assertTrue(mesh.isEmpty());
     }
+
+    // ---- source-shape statistics (pre-triangulated data detection) ----
+
+    @Test
+    void countsTriangleSourcePolygons() {
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        RingAttributes none = new RingAttributes(null, null, null);
+
+        // Hole-free triangle: counted as a triangle source polygon.
+        triangulator.triangulate(Polygon.of(ring(
+                new double[]{0, 0}, new double[]{1, 0}, new double[]{0, 1},
+                new double[]{0, 0})), 1L, WALL, none);
+
+        assertEquals(1, triangulator.getSourcePolygonCount());
+        assertEquals(1, triangulator.getTriangleSourcePolygonCount());
+        assertTrue(triangulator.isSourcePreTriangulated());
+
+        // Quad: counted, but the source is no longer all-triangles.
+        triangulator.triangulate(Polygon.of(ring(
+                new double[]{2, 0}, new double[]{3, 0}, new double[]{3, 1},
+                new double[]{2, 1}, new double[]{2, 0})), 1L, WALL, none);
+
+        assertEquals(2, triangulator.getSourcePolygonCount());
+        assertEquals(1, triangulator.getTriangleSourcePolygonCount());
+        assertFalse(triangulator.isSourcePreTriangulated());
+    }
+
+    @Test
+    void triangleOuterRingWithHoleIsNotATrianglePolygon() {
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        LinearRing outer = ring(
+                new double[]{0, 0}, new double[]{4, 0}, new double[]{0, 4},
+                new double[]{0, 0});
+        LinearRing hole = ring(
+                new double[]{1, 1}, new double[]{2, 1}, new double[]{1, 2},
+                new double[]{1, 1});
+
+        triangulator.triangulate(Polygon.of(outer, List.of(hole)), 1L, WALL,
+                new RingAttributes(null, null, null));
+
+        assertEquals(1, triangulator.getSourcePolygonCount());
+        assertEquals(0, triangulator.getTriangleSourcePolygonCount());
+        assertFalse(triangulator.isSourcePreTriangulated());
+    }
+
+    @Test
+    void degenerateSourcesStayOutOfStatistics() {
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        // Nothing triangulated yet: not pre-triangulated by definition.
+        assertFalse(triangulator.isSourcePreTriangulated());
+
+        // Collinear polygon rejected by the zero-normal early-out.
+        triangulator.triangulate(Polygon.of(ring(
+                new double[]{0, 0}, new double[]{1, 0}, new double[]{2, 0},
+                new double[]{0, 0})), 1L, WALL, new RingAttributes(null, null, null));
+
+        assertEquals(0, triangulator.getSourcePolygonCount());
+        assertFalse(triangulator.isSourcePreTriangulated());
+    }
 }
