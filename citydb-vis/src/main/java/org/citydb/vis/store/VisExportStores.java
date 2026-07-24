@@ -23,7 +23,8 @@ import java.util.BitSet;
  * temp-tree deletion so the main writer can focus on the processing pipeline.
  * <p>
  * Stores created eagerly:
- * {@link SpatialEntryStore}, {@link ShardedMeshStore}, {@link AttributeStore}, {@link TextureStore}.
+ * {@link SpatialEntryStore}, {@link ShardedMeshStore}, {@link AttributeStore},
+ * {@link TextureStore}, {@link InstanceStore}.
  * <br>
  * {@link NodeEntryStore} is created lazily via {@link #initNodeEntryStore} in the
  * close phase once the estimated node count is known.
