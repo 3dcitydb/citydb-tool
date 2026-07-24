@@ -10,6 +10,8 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.vis.util.GeoTransform;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,6 +26,8 @@ import java.util.List;
  * operates solely on its inputs.
  */
 public final class GeometryMeshBuilder {
+    private static final Logger logger = LoggerFactory.getLogger(GeometryMeshBuilder.class);
+
     /**
      * T-junction snap tolerance in world meters. Public so the prototype
      * registry can rerun the deferred T-junction pass on implicit-geometry
@@ -60,24 +64,35 @@ public final class GeometryMeshBuilder {
                                      long featureId,
                                      Name defaultSurfaceType,
                                      RingAttributes ringAttributes) {
-        return build(geometryProperties, featureId, defaultSurfaceType, ringAttributes, false);
+        return build(geometryProperties, featureId, defaultSurfaceType, ringAttributes,
+                "feature " + featureId, false);
     }
 
     /**
-     * Build variant with an explicit unit model: {@code localMeters} marks
-     * geometry in local Cartesian template units (implicit-geometry prototype
-     * templates) rather than EPSG:4326, switching the triangulator to
-     * identity degree-to-meter scaling. The T-junction pass is skipped in
-     * this mode: template units are arbitrary — only the per-instance
-     * transformation matrix defines their meter size, so a metric tolerance
-     * cannot be applied at build time. The prototype registry reruns the
-     * pass at its close-phase boundary with the tolerance divided by the
-     * largest observed instance scale.
+     * Build variant with an explicit mesh label and unit model.
+     * <p>
+     * {@code meshLabel} identifies the mesh's source in warnings emitted
+     * during post-processing (currently the T-junction skip warning above
+     * the triangle-count ceiling). The {@code featureId} parameter is the
+     * export-internal sequential id used for the per-triangle featureId
+     * lane — it is <em>not</em> the database feature id, so callers that
+     * know a database-traceable identity (gml:id, database id) should put
+     * it in the label instead.
+     * <p>
+     * {@code localMeters} marks geometry in local Cartesian template units
+     * (implicit-geometry prototype templates) rather than EPSG:4326,
+     * switching the triangulator to identity degree-to-meter scaling. The
+     * T-junction pass is skipped in this mode: template units are arbitrary
+     * — only the per-instance transformation matrix defines their meter
+     * size, so a metric tolerance cannot be applied at build time. The
+     * prototype registry reruns the pass at its close-phase boundary with
+     * the tolerance divided by the largest observed instance scale.
      */
     public static TriangleMesh build(List<GeometryProperty> geometryProperties,
                                      long featureId,
                                      Name defaultSurfaceType,
                                      RingAttributes ringAttributes,
+                                     String meshLabel,
                                      boolean localMeters) {
         PolygonTriangulator triangulator = new PolygonTriangulator(localMeters);
         TriangleMesh mesh = new TriangleMesh();
@@ -117,20 +132,45 @@ public final class GeometryMeshBuilder {
         }
 
         if (!mesh.isEmpty()) {
-            // Single global T-junction pass with an internal triangle-count
-            // ceiling: catches cracks between adjacent polygons within and
-            // across GeometryProperty boundaries for normal-sized features,
-            // and skips with a warning on BIM-scale meshes where the dense
-            // overlapping geometry would either explode the algorithm's
-            // split-application loop or weld topologically independent
-            // components into shared edges (the wrong thing to do).
-            // Deferred for prototype templates (localMeters) — see the
-            // javadoc above.
+            // Single global T-junction pass with a triangle-count ceiling:
+            // catches cracks between adjacent polygons within and across
+            // GeometryProperty boundaries for normal-sized features, and
+            // skips on BIM-scale meshes where the dense overlapping geometry
+            // would either explode the algorithm's split-application loop or
+            // weld topologically independent components into shared edges
+            // (the wrong thing to do). Deferred for prototype templates
+            // (localMeters) — see the javadoc above.
+            //
+            // The ceiling check runs here rather than relying on the
+            // resolver's internal backstop so the log level can depend on
+            // the source-polygon shape: a mesh whose source polygons are all
+            // hole-free triangles is pre-triangulated data (BIM-converted
+            // buildings, TINs stored as many small polygons) — its
+            // triangulation introduced no new shared-edge cracks beyond
+            // what the source mesh already carried, exceeding the ceiling
+            // is the expected steady state for such data, and the skip is
+            // logged at DEBUG instead of WARN.
             if (!localMeters) {
-                double[] center = mesh.computeCenter();
-                double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
-                double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
-                mesh.resolveTJunctions(scaleX, scaleY, T_JUNCTION_TOLERANCE_METERS);
+                if (mesh.getTriangleCount() > TJunctionResolver.MAX_TRIANGLES) {
+                    if (triangulator.isSourcePreTriangulated()) {
+                        logger.debug("Skipping T-junction resolution for pre-triangulated mesh "
+                                + "of {} (triangles={}, all {} source polygons are triangles).",
+                                meshLabel, mesh.getTriangleCount(),
+                                triangulator.getSourcePolygonCount());
+                    } else {
+                        logger.warn("Skipping T-junction resolution for oversized mesh of {} "
+                                + "(triangles={} > {}; {} of {} source polygons are triangles). "
+                                + "Sub-pixel cracks at shared edges (if any) will not be resolved.",
+                                meshLabel, mesh.getTriangleCount(), TJunctionResolver.MAX_TRIANGLES,
+                                triangulator.getTriangleSourcePolygonCount(),
+                                triangulator.getSourcePolygonCount());
+                    }
+                } else {
+                    double[] center = mesh.computeCenter();
+                    double scaleX = GeoTransform.metersPerDegreeLon(center[1]);
+                    double scaleY = GeoTransform.WGS84_METERS_PER_DEGREE_LAT;
+                    mesh.resolveTJunctions(scaleX, scaleY, T_JUNCTION_TOLERANCE_METERS, meshLabel);
+                }
             }
             mesh.removeDuplicateTriangles();
         }

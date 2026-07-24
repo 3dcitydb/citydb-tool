@@ -78,8 +78,8 @@ public final class FeatureProcessor {
         return new double[]{(bbox[0] + bbox[3]) / 2, (bbox[1] + bbox[4]) / 2};
     }
 
-    public void process(long featureId, String objectId, String featureType,
-                        String featureTypeNamespace,
+    public void process(long featureId, String objectId, String featureLabel,
+                        String featureType, String featureTypeNamespace,
                         Envelope envelope, Map<String, Object> attributes,
                         List<GeometryProperty> geomProps,
                         RingAttributes ringAttributes) throws VisExportException {
@@ -89,7 +89,7 @@ public final class FeatureProcessor {
         // inside GeometryMeshBuilder.
         Name defaultSurfaceType = Name.of(featureType, featureTypeNamespace);
         TriangleMesh mesh = GeometryMeshBuilder.build(geomProps, featureId, defaultSurfaceType,
-                ringAttributes);
+                ringAttributes, featureLabel, false);
         if (mesh.isEmpty()) {
             return;
         }
