@@ -44,10 +44,10 @@ class GeoTransformTest {
         };
     }
 
-    private static void assertVecEquals(double[] expected, double[] actual) {
-        assertEquals(expected[0], actual[0], 1e-12);
-        assertEquals(expected[1], actual[1], 1e-12);
-        assertEquals(expected[2], actual[2], 1e-12);
+    private static void assertVecEquals(double[] expected, double[] actual, String label) {
+        assertEquals(expected[0], actual[0], 1e-12, label + ".x");
+        assertEquals(expected[1], actual[1], 1e-12, label + ".y");
+        assertEquals(expected[2], actual[2], 1e-12, label + ".z");
     }
 
     @Test
@@ -62,44 +62,44 @@ class GeoTransformTest {
     }
 
     @Test
-    void upInEcefMatchesQuaternionUpColumnAcrossLatitudes() {
-        // The quaternion must rotate ENU "up" (0,0,1) onto the same ECEF
-        // local-vertical that fillUpInEcef writes directly. Checked at the
-        // equator, mid latitude, and a high latitude to cover the different
-        // Shepperd branches the matrix-to-quaternion conversion selects.
+    void quaternionRotatesEnuAxesOntoEcefColumnsAcrossShepperdBranches() {
+        // The quaternion is the matrix-to-quaternion form of M = [east|north|up],
+        // so rotating the ENU unit axes must reproduce those columns, and "up"
+        // must additionally match what fillUpInEcef writes directly. With
+        // trace(M) = -sinLon * (1 + sinLat) + sinLat and the diagonal
+        // (-sinLon, -sinLat * sinLon, sinLat), the points select every
+        // Shepperd branch of matrixToQuaternion:
+        //   (11.5, 48.1), (-74, 40.7), (10, 89) -> trace-positive
+        //   (-90, -45) -> x-dominant (trace = 1 + 2 * sin(-45) = -0.414, m00 = 1)
+        //   (0, -75)   -> y-dominant (trace < 0, m00 = m11 = 0 > m22)
+        //   (0, 0)     -> z-dominant (trace and all diagonal entries are 0)
         double[][] points = {
-                {0, 0}, {11.5, 48.1}, {-74.0, 40.7}, {10, 89}, {0, -75}
+                {0, 0}, {11.5, 48.1}, {-74.0, 40.7}, {10, 89}, {0, -75}, {-90, -45}
         };
         for (double[] p : points) {
             EnuBasis basis = EnuBasis.at(p[0], p[1]);
-
-            float[] up = new float[3];
-            basis.fillUpInEcef(up);
+            String at = " at " + p[0] + "," + p[1];
 
             double[] q = basis.enuToEcefQuaternion();
             double norm = Math.sqrt(q[0] * q[0] + q[1] * q[1] + q[2] * q[2] + q[3] * q[3]);
-            assertEquals(1.0, norm, 1e-9, "quaternion must be unit length");
+            assertEquals(1.0, norm, 1e-9, "quaternion must be unit length" + at);
 
+            double sinLon = Math.sin(Math.toRadians(p[0])), cosLon = Math.cos(Math.toRadians(p[0]));
+            double sinLat = Math.sin(Math.toRadians(p[1])), cosLat = Math.cos(Math.toRadians(p[1]));
             double[] rotatedUp = rotate(q, 0, 0, 1);
-            assertEquals(up[0], rotatedUp[0], 1e-6, "up.x at " + p[0] + "," + p[1]);
-            assertEquals(up[1], rotatedUp[1], 1e-6, "up.y at " + p[0] + "," + p[1]);
-            assertEquals(up[2], rotatedUp[2], 1e-6, "up.z at " + p[0] + "," + p[1]);
+            assertVecEquals(new double[]{-sinLon, cosLon, 0},
+                    rotate(q, 1, 0, 0), "east" + at);
+            assertVecEquals(new double[]{-sinLat * cosLon, -sinLat * sinLon, cosLat},
+                    rotate(q, 0, 1, 0), "north" + at);
+            assertVecEquals(new double[]{cosLat * cosLon, cosLat * sinLon, sinLat},
+                    rotatedUp, "up" + at);
+
+            float[] up = new float[3];
+            basis.fillUpInEcef(up);
+            assertEquals(up[0], rotatedUp[0], 1e-6, "fillUpInEcef.x" + at);
+            assertEquals(up[1], rotatedUp[1], 1e-6, "fillUpInEcef.y" + at);
+            assertEquals(up[2], rotatedUp[2], 1e-6, "fillUpInEcef.z" + at);
         }
-    }
-
-    @Test
-    void quaternionRotatesEnuBasisOntoEcefMatrixColumns() {
-        // The quaternion is the matrix-to-quaternion form of M = [east|north|up].
-        // Rotating the ENU unit axes must reproduce those columns exactly.
-        EnuBasis basis = EnuBasis.at(11.5, 48.1);
-        double sinLon = Math.sin(Math.toRadians(11.5)), cosLon = Math.cos(Math.toRadians(11.5));
-        double sinLat = Math.sin(Math.toRadians(48.1)), cosLat = Math.cos(Math.toRadians(48.1));
-
-        double[] q = basis.enuToEcefQuaternion();
-
-        assertVecEquals(new double[]{-sinLon, cosLon, 0}, rotate(q, 1, 0, 0));           // east
-        assertVecEquals(new double[]{-sinLat * cosLon, -sinLat * sinLon, cosLat}, rotate(q, 0, 1, 0)); // north
-        assertVecEquals(new double[]{cosLat * cosLon, cosLat * sinLon, sinLat}, rotate(q, 0, 0, 1));    // up
     }
 
     @Test

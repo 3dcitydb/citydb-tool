@@ -73,6 +73,23 @@ class QuantizedMeshDecoderTest {
     }
 
     @Test
+    void decodes32BitIndexTileWithAlignmentSkip() {
+        // 65537 vertices force the 32-bit index path. The index block then
+        // starts at 88 + 4 + 3 * 2 * 65537 = 393314 = 2 (mod 4), so the
+        // decoder's 2-byte alignment skip must execute before the triangle
+        // count. Geometry is the same quad ramp, so the sampled heights match
+        // the 16-bit tile.
+        QuantizedMeshTile tile = QuantizedMeshDecoder
+                .decode(buildQuadTile(null, 65537), 0, 0, 1, 1)
+                .tile();
+
+        assertEquals(50.0, tile.sampleHeight(0.5, 0.5), EPS);
+        assertEquals(MIN_HEIGHT, tile.sampleHeight(0.5, 0.0), EPS);
+        assertEquals(MAX_HEIGHT, tile.sampleHeight(0.0, 1.0), EPS);
+        assertEquals(25.0, tile.sampleHeight(0.5, 0.25), EPS);
+    }
+
+    @Test
     void rejectsTruncatedPayload() {
         assertThrows(IllegalArgumentException.class,
                 () -> QuantizedMeshDecoder.decode(new byte[16], 0, 0, 1, 1));
@@ -86,15 +103,27 @@ class QuantizedMeshDecoderTest {
      * optionally a trailing METADATA extension carrying {@code metadataJson}.
      */
     private static byte[] buildQuadTile(String metadataJson) {
+        return buildQuadTile(metadataJson, 4);
+    }
+
+    /**
+     * Variant with {@code vertexCount >= 4} vertices: the four quad corners
+     * first, then unreferenced filler vertices at the quantized origin. Index
+     * width follows the spec — 32-bit (4-byte aligned) when
+     * {@code vertexCount > 65536}, else 16-bit.
+     */
+    private static byte[] buildQuadTile(String metadataJson, int vertexCount) {
         // Corner vertices (u, v, h) in quantized space. Height ramps with v
         // (latitude): south edge h=0 -> minHeight, north edge h=32767 -> maxHeight.
-        int[] u = {0, 32767, 0, 32767};
-        int[] v = {0, 0, 32767, 32767};
-        int[] h = {0, 0, 32767, 32767};
+        // Arrays.copyOf pads the fillers with zeros (the sw corner).
+        int[] u = Arrays.copyOf(new int[]{0, 32767, 0, 32767}, vertexCount);
+        int[] v = Arrays.copyOf(new int[]{0, 0, 32767, 32767}, vertexCount);
+        int[] h = Arrays.copyOf(new int[]{0, 0, 32767, 32767}, vertexCount);
         // Two triangles tiling the quad: (sw, se, nw) and (se, ne, nw).
         int[] indices = {0, 1, 2, 1, 3, 2};
+        boolean longIndices = vertexCount > 65536;
 
-        ByteBuffer buf = ByteBuffer.allocate(512).order(ByteOrder.LITTLE_ENDIAN);
+        ByteBuffer buf = ByteBuffer.allocate(512 + 6 * vertexCount).order(ByteOrder.LITTLE_ENDIAN);
 
         // --- 88-byte header: only min/max height (at offset 24) are read.
         buf.position(24);
@@ -103,14 +132,19 @@ class QuantizedMeshDecoderTest {
         buf.position(88);
 
         // --- Vertex data: count, then zig-zag + delta encoded u, v, h.
-        buf.putInt(u.length);
+        buf.putInt(vertexCount);
         putVertexArray(buf, u);
         putVertexArray(buf, v);
         putVertexArray(buf, h);
 
-        // --- Triangle indices (16-bit; vertexCount well under 65536).
+        // --- Triangle indices; the 32-bit block is 4-byte aligned, so pad
+        //     with two zero bytes when the vertex data ends on a 2-mod-4
+        //     position (16-bit needs no padding).
+        if (longIndices && (buf.position() & 3) != 0) {
+            buf.position(buf.position() + 2);
+        }
         buf.putInt(indices.length / 3);
-        putIndexArray(buf, indices);
+        putIndexArray(buf, indices, longIndices);
 
         // --- Four edge-vertex lists, all empty.
         for (int e = 0; e < 4; e++) {
@@ -140,12 +174,16 @@ class QuantizedMeshDecoderTest {
         }
     }
 
-    /** High-watermark encode triangle indices into 16-bit codes (inverse of the decoder). */
-    private static void putIndexArray(ByteBuffer buf, int[] indices) {
+    /** High-watermark encode triangle indices into 16- or 32-bit codes (inverse of the decoder). */
+    private static void putIndexArray(ByteBuffer buf, int[] indices, boolean longIndices) {
         int highest = 0;
         for (int index : indices) {
             int code = highest - index;
-            buf.putShort((short) code);
+            if (longIndices) {
+                buf.putInt(code);
+            } else {
+                buf.putShort((short) code);
+            }
             if (code == 0) {
                 highest++;
             }
