@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Shared harness for the live-DB end-to-end export smoke tests. Drives the real
@@ -41,13 +41,17 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>
  * <b>Requires a populated test database.</b> The password must be supplied via
  * the {@code CITYDB_TEST_PASSWORD} environment variable — no credential is
- * committed to the repo — and the tests self-skip when it (or a reachable
- * database) is absent, so they are harmless on machines / CI without one. This
- * mirrors {@code CesiumWorldTerrainProviderIT}'s {@code CESIUM_ION_TOKEN}
- * convention; environment variables are inherited by the forked test JVM, so no
- * Gradle wiring is needed. The remaining parameters default to the local
+ * committed to the repo. The remaining parameters default to the local
  * development instance and can be overridden via their own env vars
- * ({@code CITYDB_TEST_HOST/PORT/DATABASE/USER/SCHEMA}).
+ * ({@code CITYDB_TEST_HOST/PORT/DATABASE/USER/SCHEMA}). Environment variables are
+ * inherited by the forked test JVM, so no Gradle wiring is needed.
+ * <p>
+ * <b>A missing or unreachable database fails this class; it does not skip it.</b>
+ * The class is reachable only through the {@code integrationTest} Gradle task,
+ * which CI never invokes, so the only way to get here is to ask for it. Skipping
+ * at that point would report green for the very writer pipeline the run was
+ * meant to exercise, and would make a typo'd password indistinguishable from a
+ * healthy run. Use {@code gradlew test} for the database-free unit suite.
  * <p>
  * The full textured railway export loads every source texture and builds atlases
  * concurrently, so the forked test JVM is given a larger heap via
@@ -58,6 +62,11 @@ abstract class AbstractRailwaySceneExportIT {
     /** Output-file base name; both writers strip the extension to a {@code railway} scene dir. */
     static final String SCENE_NAME = "railway";
 
+    private static final String SETUP_HINT =
+            "Start the local test citydb and set CITYDB_TEST_PASSWORD (optionally " +
+                    "CITYDB_TEST_HOST/PORT/DATABASE/USER/SCHEMA), or run 'gradlew test' " +
+                    "for the database-free unit suite.";
+
     static DatabaseManager databaseManager;
     static DatabaseAdapter adapter;
 
@@ -65,29 +74,42 @@ abstract class AbstractRailwaySceneExportIT {
     static void connect() {
         // The password is intentionally NOT defaulted — it must be supplied via
         // the CITYDB_TEST_PASSWORD env var (no secret is committed to the repo).
-        // When it is absent the whole class self-skips below.
         String password = System.getenv("CITYDB_TEST_PASSWORD");
         if (password == null || password.isBlank()) {
-            return;
+            throw new IllegalStateException(
+                    "CITYDB_TEST_PASSWORD is not set, so the integration test has no database " +
+                            "to run against. " + SETUP_HINT);
         }
 
+        String host = property("HOST", "localhost");
+        String port = property("PORT", "5432");
+        String database = property("DATABASE", "test_citydb_v5_railway");
+        String user = property("USER", "postgres");
+        String schema = property("SCHEMA", "citydb");
+
         ConnectionDetails connectionDetails = new ConnectionDetails()
-                .setHost(property("HOST", "localhost"))
-                .setPort(Integer.valueOf(property("PORT", "5432")))
-                .setDatabase(property("DATABASE", "test_citydb_v5_railway"))
-                .setUser(property("USER", "postgres"))
+                .setHost(host)
+                .setPort(Integer.valueOf(port))
+                .setDatabase(database)
+                .setUser(user)
                 .setPassword(password)
-                .setSchema(property("SCHEMA", "citydb"));
+                .setSchema(schema);
 
         DatabaseManager manager = DatabaseManager.newInstance();
         try {
             manager.connect(connectionDetails);
-            databaseManager = manager;
-            adapter = manager.getAdapter();
         } catch (Throwable e) {
-            // No reachable database -> skip the whole class rather than fail.
+            // Surface the cause instead of swallowing it: a wrong password, a
+            // stopped server and a missing schema all land here and must stay
+            // distinguishable.
             manager.disconnect();
+            throw new IllegalStateException("Failed to connect to the test database " +
+                    user + "@" + host + ":" + port + "/" + database + " (schema " + schema + "). " +
+                    SETUP_HINT, e);
         }
+
+        databaseManager = manager;
+        adapter = manager.getAdapter();
     }
 
     @AfterAll
@@ -111,9 +133,9 @@ abstract class AbstractRailwaySceneExportIT {
      */
     Path runExport(Path tempDir, IOAdapter ioAdapter, OutputFormatOptions formatOptions,
                    String fileExtension) throws Exception {
-        assumeTrue(databaseManager != null && databaseManager.isConnected(),
-                "No reachable citydb; set CITYDB_TEST_PASSWORD (and optionally the other " +
-                        "CITYDB_TEST_* env vars) to enable this integration test.");
+        assertNotNull(databaseManager, "connect() established no database connection.");
+        assertTrue(databaseManager.isConnected(),
+                "The database connection dropped before the export started.");
 
         // Visualization formats require WGS84 geographic coordinates; the DB
         // exporter reprojects via PostGIS as part of the SQL it builds.
@@ -123,7 +145,9 @@ abstract class AbstractRailwaySceneExportIT {
         Query query = new Query();
         QueryExecutor executor = QueryExecutor.builder(adapter).build(query);
         long expected = executor.countHits();
-        assumeTrue(expected > 0, "Test database holds no features.");
+        // An empty database is a misconfigured fixture, not a reason to opt out.
+        assertTrue(expected > 0, "Test database holds no features; expected the populated " +
+                "railway dataset. " + SETUP_HINT);
 
         // The writer wipes its whole temp directory on close
         // (VisExportStores.close -> deleteDirectoryTree). Keep it strictly
