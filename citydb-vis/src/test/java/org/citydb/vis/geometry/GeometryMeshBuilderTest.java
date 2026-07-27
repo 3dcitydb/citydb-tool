@@ -7,10 +7,13 @@ package org.citydb.vis.geometry;
 
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
+import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.geometry.Polygon;
+import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.GeometryProperty;
+import org.citydb.model.property.RelationType;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -77,5 +80,55 @@ class GeometryMeshBuilderTest {
                 SURFACE_TYPE, new RingAttributes(null, null, null), "test feature", false);
 
         assertEquals(6, mesh.getTriangleCount());
+    }
+
+    // ---- owner-depth sort: deepest owner wins the first-wins polygon dedup ----
+
+    private static final Name BUILDING = Name.of("Building", Namespaces.CORE);
+    private static final Name ROOF_SURFACE = Name.of("RoofSurface", Namespaces.CORE);
+
+    private static Polygon squarePolygon(String objectId) {
+        double s = 1e-5;
+        return Polygon.of(LinearRing.of(List.of(
+                Coordinate.of(0, 0, 0), Coordinate.of(s, 0, 0),
+                Coordinate.of(s, s, 0), Coordinate.of(0, s, 0),
+                Coordinate.of(0, 0, 0)))).setObjectId(objectId);
+    }
+
+    @Test
+    void deeperOwnerSurfaceTypeWinsRegardlessOfInsertionOrder() {
+        for (boolean deepFirst : new boolean[]{true, false}) {
+            // xlink pair: two distinct Polygon objects with the same gml:id,
+            // one reachable from the Building's own solid (owner depth 1),
+            // one from its boundedBy RoofSurface (owner depth 2).
+            Feature building = Feature.of(BUILDING);
+            GeometryProperty solidProperty = GeometryProperty.of(
+                    Name.of("lod2Solid", Namespaces.CORE), squarePolygon("shared"));
+            building.addGeometry(solidProperty);
+
+            Feature roof = Feature.of(ROOF_SURFACE);
+            GeometryProperty roofProperty = GeometryProperty.of(
+                    Name.of("lod2MultiSurface", Namespaces.CORE), squarePolygon("shared"));
+            roof.addGeometry(roofProperty);
+            building.addFeature(FeatureProperty.of(
+                    Name.of("boundedBy", Namespaces.CORE), roof, RelationType.CONTAINS));
+
+            List<GeometryProperty> properties = deepFirst
+                    ? List.of(roofProperty, solidProperty)
+                    : List.of(solidProperty, roofProperty);
+            TriangleMesh mesh = GeometryMeshBuilder.build(properties, 1L, BUILDING,
+                    new RingAttributes(null, null, null));
+
+            // One shared polygon, triangulated once (first-wins dedup) ...
+            assertEquals(2, mesh.getTriangleCount(),
+                    "deepFirst=" + deepFirst + ": shared polygon must be triangulated once");
+            // ... and recorded with the deepest owner's feature type: the
+            // depth sort must make insertion order irrelevant.
+            for (int t = 0; t < mesh.getTriangleCount(); t++) {
+                assertEquals(ROOF_SURFACE, mesh.getTriangleSurfaceType(t),
+                        "deepFirst=" + deepFirst + ": triangle " + t
+                                + " must carry the BoundarySurface type");
+            }
+        }
     }
 }

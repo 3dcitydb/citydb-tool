@@ -332,4 +332,86 @@ class PolygonTriangulatorTest {
         assertEquals(0, triangulator.getSourcePolygonCount());
         assertFalse(triangulator.isSourcePreTriangulated());
     }
+
+    // ---- per-feature polygon dedup (xlink shared surfaces) ----
+
+    private static Polygon unitSquare() {
+        return Polygon.of(ring(
+                new double[]{0, 0}, new double[]{1, 0},
+                new double[]{1, 1}, new double[]{0, 1}, new double[]{0, 0}));
+    }
+
+    @Test
+    void sharedPolygonInstanceIsTriangulatedOnce() {
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        RingAttributes none = new RingAttributes(null, null, null);
+        Polygon shared = unitSquare();
+
+        TriangleMesh first = triangulator.triangulate(shared, 1L, WALL, none);
+        // Same Java instance reached again (e.g. via a second geometry
+        // property of the feature): dropped by the identity set even
+        // without a gml:id.
+        TriangleMesh second = triangulator.triangulate(shared, 1L, WALL, none);
+
+        assertEquals(2, first.getTriangleCount());
+        assertTrue(second.isEmpty(), "shared instance must not be triangulated twice");
+    }
+
+    @Test
+    void xlinkCopyWithSameIdIsDroppedFirstWins() {
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        RingAttributes none = new RingAttributes(null, null, null);
+        Name roof = Name.of("RoofSurface");
+        Polygon original = unitSquare().setObjectId("poly-1");
+        Polygon xlinkCopy = unitSquare().setObjectId("poly-1");
+
+        TriangleMesh first = triangulator.triangulate(original, 1L, roof, none);
+        TriangleMesh second = triangulator.triangulate(xlinkCopy, 1L, WALL, none);
+
+        // First-wins: the first encounter records its surface type, the
+        // distinct copy carrying the same gml:id emits nothing.
+        assertEquals(2, first.getTriangleCount());
+        assertEquals(roof, first.getTriangleSurfaceType(0));
+        assertTrue(second.isEmpty(), "distinct instance with the same gml:id must be deduped");
+    }
+
+    @Test
+    void reversedCopyWithSameIdIsKeptAsBackFace() {
+        // A gml:OrientableSurface flips `reversed` on its xlink target: the
+        // same gml:id with opposite orientation is a DISTINCT face (the back
+        // side of a shared wall) and must survive dedup; a second reversed
+        // copy then dedups within the reversed lane.
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        RingAttributes none = new RingAttributes(null, null, null);
+        Polygon front = unitSquare().setObjectId("poly-1");
+        Polygon back = unitSquare().setObjectId("poly-1").setReversed(true);
+        Polygon backAgain = unitSquare().setObjectId("poly-1").setReversed(true);
+
+        TriangleMesh frontMesh = triangulator.triangulate(front, 1L, WALL, none);
+        TriangleMesh backMesh = triangulator.triangulate(back, 1L, WALL, none);
+        TriangleMesh backDup = triangulator.triangulate(backAgain, 1L, WALL, none);
+
+        assertEquals(2, frontMesh.getTriangleCount());
+        assertEquals(2, backMesh.getTriangleCount(), "reversed copy is a distinct face");
+        assertTrue(backDup.isEmpty(), "second reversed copy must be deduped");
+
+        // The kept back face really faces the other way: the CCW square's
+        // Newell normal is +Z, the reversed polygon's -Z.
+        assertTrue(frontMesh.getNormals().get(0)[2] > 0);
+        assertTrue(backMesh.getNormals().get(0)[2] < 0);
+    }
+
+    @Test
+    void distinctPolygonsWithoutIdAreBothTriangulated() {
+        // Dedup of distinct instances requires a gml:id — coincident
+        // geometry without one must be kept.
+        PolygonTriangulator triangulator = new PolygonTriangulator(false);
+        RingAttributes none = new RingAttributes(null, null, null);
+
+        TriangleMesh first = triangulator.triangulate(unitSquare(), 1L, WALL, none);
+        TriangleMesh second = triangulator.triangulate(unitSquare(), 1L, WALL, none);
+
+        assertEquals(2, first.getTriangleCount());
+        assertEquals(2, second.getTriangleCount());
+    }
 }

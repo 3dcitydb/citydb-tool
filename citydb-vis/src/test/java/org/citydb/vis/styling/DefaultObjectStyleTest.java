@@ -5,7 +5,6 @@
 
 package org.citydb.vis.styling;
 
-import org.citydb.vis.util.ColorUtils;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -59,8 +58,12 @@ class DefaultObjectStyleTest {
         assertTrue(DefaultObjectStyle.parseColor("#ff0000").hasNonDefaultColor());
         // White but semi-transparent still differs from the opaque-white default.
         assertTrue(DefaultObjectStyle.parseColor("#ffffff80").hasNonDefaultColor());
-        // Alpha just below the 0.999 threshold counts as transparent.
+        // hasAlpha() is alpha < 0.999; 0xe0 (224/255 = 0.878) is well below it.
         assertTrue(DefaultObjectStyle.parseColor("#ffffffe0").hasAlpha());
+        // Boundary of the 0.999 threshold: 254/255 = 0.99608 < 0.999 -> still
+        // transparent; 255/255 = 1 -> opaque. No 8-bit alpha lands inside
+        // [0.999, 1), since 0.999 * 255 = 254.745.
+        assertTrue(DefaultObjectStyle.parseColor("#fffffffe").hasAlpha());
         assertFalse(DefaultObjectStyle.parseColor("#ffffffff").hasAlpha());
     }
 
@@ -77,13 +80,16 @@ class DefaultObjectStyleTest {
 
     @Test
     void toLinearRgbaConvertsRgbButPassesAlphaThrough() {
-        DefaultObjectStyle style = DefaultObjectStyle.parseColor("#0000ff80");
+        DefaultObjectStyle style = DefaultObjectStyle.parseColor("#0080ff80");
         float[] linear = style.toLinearRgba();
 
-        // Endpoints are fixed points of the sRGB curve; blue channel matches
-        // ColorUtils; alpha is copied verbatim (not gamma-corrected).
-        assertEquals(ColorUtils.srgbToLinear(1f), linear[2], 1e-6f);
+        // 0 and 1 are fixed points of the sRGB curve.
         assertEquals(0f, linear[0], 0f);
+        assertEquals(1f, linear[2], 1e-6f);
+        // Mid-range green: srgb 128/255 = 0.5019608 > 0.04045, so
+        // ((0.5019608 + 0.055) / 1.055)^2.4 = 0.2158605.
+        assertEquals(0.2158605f, linear[1], 1e-6f);
+        // Alpha is copied verbatim (not gamma-corrected).
         assertEquals(128 / 255f, linear[3], 1e-6f);
     }
 

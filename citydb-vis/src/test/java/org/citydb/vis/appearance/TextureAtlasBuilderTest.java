@@ -127,4 +127,56 @@ class TextureAtlasBuilderTest {
         assertEquals(1.0, atlas.getActualScale(), 1e-9,
                 "no rescale loop may fire when the textures fit the page");
     }
+
+    @Test
+    void rescaleFallbackShrinksTexturesToFitMaxAtlasSize(@TempDir Path tempDir) throws IOException {
+        TextureStore store = new TextureStore(tempDir);
+        // Two 300x300 textures can never share a 256x256 page at scale 1.0.
+        // Phase 1 must retry until two scaled squares fit side by side
+        // (2 * 300*scale <= 256, i.e. scale ~0.35 after three attempts:
+        // ~0.53 -> ~0.45 -> ~0.35), exercising the attempt+1 tightening.
+        Set<Integer> texIds = new HashSet<>();
+        texIds.add(registerTexture(store, tempDir, "t0.jpg", 300, 300));
+        texIds.add(registerTexture(store, tempDir, "t1.jpg", 300, 300));
+
+        assertTrue(TextureAtlasBuilder.wouldOverflow(texIds, store, 1.0, 256, Map.of()),
+                "two 300x300 textures must overflow a 256x256 page");
+
+        TextureAtlas atlas = TextureAtlasBuilder.build(texIds, store,
+                1.0, 256, Map.of(), false, AtlasFallbackStrategy.RESCALE);
+
+        assertNotNull(atlas);
+        assertTrue(atlas.getWidth() <= 256 && atlas.getHeight() <= 256,
+                "RESCALE must honor --max-atlas-size, got "
+                        + atlas.getWidth() + "x" + atlas.getHeight());
+        assertTrue(atlas.getActualScale() < 1.0,
+                "resolving overflow by rescale must report a reduced actualScale");
+        assertEquals(texIds, atlas.getTextureIds(),
+                "no texture may be dropped by the rescale chain");
+    }
+
+    @Test
+    void expandFallbackGrowsPageBeyondCapAtUnchangedScale(@TempDir Path tempDir) throws IOException {
+        TextureStore store = new TextureStore(tempDir);
+        Set<Integer> texIds = new HashSet<>();
+        texIds.add(registerTexture(store, tempDir, "t0.jpg", 300, 300));
+        texIds.add(registerTexture(store, tempDir, "t1.jpg", 300, 300));
+
+        assertTrue(TextureAtlasBuilder.wouldOverflow(texIds, store, 1.0, 256, Map.of()),
+                "two 300x300 textures must overflow a 256x256 page");
+
+        TextureAtlas atlas = TextureAtlasBuilder.build(texIds, store,
+                1.0, 256, Map.of(), false, AtlasFallbackStrategy.EXPAND);
+
+        assertNotNull(atlas);
+        // Doubling: 256 -> 512 still cannot place two 300x300 -> 1024 can.
+        assertTrue(Math.max(atlas.getWidth(), atlas.getHeight()) > 256,
+                "EXPAND must grow the page beyond --max-atlas-size instead of rescaling");
+        assertTrue(atlas.getWidth() <= 16384 && atlas.getHeight() <= 16384,
+                "expansion is bounded by the WebGL-safe 16K hard cap");
+        assertEquals(1.0, atlas.getActualScale(), 1e-9,
+                "EXPAND must keep the user's texture scale unchanged");
+        assertEquals(texIds, atlas.getTextureIds(),
+                "no texture may be dropped by the expand chain");
+    }
 }
