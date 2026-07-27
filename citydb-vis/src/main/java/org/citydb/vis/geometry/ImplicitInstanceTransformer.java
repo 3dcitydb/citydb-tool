@@ -15,9 +15,11 @@ import org.citydb.model.walker.ModelWalker;
 import org.citydb.vis.util.GeoTransform;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Materializes a CityGML implicit-geometry instance into world-space (EPSG:4326)
@@ -90,8 +92,10 @@ public final class ImplicitInstanceTransformer {
         Geometry<?> copy = deepCopy(prototype);
 
         // Build prototype-ring → copy-ring identity map by parallel walks.
-        // Every Geometry.copy() implementation preserves child order, so the
-        // ModelWalker traversal yields the same ring sequence on both sides.
+        // Child.copy() preserves child order, so the ModelWalker traversal
+        // yields the same ring sequence on both sides. Its CopySession dedups
+        // shared children: a ring referenced twice in the prototype maps to
+        // the same clone at both positions, keeping the walks aligned.
         List<LinearRing> oldRings = collectRings(prototype);
         List<LinearRing> newRings = collectRings(copy);
         if (oldRings.size() != newRings.size()) {
@@ -138,7 +142,14 @@ public final class ImplicitInstanceTransformer {
         double refZ = ref.getDimension() == 3 ? ref.getZ() : 0.0;
         double metersPerDegLon = GeoTransform.metersPerDegreeLon(refLat);
 
+        // Child.copy()'s CopySession shares one clone for rings referenced
+        // multiple times in the prototype tree, so the collected list can
+        // contain the same ring instance twice — transform each ring once.
+        Set<LinearRing> seen = Collections.newSetFromMap(new IdentityHashMap<>());
         for (LinearRing ring : rings) {
+            if (!seen.add(ring)) {
+                continue;
+            }
             for (Coordinate c : ring.getPoints()) {
                 double x = c.getX();
                 double y = c.getY();
