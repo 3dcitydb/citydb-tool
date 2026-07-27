@@ -57,6 +57,15 @@ class SlpkPackagerTest {
     private static final byte[] TEXTURE_BYTES =
             "fake-jpeg-payload".getBytes(StandardCharsets.UTF_8);
     private static final byte[] GEOMETRY_BYTES = {1, 2, 3, 4, 5, 6, 7, 8};
+    /**
+     * MD5("nodes/2/geometries/0") — the hash key of the geometry entry
+     * {@code nodes/2/geometries/0.bin.gz} after lowercasing and extension
+     * stripping. Computed OUTSIDE Java (PowerShell MD5 over the UTF-8
+     * bytes), so it anchors the key derivation independently of the
+     * {@link #hashKey}/{@link #md5Of} helpers, which merely mirror the
+     * production algorithm and would track any bug in it.
+     */
+    private static final String GOLDEN_GEOMETRY_MD5 = "ec76a45a7cb0d26111dc17dd28222a58";
 
     @Test
     void remapsLooseFolderToSlpkLayout(@TempDir Path tempDir) throws IOException {
@@ -169,6 +178,17 @@ class SlpkPackagerTest {
                         zip.getInputStream(entry).readAllBytes());
             }
         }
+
+        // Golden pin: the externally computed MD5 of the geometry entry's
+        // hash key must appear in the index and its byte range must gunzip
+        // back to the source geometry. This catches an initially-wrong key
+        // derivation that the mirrored helpers below could never detect.
+        assertTrue(md5ToRange.containsKey(GOLDEN_GEOMETRY_MD5),
+                "hash index must contain MD5(\"nodes/2/geometries/0\")");
+        long[] geometryRange = md5ToRange.get(GOLDEN_GEOMETRY_MD5);
+        assertArrayEquals(GEOMETRY_BYTES, gunzip(Arrays.copyOfRange(archive,
+                        (int) geometryRange[0], (int) (geometryRange[0] + geometryRange[1]))),
+                "golden MD5 record must address the geometry entry's bytes");
 
         // Records are sorted by unsigned MD5 comparison (ArcGIS binary-search
         // precondition).
