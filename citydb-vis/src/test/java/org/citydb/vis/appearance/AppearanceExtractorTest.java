@@ -7,15 +7,18 @@ package org.citydb.vis.appearance;
 
 import org.citydb.model.appearance.Appearance;
 import org.citydb.model.appearance.Color;
+import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.appearance.ParameterizedTexture;
 import org.citydb.model.appearance.SurfaceDataProperty;
 import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.appearance.X3DMaterial;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.common.Matrix2x2;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.LinearRing;
+import org.citydb.model.geometry.Point;
 import org.citydb.model.geometry.Polygon;
 import org.citydb.model.property.AppearanceProperty;
 import org.citydb.vis.store.TextureStore;
@@ -140,6 +143,88 @@ class AppearanceExtractorTest {
         for (TextureCoordinate uv : uvs) {
             assertTrue(uv.getS() >= 0f && uv.getT() >= 0f, "normalized UV must be non-negative");
         }
+    }
+
+    @Test
+    void georeferencedTextureProjectsAffineUVsPerVertex() {
+        Polygon poly = square();
+        LinearRing ring = poly.getExteriorRing();
+
+        // UV = orientation x (xy - ref); ref = (-1, -2), row-major matrix
+        // [0.5 0.1; 0 0.25] -> u = 0.5*(x+1) + 0.1*(y+2), v = 0.25*(y+2).
+        // Corners (0,0),(1,0),(1,1),(0,1),(0,0) ->
+        // (0.7,0.5),(1.2,0.5),(1.3,0.75),(0.8,0.75),(0.7,0.5);
+        // floor(minU)=floor(0.7)=0, floor(minV)=0 -> no normalization shift.
+        GeoreferencedTexture gt = GeoreferencedTexture.newInstance()
+                .setTextureImage(ExternalFile.of("geo.png"))
+                .setReferencePoint(Point.of(Coordinate.of(-1, -2, 0)))
+                .setOrientation(Matrix2x2.ofRowMajor(0.5, 0.1, 0.0, 0.25))
+                .addTarget(poly);
+
+        RingAppearance ra = AppearanceExtractor.extract(featureWith(gt), textureStore());
+
+        assertNotNull(ra.texCoords());
+        List<TextureCoordinate> uvs = ra.texCoords().get(ring);
+        assertNotNull(uvs);
+        assertEquals(5, uvs.size(), "one UV per ring point, closing duplicate included");
+        float[][] expected = {
+                {0.7f, 0.5f}, {1.2f, 0.5f}, {1.3f, 0.75f}, {0.8f, 0.75f}, {0.7f, 0.5f}};
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i][0], uvs.get(i).getS(), 1e-5f, "u at vertex " + i);
+            assertEquals(expected[i][1], uvs.get(i).getT(), 1e-5f, "v at vertex " + i);
+        }
+        assertNotNull(ra.ringTextureIds());
+        assertTrue(ra.ringTextureIds().containsKey(ring));
+    }
+
+    /**
+     * A polygon targeted by both a ParameterizedTexture and a
+     * GeoreferencedTexture must keep the PT's authored UVs and texture id
+     * regardless of surface-data order (asymmetric put/putIfAbsent rule).
+     */
+    private void assertParameterizedTextureWins(boolean ptFirst) {
+        Polygon poly = square();
+        LinearRing ring = poly.getExteriorRing();
+
+        ParameterizedTexture pt = ParameterizedTexture.newInstance();
+        pt.setTextureImage(ExternalFile.of("pt.png"));
+        pt.addTextureCoordinates(ring, List.of(
+                TextureCoordinate.of(0f, 0f), TextureCoordinate.of(1f, 0f),
+                TextureCoordinate.of(1f, 1f), TextureCoordinate.of(0f, 1f),
+                TextureCoordinate.of(0f, 0f)));
+
+        // GT would project u = 2x, v = 2y -> (2,0) and (2,2) at corners 1 and
+        // 2, clearly distinct from the PT's authored [0,1] UVs.
+        GeoreferencedTexture gt = GeoreferencedTexture.newInstance()
+                .setTextureImage(ExternalFile.of("gt.png"))
+                .setReferencePoint(Point.of(Coordinate.of(0, 0, 0)))
+                .setOrientation(Matrix2x2.ofRowMajor(2.0, 0.0, 0.0, 2.0))
+                .addTarget(poly);
+
+        TextureStore store = textureStore();
+        Feature feature = ptFirst ? featureWith(pt, gt) : featureWith(gt, pt);
+        RingAppearance ra = AppearanceExtractor.extract(feature, store);
+
+        List<TextureCoordinate> uvs = ra.texCoords().get(ring);
+        assertNotNull(uvs);
+        assertEquals(1f, uvs.get(1).getS(), 1e-5f, "PT's authored u must win (GT would project 2)");
+        assertEquals(0f, uvs.get(1).getT(), 1e-5f);
+        assertEquals(1f, uvs.get(2).getS(), 1e-5f);
+        assertEquals(1f, uvs.get(2).getT(), 1e-5f, "PT's authored v must win (GT would project 2)");
+        // register() dedups by URI, so this resolves the PT image's id.
+        Integer ptId = store.register("pt.png");
+        assertEquals(ptId, ra.ringTextureIds().get(ring),
+                "the ring's texture id must be the PT's image");
+    }
+
+    @Test
+    void parameterizedTextureWinsOverGeoreferencedWhenProcessedFirst() {
+        assertParameterizedTextureWins(true);
+    }
+
+    @Test
+    void parameterizedTextureWinsOverGeoreferencedWhenProcessedSecond() {
+        assertParameterizedTextureWins(false);
     }
 
     @Test

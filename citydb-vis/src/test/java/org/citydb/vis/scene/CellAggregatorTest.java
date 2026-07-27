@@ -64,7 +64,9 @@ class CellAggregatorTest {
     @Test
     void nineCellsRecurseWithBoundedFanoutAndNoCellLost() {
         List<SceneNode> cells = grid(3, 3);
-        AtomicInteger indexer = new AtomicInteger(10);
+        // grid() indexes cells 1..n, so any index >= n + 1 is synthetic.
+        int firstSyntheticIndex = cells.size() + 1;
+        AtomicInteger indexer = new AtomicInteger(firstSyntheticIndex);
 
         SceneNode agg = CellAggregator.build(cells, coordsOf(cells), indexer);
 
@@ -73,7 +75,7 @@ class CellAggregatorTest {
         Deque<SceneNode> queue = new ArrayDeque<>(List.of(agg));
         while (!queue.isEmpty()) {
             SceneNode node = queue.poll();
-            if (node.getIndex() >= 10) {
+            if (node.getIndex() >= firstSyntheticIndex) {
                 syntheticCount++;
                 assertNotNull(node.getBoundingVolume());
                 assertTrue(node.getChildren().size() <= CellAggregator.MAX_CHILDREN_PER_AGG_NODE,
@@ -86,7 +88,7 @@ class CellAggregatorTest {
         assertEquals(new HashSet<>(cells), reachableCells);
         // Indexer consumption matches the synthetic node count — the stage
         // relies on this to append them contiguously to allNodes.
-        assertEquals(10 + syntheticCount, indexer.get());
+        assertEquals(firstSyntheticIndex + syntheticCount, indexer.get());
         assertTrue(syntheticCount > 1, "9 cells must recurse into sub-aggregations");
 
         // Root bbox is the union of the full 3×3 layout.
@@ -101,21 +103,34 @@ class CellAggregatorTest {
         // 6 cells in one row: gy is collapsed, recursion must still terminate
         // by splitting on gx alone.
         List<SceneNode> cells = grid(1, 6);
-        AtomicInteger indexer = new AtomicInteger(10);
+        // grid() indexes cells 1..n, so any index >= n + 1 is synthetic.
+        int firstSyntheticIndex = cells.size() + 1;
+        AtomicInteger indexer = new AtomicInteger(firstSyntheticIndex);
 
         SceneNode agg = CellAggregator.build(cells, coordsOf(cells), indexer);
 
+        // The gx midpoint of 0..5 is 2, mid inclusive on the low side: the
+        // root splits into a gx 0-2 and a gx 3-5 sub-aggregation instead of
+        // collapsing all 6 cells under itself.
+        assertEquals(2, agg.getChildren().size());
+
         Set<SceneNode> reachableCells = new HashSet<>();
+        int syntheticCount = 0;
         Deque<SceneNode> queue = new ArrayDeque<>(List.of(agg));
         while (!queue.isEmpty()) {
             SceneNode node = queue.poll();
-            if (node.getIndex() >= 10) {
+            if (node.getIndex() >= firstSyntheticIndex) {
+                syntheticCount++;
+                assertTrue(node.getChildren().size() <= CellAggregator.MAX_CHILDREN_PER_AGG_NODE,
+                        "a collapsed gy must not disable the split on gx");
                 queue.addAll(node.getChildren());
             } else {
                 reachableCells.add(node);
             }
         }
         assertEquals(new HashSet<>(cells), reachableCells);
+        assertEquals(3, syntheticCount);
+        assertEquals(firstSyntheticIndex + syntheticCount, indexer.get());
     }
 
     @Test
