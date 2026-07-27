@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,18 +55,10 @@ class MeshStoreTest {
             loaded = store.load(handle);
         }
 
-        assertEquals(mesh.getVertexCount(), loaded.getVertexCount());
         assertEquals(mesh.getTriangleCount(), loaded.getTriangleCount());
         assertTrue(loaded.hasTexCoords());
         assertTrue(loaded.hasColors());
-
-        for (int i = 0; i < mesh.getVertexCount(); i++) {
-            double[] expected = mesh.getPositions().get(i);
-            double[] actual = loaded.getPositions().get(i);
-            for (int d = 0; d < 3; d++) {
-                assertEquals(expected[d], actual[d], "position " + i + "[" + d + "]");
-            }
-        }
+        assertVertexLanesEqual(mesh, loaded);
 
         assertEquals(List.of(100L, 200L, 300L), loaded.getFeatureIds());
         assertEquals(List.of(3, -1, -1), loaded.getTriangleTextureIds());
@@ -83,6 +76,65 @@ class MeshStoreTest {
             assertEquals(mesh.getTriangles().get(i)[0], loaded.getTriangles().get(i)[0]);
             assertEquals(mesh.getTriangles().get(i)[1], loaded.getTriangles().get(i)[1]);
             assertEquals(mesh.getTriangles().get(i)[2], loaded.getTriangles().get(i)[2]);
+        }
+    }
+
+    @Test
+    void roundTripPreservesTexCoordsWithoutColors(@TempDir Path tempDir) throws IOException {
+        TriangleMesh mesh = new TriangleMesh();
+        int v0 = mesh.addVertex(8.1, 48.7, 10.0, 0, 0, 1, 0.1f, 0.2f);
+        int v1 = mesh.addVertex(8.2, 48.7, 10.0, 0, 0, 1, 0.9f, 0.2f);
+        int v2 = mesh.addVertex(8.1, 48.8, 10.0, 0, 0, 1, 0.1f, 0.8f);
+        mesh.addTriangle(v0, v1, v2, 100L, 3, false, ROOF, (byte) 0);
+
+        TriangleMesh loaded = storeAndLoad(mesh, tempDir);
+
+        assertTrue(loaded.hasTexCoords());
+        assertFalse(loaded.hasColors());
+        assertVertexLanesEqual(mesh, loaded);
+    }
+
+    @Test
+    void roundTripPreservesColorsWithoutTexCoords(@TempDir Path tempDir) throws IOException {
+        TriangleMesh mesh = new TriangleMesh();
+        int v0 = mesh.addVertex(8.3, 48.7, 0.0, 0, 0, 1, 1f, 0f, 0f, 0.5f);
+        int v1 = mesh.addVertex(8.4, 48.7, 0.0, 0, 0, 1, 0f, 1f, 0f, 0.5f);
+        int v2 = mesh.addVertex(8.3, 48.8, 0.0, 0, 0, 1, 0f, 0f, 1f, 1f);
+        mesh.addTriangle(v0, v1, v2, 200L, -1, true, WALL, (byte) 0);
+
+        TriangleMesh loaded = storeAndLoad(mesh, tempDir);
+
+        assertFalse(loaded.hasTexCoords());
+        assertTrue(loaded.hasColors());
+        assertTrue(loaded.isTriangleColored(0));
+        assertVertexLanesEqual(mesh, loaded);
+    }
+
+    private static TriangleMesh storeAndLoad(TriangleMesh mesh, Path tempDir) throws IOException {
+        try (MeshStore store = new MeshStore(tempDir)) {
+            return store.load(store.store(mesh));
+        }
+    }
+
+    /**
+     * Value-compare every vertex lane the expected mesh carries. Doubles and
+     * floats round-trip bit-exactly through the binary format, so no delta.
+     */
+    private static void assertVertexLanesEqual(TriangleMesh expected, TriangleMesh actual) {
+        assertEquals(expected.getVertexCount(), actual.getVertexCount());
+        for (int i = 0; i < expected.getVertexCount(); i++) {
+            assertArrayEquals(expected.getPositions().get(i), actual.getPositions().get(i),
+                    "position " + i);
+            assertArrayEquals(expected.getNormals().get(i), actual.getNormals().get(i),
+                    "normal " + i);
+            if (expected.hasTexCoords()) {
+                assertArrayEquals(expected.getTexCoords().get(i), actual.getTexCoords().get(i),
+                        "uv " + i);
+            }
+            if (expected.hasColors()) {
+                assertArrayEquals(expected.getColors().get(i), actual.getColors().get(i),
+                        "color " + i);
+            }
         }
     }
 }
