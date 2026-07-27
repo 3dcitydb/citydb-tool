@@ -94,7 +94,13 @@ public class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
 
         texture.referencePoint = texture.asChild(copy(referencePoint, session));
         texture.orientation = orientation != null ? orientation.copy() : null;
-        texture.targets = copy(targets, texture, session);
+
+        if (targets != null) {
+            texture.targets = new ArrayList<>(targets.size());
+            for (Surface<?> target : targets) {
+                texture.targets.add(copy(target, session));
+            }
+        }
     }
 
     @Override

@@ -143,7 +143,13 @@ public class X3DMaterial extends SurfaceData<X3DMaterial> {
         material.emissiveColor = emissiveColor;
         material.specularColor = specularColor;
         material.isSmooth = isSmooth;
-        material.targets = copy(targets, material, session);
+
+        if (targets != null) {
+            material.targets = new ArrayList<>(targets.size());
+            for (Surface<?> target : targets) {
+                material.targets.add(copy(target, session));
+            }
+        }
     }
 
     @Override
