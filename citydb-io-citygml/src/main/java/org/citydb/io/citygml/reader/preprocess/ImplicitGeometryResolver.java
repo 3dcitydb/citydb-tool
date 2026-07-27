@@ -42,7 +42,7 @@ public class ImplicitGeometryResolver {
 
     public org.citydb.model.geometry.ImplicitGeometry getOrConvert(String objectId, Converter converter) throws ModelBuildException {
         try {
-            return converted.computeIfAbsent(objectId, k -> {
+            org.citydb.model.geometry.ImplicitGeometry cached = converted.computeIfAbsent(objectId, k -> {
                 try {
                     ImplicitGeometry implicitGeometry = implicitGeometries.remove(k);
                     return implicitGeometry != null
@@ -52,6 +52,8 @@ public class ImplicitGeometryResolver {
                     throw UncheckedException.wrap(e);
                 }
             });
+
+            return cached != null ? cached.copy() : null;
         } catch (UncheckedException e) {
             throw UncheckedException.unwrap(e, ModelBuildException.class);
         }
