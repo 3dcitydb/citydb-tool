@@ -94,6 +94,34 @@ class AtlasOverflowSplitStageTest {
     }
 
     @Test
+    void twoOverflowingCellsCommitInRootOrderWithPerTreeIsolation(@TempDir Path tempDir)
+            throws IOException, VisExportException {
+        try (VisExportStores stores = new VisExportStores(2, tempDir.resolve("stores"))) {
+            PipelineContext ctx = twoOverflowingCells(stores, AtlasOverflowMode.SPLIT);
+            new AtlasOverflowSplitStage().execute(ctx);
+
+            // globalRoot + 2 cell roots + 4 split leaves per cell.
+            List<SceneNode> allNodes = ctx.allNodes();
+            assertEquals(11, allNodes.size());
+            for (int i = 0; i < allNodes.size(); i++) {
+                assertEquals(i, allNodes.get(i).getIndex());
+            }
+
+            // Both roots turn intermediate; only the eight split leaves remain.
+            assertEquals(Set.of(3, 4, 5, 6, 7, 8, 9, 10), ctx.meshNodeIndices());
+
+            // Plans commit in initialRoots order regardless of which worker
+            // finished first: cell 1's children occupy the first index block,
+            // cell 2's the second, and each child references only a feature
+            // ingested into its own cell.
+            assertCellTreeSplit(stores, allNodes.get(1),
+                    Set.of(3, 4, 5, 6), Set.of(1L, 2L, 3L, 4L));
+            assertCellTreeSplit(stores, allNodes.get(2),
+                    Set.of(7, 8, 9, 10), Set.of(5L, 6L, 7L, 8L));
+        }
+    }
+
+    @Test
     void hybridModeKeepsRootAsLodPreview(@TempDir Path tempDir)
             throws IOException, VisExportException {
         try (VisExportStores stores = new VisExportStores(2, tempDir.resolve("stores"))) {
@@ -172,6 +200,73 @@ class AtlasOverflowSplitStageTest {
     private static PipelineContext overflowingCell(VisExportStores stores, AtlasOverflowMode mode)
             throws IOException {
         return cell(stores, mode, 1024);
+    }
+
+    /**
+     * Two overflowing cell roots (indices 1 and 2), the second shifted +2° in
+     * X, with four per-quadrant features each: ids 1-4 in cell 1, 5-8 in
+     * cell 2. Exercises the parallel per-cell-tree workers plus the serial
+     * commit pass with more than one plan.
+     */
+    private static PipelineContext twoOverflowingCells(VisExportStores stores, AtlasOverflowMode mode)
+            throws IOException {
+        Path storeDir = stores.getTempDir();
+        stores.initNodeEntryStore(3);
+        for (int cellIndex = 1; cellIndex <= 2; cellIndex++) {
+            double offsetX = (cellIndex - 1) * 2.0;
+            List<NodeEntry> entries = new ArrayList<>();
+            for (int i = 0; i < 4; i++) {
+                long featureId = (cellIndex - 1) * 4L + i + 1;
+                String name = "tex" + featureId + ".png";
+                writePng(storeDir, name, 1024);
+                int texId = stores.getTextureStore().register(name);
+                TriangleMesh mesh = quadrantTriangle(featureId, texId,
+                        offsetX + CENTROIDS[i][0], CENTROIDS[i][1]);
+                long handle = stores.getMeshStore().store(mesh, i);
+                entries.add(new NodeEntry(featureId, handle, 0L));
+                stores.setFeatureTextured(featureId);
+            }
+            stores.getNodeEntryStore().writeNode(cellIndex, entries);
+        }
+
+        SceneNode globalRoot = new SceneNode(0, 0);
+        SceneNode cellRoot1 = new SceneNode(1, 1);
+        cellRoot1.setBoundingVolume(CELL_BBOX);
+        globalRoot.addChild(cellRoot1);
+        SceneNode cellRoot2 = new SceneNode(2, 1);
+        cellRoot2.setBoundingVolume(BoundingVolume.ofBoundingBox(2.0, 0.0, 0.0, 3.0, 1.0, 10.0));
+        globalRoot.addChild(cellRoot2);
+
+        Tiles3DFormatOptions opts = new Tiles3DFormatOptions();
+        opts.setAtlasOverflowMode(mode);
+        opts.setMaxAtlasSize(1024);
+
+        return new PipelineContext(stores, opts, new AttributeEncoder(), 8, 2)
+                .setAllNodes(new ArrayList<>(List.of(globalRoot, cellRoot1, cellRoot2)))
+                .setMeshNodeIndices(new HashSet<>(Set.of(1, 2)))
+                .setHasTextures(true);
+    }
+
+    /**
+     * The cell root became a content-less intermediate whose four leaves carry
+     * exactly the given indices, each holding one entry, and together reference
+     * exactly the cell's own features.
+     */
+    private static void assertCellTreeSplit(VisExportStores stores, SceneNode cellRoot,
+                                            Set<Integer> expectedChildIndices,
+                                            Set<Long> expectedFeatureIds) throws IOException {
+        assertEquals(4, cellRoot.getChildren().size());
+        assertFalse(cellRoot.isLodPreview());
+        Set<Integer> childIndices = new HashSet<>();
+        Set<Long> featureIds = new HashSet<>();
+        for (SceneNode child : cellRoot.getChildren()) {
+            childIndices.add(child.getIndex());
+            List<NodeEntry> entries = stores.getNodeEntryStore().loadNode(child.getIndex());
+            assertEquals(1, entries.size());
+            featureIds.add(entries.get(0).id());
+        }
+        assertEquals(expectedChildIndices, childIndices);
+        assertEquals(expectedFeatureIds, featureIds);
     }
 
     /**

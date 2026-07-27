@@ -114,19 +114,21 @@ class TextureAtlasTest {
     @Test
     void buildMultiCoversAllTexturesAcrossPages() throws IOException {
         store = newStore();
-        int t0 = registerTexture("a.png", 8, 8, Color.RED);
-        int t1 = registerTexture("b.png", 16, 16, Color.GREEN);
-        int t2 = registerTexture("c.png", 32, 8, Color.BLUE);
+        // Three 200x200 textures cannot share one 256x256 page at scale 1.0,
+        // so the BSP packer must spill onto additional levels -> >= 2 pages.
+        int t0 = registerTexture("a.png", 200, 200, Color.RED);
+        int t1 = registerTexture("b.png", 200, 200, Color.GREEN);
+        int t2 = registerTexture("c.png", 200, 200, Color.BLUE);
         List<Integer> ids = List.of(t0, t1, t2);
 
-        List<TextureAtlas> pages = TextureAtlasBuilder.buildMulti(ids, store, 1.0, 1024, null);
+        List<TextureAtlas> pages = TextureAtlasBuilder.buildMulti(ids, store, 1.0, 256, null);
 
-        assertFalse(pages.isEmpty());
+        assertTrue(pages.size() >= 2, "the 256 cap must force a genuine multi-page spill");
         Set<Integer> covered = new HashSet<>();
         for (TextureAtlas page : pages) {
             assertNotNull(page);
             assertTrue(page.getWidth() > 0 && page.getHeight() > 0);
-            // composePage never reserves a white pixel.
+            // composePage never reserves a white pixel — on any page.
             assertFalse(page.getTextureIds().contains(TextureAtlas.WHITE_PIXEL_TEX_ID));
             covered.addAll(page.getTextureIds());
         }
