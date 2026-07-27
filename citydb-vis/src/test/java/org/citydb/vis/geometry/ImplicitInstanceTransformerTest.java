@@ -64,6 +64,43 @@ class ImplicitInstanceTransformerTest {
     }
 
     @Test
+    void rotationScaleAndTranslationFollowRowMajorLayout() {
+        Polygon polygon = Polygon.of(ring(
+                0, 0, 0,
+                3, 4, 1,
+                1, 0, 0,
+                0, 0, 0));
+
+        // M = 90° CCW rotation about Z combined with uniform scale 2, plus a
+        // translation of (10, 20, 5) meters in the last COLUMN (m03/m13/m23).
+        Matrix4x4 matrix = Matrix4x4.ofRowMajor(
+                0, -2, 0, 10,
+                2, 0, 0, 20,
+                0, 0, 2, 5,
+                0, 0, 0, 1);
+
+        ImplicitInstanceTransformer.Result result = ImplicitInstanceTransformer.transform(
+                polygon, matrix, Point.of(Coordinate.of(13.4, 52.5, 34)));
+
+        List<Coordinate> points =
+                ((Polygon) result.geometry()).getExteriorRing().getPoints();
+
+        // Hand derivation, metersPerDegLon = 111320 * cos(52.5°) = 67767.32227725079.
+        // Vertex (0, 0, 0): metric offset = translation column (10, 20, 5).
+        //   lon = 13.4 + 10 / 67767.32227725079, lat = 52.5 + 20 / 111320, z = 34 + 5.
+        assertEquals(13.400147563747009, points.get(0).getX(), EPS);
+        assertEquals(52.500179662235, points.get(0).getY(), EPS);
+        assertEquals(39.0, points.get(0).getZ(), EPS);
+
+        // Vertex (3, 4, 1): M·v = (-2·4 + 10, 2·3 + 20, 2·1 + 5) = (2, 26, 7).
+        // A transposed (column-major) read would give (2·4 + 10, -2·3 + 20, 7)
+        //   = (18, 14, 7) — lon 13.40026561..., ~16 m east of the value below.
+        assertEquals(13.400029512749402, points.get(1).getX(), EPS);
+        assertEquals(52.5002335609055, points.get(1).getY(), EPS);
+        assertEquals(41.0, points.get(1).getZ(), EPS);
+    }
+
+    @Test
     void ringMapBridgesSharedRingToItsSingleClone() {
         Polygon polygon = Polygon.of(ring(
                 0, 0, 0,

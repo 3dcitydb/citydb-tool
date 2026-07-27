@@ -9,6 +9,7 @@ import org.citydb.model.common.Name;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
+import org.citydb.vis.styling.DefaultObjectStyle;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.citydb.vis.util.GeoTransform;
 import org.junit.jupiter.api.Test;
@@ -206,6 +207,82 @@ class I3SGeometryEncoderTest {
                 ObjectStyleRegistry.empty());
 
         assertEquals(160, read(tempDir, 2).remaining(), "no COLOR_0 lane expected");
+        assertFalse(node.isColored());
+    }
+
+    @Test
+    void mixedX3dNodeBakesDefaultStyleColorOnPlainTriangles(@TempDir Path tempDir)
+            throws IOException {
+        // One X3DMaterial-colored triangle (authored opaque blue) plus one
+        // plain triangle in the same feature. A non-white --default-color
+        // must be baked into COLOR_0 on the plain triangle only — the mixed
+        // colored slot has no baseColorFactor, so per-vertex bake is the
+        // only place the default colour can land — while the authored X3D
+        // RGBA wins on its own triangle. The style's alpha (0xcc < 1) must
+        // promote the colored material to BLEND even though the authored
+        // colour is opaque.
+        TriangleMesh mesh = new TriangleMesh();
+        int v0 = mesh.addVertex(8.100, 48.700, 10.0, 0, 0, 1, 0f, 0f, 1f, 1f);
+        int v1 = mesh.addVertex(8.101, 48.700, 10.0, 0, 0, 1, 0f, 0f, 1f, 1f);
+        int v2 = mesh.addVertex(8.100, 48.701, 12.0, 0, 0, 1, 0f, 0f, 1f, 1f);
+        mesh.addTriangle(v0, v1, v2, 1L, -1, true, SURFACE);
+        int v3 = mesh.addVertex(8.102, 48.702, 20.0, 0, 0, 1);
+        int v4 = mesh.addVertex(8.1015, 48.702, 20.0, 0, 0, 1);
+        int v5 = mesh.addVertex(8.102, 48.7015, 18.0, 0, 0, 1);
+        mesh.addTriangle(v3, v4, v5, 1L, -1, false, SURFACE);
+        SceneNode node = node(mesh);
+
+        ObjectStyleRegistry registry = ObjectStyleRegistry.builder()
+                .defaultStyle(DefaultObjectStyle.parseColor("#ff8000cc"))
+                .build();
+        new I3SGeometryEncoder().writeNodeGeometry(tempDir, node, true, false, registry);
+
+        ByteBuffer buf = read(tempDir, 2);
+        // 8 + positions(72) + uv0(48) + color(24) + featureId(8) + faceRange(8).
+        assertEquals(168, buf.remaining());
+        buf.position(8 + 6 * 12 + 6 * 8);
+        for (int v = 0; v < 3; v++) {
+            assertEquals((byte) 0, buf.get(), "authored R");
+            assertEquals((byte) 0, buf.get(), "authored G");
+            assertEquals((byte) 255, buf.get(), "authored B");
+            assertEquals((byte) 255, buf.get(), "authored A");
+        }
+        for (int v = 0; v < 3; v++) {
+            assertEquals((byte) 255, buf.get(), "styled R = 0xff");
+            assertEquals((byte) 128, buf.get(), "styled G = 0x80");
+            assertEquals((byte) 0, buf.get(), "styled B = 0x00");
+            assertEquals((byte) 204, buf.get(), "styled A = 0xcc");
+        }
+
+        assertTrue(node.isColored());
+        assertTrue(node.isColoredBlend(), "style alpha < 1 must promote the material to BLEND");
+        // Default-style baking is not a per-type override — the node stays
+        // on the X3DMaterial colored slot, not the styled-colored slot.
+        assertFalse(node.hasStyleOverride());
+    }
+
+    @Test
+    void overridesWithoutSchemaCannotReachStyledColoredSlot(@TempDir Path tempDir)
+            throws IOException {
+        // The styled-colored slot fires only when a triangle's surface type
+        // resolves to a per-type override, and that resolution needs a
+        // DB-backed SchemaMapping (package-private construction, built from
+        // a live connection). The only non-empty registry constructible in a
+        // unit test is therefore a schema-less one, whose resolve() falls
+        // back to the default style. Pin that fallback end-to-end: no
+        // COLOR_0 lane, no style-override flag — even though the override
+        // key matches the mesh's surface type exactly. The positive
+        // styled-colored slot path is covered by integration tests.
+        TriangleMesh mesh = twoFeatureMesh();
+        SceneNode node = node(mesh);
+        ObjectStyleRegistry registry = ObjectStyleRegistry.builder()
+                .override(SURFACE, DefaultObjectStyle.parseColor("#ff0000"))
+                .build(); // no schemaMapping(...)
+
+        new I3SGeometryEncoder().writeNodeGeometry(tempDir, node, true, false, registry);
+
+        assertEquals(160, read(tempDir, 2).remaining(), "no COLOR_0 lane expected");
+        assertFalse(node.hasStyleOverride());
         assertFalse(node.isColored());
     }
 
