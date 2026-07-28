@@ -293,6 +293,88 @@ class TriangleMeshTest {
         }
     }
 
+    // ---- clamp to ground ----------------------------------------------------
+
+    /**
+     * Add a triangle whose three vertices sit at the given heights, at
+     * distinct XY positions so nothing welds.
+     */
+    private static void addTriAtHeights(TriangleMesh mesh, double z0, double z1, double z2) {
+        int base = mesh.getVertexCount();
+        int v0 = mesh.addVertex(base, 0, z0, 0, 0, 1);
+        int v1 = mesh.addVertex(base + 1, 0, z1, 0, 0, 1);
+        int v2 = mesh.addVertex(base, 1, z2, 0, 0, 1);
+        mesh.addTriangle(v0, v1, v2, 1L, -1, false, WALL);
+    }
+
+    private static double minZ(TriangleMesh mesh) {
+        double min = Double.MAX_VALUE;
+        for (double[] pos : mesh.getPositions()) {
+            min = Math.min(min, pos[2]);
+        }
+        return min;
+    }
+
+    @Test
+    void clampToGroundTranslatesEveryVertexRigidlyOntoTheGroundHeight() {
+        TriangleMesh mesh = new TriangleMesh();
+        addTriAtHeights(mesh, 112.0, 118.0, 112.0);
+        // The lowest vertex is added LAST and belongs to a different triangle:
+        // clamping must key off the mesh minimum, not the first vertex, the
+        // first triangle or the centroid.
+        addTriAtHeights(mesh, 104.0, 100.0, 106.0);
+        List<double[]> before = mesh.getPositions().stream().map(double[]::clone).toList();
+
+        mesh.clampToGround(0.0);
+
+        assertEquals(0.0, minZ(mesh), 1e-9, "the lowest vertex must land on the ground height");
+        List<double[]> after = mesh.getPositions();
+        for (int i = 0; i < before.size(); i++) {
+            // A single shared shift: relative heights are what make the mesh a
+            // building rather than a flat footprint, so every vertex moves by
+            // the same delta and X/Y never move at all.
+            assertEquals(before.get(i)[2] - 100.0, after.get(i)[2], 1e-9, "z of vertex " + i);
+            assertEquals(before.get(i)[0], after.get(i)[0], "x of vertex " + i);
+            assertEquals(before.get(i)[1], after.get(i)[1], "y of vertex " + i);
+        }
+    }
+
+    @Test
+    void clampToGroundLiftsOntoTerrainAndDropsBelowTheEllipsoid() {
+        // --clamp-to-ground=cesium-world-terrain passes a sampled terrain
+        // height, which is routinely above (mountains) or below (Dead Sea,
+        // Death Valley) the ellipsoid, and the shift is signed either way.
+        TriangleMesh onTerrain = new TriangleMesh();
+        addTriAtHeights(onTerrain, 10.0, 22.0, 10.0);
+        onTerrain.clampToGround(250.0);
+        assertEquals(250.0, minZ(onTerrain), 1e-9);
+        assertEquals(262.0, onTerrain.getPositions().get(1)[2], 1e-9, "12 m of height preserved");
+
+        TriangleMesh belowEllipsoid = new TriangleMesh();
+        addTriAtHeights(belowEllipsoid, 10.0, 22.0, 10.0);
+        belowEllipsoid.clampToGround(-86.5);
+        assertEquals(-86.5, minZ(belowEllipsoid), 1e-9);
+    }
+
+    @Test
+    void clampToGroundIsANoOpWhenTheMeshAlreadySitsOnTheGround() {
+        TriangleMesh mesh = new TriangleMesh();
+        addTriAtHeights(mesh, 0.0, 9.0, 3.0);
+
+        mesh.clampToGround(0.0);
+
+        assertEquals(0.0, mesh.getPositions().get(0)[2]);
+        assertEquals(9.0, mesh.getPositions().get(1)[2]);
+        assertEquals(3.0, mesh.getPositions().get(2)[2]);
+    }
+
+    @Test
+    void clampToGroundOnAnEmptyMeshDoesNotThrow() {
+        TriangleMesh empty = new TriangleMesh();
+        empty.clampToGround(120.0);
+        assertTrue(empty.isEmpty());
+    }
+
     @Test
     void emptyAndTrivialMeshesAreNoOps() {
         TriangleMesh empty = new TriangleMesh();
