@@ -36,7 +36,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
-public class CityGMLReader implements FeatureReader {
+public class CityGMLReader extends FeatureReader {
     private final Logger logger = LoggerFactory.getLogger(CityGMLReader.class);
     private final InputFile file;
     private final ReadOptions options;
@@ -87,12 +87,23 @@ public class CityGMLReader implements FeatureReader {
                 .useLod4AsLod3(formatOptions.isUseLod4AsLod3())
                 .mapLod0RoofEdge(formatOptions.isMapLod0RoofEdge())
                 .mapLod1MultiSurfaces(formatOptions.isMapLod1MultiSurfaces())
+                .setImplicitGeometryScope(options.getImplicitGeometryScope())
                 .setNumberOfThreads(options.getNumberOfThreads());
     }
 
     @Override
-    public void read(Consumer<Feature> consumer) throws ReadException {
+    protected void doPrepass(Consumer<Feature> consumer) throws ReadException {
+        read(consumer, true);
+    }
+
+    @Override
+    protected void doRead(Consumer<Feature> consumer) throws ReadException {
+        read(consumer, false);
+    }
+
+    private void read(Consumer<Feature> consumer, boolean retainState) throws ReadException {
         shouldRun = true;
+        preprocessor.retainState(retainState);
         if (!isPreprocessed) {
             preprocess();
             readTemplatesAsReference();
@@ -161,6 +172,7 @@ public class CityGMLReader implements FeatureReader {
         } finally {
             service.shutdown();
             store.clear();
+            exception = null;
         }
     }
 
@@ -196,13 +208,13 @@ public class CityGMLReader implements FeatureReader {
     }
 
     @Override
-    public void cancel() {
+    protected void doCancel() {
         shouldRun = false;
         preprocessor.cancel();
     }
 
     @Override
-    public void close() {
+    protected void doClose() {
         store.close();
         preprocessor = null;
         exception = null;

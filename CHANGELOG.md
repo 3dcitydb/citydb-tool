@@ -10,7 +10,8 @@
 - **Breaking**: Removed the `Shareable` base class and restored parent references for implicit geometries.
 
 ### Added
-- Added deep `copy` support to all model classes.
+- Added deep copy support for all model classes.
+- Added support for preliminary processing through `FeatureReader.prepass` before the final read.
 
 ### Fixed
 - Input files are now closed properly during imports, preventing resource leaks.

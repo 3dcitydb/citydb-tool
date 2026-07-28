@@ -29,7 +29,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 
-public class CityJSONReader implements FeatureReader {
+public class CityJSONReader extends FeatureReader {
     private final Logger logger = LoggerFactory.getLogger(CityJSONReader.class);
     private final InputFile file;
     private final ReadOptions options;
@@ -38,7 +38,7 @@ public class CityJSONReader implements FeatureReader {
     private final CityJSONFormatOptions formatOptions;
     private final PersistentMapStore store;
     private final Filter filter;
-    private final CityJSONPreprocessor preprocessor = new CityJSONPreprocessor();
+    private final CityJSONPreprocessor preprocessor;
 
     private volatile boolean shouldRun = true;
     private Throwable exception;
@@ -73,10 +73,21 @@ public class CityJSONReader implements FeatureReader {
 
         factory = CityJSONReaderFactory.newInstance(cityJSONContext, options, formatOptions);
         filter = options.getFilter().orElseGet(Filter::acceptAll);
+        preprocessor = new CityJSONPreprocessor()
+                .setImplicitGeometryScope(options.getImplicitGeometryScope());
     }
 
     @Override
-    public void read(Consumer<Feature> consumer) throws ReadException {
+    protected void doPrepass(Consumer<Feature> consumer) throws ReadException {
+        read(consumer, true);
+    }
+
+    @Override
+    protected void doRead(Consumer<Feature> consumer) throws ReadException {
+        read(consumer, false);
+    }
+
+    private void read(Consumer<Feature> consumer, boolean retainState) throws ReadException {
         shouldRun = true;
         int threads = filter.needsSequentialProcessing() ? 1 : options.getNumberOfThreads() > 0
                 ? options.getNumberOfThreads()
@@ -92,7 +103,8 @@ public class CityJSONReader implements FeatureReader {
 
             while (shouldRun && reader.hasNext()) {
                 AbstractFeature feature = reader.next();
-                preprocessor.processGlobalObjects(feature);
+                preprocessor.retainState(retainState)
+                        .processGlobalObjects(feature);
 
                 countLatch.increment();
                 service.execute(() -> {
@@ -125,16 +137,17 @@ public class CityJSONReader implements FeatureReader {
         } finally {
             service.shutdown();
             store.clear();
+            exception = null;
         }
     }
 
     @Override
-    public void cancel() {
+    protected void doCancel() {
         shouldRun = false;
     }
 
     @Override
-    public void close() {
+    protected void doClose() {
         store.close();
         exception = null;
     }

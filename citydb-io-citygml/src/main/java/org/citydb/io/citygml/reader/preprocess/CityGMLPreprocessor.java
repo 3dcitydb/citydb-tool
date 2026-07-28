@@ -10,6 +10,7 @@ import org.citydb.core.concurrent.ExecutorHelper;
 import org.citydb.core.file.InputFile;
 import org.citydb.io.citygml.reader.CityGMLReaderFactory;
 import org.citydb.io.reader.ReadException;
+import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.core.AbstractFeature;
@@ -88,8 +89,19 @@ public class CityGMLPreprocessor {
         return this;
     }
 
+    public CityGMLPreprocessor setImplicitGeometryScope(ImplicitGeometryScope scope) {
+        implicitGeometryResolver.withScope(scope);
+        return this;
+    }
+
     public CityGMLPreprocessor setNumberOfThreads(int numberOfThreads) {
         this.numberOfThreads = numberOfThreads;
+        return this;
+    }
+
+    public CityGMLPreprocessor retainState(boolean retainState) {
+        implicitGeometryResolver.retainState(retainState);
+        appearanceConverter.removeTargets(!retainState);
         return this;
     }
 

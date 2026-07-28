@@ -5,6 +5,7 @@
 
 package org.citydb.io.citygml.reader.preprocess;
 
+import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.util.reference.DefaultReferenceResolver;
 import org.xmlobjects.gml.util.reference.ReferenceResolver;
@@ -19,6 +20,16 @@ public class CityJSONPreprocessor {
 
     public ImplicitGeometryResolver getImplicitGeometryResolver() {
         return implicitGeometryResolver;
+    }
+
+    public CityJSONPreprocessor setImplicitGeometryScope(ImplicitGeometryScope scope) {
+        implicitGeometryResolver.withScope(scope);
+        return this;
+    }
+
+    public CityJSONPreprocessor retainState(boolean retainState) {
+        implicitGeometryResolver.retainState(retainState);
+        return this;
     }
 
     public void processGlobalObjects(AbstractFeature feature) {

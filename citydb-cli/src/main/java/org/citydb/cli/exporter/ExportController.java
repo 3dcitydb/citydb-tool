@@ -421,7 +421,7 @@ public abstract class ExportController implements Command {
     private String getTileCounter(TilingHelper helper, Tile tile) {
         return helper.isUseTiling()
                 ? "[" + (tile.getRow() * helper.getTileMatrix().getColumns() + tile.getColumn() + 1) + "|"
-                  + helper.getTileMatrix().size() + "] "
+                + helper.getTileMatrix().size() + "] "
                 : "";
     }
 
@@ -442,8 +442,8 @@ public abstract class ExportController implements Command {
                 helper.logException(feature == null
                         ? "Failed to export feature (ID: " + id + ")."
                         : "Failed to export " + feature.getFeatureType().getLocalName()
-                          + feature.getObjectId().map(objectId -> " '" + objectId + "'").orElse("") +
-                          " (ID: " + id + ").", e);
+                        + feature.getObjectId().map(objectId -> " '" + objectId + "'").orElse("") +
+                        " (ID: " + id + ").", e);
                 writer.cancel();
             }
         }

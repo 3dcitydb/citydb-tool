@@ -32,6 +32,7 @@ public class GlobalAppearanceConverter {
     private final Map<String, Map<String, TextureAssociationProperty>> textureAssociations = new ConcurrentHashMap<>();
 
     private Mode mode = Mode.TOPLEVEL;
+    private boolean removeTargets;
 
     public enum Mode {
         TOPLEVEL,
@@ -49,6 +50,11 @@ public class GlobalAppearanceConverter {
 
     GlobalAppearanceConverter setMode(Mode mode) {
         this.mode = mode;
+        return this;
+    }
+
+    GlobalAppearanceConverter removeTargets(boolean removeTargets) {
+        this.removeTargets = removeTargets;
         return this;
     }
 
@@ -139,7 +145,7 @@ public class GlobalAppearanceConverter {
     }
 
     void convertGlobalAppearance(VisitableObject object) {
-        process(object, false);
+        process(object, removeTargets);
     }
 
     void convertAndRemoveGlobalAppearance(VisitableObject object) {

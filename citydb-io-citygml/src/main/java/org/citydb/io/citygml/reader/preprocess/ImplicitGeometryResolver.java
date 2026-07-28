@@ -9,6 +9,7 @@ import org.citydb.core.exception.UncheckedException;
 import org.citydb.core.function.CheckedFunction;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
+import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.model.core.ImplicitGeometry;
@@ -29,7 +30,20 @@ public class ImplicitGeometryResolver {
     private final Map<String, org.citydb.model.geometry.ImplicitGeometry> converted = new ConcurrentHashMap<>();
     private final Map<String, Envelope> envelopes = new ConcurrentHashMap<>();
 
+    private ImplicitGeometryScope scope = ImplicitGeometryScope.GLOBAL;
+    private boolean retainState;
+
     ImplicitGeometryResolver() {
+    }
+
+    ImplicitGeometryResolver withScope(ImplicitGeometryScope scope) {
+        this.scope = scope != null ? scope : ImplicitGeometryScope.GLOBAL;
+        return this;
+    }
+
+    ImplicitGeometryResolver retainState(boolean retainState) {
+        this.retainState = retainState;
+        return this;
     }
 
     public boolean hasImplicitGeometries() {
@@ -41,22 +55,30 @@ public class ImplicitGeometryResolver {
     }
 
     public org.citydb.model.geometry.ImplicitGeometry getOrConvert(String objectId, Converter converter) throws ModelBuildException {
-        try {
-            org.citydb.model.geometry.ImplicitGeometry cached = converted.computeIfAbsent(objectId, k -> {
-                try {
-                    ImplicitGeometry implicitGeometry = implicitGeometries.remove(k);
-                    return implicitGeometry != null
-                            ? converter.apply(implicitGeometry)
-                            : null;
-                } catch (Exception e) {
-                    throw UncheckedException.wrap(e);
-                }
-            });
+        boolean cacheResult = retainState || scope == ImplicitGeometryScope.TOP_LEVEL_FEATURE;
+        if (cacheResult) {
+            try {
+                org.citydb.model.geometry.ImplicitGeometry cached = converted.computeIfAbsent(objectId, k -> {
+                    try {
+                        return consumeAndConvert(k, converter);
+                    } catch (Exception e) {
+                        throw UncheckedException.wrap(e);
+                    }
+                });
 
-            return cached != null ? cached.copy() : null;
-        } catch (UncheckedException e) {
-            throw UncheckedException.unwrap(e, ModelBuildException.class);
+                return cached != null ? cached.copy() : null;
+            } catch (UncheckedException e) {
+                throw UncheckedException.unwrap(e, ModelBuildException.class);
+            }
+        } else {
+            org.citydb.model.geometry.ImplicitGeometry cached = converted.remove(objectId);
+            return cached != null ? cached : consumeAndConvert(objectId, converter);
         }
+    }
+
+    private org.citydb.model.geometry.ImplicitGeometry consumeAndConvert(String objectId, Converter converter) throws ModelBuildException {
+        ImplicitGeometry implicitGeometry = implicitGeometries.remove(objectId);
+        return implicitGeometry != null ? converter.apply(implicitGeometry) : null;
     }
 
     public Envelope computeEnvelope(ImplicitGeometry implicitGeometry) {

@@ -113,7 +113,7 @@ public class DuplicateController implements AutoCloseable {
         AtomicInteger counter = new AtomicInteger();
         try {
             filter.saveState();
-            reader.read(feature -> {
+            reader.prepass(feature -> {
                 countLatch.increment();
                 service.execute(() -> {
                     try {
