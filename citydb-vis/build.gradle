@@ -1,3 +1,5 @@
+apply plugin: 'jacoco'
+
 dependencies {
     api project(':citydb-io')
     implementation project(':citydb-config')
@@ -32,6 +34,10 @@ tasks.withType(Test).configureEach {
     // The railway export IT builds texture atlases concurrently and
     // the default 512m is not sufficient. 2g also fails; 4g passes.
     maxHeapSize = '4g'
+
+    jacoco {
+        includes = ['org.citydb.vis.*']
+    }
 }
 
 test {
@@ -43,7 +49,34 @@ test {
             excludeTestsMatching '*CesiumWorldTerrainProviderIT'
         }
     }
+    finalizedBy jacocoTestReport
 }
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                minimum = 0.80
+            }
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.70
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
 
 tasks.register('integrationTest', Test) {
     description = 'Runs the live-database and network integration tests (requires a local citydb).'
