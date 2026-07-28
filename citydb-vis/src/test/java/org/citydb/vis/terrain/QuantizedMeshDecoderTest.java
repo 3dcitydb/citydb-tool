@@ -6,6 +6,8 @@
 package org.citydb.vis.terrain;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -188,5 +190,60 @@ class QuantizedMeshDecoderTest {
                 highest++;
             }
         }
+    }
+
+    // ---- corrupt payloads ----
+
+    /**
+     * Offsets into the payload, both fixed by the quantized-mesh layout: the
+     * vertex count follows the 88-byte header, and the triangle count follows
+     * the three vertex arrays (2 bytes per component, three components).
+     */
+    private static final int VERTEX_COUNT_OFFSET = 88;
+
+    private static int triangleCountOffset(int vertexCount) {
+        return VERTEX_COUNT_OFFSET + 4 + 6 * vertexCount;
+    }
+
+    /**
+     * A corrupt or truncated tile must raise {@link IllegalArgumentException},
+     * which the caller can recover from per tile. Without the bounds guard a
+     * negative count reaches {@code new int[count]} as
+     * {@code NegativeArraySizeException} and an oversized one as
+     * {@code OutOfMemoryError} — an {@code Error} that escapes per-tile
+     * recovery and takes the whole export down.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = {-1, Integer.MAX_VALUE})
+    void rejectsOutOfRangeVertexCount(int corruptCount) {
+        byte[] tile = buildQuadTile(null);
+        ByteBuffer.wrap(tile).order(ByteOrder.LITTLE_ENDIAN)
+                .putInt(VERTEX_COUNT_OFFSET, corruptCount);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> QuantizedMeshDecoder.decode(tile, 0, 0, 1, 1));
+        assertTrue(ex.getMessage().contains("vertex count out of range"),
+                "unexpected message: " + ex.getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-1, Integer.MAX_VALUE})
+    void rejectsOutOfRangeTriangleCount(int corruptCount) {
+        byte[] tile = buildQuadTile(null);
+        ByteBuffer.wrap(tile).order(ByteOrder.LITTLE_ENDIAN)
+                .putInt(triangleCountOffset(4), corruptCount);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> QuantizedMeshDecoder.decode(tile, 0, 0, 1, 1));
+        assertTrue(ex.getMessage().contains("triangle count out of range"),
+                "unexpected message: " + ex.getMessage());
+    }
+
+    @Test
+    void rejectsPayloadShorterThanTheHeader() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> QuantizedMeshDecoder.decode(new byte[87], 0, 0, 1, 1));
+        assertTrue(ex.getMessage().contains("payload too small"),
+                "unexpected message: " + ex.getMessage());
     }
 }
