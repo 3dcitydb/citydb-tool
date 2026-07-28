@@ -11,13 +11,19 @@ import org.citydb.vis.attribute.AttributeProjection.FeatureSource;
 import org.citydb.vis.attribute.AttributeProjection.Mapping;
 import org.citydb.vis.attribute.AttributeProjection.PathSegment;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 /**
  * Characterization tests for the {@code --attributes} grammar, exercised
@@ -108,34 +114,123 @@ class AttributeProjectionParserTest {
         assertEquals(true, ex.getMessage().contains("duplicate output column"));
     }
 
+    /**
+     * Every rejection branch of the grammar, one row each, pinned by the
+     * distinguishing fragment of its message rather than just by exception
+     * type. The type alone is not enough: every branch throws
+     * {@link IllegalArgumentException}, so a token that silently starts
+     * tripping an <i>earlier</i> guard still passes a type-only assertion
+     * while its intended branch goes dead. Half the branches below were
+     * unreachable from the previous type-only table for exactly that reason —
+     * e.g. {@code a[k='oops]} never reached the unterminated-string check
+     * because the unbalanced bracket fires first.
+     * <p>
+     * The message is also the user-facing product here: {@code --attributes} is
+     * hand-written on the command line, so a wrong-but-plausible message costs
+     * more than a stack trace.
+     */
+    @ParameterizedTest(name = "[{index}] {0}")
+    @MethodSource("malformedTokens")
+    void rejectsMalformedToken(String token, String expectedMessageFragment) {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> AttributeProjection.parse(List.of(token)),
+                "expected parse failure for: '" + token + "'");
+        assertTrue(ex.getMessage().contains(expectedMessageFragment),
+                "token '" + token + "' threw the wrong branch.\n  expected to contain: "
+                        + expectedMessageFragment + "\n  actual: " + ex.getMessage());
+        // Every message carries the "--attributes[i]: " location prefix so the
+        // user can tell which of several tokens is at fault.
+        assertTrue(ex.getMessage().startsWith("--attributes"),
+                "message lost its location prefix: " + ex.getMessage());
+    }
+
+    static Stream<Arguments> malformedTokens() {
+        return Stream.of(
+                // ---- mapping shape ----
+                arguments("", "mapping must not be empty"),
+                arguments("FEATURE/objectid", "missing ':' separating output column"),
+                arguments("a,b:FEATURE/objectid", "contains a reserved character"),
+                arguments("x:FEATURE", "missing '/' separating table from column"),
+                arguments("x:NOPE/field", "unknown table 'NOPE'"),
+
+                // ---- FEATURE: single row, statically typed ----
+                arguments("x:FEATURE/[FIRST]objectid", "must not declare an aggregate"),
+                arguments("x:FEATURE/objectid[a=1]", "must not declare a predicate"),
+                arguments("x:FEATURE/objectid::uri", "must not declare a value-type cast"),
+                arguments("x:FEATURE/a.b", "FEATURE source must reference a single"),
+                arguments("x:FEATURE/bogus", "FEATURE field 'bogus' is not"),
+
+                // ---- ATTRIBUTES: path, segments, cast ----
+                arguments("x:ATTRIBUTES/", "ATTRIBUTES source has an empty column path"),
+                arguments("x:ATTRIBUTES/a[k=1", "unterminated '[' in path"),
+                arguments("x:ATTRIBUTES/a]b", "unmatched ']' in path"),
+                arguments("x:ATTRIBUTES/a'b", "unterminated string literal in path"),
+                arguments("x:ATTRIBUTES/a..b", "ATTRIBUTES path has an empty segment"),
+                arguments("x:ATTRIBUTES/a[k=1]b", "unexpected text after its predicate"),
+                arguments("x:ATTRIBUTES/a.[k=1]", "has no localName before the predicate"),
+                arguments("x:ATTRIBUTES/ns:", "missing a local name after the prefix"),
+                arguments("x:ATTRIBUTES/a::bogus", "unknown value-type cast 'bogus'"),
+                arguments("x:ATTRIBUTES/a::", "empty value-type cast after '::'"),
+
+                // ---- ADDRESS: single row per address, statically typed ----
+                arguments("x:ADDRESS/street::uri", "ADDRESS source must not declare a"),
+                arguments("x:ADDRESS/a.b", "ADDRESS source must reference a single"),
+                arguments("x:ADDRESS/bogus", "ADDRESS field 'bogus' is not"),
+                arguments("x:ADDRESS/street[bogus='v']", "predicate field 'bogus'"),
+
+                // ---- aggregate prefix ----
+                arguments("x:ATTRIBUTES/[BOGUS]a", "unknown aggregate 'BOGUS'"),
+                arguments("x:ADDRESS/[FIRST", "unterminated '[' in aggregate"),
+
+                // ---- predicate suffix ----
+                arguments("x:ADDRESS/street[a='v'", "unterminated '[' in predicate"),
+                arguments("x:ADDRESS/street[a='v']z", "unexpected text after predicate"),
+                arguments("x:ATTRIBUTES/a[novalue]", "is not of the form"),
+                // A predicate whose field is only whitespace also lands on the
+                // "not of the form field=value" branch, not on the dedicated
+                // empty-field guard: both call sites trim the bracket contents
+                // before parsing, so '=' can never sit at index >= 1 with
+                // nothing but blanks in front of it. See the class javadoc note
+                // on the two guards that are unreachable by construction.
+                arguments("x:ATTRIBUTES/a[ =1]", "is not of the form"),
+                arguments("x:ATTRIBUTES/a[k=]", "has an empty value"),
+                arguments("x:ATTRIBUTES/a[k='v'x]", "is not terminated with a closing quote"),
+                arguments("x:ATTRIBUTES/a[k=1.2.3]", "is not a quoted string, integer"));
+    }
+
+    /**
+     * {@code parse} trims each token before handing it on, so an output column
+     * that is blank rather than absent can only arrive through the
+     * package-private entry point — the public path always trips the
+     * missing-':' guard first. Pinned here so the guard is not mistaken for
+     * live validation of CLI input.
+     */
     @Test
-    void rejectsMalformedTokens() {
-        // One representative per major error branch in the parser. All must
-        // throw IllegalArgumentException carrying the "<location>: " prefix.
-        String[] bad = {
-                "",                                   // empty mapping
-                "FEATURE/objectid",                   // missing ':'
-                "a,b:FEATURE/objectid",               // reserved char in output column
-                "x:NOPE/field",                       // unknown table
-                "x:FEATURE/[FIRST]objectid",          // FEATURE forbids aggregate
-                "x:FEATURE/a.b",                      // FEATURE forbids dotted path
-                "x:FEATURE/bogus",                    // unknown FEATURE field
-                "x:ATTRIBUTES/",                      // empty ATTRIBUTES path
-                "x:ATTRIBUTES/a[k=1",                 // unterminated '['
-                "x:ATTRIBUTES/a]b",                   // unmatched ']'
-                "x:ATTRIBUTES/a[k='oops]",            // unterminated string literal
-                "x:ATTRIBUTES/a::bogus",              // unknown value-type cast
-                "x:ATTRIBUTES/a::",                   // empty value-type cast
-                "x:ADDRESS/street::uri",              // ADDRESS forbids cast
-                "x:ADDRESS/bogus",                    // unknown ADDRESS field
-                "x:ADDRESS/street[bogus='v']",        // unknown ADDRESS predicate field
-                "x:ATTRIBUTES/[BOGUS]a",              // unknown aggregate
-                "x:ATTRIBUTES/a[novalue]",            // predicate not field=value
-        };
-        for (String token : bad) {
-            assertThrows(IllegalArgumentException.class,
-                    () -> AttributeProjection.parse(List.of(token)),
-                    "expected parse failure for: '" + token + "'");
-        }
+    void blankOutputColumnIsRejectedOnlyBelowTheTrimmingEntryPoint() {
+        assertThrows(IllegalArgumentException.class,
+                () -> AttributeProjectionParser.parseMapping(" :FEATURE/objectid", "--attributes[0]"));
+
+        IllegalArgumentException viaPublicPath = assertThrows(IllegalArgumentException.class,
+                () -> AttributeProjection.parse(List.of(" :FEATURE/objectid")));
+        assertTrue(viaPublicPath.getMessage().contains("missing ':' separating output column"),
+                "the public path is expected to trim first and fail on the missing ':'.");
+    }
+
+    /**
+     * The record invariants the parser is trusted to uphold. They are public
+     * API — anything constructing a projection programmatically rather than
+     * from the CLI grammar must hit the same guards.
+     */
+    @Test
+    void sourceRecordsRejectStructurallyInvalidInput() {
+        assertThrows(IllegalArgumentException.class, () -> new AttributesSource(
+                List.of(), AttributeProjection.Aggregate.FIRST, ValueType.STRING));
+        assertThrows(IllegalArgumentException.class, () -> new PathSegment("", null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new AttributeProjection.Predicate("field", new Object()));
+
+        assertThrows(NullPointerException.class, () -> new PathSegment(null, null));
+        assertThrows(NullPointerException.class,
+                () -> new AttributeProjection.Predicate("field", null));
     }
 }
