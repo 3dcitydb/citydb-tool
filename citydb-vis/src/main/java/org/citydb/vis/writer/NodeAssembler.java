@@ -10,7 +10,7 @@ import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasMode;
 import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.appearance.TextureAtlasBuilder;
-import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.options.VisFormatOptions;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.model.InstanceBatch;

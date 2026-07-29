@@ -60,7 +60,7 @@ public class StylingOptions implements Option {
      * {@code null} when the flag was not provided. The controller copies
      * this onto the format options, which build the
      * {@link org.citydb.vis.styling.ObjectStyleRegistry} in
-     * {@link org.citydb.vis.config.VisFormatOptions#buildStyleRegistry};
+     * {@link org.citydb.vis.options.VisFormatOptions#buildStyleRegistry};
      * this class only validates the hex syntax in {@link #preprocess}.
      */
     public String getDefaultColor() {
