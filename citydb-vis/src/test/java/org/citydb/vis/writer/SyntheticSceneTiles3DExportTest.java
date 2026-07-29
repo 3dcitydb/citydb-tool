@@ -9,7 +9,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.citydb.vis.Tiles3DAdapter;
-import org.citydb.vis.config.Tiles3DFormatOptions;
+import org.citydb.vis.options.Tiles3DFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

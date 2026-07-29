@@ -14,7 +14,7 @@ import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.I3SAdapter;
-import org.citydb.vis.config.I3SFormatOptions;
+import org.citydb.vis.options.I3SFormatOptions;
 import picocli.CommandLine;
 
 @CommandLine.Command(
