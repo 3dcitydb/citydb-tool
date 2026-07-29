@@ -9,7 +9,7 @@ import org.citydb.model.common.Name;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasOverflowMode;
 import org.citydb.vis.attribute.AttributeEncoder;
-import org.citydb.vis.config.Tiles3DFormatOptions;
+import org.citydb.vis.options.Tiles3DFormatOptions;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.scene.BoundingVolume;

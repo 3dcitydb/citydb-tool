@@ -18,7 +18,7 @@ import org.citydb.vis.store.NodeEntryStore;
 import org.citydb.vis.store.ShardedMeshStore;
 import org.citydb.vis.store.TextureStore;
 import org.citydb.vis.store.VisExportStores;
-import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.options.VisFormatOptions;
 import org.citydb.vis.util.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -8,7 +8,7 @@ package org.citydb.cli.visExporter.options;
 import org.citydb.cli.common.Option;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
-import org.citydb.vis.config.ClampMode;
+import org.citydb.vis.options.ClampMode;
 import picocli.CommandLine;
 
 import java.util.List;
