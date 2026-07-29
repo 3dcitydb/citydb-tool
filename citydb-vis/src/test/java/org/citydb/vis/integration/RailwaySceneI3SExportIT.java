@@ -6,7 +6,7 @@
 package org.citydb.vis.integration;
 
 import org.citydb.vis.I3SAdapter;
-import org.citydb.vis.config.I3SFormatOptions;
+import org.citydb.vis.options.I3SFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
