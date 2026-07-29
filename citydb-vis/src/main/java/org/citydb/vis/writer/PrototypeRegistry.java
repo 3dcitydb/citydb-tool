@@ -15,7 +15,7 @@ import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.RingAppearance;
 import org.citydb.vis.appearance.TextureAtlas;
 import org.citydb.vis.appearance.TextureAtlasBuilder;
-import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.options.VisFormatOptions;
 import org.citydb.vis.geometry.GeometryMeshBuilder;
 import org.citydb.vis.geometry.ImplicitInstanceTransformer;
 import org.citydb.vis.geometry.TriangleMesh;
