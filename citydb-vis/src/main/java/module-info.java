@@ -14,8 +14,8 @@ module org.citydb.vis {
     // encapsulated so it can be refactored without breaking consumers.
     exports org.citydb.vis;
     exports org.citydb.vis.appearance;
-    exports org.citydb.vis.config;
     exports org.citydb.vis.geometry;
+    exports org.citydb.vis.options;
     exports org.citydb.vis.styling;
 
     // The output-format POJOs are serialized by fastjson2 with
