@@ -15,10 +15,10 @@ import org.citydb.io.writer.WriteException;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.vis.I3SAdapter;
 import org.citydb.vis.Tiles3DAdapter;
-import org.citydb.vis.config.ClampMode;
-import org.citydb.vis.config.I3SFormatOptions;
-import org.citydb.vis.config.Tiles3DFormatOptions;
-import org.citydb.vis.config.VisFormatOptions;
+import org.citydb.vis.options.ClampMode;
+import org.citydb.vis.options.I3SFormatOptions;
+import org.citydb.vis.options.Tiles3DFormatOptions;
+import org.citydb.vis.options.VisFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

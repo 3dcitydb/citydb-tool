@@ -7,7 +7,7 @@ package org.citydb.vis.pipeline.stages;
 
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.attribute.AttributeEncoder;
-import org.citydb.vis.config.Tiles3DFormatOptions;
+import org.citydb.vis.options.Tiles3DFormatOptions;
 import org.citydb.vis.pipeline.PipelineContext;
 import org.citydb.vis.store.PartitionedEntryStore;
 import org.citydb.vis.store.SpatialEntry;
