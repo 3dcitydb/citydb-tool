@@ -19,8 +19,6 @@ public class DeleteOptions {
 
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private DeleteMode mode = DeleteMode.TERMINATE;
-    @JSONField(serialize = false, deserialize = false)
-    private int numberOfThreads;
     private int commitAfter;
     private boolean terminateWithSubFeatures = true;
     private OffsetDateTime terminationDate;
@@ -28,21 +26,15 @@ public class DeleteOptions {
     private String reasonForUpdate;
     private String lineage;
 
+    @JSONField(serialize = false, deserialize = false)
+    private int numberOfThreads;
+
     public DeleteMode getMode() {
         return mode != null ? mode : DeleteMode.TERMINATE;
     }
 
     public DeleteOptions setMode(DeleteMode mode) {
         this.mode = mode;
-        return this;
-    }
-
-    public int getNumberOfThreads() {
-        return numberOfThreads;
-    }
-
-    public DeleteOptions setNumberOfThreads(int numberOfThreads) {
-        this.numberOfThreads = numberOfThreads;
         return this;
     }
 
@@ -97,6 +89,15 @@ public class DeleteOptions {
 
     public DeleteOptions setLineage(String lineage) {
         this.lineage = lineage;
+        return this;
+    }
+
+    public int getNumberOfThreads() {
+        return numberOfThreads;
+    }
+
+    public DeleteOptions setNumberOfThreads(int numberOfThreads) {
+        this.numberOfThreads = numberOfThreads;
         return this;
     }
 }

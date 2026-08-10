@@ -29,8 +29,6 @@ public class ExportOptions {
     private final LazyCheckedInitializer<OutputFile, IOException> tempOutputFile = LazyCheckedInitializer.of(
             () -> new RegularOutputFile(Files.createTempDirectory("citydb-").resolve("output.tmp")));
 
-    @JSONField(serialize = false, deserialize = false)
-    private OutputFile outputFile;
     private int numberOfThreads;
     private boolean useAbsoluteResourcePaths;
     private SrsReference targetSrs;
@@ -40,27 +38,8 @@ public class ExportOptions {
     private LodOptions lodOptions;
     private AppearanceOptions appearanceOptions;
 
-    public OutputFile getOutputFile() {
-        if (outputFile == null) {
-            try {
-                outputFile = tempOutputFile.get();
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to create temporary output directory.", e);
-            }
-        }
-
-        return outputFile;
-    }
-
-    public ExportOptions setOutputFile(OutputFile outputFile) {
-        this.outputFile = outputFile;
-        return this;
-    }
-
-    public ExportOptions setOutputDirectory(Path outputDirectory) {
-        outputFile = new RegularOutputFile(outputDirectory.resolve("output.tmp"));
-        return this;
-    }
+    @JSONField(serialize = false, deserialize = false)
+    private OutputFile outputFile;
 
     public int getNumberOfThreads() {
         return numberOfThreads;
@@ -122,6 +101,28 @@ public class ExportOptions {
 
     public ExportOptions setAppearanceOptions(AppearanceOptions appearanceOptions) {
         this.appearanceOptions = appearanceOptions;
+        return this;
+    }
+
+    public OutputFile getOutputFile() {
+        if (outputFile == null) {
+            try {
+                outputFile = tempOutputFile.get();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create temporary output directory.", e);
+            }
+        }
+
+        return outputFile;
+    }
+
+    public ExportOptions setOutputFile(OutputFile outputFile) {
+        this.outputFile = outputFile;
+        return this;
+    }
+
+    public ExportOptions setOutputDirectory(Path outputDirectory) {
+        outputFile = new RegularOutputFile(outputDirectory.resolve("output.tmp"));
         return this;
     }
 }
