@@ -66,14 +66,12 @@ public class HierarchyBuilder {
 
         while (rs.next() && propertyIds.add(rs.getLong("id"))) {
             long featureId = rs.getLong("val_feature_id");
-            if (!rs.wasNull() && hierarchy.getFeature(featureId) == null) {
+            if (!rs.wasNull()) {
                 featureIds.add(featureId);
             }
 
             long geometryId = rs.getLong("val_geometry_id");
-            if (!rs.wasNull()
-                    && hierarchy.getGeometry(geometryId) == null
-                    && lodFilter.filter(rs.getString("val_lod"))) {
+            if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
                 geometryIds.add(geometryId);
             }
 
