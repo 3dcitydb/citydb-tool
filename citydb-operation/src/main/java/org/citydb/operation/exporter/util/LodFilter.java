@@ -42,16 +42,17 @@ public class LodFilter {
 
     public boolean filter(String lod) {
         if (isEnabled && lod != null) {
-            if (switch (mode) {
+            boolean isSatisfied = switch (mode) {
                 case KEEP -> lods.contains(lod);
                 case REMOVE -> !lods.contains(lod);
                 case MINIMUM, MAXIMUM -> lods.isEmpty() || lods.contains(lod);
-            }) {
-                return true;
-            } else {
+            };
+
+            if (!isSatisfied) {
                 hasRemovedGeometry = true;
-                return false;
             }
+
+            return isSatisfied;
         } else {
             return true;
         }
