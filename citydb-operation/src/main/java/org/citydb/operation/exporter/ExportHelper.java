@@ -174,6 +174,7 @@ public class ExportHelper {
     }
 
     private void clear() {
+        lodFilter.reset();
         surfaceDataMapper.clear();
         featureIdCache.clear();
         surfaceDataIdCache.clear();

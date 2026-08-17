@@ -121,4 +121,8 @@ public class LodFilter {
         hasRemovedGeometry = true;
         property.removeFromParent();
     }
+
+    public void reset() {
+        hasRemovedGeometry = false;
+    }
 }
