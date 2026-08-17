@@ -45,7 +45,6 @@ public class Preprocessor {
     }
 
     private class Processor extends ModelWalker {
-
         @Override
         public void visit(GeometryProperty property) {
             if (checkForDeprecatedLod4Geometry

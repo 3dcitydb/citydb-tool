@@ -58,13 +58,18 @@ public class HierarchyBuilder {
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
         Set<Long> propertyIds = new HashSet<>();
         Set<Long> featureIds = new HashSet<>();
-        Set<Long> geometryIds = new HashSet<>();
-        Set<Long> appearanceIds = new HashSet<>();
-        Set<Long> addressIds = new HashSet<>();
-        Set<Long> implicitGeometryIds = new HashSet<>();
+        Map<Long, Set<Long>> geometryIds = new HashMap<>();
+        Map<Long, Set<Long>> appearanceIds = new HashMap<>();
+        Map<Long, Set<Long>> addressIds = new HashMap<>();
+        Map<Long, Set<Long>> implicitGeometryIds = new HashMap<>();
         Map<Long, Integer> referees = new HashMap<>();
 
         while (rs.next() && propertyIds.add(rs.getLong("id"))) {
+            long ownerId = rs.getLong("feature_id");
+            if (rs.wasNull()) {
+                continue;
+            }
+
             long featureId = rs.getLong("val_feature_id");
             if (!rs.wasNull()) {
                 featureIds.add(featureId);
@@ -72,24 +77,24 @@ public class HierarchyBuilder {
 
             long geometryId = rs.getLong("val_geometry_id");
             if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
-                geometryIds.add(geometryId);
+                geometryIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(geometryId);
             }
 
             if (exportAppearances) {
                 long appearanceId = rs.getLong("val_appearance_id");
                 if (!rs.wasNull()) {
-                    appearanceIds.add(appearanceId);
+                    appearanceIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(appearanceId);
                 }
             }
 
             long addressId = rs.getLong("val_address_id");
             if (!rs.wasNull()) {
-                addressIds.add(addressId);
+                addressIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(addressId);
             }
 
             long implicitGeometryId = rs.getLong("val_implicitgeom_id");
             if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
-                implicitGeometryIds.add(implicitGeometryId);
+                implicitGeometryIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(implicitGeometryId);
             }
 
             long parentFeatureId = rs.getLong("feature_id");
@@ -122,30 +127,34 @@ public class HierarchyBuilder {
 
             if (!removedFeatureIds.isEmpty()) {
                 hierarchy.getFeatures().keySet().removeAll(removedFeatureIds);
+                geometryIds.keySet().removeAll(removedFeatureIds);
+                appearanceIds.keySet().removeAll(removedFeatureIds);
+                addressIds.keySet().removeAll(removedFeatureIds);
+                implicitGeometryIds.keySet().removeAll(removedFeatureIds);
             }
         }
 
         if (!geometryIds.isEmpty()) {
             tableHelper.getOrCreateExporter(GeometryExporter.class)
-                    .doExport(geometryIds, false)
+                    .doExport(flattenIds(geometryIds), false)
                     .forEach(hierarchy::addGeometry);
         }
 
         if (exportAppearances) {
             tableHelper.getOrCreateExporter(AppearanceExporter.class)
-                    .doExport(appearanceIds, implicitGeometryIds)
+                    .doExport(flattenIds(appearanceIds), flattenIds(implicitGeometryIds))
                     .forEach(hierarchy::addAppearance);
         }
 
         if (!addressIds.isEmpty()) {
             tableHelper.getOrCreateExporter(AddressExporter.class)
-                    .doExport(addressIds)
+                    .doExport(flattenIds(addressIds))
                     .forEach(hierarchy::addAddress);
         }
 
         if (!implicitGeometryIds.isEmpty()) {
             tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
-                    .doExport(implicitGeometryIds, hierarchy.getAppearances().values())
+                    .doExport(flattenIds(implicitGeometryIds), hierarchy.getAppearances().values())
                     .forEach(hierarchy::addImplicitGeometry);
         }
 
@@ -200,5 +209,11 @@ public class HierarchyBuilder {
                 }
             }
         }
+    }
+
+    private Set<Long> flattenIds(Map<Long, Set<Long>> idsByFeature) {
+        Set<Long> ids = new HashSet<>();
+        idsByFeature.values().forEach(ids::addAll);
+        return ids;
     }
 }
