@@ -65,7 +65,7 @@ public class HierarchyBuilder {
         Map<Long, Integer> referees = new HashMap<>();
 
         while (rs.next() && propertyIds.add(rs.getLong("id"))) {
-            long ownerId = rs.getLong("feature_id");
+            long parentFeatureId = rs.getLong("feature_id");
             if (rs.wasNull()) {
                 continue;
             }
@@ -77,35 +77,32 @@ public class HierarchyBuilder {
 
             long geometryId = rs.getLong("val_geometry_id");
             if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
-                geometryIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(geometryId);
+                geometryIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(geometryId);
             }
 
             if (exportAppearances) {
                 long appearanceId = rs.getLong("val_appearance_id");
                 if (!rs.wasNull()) {
-                    appearanceIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(appearanceId);
+                    appearanceIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(appearanceId);
                 }
             }
 
             long addressId = rs.getLong("val_address_id");
             if (!rs.wasNull()) {
-                addressIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(addressId);
+                addressIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(addressId);
             }
 
             long implicitGeometryId = rs.getLong("val_implicitgeom_id");
             if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
-                implicitGeometryIds.computeIfAbsent(ownerId, k -> new HashSet<>()).add(implicitGeometryId);
+                implicitGeometryIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(implicitGeometryId);
             }
 
-            long parentFeatureId = rs.getLong("feature_id");
-            if (!rs.wasNull()) {
-                PropertyStub propertyStub = tableHelper.getOrCreateExporter(PropertyExporter.class)
-                        .doExport(parentFeatureId, rs);
-                if (propertyStub != null) {
-                    propertyStubs.computeIfAbsent(parentFeatureId, v -> new ArrayList<>()).add(propertyStub);
-                    if (propertyStub.getDataType() == DataType.FEATURE_PROPERTY) {
-                        referees.merge(featureId, 1, Integer::sum);
-                    }
+            PropertyStub propertyStub = tableHelper.getOrCreateExporter(PropertyExporter.class)
+                    .doExport(parentFeatureId, rs);
+            if (propertyStub != null) {
+                propertyStubs.computeIfAbsent(parentFeatureId, v -> new ArrayList<>()).add(propertyStub);
+                if (propertyStub.getDataType() == DataType.FEATURE_PROPERTY) {
+                    referees.merge(featureId, 1, Integer::sum);
                 }
             }
         }
