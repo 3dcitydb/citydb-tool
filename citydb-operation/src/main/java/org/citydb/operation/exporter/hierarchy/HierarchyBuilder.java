@@ -56,12 +56,21 @@ public class HierarchyBuilder {
     }
 
     public HierarchyBuilder initialize(ResultSet rs) throws ExportException, SQLException {
+        loadFeatures(rs);
+        if (hierarchy.getFeature(rootId) != null) {
+            if (lodFilter.requiresAvailableLods()) {
+                lodFilter.setAvailableLods(getLods());
+            }
+
+            loadResources();
+        }
+
+        return this;
+    }
+
+    private void loadFeatures(ResultSet rs) throws ExportException, SQLException {
         Set<Long> propertyIds = new HashSet<>();
         Set<Long> featureIds = new HashSet<>();
-        Map<Long, Set<Long>> geometryIds = new HashMap<>();
-        Map<Long, Set<Long>> appearanceIds = new HashMap<>();
-        Map<Long, Set<Long>> addressIds = new HashMap<>();
-        Map<Long, Set<Long>> implicitGeometryIds = new HashMap<>();
         Map<Long, Integer> referees = new HashMap<>();
 
         while (rs.next() && propertyIds.add(rs.getLong("id"))) {
@@ -73,28 +82,6 @@ public class HierarchyBuilder {
             long featureId = rs.getLong("val_feature_id");
             if (!rs.wasNull()) {
                 featureIds.add(featureId);
-            }
-
-            long geometryId = rs.getLong("val_geometry_id");
-            if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
-                geometryIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(geometryId);
-            }
-
-            if (exportAppearances) {
-                long appearanceId = rs.getLong("val_appearance_id");
-                if (!rs.wasNull()) {
-                    appearanceIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(appearanceId);
-                }
-            }
-
-            long addressId = rs.getLong("val_address_id");
-            if (!rs.wasNull()) {
-                addressIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(addressId);
-            }
-
-            long implicitGeometryId = rs.getLong("val_implicitgeom_id");
-            if (!rs.wasNull() && lodFilter.filter(rs.getString("val_lod"))) {
-                implicitGeometryIds.computeIfAbsent(parentFeatureId, k -> new HashSet<>()).add(implicitGeometryId);
             }
 
             PropertyStub propertyStub = tableHelper.getOrCreateExporter(PropertyExporter.class)
@@ -124,38 +111,69 @@ public class HierarchyBuilder {
 
             if (!removedFeatureIds.isEmpty()) {
                 hierarchy.getFeatures().keySet().removeAll(removedFeatureIds);
-                geometryIds.keySet().removeAll(removedFeatureIds);
-                appearanceIds.keySet().removeAll(removedFeatureIds);
-                addressIds.keySet().removeAll(removedFeatureIds);
-                implicitGeometryIds.keySet().removeAll(removedFeatureIds);
+            }
+        }
+    }
+
+    private void loadResources() throws ExportException, SQLException {
+        Set<Long> geometryIds = new HashSet<>();
+        Set<Long> appearanceIds = new HashSet<>();
+        Set<Long> addressIds = new HashSet<>();
+        Set<Long> implicitGeometryIds = new HashSet<>();
+
+        for (List<PropertyStub> propertyStubs : this.propertyStubs.values()) {
+            Iterator<PropertyStub> iterator = propertyStubs.iterator();
+            while (iterator.hasNext()) {
+                PropertyStub propertyStub = iterator.next();
+                if (propertyStub.getGeometryId() != null) {
+                    if (lodFilter.filter(propertyStub.getLod())) {
+                        geometryIds.add(propertyStub.getGeometryId());
+                    } else {
+                        iterator.remove();
+                    }
+                }
+
+                if (exportAppearances && propertyStub.getAppearanceId() != null) {
+                    appearanceIds.add(propertyStub.getAppearanceId());
+                }
+
+                if (propertyStub.getAddressId() != null) {
+                    addressIds.add(propertyStub.getAddressId());
+                }
+
+                if (propertyStub.getImplicitGeometryId() != null) {
+                    if (lodFilter.filter(propertyStub.getLod())) {
+                        implicitGeometryIds.add(propertyStub.getImplicitGeometryId());
+                    } else {
+                        iterator.remove();
+                    }
+                }
             }
         }
 
         if (!geometryIds.isEmpty()) {
             tableHelper.getOrCreateExporter(GeometryExporter.class)
-                    .doExport(flattenIds(geometryIds), false)
+                    .doExport(geometryIds, false)
                     .forEach(hierarchy::addGeometry);
         }
 
         if (exportAppearances) {
             tableHelper.getOrCreateExporter(AppearanceExporter.class)
-                    .doExport(flattenIds(appearanceIds), flattenIds(implicitGeometryIds))
+                    .doExport(appearanceIds, implicitGeometryIds)
                     .forEach(hierarchy::addAppearance);
         }
 
         if (!addressIds.isEmpty()) {
             tableHelper.getOrCreateExporter(AddressExporter.class)
-                    .doExport(flattenIds(addressIds))
+                    .doExport(addressIds)
                     .forEach(hierarchy::addAddress);
         }
 
         if (!implicitGeometryIds.isEmpty()) {
             tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
-                    .doExport(flattenIds(implicitGeometryIds), hierarchy.getAppearances().values())
+                    .doExport(implicitGeometryIds, hierarchy.getAppearances().values())
                     .forEach(hierarchy::addImplicitGeometry);
         }
-
-        return this;
     }
 
     public Hierarchy build() {
@@ -208,9 +226,19 @@ public class HierarchyBuilder {
         }
     }
 
-    private Set<Long> flattenIds(Map<Long, Set<Long>> idsByFeature) {
-        Set<Long> ids = new HashSet<>();
-        idsByFeature.values().forEach(ids::addAll);
-        return ids;
+    private Set<String> getLods() {
+        Set<String> lods = new HashSet<>();
+        for (List<PropertyStub> propertyStubs : this.propertyStubs.values()) {
+            for (PropertyStub propertyStub : propertyStubs) {
+                if (propertyStub.getGeometryId() != null || propertyStub.getImplicitGeometryId() != null) {
+                    String lod = propertyStub.getLod();
+                    if (lod != null) {
+                        lods.add(lod);
+                    }
+                }
+            }
+        }
+
+        return lods;
     }
 }

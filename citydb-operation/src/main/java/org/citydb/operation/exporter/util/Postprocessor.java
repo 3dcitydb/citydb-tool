@@ -10,18 +10,17 @@ import org.citydb.model.appearance.SurfaceDataProperty;
 import org.citydb.model.common.DatabaseDescriptor;
 import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
-import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.Attribute;
 import org.citydb.model.property.FeatureProperty;
-import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.Property;
 import org.citydb.model.util.AffineTransformer;
+import org.citydb.model.util.GeometryInfo;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportHelper;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 public class Postprocessor {
@@ -42,17 +41,14 @@ public class Postprocessor {
     }
 
     public void process(Feature feature) {
-        Map<String, ImplicitGeometry> implicitGeometries = helper.getLodFilter().removeGeometries(feature);
         appearanceHelper.assignSurfaceData(feature, helper.getSurfaceDataMapper());
 
         if (helper.getLodFilter().hasRemovedGeometry()) {
-            Set<String> featureIds = helper.getLodFilter().removeEmptyFeatures(feature);
+            Set<String> featureIds = removeEmptyFeatures(feature);
             Set<String> surfaceDataIds = appearanceHelper.removeEmptySurfaceData(feature);
 
-            if (!featureIds.isEmpty()
-                    || !surfaceDataIds.isEmpty()
-                    || !implicitGeometries.isEmpty()) {
-                processReferences(feature, featureIds, surfaceDataIds, implicitGeometries);
+            if (!featureIds.isEmpty() || !surfaceDataIds.isEmpty()) {
+                processReferences(feature, featureIds, surfaceDataIds);
             }
 
             if (!surfaceDataIds.isEmpty()) {
@@ -79,7 +75,31 @@ public class Postprocessor {
         sortAttributes(visitable);
     }
 
-    private void processReferences(Feature feature, Set<String> featureIds, Set<String> surfaceDataIds, Map<String, ImplicitGeometry> implicitGeometries) {
+    private Set<String> removeEmptyFeatures(Feature feature) {
+        Set<String> featureIds = new HashSet<>();
+        feature.accept(new ModelWalker() {
+            @Override
+            public void visit(FeatureProperty property) {
+                Feature child = property.getObject().orElse(null);
+                if (child != null && hasEmptyGeometry(child)) {
+                    property.removeFromParent();
+                    child.getObjectId().ifPresent(featureIds::add);
+                } else {
+                    super.visit(property);
+                }
+            }
+        });
+
+        return featureIds;
+    }
+
+    private boolean hasEmptyGeometry(Feature feature) {
+        GeometryInfo geometryInfo = feature.getGeometryInfo(GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
+        return !geometryInfo.hasGeometries()
+                && !geometryInfo.hasImplicitGeometries();
+    }
+
+    private void processReferences(Feature feature, Set<String> featureIds, Set<String> surfaceDataIds) {
         feature.accept(new ModelWalker() {
             @Override
             public void visit(FeatureProperty property) {
@@ -97,13 +117,6 @@ public class Postprocessor {
                             .filter(surfaceDataIds::contains)
                             .ifPresent(reference -> iterator.remove());
                 }
-            }
-
-            @Override
-            public void visit(ImplicitGeometryProperty property) {
-                property.getReference()
-                        .map(implicitGeometries::remove)
-                        .ifPresent(property::setObject);
             }
         });
     }
