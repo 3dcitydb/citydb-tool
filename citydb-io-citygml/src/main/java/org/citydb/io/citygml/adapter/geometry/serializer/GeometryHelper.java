@@ -11,6 +11,7 @@ import org.citydb.model.common.ExternalFile;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citygml4j.core.model.core.ImplicitGeometry;
+import org.xmlobjects.gml.model.basictypes.Code;
 import org.xmlobjects.gml.model.basictypes.Sign;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.DirectPosition;
@@ -244,14 +245,16 @@ public class GeometryHelper {
             if (implicitGeometry != null) {
                 ImplicitGeometry target = new ImplicitGeometry();
                 Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
+                ExternalFile libraryObject = implicitGeometry.getLibraryObject().orElse(null);
+
                 if (geometry != null) {
                     target.setRelativeGeometry(helper.lookupAndPut(implicitGeometry)
                             ? new GeometryProperty<>("#" + geometry.getOrCreateObjectId())
                             : new GeometryProperty<>(getGeometry(geometry, force3D)));
-                } else {
-                    target.setLibraryObject(implicitGeometry.getLibraryObject()
-                            .map(ExternalFile::getFileLocation)
-                            .orElse(null));
+                } else if (libraryObject != null) {
+                    target.setLibraryObject(libraryObject.getFileLocation());
+                    libraryObject.getMimeType().ifPresent(mimeType -> target.setMimeType(
+                            new Code(mimeType, libraryObject.getMimeTypeCodeSpace().orElse(null))));
                 }
 
                 return target;

@@ -9,6 +9,7 @@ import org.citydb.core.file.FileLocator;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
 import org.citydb.model.common.ExternalFile;
+import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.AppearanceProperty;
 import org.citydb.operation.importer.ImportException;
@@ -44,16 +45,18 @@ public class ImplicitGeometryImporter extends DatabaseImporter {
         stmt.setLong(1, implicitGeometryId);
         stmt.setString(2, objectId);
 
-        if (implicitGeometry.getGeometry().isPresent()) {
+        Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
+        ExternalFile libraryObject = implicitGeometry.getLibraryObject().orElse(null);
+
+        if (geometry != null) {
             stmt.setNull(3, Types.VARCHAR);
             stmt.setNull(4, Types.VARCHAR);
             stmt.setNull(5, Types.VARCHAR);
             setBytesOrNull(6, null);
             stmt.setLong(7, tableHelper.getOrCreateImporter(GeometryImporter.class)
-                    .doImport(implicitGeometry.getGeometry().get(), true, featureId)
+                    .doImport(geometry, true, featureId)
                     .getId());
-        } else if (implicitGeometry.getLibraryObject().isPresent()) {
-            ExternalFile libraryObject = implicitGeometry.getLibraryObject().get();
+        } else if (libraryObject != null) {
             FileLocator locator = getFileLocator(libraryObject);
 
             setStringOrNull(3, libraryObject.getMimeType().orElse(null));
