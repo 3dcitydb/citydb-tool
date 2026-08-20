@@ -36,11 +36,11 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
     }
 
     public static ImplicitGeometry of(Geometry<?> geometry) {
-        return new ImplicitGeometry(geometry);
+        return new ImplicitGeometry(geometry).setObjectId(geometry.getObjectId().orElse(null));
     }
 
-    public static ImplicitGeometry of(ExternalFile libraryObjectFile) {
-        return new ImplicitGeometry(libraryObjectFile);
+    public static ImplicitGeometry of(ExternalFile libraryObject) {
+        return new ImplicitGeometry(libraryObject).setObjectId(libraryObject.getObjectId().orElse(null));
     }
 
     public Optional<Geometry<?>> getGeometry() {
@@ -50,7 +50,6 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
     public ImplicitGeometry setGeometry(Geometry<?> geometry) {
         if (geometry != null) {
             this.geometry = asChild(geometry);
-            objectId = geometry.getObjectId().orElse(null);
             libraryObject = null;
         }
 
@@ -64,7 +63,6 @@ public class ImplicitGeometry extends Child implements Referencable, Visitable {
     public ImplicitGeometry setLibraryObject(ExternalFile libraryObject) {
         if (libraryObject != null) {
             this.libraryObject = libraryObject;
-            objectId = libraryObject.getObjectId().orElse(null);
             geometry = null;
         }
 
