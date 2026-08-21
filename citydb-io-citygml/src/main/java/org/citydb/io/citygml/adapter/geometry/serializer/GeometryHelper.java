@@ -9,7 +9,9 @@ package org.citydb.io.citygml.adapter.geometry.serializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.geometry.*;
+import org.citydb.model.property.ImplicitGeometryDescriptor;
 import org.citydb.model.property.ImplicitGeometryProperty;
+import org.citydb.model.property.ImplicitGeometryReference;
 import org.citygml4j.core.model.core.ImplicitGeometry;
 import org.xmlobjects.gml.model.basictypes.Code;
 import org.xmlobjects.gml.model.basictypes.Sign;
@@ -243,25 +245,46 @@ public class GeometryHelper {
         if (source != null) {
             org.citydb.model.geometry.ImplicitGeometry implicitGeometry = helper.getOrLookupObject(source);
             if (implicitGeometry != null) {
-                ImplicitGeometry target = new ImplicitGeometry();
-                Geometry<?> geometry = implicitGeometry.getGeometry().orElse(null);
-                ExternalFile libraryObject = implicitGeometry.getLibraryObject().orElse(null);
-
-                if (geometry != null) {
-                    target.setRelativeGeometry(helper.lookupAndPut(implicitGeometry)
-                            ? new GeometryProperty<>("#" + geometry.getOrCreateObjectId())
-                            : new GeometryProperty<>(getGeometry(geometry, force3D)));
-                } else if (libraryObject != null) {
-                    target.setLibraryObject(libraryObject.getFileLocation());
-                    libraryObject.getMimeType().ifPresent(mimeType -> target.setMimeType(
-                            new Code(mimeType, libraryObject.getMimeTypeCodeSpace().orElse(null))));
-                }
-
-                return target;
+                return getImplicitGeometry(implicitGeometry, force3D);
+            } else {
+                return source.getReference()
+                        .flatMap(ImplicitGeometryReference::getDescriptor)
+                        .map(this::getImplicitGeometry)
+                        .orElse(null);
             }
         }
 
         return null;
+    }
+
+    private ImplicitGeometry getImplicitGeometry(org.citydb.model.geometry.ImplicitGeometry source, boolean force3D) {
+        ImplicitGeometry target = new ImplicitGeometry();
+        Geometry<?> geometry = source.getGeometry().orElse(null);
+        if (geometry != null) {
+            target.setRelativeGeometry(helper.lookupAndPut(source)
+                    ? new GeometryProperty<>("#" + geometry.getOrCreateObjectId())
+                    : new GeometryProperty<>(getGeometry(geometry, force3D)));
+        } else {
+            source.getLibraryObject().ifPresent(libraryObject -> setLibraryObject(target, libraryObject));
+        }
+
+        return target;
+    }
+
+    private ImplicitGeometry getImplicitGeometry(ImplicitGeometryDescriptor descriptor) {
+        ImplicitGeometry target = new ImplicitGeometry();
+        descriptor.getGeometryReference().ifPresentOrElse(
+                reference -> target.setRelativeGeometry(new GeometryProperty<>("#" + reference)),
+                () -> descriptor.getLibraryObject()
+                        .ifPresent(libraryObject -> setLibraryObject(target, libraryObject)));
+
+        return target;
+    }
+
+    private void setLibraryObject(ImplicitGeometry target, ExternalFile libraryObject) {
+        target.setLibraryObject(libraryObject.getFileLocation());
+        libraryObject.getMimeType().ifPresent(mimeType -> target.setMimeType(
+                new Code(mimeType, libraryObject.getMimeTypeCodeSpace().orElse(null))));
     }
 
     private PointProperty getPointProperty(org.citydb.model.geometry.Point source, int dimension) {
