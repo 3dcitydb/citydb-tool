@@ -25,6 +25,6 @@ public class GeometryDescriptor extends DatabaseDescriptor {
 
     @Override
     public GeometryDescriptor copy() {
-        return GeometryDescriptor.of(getId(), featureId);
+        return new GeometryDescriptor(getId(), featureId);
     }
 }

@@ -69,7 +69,7 @@ public class PropertyBuilder {
         ImplicitGeometry implicitGeometry = hierarchy.getImplicitGeometry(propertyStub.getImplicitGeometryId());
         if (implicitGeometry != null) {
             ImplicitGeometryProperty property = helper.lookupAndPut(implicitGeometry)
-                    ? ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry.getOrCreateObjectId())
+                    ? ImplicitGeometryProperty.asReference(propertyStub.getName(), implicitGeometry)
                     : ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
 
             if (propertyStub.getArrayValue() != null) {

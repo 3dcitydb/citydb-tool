@@ -12,7 +12,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Objects;
 import java.util.Optional;
 
-public class SurfaceDataProperty extends Child implements InlineOrByReferenceProperty<SurfaceData<?>> {
+public class SurfaceDataProperty extends Child implements InlineOrByReferenceProperty<SurfaceData<?>, String> {
     private SurfaceData<?> surfaceData;
     private String reference;
 

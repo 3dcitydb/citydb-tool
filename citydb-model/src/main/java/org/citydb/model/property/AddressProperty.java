@@ -15,7 +15,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Objects;
 import java.util.Optional;
 
-public class AddressProperty extends Property<AddressProperty> implements InlineOrByReferenceProperty<Address> {
+public class AddressProperty extends Property<AddressProperty> implements InlineOrByReferenceProperty<Address, String> {
     private Address address;
     private String reference;
 

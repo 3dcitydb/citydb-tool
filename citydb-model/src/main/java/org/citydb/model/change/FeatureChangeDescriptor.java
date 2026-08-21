@@ -33,6 +33,6 @@ public class FeatureChangeDescriptor extends DatabaseDescriptor {
 
     @Override
     public FeatureChangeDescriptor copy() {
-        return FeatureChangeDescriptor.of(getId(), objectClassId, featureId);
+        return new FeatureChangeDescriptor(getId(), objectClassId, featureId);
     }
 }
