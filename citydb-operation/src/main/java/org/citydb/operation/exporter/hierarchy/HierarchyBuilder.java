@@ -178,7 +178,7 @@ public class HierarchyBuilder {
             if (!implicitGeometryIdsToExport.isEmpty()) {
                 implicitGeometryRegistry.resolve(implicitGeometryIdsToExport, ids ->
                                 tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
-                                        .doExport(ids, hierarchy.getAppearances().values()))
+                                        .doExport(ids, hierarchy.getImplicitGeometryAppearances()))
                         .forEach(hierarchy::addImplicitGeometry);
             }
         } catch (Exception e) {

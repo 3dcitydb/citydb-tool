@@ -6,7 +6,6 @@
 package org.citydb.operation.exporter.geometry;
 
 import org.citydb.model.appearance.Appearance;
-import org.citydb.model.appearance.AppearanceDescriptor;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
@@ -27,7 +26,6 @@ import org.citydb.sqlbuilder.schema.Table;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class ImplicitGeometryExporter extends DatabaseExporter {
     private final BlobExporter blobExporter;
@@ -63,11 +61,11 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
 
         setLongArrayOrNull(1, List.of(id));
         try (ResultSet rs = stmt.executeQuery()) {
-            return doExport(appearances, rs).get(id);
+            return doExport(Map.of(id, appearances), rs).get(id);
         }
     }
 
-    public Map<Long, ImplicitGeometry> doExport(Set<Long> ids, Collection<Appearance> appearances) throws ExportException, SQLException {
+    public Map<Long, ImplicitGeometry> doExport(Set<Long> ids, Map<Long, ? extends Collection<Appearance>> appearances) throws ExportException, SQLException {
         if (!ids.isEmpty()) {
             setLongArrayOrNull(1, ids);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -78,14 +76,8 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
         }
     }
 
-    private Map<Long, ImplicitGeometry> doExport(Collection<Appearance> appearances, ResultSet rs) throws ExportException, SQLException {
+    private Map<Long, ImplicitGeometry> doExport(Map<Long, ? extends Collection<Appearance>> appearancesById, ResultSet rs) throws ExportException, SQLException {
         Map<Long, ImplicitGeometry> implicitGeometries = new HashMap<>();
-        Map<Long, List<Appearance>> appearancesById = appearances.stream()
-                .filter(appearance -> appearance.getDescriptor()
-                        .map(AppearanceDescriptor::getImplicitGeometryId).isPresent())
-                .collect(Collectors.groupingBy(appearance -> appearance.getDescriptor()
-                        .map(AppearanceDescriptor::getImplicitGeometryId).orElse(0L)));
-
         while (rs.next()) {
             ImplicitGeometry implicitGeometry = null;
             long id = rs.getLong("id");
@@ -118,9 +110,12 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
                 }
 
                 implicitGeometries.put(id, implicitGeometry);
-                for (Appearance appearance : appearancesById.getOrDefault(id, Collections.emptyList())) {
-                    implicitGeometry.addAppearance(
-                            AppearanceProperty.of(Name.of("appearance", Namespaces.APPEARANCE), appearance));
+                Collection<Appearance> appearances = appearancesById.get(id);
+                if (appearances != null) {
+                    for (Appearance appearance : appearances) {
+                        implicitGeometry.addAppearance(
+                                AppearanceProperty.of(Name.of("appearance", Namespaces.APPEARANCE), appearance));
+                    }
                 }
             }
         }
