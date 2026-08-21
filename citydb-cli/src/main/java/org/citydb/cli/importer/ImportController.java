@@ -141,10 +141,10 @@ public abstract class ImportController implements Command {
         beforeImport(importOptions, readOptions, featureProcessors, databaseAdapter);
 
         Filter filter = getFilter(importOptions, databaseAdapter);
-        readOptions.setFilter(filter)
-                .setImplicitGeometryScope(filter == Filter.ACCEPT_ALL
-                        ? ImplicitGeometryScope.GLOBAL
-                        : ImplicitGeometryScope.TOP_LEVEL_FEATURE);
+        readOptions.setFilter(filter);
+        if (filter != Filter.ACCEPT_ALL) {
+            readOptions.setImplicitGeometryScope(ImplicitGeometryScope.TOP_LEVEL_FEATURE);
+        }
 
         ImportLogger importLogger = new ImportLogger(preview, databaseAdapter);
         ImportMode importMode = importOptions.getMode();
