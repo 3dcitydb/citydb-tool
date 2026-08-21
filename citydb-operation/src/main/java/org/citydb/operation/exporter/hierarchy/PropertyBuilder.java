@@ -76,10 +76,11 @@ public class PropertyBuilder {
                     ? ImplicitGeometryProperty.asReference(propertyStub.getName(), implicitGeometry)
                     : ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
         } else {
-            String objectId = implicitGeometryRegistry.getObjectId(propertyStub.getImplicitGeometryId());
-            if (objectId != null) {
-                property = ImplicitGeometryProperty.of(propertyStub.getName(), ImplicitGeometryReference.of(objectId,
-                        implicitGeometryRegistry.getDescriptor(propertyStub.getImplicitGeometryId())));
+            ImplicitGeometryRegistry.Metadata metadata = implicitGeometryRegistry.getMetadata(
+                    propertyStub.getImplicitGeometryId());
+            if (metadata != null) {
+                property = ImplicitGeometryProperty.of(propertyStub.getName(),
+                        ImplicitGeometryReference.of(metadata.objectId(), metadata.descriptor()));
             }
         }
 

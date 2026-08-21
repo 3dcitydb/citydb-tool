@@ -13,7 +13,6 @@ import org.citydb.operation.exporter.options.ImplicitGeometryScope;
 
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,10 +20,12 @@ import java.util.stream.Collectors;
 
 public class ImplicitGeometryRegistry {
     private final ImplicitGeometryScope scope;
-    private final Map<Long, String> objectIds = new ConcurrentHashMap<>();
+    private final Map<Long, Metadata> metadata = new ConcurrentHashMap<>();
     private final Map<String, Envelope> envelopes = new ConcurrentHashMap<>();
-    private final Map<Long, ImplicitGeometryDescriptor> descriptors = new ConcurrentHashMap<>();
     private final Map<Long, CompletableFuture<Void>> pending = new ConcurrentHashMap<>();
+
+    public record Metadata(String objectId, ImplicitGeometryDescriptor descriptor) {
+    }
 
     private ImplicitGeometryRegistry(ImplicitGeometryScope scope) {
         this.scope = scope != null ? scope : ImplicitGeometryScope.GLOBAL;
@@ -34,8 +35,13 @@ public class ImplicitGeometryRegistry {
         return new ImplicitGeometryRegistry(scope);
     }
 
-    public String getObjectId(Long id) {
-        return id != null ? objectIds.get(id) : null;
+    public Metadata getMetadata(Long id) {
+        if (id != null) {
+            await(id);
+            return metadata.get(id);
+        }
+
+        return null;
     }
 
     public Envelope getEnvelope(String objectId) {
@@ -43,14 +49,10 @@ public class ImplicitGeometryRegistry {
         return envelope != null ? envelope.copy() : null;
     }
 
-    public ImplicitGeometryDescriptor getDescriptor(Long id) {
-        return id != null ? descriptors.get(id) : null;
-    }
-
     public Set<Long> claim(Set<Long> ids) {
         if (scope == ImplicitGeometryScope.GLOBAL) {
             return ids.stream()
-                    .filter(id -> !descriptors.containsKey(id))
+                    .filter(id -> !metadata.containsKey(id))
                     .filter(id -> pending.putIfAbsent(id, new CompletableFuture<>()) == null)
                     .collect(Collectors.collectingAndThen(Collectors.toSet(), Set::copyOf));
         } else {
@@ -62,13 +64,13 @@ public class ImplicitGeometryRegistry {
         ids.forEach(id -> fail(id, cause));
     }
 
-    public Map<Long, ImplicitGeometry> resolve(Set<Long> implicitGeometryIds, Set<Long> claimedIds, ImplicitGeometryLoader loader) throws ExportException, SQLException {
+    public Map<Long, ImplicitGeometry> resolve(Set<Long> claimedIds, ImplicitGeometryLoader loader) throws ExportException, SQLException {
         return scope == ImplicitGeometryScope.TOP_LEVEL_FEATURE
-                ? loader.load(implicitGeometryIds)
-                : resolveGlobal(implicitGeometryIds, claimedIds, loader);
+                ? loader.load(claimedIds)
+                : resolveGlobal(claimedIds, loader);
     }
 
-    private Map<Long, ImplicitGeometry> resolveGlobal(Set<Long> implicitGeometryIds, Set<Long> claimedIds, ImplicitGeometryLoader loader) throws ExportException, SQLException {
+    private Map<Long, ImplicitGeometry> resolveGlobal(Set<Long> claimedIds, ImplicitGeometryLoader loader) throws ExportException, SQLException {
         try {
             Map<Long, ImplicitGeometry> implicitGeometries = !claimedIds.isEmpty()
                     ? loader.load(claimedIds)
@@ -78,17 +80,17 @@ public class ImplicitGeometryRegistry {
             }
 
             claimedIds.forEach(this::complete);
-            implicitGeometryIds.stream()
-                    .filter(id -> !claimedIds.contains(id))
-                    .filter(id -> !descriptors.containsKey(id))
-                    .map(pending::get)
-                    .filter(Objects::nonNull)
-                    .forEach(CompletableFuture::join);
-
             return implicitGeometries;
         } catch (Exception e) {
             claimedIds.forEach(id -> fail(id, e));
             throw e;
+        }
+    }
+
+    private void await(Long id) {
+        CompletableFuture<Void> future = pending.get(id);
+        if (future != null) {
+            future.join();
         }
     }
 
@@ -108,15 +110,13 @@ public class ImplicitGeometryRegistry {
 
     private void registerMetadata(Long id, ImplicitGeometry implicitGeometry) {
         String objectId = implicitGeometry.getOrCreateObjectId();
-        objectIds.put(id, objectId);
-        descriptors.put(id, ImplicitGeometryDescriptor.of(implicitGeometry));
+        metadata.put(id, new Metadata(objectId, ImplicitGeometryDescriptor.of(implicitGeometry)));
         implicitGeometry.getGeometry().ifPresent(geometry -> envelopes.put(objectId, geometry.getEnvelope().copy()));
     }
 
     public void clear() {
-        objectIds.clear();
+        metadata.clear();
         envelopes.clear();
-        descriptors.clear();
         pending.clear();
     }
 
