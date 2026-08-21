@@ -47,8 +47,8 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
     private Select getQuery(Table implicitGeometry) {
         Table geometryData = tableHelper.getTable(org.citydb.database.schema.Table.GEOMETRY_DATA);
         return Select.newInstance()
-                .select(implicitGeometry.columns("id", "mime_type", "mime_type_codespace", "reference_to_library",
-                        "relative_geometry_id"))
+                .select(implicitGeometry.columns("id", "objectid", "mime_type", "mime_type_codespace",
+                        "reference_to_library", "relative_geometry_id"))
                 .select(geometryData.columns("implicit_geometry", "geometry_properties", "feature_id"))
                 .from(implicitGeometry)
                 .leftJoin(geometryData).on(geometryData.column("id")
@@ -112,6 +112,11 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
             }
 
             if (implicitGeometry != null) {
+                String objectId = rs.getString("objectid");
+                if (!rs.wasNull()) {
+                    implicitGeometry.setObjectId(objectId);
+                }
+
                 implicitGeometries.put(id, implicitGeometry);
                 for (Appearance appearance : appearancesById.getOrDefault(id, Collections.emptyList())) {
                     implicitGeometry.addAppearance(
