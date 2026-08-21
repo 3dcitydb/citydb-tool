@@ -20,9 +20,8 @@ import java.util.stream.Collectors;
 
 public class ImplicitGeometryRegistry {
     private final ImplicitGeometryScope scope;
-    private final Map<Long, Metadata> metadata = new ConcurrentHashMap<>();
+    private final Map<Long, CompletableFuture<Metadata>> metadata = new ConcurrentHashMap<>();
     private final Map<String, Envelope> envelopes = new ConcurrentHashMap<>();
-    private final Map<Long, CompletableFuture<Void>> pending = new ConcurrentHashMap<>();
 
     public record Metadata(String objectId, ImplicitGeometryDescriptor descriptor) {
     }
@@ -37,8 +36,8 @@ public class ImplicitGeometryRegistry {
 
     public Metadata getMetadata(Long id) {
         if (id != null) {
-            await(id);
-            return metadata.get(id);
+            CompletableFuture<Metadata> future = metadata.get(id);
+            return future != null ? future.join() : null;
         }
 
         return null;
@@ -52,8 +51,7 @@ public class ImplicitGeometryRegistry {
     public Set<Long> claim(Set<Long> ids) {
         if (scope == ImplicitGeometryScope.GLOBAL) {
             return ids.stream()
-                    .filter(id -> !metadata.containsKey(id))
-                    .filter(id -> pending.putIfAbsent(id, new CompletableFuture<>()) == null)
+                    .filter(id -> metadata.putIfAbsent(id, new CompletableFuture<>()) == null)
                     .collect(Collectors.collectingAndThen(Collectors.toSet(), Set::copyOf));
         } else {
             return ids;
@@ -76,10 +74,13 @@ public class ImplicitGeometryRegistry {
                     ? loader.load(claimedIds)
                     : Map.of();
             for (Map.Entry<Long, ImplicitGeometry> entry : implicitGeometries.entrySet()) {
-                registerMetadata(entry.getKey(), entry.getValue());
+                complete(entry.getKey(), registerMetadata(entry.getValue()));
             }
 
-            claimedIds.forEach(this::complete);
+            claimedIds.stream()
+                    .filter(id -> !implicitGeometries.containsKey(id))
+                    .forEach(id -> complete(id, null));
+
             return implicitGeometries;
         } catch (Exception e) {
             claimedIds.forEach(id -> fail(id, e));
@@ -87,37 +88,29 @@ public class ImplicitGeometryRegistry {
         }
     }
 
-    private void await(Long id) {
-        CompletableFuture<Void> future = pending.get(id);
+    private void complete(Long id, Metadata metadata) {
+        CompletableFuture<Metadata> future = this.metadata.get(id);
         if (future != null) {
-            future.join();
-        }
-    }
-
-    private void complete(Long id) {
-        CompletableFuture<Void> future = pending.get(id);
-        if (future != null) {
-            future.complete(null);
+            future.complete(metadata);
         }
     }
 
     private void fail(Long id, Throwable cause) {
-        CompletableFuture<Void> future = pending.get(id);
+        CompletableFuture<Metadata> future = metadata.get(id);
         if (future != null) {
             future.completeExceptionally(cause);
         }
     }
 
-    private void registerMetadata(Long id, ImplicitGeometry implicitGeometry) {
+    private Metadata registerMetadata(ImplicitGeometry implicitGeometry) {
         String objectId = implicitGeometry.getOrCreateObjectId();
-        metadata.put(id, new Metadata(objectId, ImplicitGeometryDescriptor.of(implicitGeometry)));
         implicitGeometry.getGeometry().ifPresent(geometry -> envelopes.put(objectId, geometry.getEnvelope().copy()));
+        return new Metadata(objectId, ImplicitGeometryDescriptor.of(implicitGeometry));
     }
 
     public void clear() {
-        metadata.clear();
         envelopes.clear();
-        pending.clear();
+        metadata.clear();
     }
 
     @FunctionalInterface
