@@ -32,6 +32,7 @@ import java.util.Set;
 public class ExportHelper {
     private final DatabaseAdapter adapter;
     private final ExportOptions options;
+    private final ImplicitGeometryRegistry implicitGeometryRegistry;
     private final Connection connection;
     private final SchemaMapping schemaMapping;
     private final SpatialReference targetSrs;
@@ -46,9 +47,10 @@ public class ExportHelper {
     private final Set<String> addressIdCache = new HashSet<>();
     private final Set<String> externalFileIdCache = new HashSet<>();
 
-    ExportHelper(DatabaseAdapter adapter, ExportOptions options) throws SQLException, SrsException {
+    ExportHelper(DatabaseAdapter adapter, ExportOptions options, ImplicitGeometryRegistry implicitGeometryRegistry) throws SQLException, SrsException {
         this.adapter = adapter;
         this.options = options;
+        this.implicitGeometryRegistry = implicitGeometryRegistry;
 
         connection = adapter.getPool().getConnection();
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
@@ -66,6 +68,10 @@ public class ExportHelper {
 
     public ExportOptions getOptions() {
         return options;
+    }
+
+    public ImplicitGeometryRegistry getImplicitGeometryRegistry() {
+        return implicitGeometryRegistry;
     }
 
     public SchemaMapping getSchemaMapping() {

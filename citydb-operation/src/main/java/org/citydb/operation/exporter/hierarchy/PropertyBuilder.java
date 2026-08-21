@@ -13,12 +13,15 @@ import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.*;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.property.PropertyStub;
+import org.citydb.operation.exporter.util.ImplicitGeometryRegistry;
 
 public class PropertyBuilder {
     private final ExportHelper helper;
+    private final ImplicitGeometryRegistry implicitGeometryRegistry;
 
     PropertyBuilder(ExportHelper helper) {
         this.helper = helper;
+        implicitGeometryRegistry = helper.getImplicitGeometryRegistry();
     }
 
     Property<?> build(PropertyStub propertyStub, Hierarchy hierarchy) {
@@ -66,12 +69,21 @@ public class PropertyBuilder {
     }
 
     private ImplicitGeometryProperty buildImplicitGeometryProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
+        ImplicitGeometryProperty property = null;
         ImplicitGeometry implicitGeometry = hierarchy.getImplicitGeometry(propertyStub.getImplicitGeometryId());
         if (implicitGeometry != null) {
-            ImplicitGeometryProperty property = helper.lookupAndPut(implicitGeometry)
+            property = helper.lookupAndPut(implicitGeometry)
                     ? ImplicitGeometryProperty.asReference(propertyStub.getName(), implicitGeometry)
                     : ImplicitGeometryProperty.of(propertyStub.getName(), implicitGeometry);
+        } else {
+            String objectId = implicitGeometryRegistry.getObjectId(propertyStub.getImplicitGeometryId());
+            if (objectId != null) {
+                property = ImplicitGeometryProperty.of(propertyStub.getName(), ImplicitGeometryReference.of(objectId,
+                        implicitGeometryRegistry.getDescriptor(propertyStub.getImplicitGeometryId())));
+            }
+        }
 
+        if (property != null) {
             if (propertyStub.getArrayValue() != null) {
                 property.setTransformationMatrix(propertyStub.getArrayValue().getValues().stream()
                         .filter(Value::isDouble)
@@ -79,11 +91,11 @@ public class PropertyBuilder {
                         .toList());
             }
 
-            return property.setReferencePoint(propertyStub.getReferencePoint())
+            property.setReferencePoint(propertyStub.getReferencePoint())
                     .setLod(propertyStub.getLod());
         }
 
-        return null;
+        return property;
     }
 
     private AppearanceProperty buildAppearanceProperty(PropertyStub propertyStub, Hierarchy hierarchy) {
