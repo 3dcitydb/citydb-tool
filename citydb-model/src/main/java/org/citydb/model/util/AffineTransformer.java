@@ -74,8 +74,32 @@ public class AffineTransformer {
 
     public void transform(Envelope envelope) {
         if (!envelope.isEmpty()) {
-            transform(envelope.getLowerCorner());
-            transform(envelope.getUpperCorner());
+            Envelope transformed = Envelope.empty();
+            boolean is3D = envelope.getVertexDimension() == 3;
+
+            Coordinate lowerCorner = envelope.getLowerCorner();
+            Coordinate upperCorner = envelope.getUpperCorner();
+            for (int x = 0; x < 2; x++) {
+                for (int y = 0; y < 2; y++) {
+                    for (int z = 0; z < (is3D ? 2 : 1); z++) {
+                        Coordinate corner = Coordinate.of(
+                                x == 0 ? lowerCorner.getX() : upperCorner.getX(),
+                                y == 0 ? lowerCorner.getY() : upperCorner.getY(),
+                                z == 0 ? lowerCorner.getZ() : upperCorner.getZ());
+                        transform(corner);
+                        transformed.include(corner);
+                    }
+                }
+            }
+
+            lowerCorner.setX(transformed.getLowerCorner().getX())
+                    .setY(transformed.getLowerCorner().getY());
+            upperCorner.setX(transformed.getUpperCorner().getX())
+                    .setY(transformed.getUpperCorner().getY());
+            if (is3D) {
+                lowerCorner.setZ(transformed.getLowerCorner().getZ());
+                upperCorner.setZ(transformed.getUpperCorner().getZ());
+            }
         }
     }
 
