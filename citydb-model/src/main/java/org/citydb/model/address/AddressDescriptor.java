@@ -19,6 +19,6 @@ public class AddressDescriptor extends DatabaseDescriptor {
 
     @Override
     public AddressDescriptor copy() {
-        return AddressDescriptor.of(getId());
+        return new AddressDescriptor(getId());
     }
 }

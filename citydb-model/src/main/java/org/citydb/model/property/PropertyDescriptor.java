@@ -35,7 +35,7 @@ public class PropertyDescriptor extends DatabaseDescriptor {
 
     @Override
     public PropertyDescriptor copy() {
-        return PropertyDescriptor.of(getId(), featureId)
+        return new PropertyDescriptor(getId(), featureId)
                 .setParentId(parentId);
     }
 }

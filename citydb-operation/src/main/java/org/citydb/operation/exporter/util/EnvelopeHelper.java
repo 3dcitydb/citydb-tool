@@ -13,42 +13,32 @@ import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
+import org.citydb.model.property.ImplicitGeometryReference;
 import org.citydb.model.property.RelationType;
+import org.citydb.model.util.AffineTransformer;
 import org.citydb.model.util.GeometryInfo;
+import org.citydb.model.util.matrix.Matrix;
 import org.citydb.model.walker.ModelWalker;
 import org.citydb.operation.exporter.ExportHelper;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
 
 public class EnvelopeHelper {
     private final ExportHelper helper;
+    private final ImplicitGeometryRegistry implicitGeometryRegistry;
 
     EnvelopeHelper(ExportHelper helper) {
         this.helper = helper;
+        implicitGeometryRegistry = helper.getImplicitGeometryRegistry();
     }
 
     public void updateEnvelope(Feature feature) {
-        Map<String, ImplicitGeometry> implicitGeometries = new HashMap<>();
-        feature.accept(new ModelWalker() {
-            @Override
-            public void visit(ImplicitGeometry implicitGeometry) {
-                implicitGeometry.getObjectId().ifPresent(objectId ->
-                        implicitGeometries.put(objectId, implicitGeometry));
-            }
-        });
-
-        updateEnvelope(feature, implicitGeometries);
-    }
-
-    private void updateEnvelope(Feature feature, Map<String, ImplicitGeometry> implicitGeometries) {
         Deque<Envelope> envelopes = new ArrayDeque<>();
         feature.accept(new ModelWalker() {
             @Override
             public void visit(Feature feature) {
-                envelopes.push(computeEnvelope(feature, implicitGeometries));
+                envelopes.push(computeEnvelope(feature));
                 super.visit(feature);
 
                 Envelope envelope = envelopes.pop();
@@ -69,7 +59,7 @@ public class EnvelopeHelper {
         });
     }
 
-    private Envelope computeEnvelope(Feature feature, Map<String, ImplicitGeometry> implicitGeometries) {
+    private Envelope computeEnvelope(Feature feature) {
         Envelope envelope = Envelope.empty();
         GeometryInfo geometryInfo = feature.getGeometryInfo(GeometryInfo.Mode.SKIP_NESTED_FEATURES);
 
@@ -86,15 +76,26 @@ public class EnvelopeHelper {
                     Matrix4x4 transformationMatrix = property.getTransformationMatrix().orElse(null);
                     Point referencePoint = property.getReferencePoint().orElse(null);
                     if (transformationMatrix != null && referencePoint != null) {
-                        ImplicitGeometry geometry = property.getObject().orElse(
-                                implicitGeometries.get(property.getReference().orElse(null)));
+                        ImplicitGeometry geometry = property.getObject().orElse(null);
                         if (geometry != null) {
                             envelope.include(geometry.getEnvelope(transformationMatrix, referencePoint));
                         } else {
-                            envelope.include(Point.of(Coordinate.of(
-                                    referencePoint.getCoordinate().getX() + transformationMatrix.get(0, 3),
-                                    referencePoint.getCoordinate().getY() + transformationMatrix.get(1, 3),
-                                    referencePoint.getCoordinate().getZ() + transformationMatrix.get(2, 3))));
+                            Envelope extent = implicitGeometryRegistry.getEnvelope(property.getReference()
+                                    .map(ImplicitGeometryReference::getObjectId)
+                                    .orElse(null));
+                            if (extent != null) {
+                                AffineTransformer.of(transformationMatrix.plus(new Matrix(4, 4)
+                                                .set(0, 3, referencePoint.getCoordinate().getX())
+                                                .set(1, 3, referencePoint.getCoordinate().getY())
+                                                .set(2, 3, referencePoint.getCoordinate().getZ())))
+                                        .transform(extent);
+                                envelope.include(extent);
+                            } else {
+                                envelope.include(Point.of(Coordinate.of(
+                                        referencePoint.getCoordinate().getX() + transformationMatrix.get(0, 3),
+                                        referencePoint.getCoordinate().getY() + transformationMatrix.get(1, 3),
+                                        referencePoint.getCoordinate().getZ() + transformationMatrix.get(2, 3))));
+                            }
                         }
                     }
                 }

@@ -20,6 +20,7 @@ import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.property.PropertyExporter;
 import org.citydb.operation.exporter.property.PropertyStub;
+import org.citydb.operation.exporter.util.ImplicitGeometryRegistry;
 import org.citydb.operation.exporter.util.LodFilter;
 import org.citydb.operation.exporter.util.TableHelper;
 import org.citydb.operation.exporter.util.ValidityFilter;
@@ -31,6 +32,7 @@ import java.util.*;
 public class HierarchyBuilder {
     private final long rootId;
     private final ExportHelper helper;
+    private final ImplicitGeometryRegistry implicitGeometryRegistry;
     private final ValidityFilter validityFilter;
     private final LodFilter lodFilter;
     private final TableHelper tableHelper;
@@ -42,6 +44,8 @@ public class HierarchyBuilder {
     private HierarchyBuilder(long rootId, ExportHelper helper) {
         this.rootId = rootId;
         this.helper = helper;
+
+        implicitGeometryRegistry = helper.getImplicitGeometryRegistry();
         validityFilter = helper.getValidityFilter();
         lodFilter = helper.getLodFilter();
         tableHelper = helper.getTableHelper();
@@ -117,8 +121,8 @@ public class HierarchyBuilder {
 
     private void loadResources() throws ExportException, SQLException {
         Set<Long> geometryIds = new HashSet<>();
-        Set<Long> appearanceIds = new HashSet<>();
         Set<Long> addressIds = new HashSet<>();
+        Set<Long> appearanceIds = new HashSet<>();
         Set<Long> implicitGeometryIds = new HashSet<>();
 
         for (List<PropertyStub> propertyStubs : this.propertyStubs.values()) {
@@ -133,12 +137,12 @@ public class HierarchyBuilder {
                     }
                 }
 
-                if (exportAppearances && propertyStub.getAppearanceId() != null) {
-                    appearanceIds.add(propertyStub.getAppearanceId());
-                }
-
                 if (propertyStub.getAddressId() != null) {
                     addressIds.add(propertyStub.getAddressId());
+                }
+
+                if (exportAppearances && propertyStub.getAppearanceId() != null) {
+                    appearanceIds.add(propertyStub.getAppearanceId());
                 }
 
                 if (propertyStub.getImplicitGeometryId() != null) {
@@ -157,22 +161,29 @@ public class HierarchyBuilder {
                     .forEach(hierarchy::addGeometry);
         }
 
-        if (exportAppearances) {
-            tableHelper.getOrCreateExporter(AppearanceExporter.class)
-                    .doExport(appearanceIds, implicitGeometryIds)
-                    .forEach(hierarchy::addAppearance);
-        }
-
         if (!addressIds.isEmpty()) {
             tableHelper.getOrCreateExporter(AddressExporter.class)
                     .doExport(addressIds)
                     .forEach(hierarchy::addAddress);
         }
 
-        if (!implicitGeometryIds.isEmpty()) {
-            tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
-                    .doExport(implicitGeometryIds, hierarchy.getAppearances().values())
-                    .forEach(hierarchy::addImplicitGeometry);
+        Set<Long> implicitGeometryIdsToExport = implicitGeometryRegistry.claim(implicitGeometryIds);
+        try {
+            if (exportAppearances) {
+                tableHelper.getOrCreateExporter(AppearanceExporter.class)
+                        .doExport(appearanceIds, implicitGeometryIdsToExport)
+                        .forEach(hierarchy::addAppearance);
+            }
+
+            if (!implicitGeometryIdsToExport.isEmpty()) {
+                implicitGeometryRegistry.resolve(implicitGeometryIdsToExport, ids ->
+                                tableHelper.getOrCreateExporter(ImplicitGeometryExporter.class)
+                                        .doExport(ids, hierarchy.getImplicitGeometryAppearances()))
+                        .forEach(hierarchy::addImplicitGeometry);
+            }
+        } catch (Exception e) {
+            implicitGeometryRegistry.fail(implicitGeometryIdsToExport, e);
+            throw e;
         }
     }
 

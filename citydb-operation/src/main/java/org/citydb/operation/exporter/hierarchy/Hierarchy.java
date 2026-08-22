@@ -7,12 +7,15 @@ package org.citydb.operation.exporter.hierarchy;
 
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.Appearance;
+import org.citydb.model.appearance.AppearanceDescriptor;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.Property;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Hierarchy {
@@ -20,6 +23,7 @@ public class Hierarchy {
     private final Map<Long, Geometry<?>> geometries = new HashMap<>();
     private final Map<Long, ImplicitGeometry> implicitGeometries = new HashMap<>();
     private final Map<Long, Appearance> appearances = new HashMap<>();
+    private final Map<Long, List<Appearance>> implicitGeometryAppearances = new HashMap<>();
     private final Map<Long, Address> addresses = new HashMap<>();
     private final Map<Long, Property<?>> properties = new HashMap<>();
 
@@ -76,9 +80,19 @@ public class Hierarchy {
         return id != null ? appearances.get(id) : null;
     }
 
+    public Map<Long, List<Appearance>> getImplicitGeometryAppearances() {
+        return implicitGeometryAppearances;
+    }
+
     public void addAppearance(long id, Appearance appearance) {
         if (appearance != null) {
             appearances.put(id, appearance);
+            appearance.getDescriptor()
+                    .map(AppearanceDescriptor::getImplicitGeometryId)
+                    .filter(implicitGeometryId -> implicitGeometryId != 0)
+                    .ifPresent(implicitGeometryId -> implicitGeometryAppearances
+                            .computeIfAbsent(implicitGeometryId, k -> new ArrayList<>())
+                            .add(appearance));
         }
     }
 

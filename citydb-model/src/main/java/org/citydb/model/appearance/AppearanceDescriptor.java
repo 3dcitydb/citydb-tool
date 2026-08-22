@@ -39,7 +39,7 @@ public class AppearanceDescriptor extends DatabaseDescriptor {
 
     @Override
     public AppearanceDescriptor copy() {
-        return AppearanceDescriptor.of(getId())
+        return new AppearanceDescriptor(getId())
                 .setFeatureId(featureId)
                 .setImplicitGeometryId(implicitGeometryId);
     }

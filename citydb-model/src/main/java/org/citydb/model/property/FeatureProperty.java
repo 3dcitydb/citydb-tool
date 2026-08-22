@@ -14,7 +14,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Objects;
 import java.util.Optional;
 
-public class FeatureProperty extends Property<FeatureProperty> implements InlineOrByReferenceProperty<Feature> {
+public class FeatureProperty extends Property<FeatureProperty> implements InlineOrByReferenceProperty<Feature, String> {
     private Feature feature;
     private String reference;
     private RelationType relationType;

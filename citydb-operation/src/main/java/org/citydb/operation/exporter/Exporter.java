@@ -11,6 +11,7 @@ import org.citydb.core.function.CheckedSupplier;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.operation.exporter.util.ImplicitGeometryRegistry;
 
 import java.util.Objects;
 import java.util.Set;
@@ -20,6 +21,7 @@ import java.util.concurrent.ExecutorService;
 
 public class Exporter {
     private ExecutorService service;
+    private ImplicitGeometryRegistry implicitGeometryRegistry;
     private ThreadLocal<ExportHelper> contexts;
     private Set<ExportHelper> helpers;
     private CountLatch countLatch;
@@ -56,6 +58,8 @@ public class Exporter {
         Objects.requireNonNull(adapter, "The database adapter must not be null.");
         Objects.requireNonNull(options, "The export options must not be null.");
 
+        implicitGeometryRegistry = ImplicitGeometryRegistry.of(options.getImplicitGeometryScope());
+
         helpers = ConcurrentHashMap.newKeySet();
         service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
                 ? options.getNumberOfThreads()
@@ -64,7 +68,7 @@ public class Exporter {
         countLatch = new CountLatch();
         contexts = ThreadLocal.withInitial(() -> {
             try {
-                ExportHelper helper = new ExportHelper(adapter, options);
+                ExportHelper helper = new ExportHelper(adapter, options, implicitGeometryRegistry);
                 helpers.add(helper);
                 return helper;
             } catch (Exception e) {
@@ -132,6 +136,7 @@ public class Exporter {
             throw new ExportException("Failed to close export session.", e);
         } finally {
             service.shutdown();
+            implicitGeometryRegistry.clear();
         }
     }
 }

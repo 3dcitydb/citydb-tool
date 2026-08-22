@@ -221,7 +221,7 @@ public class ModelWalker implements Visitor {
         }
     }
 
-    public void visit(InlineOrByReferenceProperty<?> property) {
+    public void visit(InlineOrByReferenceProperty<?, ?> property) {
         if (property instanceof Property<?> object) {
             visit(object);
         }
@@ -236,11 +236,11 @@ public class ModelWalker implements Visitor {
     }
 
     public void visit(AddressProperty property) {
-        visit((InlineOrByReferenceProperty<?>) property);
+        visit((InlineOrByReferenceProperty<?, ?>) property);
     }
 
     public void visit(FeatureProperty property) {
-        visit((InlineOrByReferenceProperty<?>) property);
+        visit((InlineOrByReferenceProperty<?, ?>) property);
     }
 
     public void visit(GeometryProperty property) {
@@ -248,11 +248,11 @@ public class ModelWalker implements Visitor {
     }
 
     public void visit(SurfaceDataProperty property) {
-        visit((InlineOrByReferenceProperty<?>) property);
+        visit((InlineOrByReferenceProperty<?, ?>) property);
     }
 
     public void visit(ImplicitGeometryProperty property) {
-        visit((InlineOrByReferenceProperty<?>) property);
+        visit((InlineOrByReferenceProperty<?, ?>) property);
 
         if (shouldWalk) {
             property.getReferencePoint().ifPresent(referencePoint -> referencePoint.accept(this));
