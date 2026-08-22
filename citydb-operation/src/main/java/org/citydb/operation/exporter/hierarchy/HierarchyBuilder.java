@@ -77,7 +77,11 @@ public class HierarchyBuilder {
         Set<Long> featureIds = new HashSet<>();
         Map<Long, Integer> referees = new HashMap<>();
 
-        while (rs.next() && propertyIds.add(rs.getLong("id"))) {
+        while (rs.next()) {
+            if (!propertyIds.add(rs.getLong("id"))) {
+                continue;
+            }
+
             long parentFeatureId = rs.getLong("feature_id");
             if (rs.wasNull()) {
                 continue;
