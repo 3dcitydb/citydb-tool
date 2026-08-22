@@ -21,6 +21,7 @@ import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.util.Matrices;
 import org.xmlobjects.gml.util.matrix.Matrix;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -104,6 +105,7 @@ public class ImplicitGeometryResolver {
             Envelope relative = envelopes.get(objectId);
 
             if (relative != null
+                    && relative.getDimension() > 1
                     && implicitGeometry.getTransformationMatrix() != null
                     && implicitGeometry.getReferencePoint() != null
                     && implicitGeometry.getReferencePoint().getObject() != null) {
@@ -116,8 +118,19 @@ public class ImplicitGeometryResolver {
                     matrix.set(2, 3, matrix.get(2, 3) + point.get(2));
                 }
 
-                envelope.include(Matrices.transform3D(relative.getLowerCorner(), matrix));
-                envelope.include(Matrices.transform3D(relative.getUpperCorner(), matrix));
+                List<Double> lowerCorner = relative.getLowerCorner().toCoordinateList3D();
+                List<Double> upperCorner = relative.getUpperCorner().toCoordinateList3D();
+                for (int x = 0; x < 2; x++) {
+                    for (int y = 0; y < 2; y++) {
+                        for (int z = 0; z < 2; z++) {
+                            List<Double> corner = Arrays.asList(
+                                    x == 0 ? lowerCorner.get(0) : upperCorner.get(0),
+                                    y == 0 ? lowerCorner.get(1) : upperCorner.get(1),
+                                    z == 0 ? lowerCorner.get(2) : upperCorner.get(2));
+                            envelope.include(Matrices.transform3D(corner, matrix));
+                        }
+                    }
+                }
             } else if (implicitGeometry.getReferencePoint() != null
                     && implicitGeometry.getReferencePoint().getObject() != null) {
                 List<Double> point = implicitGeometry.getReferencePoint().getObject().toCoordinateList3D();
