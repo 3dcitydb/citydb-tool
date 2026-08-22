@@ -25,12 +25,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ImplicitGeometryResolver {
     private final Map<String, ImplicitGeometry> implicitGeometries = new ConcurrentHashMap<>();
     private final Map<String, org.citydb.model.geometry.ImplicitGeometry> converted = new ConcurrentHashMap<>();
-    private final Map<String, ImplicitGeometryDescriptor> descriptors = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<ImplicitGeometryDescriptor>> descriptors = new ConcurrentHashMap<>();
     private final Map<String, Envelope> envelopes = new ConcurrentHashMap<>();
 
     private ImplicitGeometryScope scope = ImplicitGeometryScope.GLOBAL;
@@ -58,7 +59,8 @@ public class ImplicitGeometryResolver {
     }
 
     public ImplicitGeometryDescriptor getDescriptor(String objectId) {
-        return descriptors.get(objectId);
+        CompletableFuture<ImplicitGeometryDescriptor> future = descriptors.get(objectId);
+        return future != null ? future.join() : null;
     }
 
     public org.citydb.model.geometry.ImplicitGeometry getOrConvert(String objectId, Converter converter) throws ModelBuildException {
@@ -86,12 +88,17 @@ public class ImplicitGeometryResolver {
     private org.citydb.model.geometry.ImplicitGeometry consumeAndConvert(String objectId, Converter converter) throws ModelBuildException {
         ImplicitGeometry source = implicitGeometries.remove(objectId);
         if (source != null) {
-            org.citydb.model.geometry.ImplicitGeometry target = converter.apply(source);
-            if (target != null) {
-                descriptors.putIfAbsent(objectId, ImplicitGeometryDescriptor.of(target));
-            }
+            try {
+                org.citydb.model.geometry.ImplicitGeometry target = converter.apply(source);
+                if (target != null) {
+                    complete(objectId, ImplicitGeometryDescriptor.of(target));
+                }
 
-            return target;
+                return target;
+            } catch (Exception e) {
+                fail(objectId, e);
+                throw e;
+            }
         }
 
         return null;
@@ -166,6 +173,7 @@ public class ImplicitGeometryResolver {
                     }
 
                     implicitGeometries.put(geometry.getId(), template);
+                    descriptors.putIfAbsent(geometry.getId(), new CompletableFuture<>());
                     envelopes.put(geometry.getId(), geometry.computeEnvelope());
                 }
             }
@@ -186,6 +194,20 @@ public class ImplicitGeometryResolver {
                 }
             }
         });
+    }
+
+    private void complete(String objectId, ImplicitGeometryDescriptor descriptor) {
+        CompletableFuture<ImplicitGeometryDescriptor> future = descriptors.get(objectId);
+        if (future != null) {
+            future.complete(descriptor);
+        }
+    }
+
+    private void fail(String objectId, Throwable cause) {
+        CompletableFuture<ImplicitGeometryDescriptor> future = descriptors.get(objectId);
+        if (future != null) {
+            future.completeExceptionally(cause);
+        }
     }
 
     @FunctionalInterface
