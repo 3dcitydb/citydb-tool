@@ -18,7 +18,8 @@ public class FeatureHierarchyExporter extends DatabaseExporter {
 
     public FeatureHierarchyExporter(ExportHelper helper) throws SQLException {
         super(helper);
-        stmt = helper.getConnection().prepareStatement(adapter.getSchemaAdapter().getFeatureHierarchyQuery());
+        stmt = helper.getConnection().prepareStatement(
+                adapter.getSchemaAdapter().getFeatureHierarchyQuery(helper.getSRID()));
     }
 
     public Feature doExport(long id) throws ExportException, SQLException {

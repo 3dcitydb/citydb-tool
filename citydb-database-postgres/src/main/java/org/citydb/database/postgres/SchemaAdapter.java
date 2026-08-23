@@ -26,7 +26,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
@@ -72,9 +75,13 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public String getFeatureHierarchyQuery() {
+    public String getFeatureHierarchyQuery(int targetSRID) {
         try {
-            return featureHierarchyQuery.get();
+            int srid = adapter.getDatabaseMetadata().getSpatialReference().getSRID();
+            return featureHierarchyQuery.get()
+                    .replace("@VAL_IMPLICITGEOM_REFPOINT@", srid != targetSRID
+                            ? "st_transform(val_implicitgeom_refpoint, " + targetSRID + ") val_implicitgeom_refpoint"
+                            : "val_implicitgeom_refpoint");
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create feature hierarchy query.", e);
         }
@@ -197,10 +204,10 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     protected boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException {
         String sql = version.compareTo(Version.of(5, 1, 0)) < 0
                 ? "select coalesce(( " +
-                  "select 1 from information_schema.schemata s " +
-                  "join information_schema.tables t on t.table_schema = s.schema_name " +
-                  "where s.schema_name = ? and t.table_name = 'database_srs' " +
-                  "limit 1), 0)"
+                "select 1 from information_schema.schemata s " +
+                "join information_schema.tables t on t.table_schema = s.schema_name " +
+                "where s.schema_name = ? and t.table_name = 'database_srs' " +
+                "limit 1), 0)"
                 : "select citydb_pkg.schema_exists(?)";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
@@ -249,8 +256,8 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     private String readFeatureHierarchyQuery() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
-                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_feature_hierarchy.sql"))))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(SchemaAdapter.class.getResourceAsStream(
+                "/org/citydb/database/postgres/query_feature_hierarchy.sql")))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
                     .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema())
@@ -261,8 +268,8 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     private String readRecursiveImplicitGeometryQuery() throws IOException {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Objects.requireNonNull(
-                SchemaAdapter.class.getResourceAsStream("/org/citydb/database/postgres/query_recursive_implicit_geometry.sql"))))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(SchemaAdapter.class.getResourceAsStream(
+                "/org/citydb/database/postgres/query_recursive_implicit_geometry.sql")))) {
             return reader.lines()
                     .collect(Collectors.joining(" "))
                     .replace("@SCHEMA@", adapter.getConnectionDetails().getSchema());

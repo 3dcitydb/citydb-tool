@@ -40,7 +40,7 @@ public abstract class SchemaAdapter {
 
     public abstract int getMaximumNumberOfItemsForInOperator();
 
-    public abstract String getFeatureHierarchyQuery();
+    public abstract String getFeatureHierarchyQuery(int targetSRID);
 
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
 
