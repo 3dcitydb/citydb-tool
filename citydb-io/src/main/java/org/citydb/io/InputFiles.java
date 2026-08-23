@@ -5,12 +5,14 @@
 
 package org.citydb.io;
 
-import org.apache.tika.config.TikaConfig;
-import org.apache.tika.exception.TikaException;
+import org.apache.tika.config.loader.TikaLoader;
+import org.apache.tika.detect.Detector;
+import org.apache.tika.exception.TikaConfigException;
 import org.apache.tika.io.TikaInputStream;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.metadata.TikaCoreProperties;
 import org.apache.tika.mime.MediaType;
+import org.apache.tika.parser.ParseContext;
 import org.citydb.core.file.InputFile;
 import org.citydb.core.file.input.GZipInputFile;
 import org.citydb.core.file.input.RegularInputFile;
@@ -33,7 +35,7 @@ import java.util.zip.GZIPInputStream;
 public class InputFiles {
     private static final Pattern PATH_ELEMENT_PATTERN = Pattern.compile("[^*?{}!\\[\\]]+");
     private final Collection<String> pathsOrGlobPatterns;
-    private final TikaConfig tikaConfig;
+    private final Detector detector;
     private final Set<String> extensions = new HashSet<>();
     private final Set<MediaType> mediaTypes = new HashSet<>();
     private Path baseDirectory = Path.of(".").toAbsolutePath().normalize();
@@ -42,8 +44,8 @@ public class InputFiles {
     private InputFiles(Collection<String> pathsOrGlobPatterns) throws IOException {
         this.pathsOrGlobPatterns = pathsOrGlobPatterns;
         try {
-            tikaConfig = new TikaConfig();
-        } catch (TikaException e) {
+            detector = TikaLoader.loadDefault(Thread.currentThread().getContextClassLoader()).loadDetectors();
+        } catch (TikaConfigException e) {
             throw new IOException("Failed to initialize media type detection.", e);
         }
     }
@@ -250,7 +252,7 @@ public class InputFiles {
         try {
             Metadata metadata = new Metadata();
             metadata.set(TikaCoreProperties.RESOURCE_NAME_KEY, fileName);
-            return tikaConfig.getDetector().detect(input, metadata);
+            return detector.detect(input, metadata, new ParseContext());
         } catch (IOException e) {
             return MediaType.EMPTY;
         }

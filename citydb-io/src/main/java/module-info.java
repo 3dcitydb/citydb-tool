@@ -1,5 +1,6 @@
 module org.citydb.io {
     requires java.sql;
+    requires org.apache.tika.serialization;
     requires transitive org.citydb.config;
     requires transitive org.citydb.core;
     requires transitive org.citydb.model;
