@@ -30,7 +30,7 @@ public enum Table {
 
     public static final EnumSet<Table> CONTENT_TABLES = EnumSet.of(FEATURE, PROPERTY, ADDRESS, GEOMETRY_DATA,
             IMPLICIT_GEOMETRY, APPEARANCE, APPEAR_TO_SURFACE_DATA, TEX_IMAGE, SURFACE_DATA, SURFACE_DATA_MAPPING);
-    public static final  EnumSet<Table> METADATA_TABLES = EnumSet.of(ADE, CODELIST, DATABASE_SRS, CODELIST_ENTRY,
+    public static final EnumSet<Table> METADATA_TABLES = EnumSet.of(ADE, CODELIST, DATABASE_SRS, CODELIST_ENTRY,
             NAMESPACE, DATATYPE, OBJECTCLASS, FEATURE_CHANGELOG);
 
     private static final Map<String, Table> tables = new HashMap<>();

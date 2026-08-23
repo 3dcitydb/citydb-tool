@@ -118,8 +118,8 @@ public class InputFiles {
             } else {
                 // construct a pattern from the path and the truncated elements
                 String pattern = !elements.isEmpty()
-                        ? ("glob:" + path.toAbsolutePath().normalize() + File.separator
-                           + String.join(File.separator, elements)).replace("\\", "\\\\")
+                        ? ("glob:" + path.toAbsolutePath().normalize() + File.separator +
+                        String.join(File.separator, elements)).replace("\\", "\\\\")
                         : defaultPattern;
 
                 // find files matching the pattern
