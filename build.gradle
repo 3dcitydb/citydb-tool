@@ -21,13 +21,13 @@ subprojects {
     version = parent.version
     def projectVersion = project.version
     def appName = rootProject.ext.appName
-    def appIssueTrackerUrl = rootProject.ext.appIssueTrackerUrl
     def appWebsiteUrl = rootProject.ext.appWebsiteUrl
+    def appGitHubUrl = rootProject.ext.appGitHubUrl
+    def appGitConnection = rootProject.ext.appGitConnection
+    def appIssueTrackerUrl = rootProject.ext.appIssueTrackerUrl
     def appCopyrightYear = rootProject.ext.appCopyrightYear
     def vendorName = rootProject.ext.vendorName
     def vendorWebsiteUrl = rootProject.ext.vendorWebsiteUrl
-    def appGitHubUrl = rootProject.ext.appGitHubUrl
-    def appGitConnection = rootProject.ext.appGitConnection
 
     java {
         toolchain {

@@ -14,11 +14,11 @@ configurations {
     }
 }
 
+def projectVersion = project.version
 def appName = rootProject.ext.appName
 def appCliCommand = rootProject.ext.appCliCommand
 def appCopyrightYear = rootProject.ext.appCopyrightYear
 def vendorName = rootProject.ext.vendorName
-def projectVersion = project.version
 def log4jVersion = '2.26.1'
 
 dependencies {
