@@ -11,8 +11,8 @@
 - Improved performance when resolving global appearances while reading and importing CityGML datasets.
 - **Breaking**: Changed the `TOP_LEVEL_FEATURE` mode of the `ImplicitGeometryScope` reader option to return independent
   copies of implicit geometry objects instead of shared objects, allowing each feature to be processed independently.
-- **Breaking**: Refactored and enhanced the Plugin API to support subcommands and feature processors for the `import`
-  and `export` commands.
+- **Breaking**: Enhanced the Plugin API to support subcommands and feature processors for the `import` and
+  `export` commands.
 - **Breaking**: Made several changes to the data model in `org.citydb.model`, including:
   - Removed the `Shareable` base class and restored parent references for implicit geometries.
   - Refactored the `PropertyMap` API for setting and accessing feature properties.
