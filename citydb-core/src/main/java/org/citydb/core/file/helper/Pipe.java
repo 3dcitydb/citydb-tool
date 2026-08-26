@@ -191,7 +191,8 @@ public class Pipe {
             try {
                 wait();
             } catch (InterruptedException e) {
-                throw new IOException("Stream pipe has been interrupted.");
+                Thread.currentThread().interrupt();
+                throw new IOException("Stream pipe has been interrupted.", e);
             }
         }
     }
@@ -211,7 +212,8 @@ public class Pipe {
             try {
                 wait();
             } catch (InterruptedException e) {
-                throw new IOException("Stream pipe has been interrupted.");
+                Thread.currentThread().interrupt();
+                throw new IOException("Stream pipe has been interrupted.", e);
             }
         }
     }

@@ -250,28 +250,38 @@ public class ProcessHelper {
         }
     }
 
-    private void waitForProcess(ProcessHandle processHandle) throws ProcessException {
+    private void waitForProcess(ProcessHandle processHandle) throws ProcessException, InterruptedException {
         CompletableFuture<ProcessHandle> onExit = processHandle.onExit();
 
-        if (processTimeout > 0) {
-            ProcessHandle exitHandle = onExit.completeOnTimeout(null, processTimeout, TimeUnit.SECONDS).join();
-            if (exitHandle == null) {
-                logger.debug("Process did not exit within {} seconds. Killing process.", processTimeout);
-                processHandle.destroy();
-                exitHandle = onExit.completeOnTimeout(null, GRACEFUL_KILL_TIMEOUT, TimeUnit.SECONDS).join();
-                if (exitHandle == null) {
+        try {
+            if (processTimeout > 0) {
+                try {
+                    onExit.get(processTimeout, TimeUnit.SECONDS);
+                    return;
+                } catch (TimeoutException e) {
+                    logger.debug("Process did not exit within {} seconds. Killing process.", processTimeout);
+                    processHandle.destroy();
+                }
+
+                try {
+                    onExit.get(GRACEFUL_KILL_TIMEOUT, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
                     processHandle.destroyForcibly();
-                    exitHandle = onExit.completeOnTimeout(null, GRACEFUL_KILL_TIMEOUT, TimeUnit.SECONDS).join();
-                    if (exitHandle == null) {
-                        logger.debug("Process did not terminate after forced kill within timeout.");
-                    }
+                }
+
+                try {
+                    onExit.get(GRACEFUL_KILL_TIMEOUT, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    logger.debug("Process did not terminate after forced kill within timeout.");
                 }
 
                 throw new ProcessException("Process did not complete before the " +
                         processTimeout + "-second timeout.");
             }
-        } else {
-            onExit.join();
+
+            onExit.get();
+        } catch (ExecutionException e) {
+            throw new ProcessException("Failed to wait for process termination.", e.getCause());
         }
     }
 

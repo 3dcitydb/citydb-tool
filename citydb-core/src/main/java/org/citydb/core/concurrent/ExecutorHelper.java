@@ -17,6 +17,7 @@ public class ExecutorHelper {
                     put(o);
                     return true;
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     return false;
                 }
             }

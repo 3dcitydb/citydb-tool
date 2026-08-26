@@ -79,6 +79,7 @@ public class SequentialWriter implements FeatureWriter {
                         try {
                             condition.await();
                         } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                             throw new WriteException("Failed to write feature.", e);
                         }
                     }
