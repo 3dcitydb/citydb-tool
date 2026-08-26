@@ -19,6 +19,15 @@ subprojects {
     apply plugin: 'idea'
 
     version = parent.version
+    def projectVersion = project.version
+    def appName = rootProject.ext.appName
+    def appIssueTrackerUrl = rootProject.ext.appIssueTrackerUrl
+    def appWebsiteUrl = rootProject.ext.appWebsiteUrl
+    def appCopyrightYear = rootProject.ext.appCopyrightYear
+    def vendorName = rootProject.ext.vendorName
+    def vendorWebsiteUrl = rootProject.ext.vendorWebsiteUrl
+    def appGitHubUrl = rootProject.ext.appGitHubUrl
+    def appGitConnection = rootProject.ext.appGitConnection
 
     java {
         toolchain {
@@ -85,8 +94,8 @@ subprojects {
             bottom """
                 <a href="${appIssueTrackerUrl}">Report a bug or suggest an enhancement</a><br>
                 ${project.name} is open source and licensed under the <a target="_blank" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License, Version 2.0</a>.<br>
-                Official website and more information at: <a target="_blank" href="$appWebsiteUrl">$appWebsiteUrl</a><br>
-                Copyright &copy; $appCopyrightYear $vendorName
+                Official website and more information at: <a target="_blank" href="${appWebsiteUrl}">${appWebsiteUrl}</a><br>
+                Copyright &copy; ${appCopyrightYear} ${vendorName}
                 """.replaceAll("[\r|\n]+", "")
             addStringOption('doctitle', project.name + ' ' + project.version)
             addStringOption('Xdoclint:none', '-quiet')
@@ -97,8 +106,8 @@ subprojects {
                 from("$rootDir/resources/javadoc/overview.html") {
                     filteringCharset = 'UTF-8'
                     filter(ReplaceTokens, tokens: [
-                            name: module,
-                            version: version,
+                            name   : module,
+                            version: projectVersion,
                             appName: appName,
                     ])
                 }

@@ -1,17 +1,19 @@
 import org.apache.tools.ant.filters.ReplaceTokens
 
-def geotools_version = '35.1'
+def citydbName = rootProject.ext.citydbName
+def citydbShortName = rootProject.ext.citydbShortName
+def geotoolsVersion = '35.1'
 
 dependencies {
     api project(':citydb-core')
     api project(':citydb-config')
     api project(':citydb-model')
     api 'org.citydb:sqlbuilder:3.2.0'
-    api "org.geotools:gt-referencing:$geotools_version"
+    api "org.geotools:gt-referencing:$geotoolsVersion"
     api 'systems.uom:systems-quantity:2.1'
     implementation 'org.apache.tomcat:tomcat-jdbc:11.0.25'
-    implementation "org.geotools:gt-epsg-wkt:$geotools_version"
-    implementation "org.geotools:gt-epsg-extension:$geotools_version"
+    implementation "org.geotools:gt-epsg-wkt:$geotoolsVersion"
+    implementation "org.geotools:gt-epsg-extension:$geotoolsVersion"
 }
 
 processResources {
