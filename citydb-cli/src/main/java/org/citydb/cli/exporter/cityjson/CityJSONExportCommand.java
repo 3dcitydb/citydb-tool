@@ -156,7 +156,10 @@ public class CityJSONExportCommand extends ExportController {
     @Override
     protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
         try {
-            if (adapter.getGeometryAdapter().hasImplicitGeometries()) {
+            CityJSONFormatOptions options = writeOptions.getFormatOptions()
+                    .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
+
+            if (options.isJsonLines() && adapter.getGeometryAdapter().hasImplicitGeometries()) {
                 logger.info("Retrieving global template geometries...");
                 Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
                 Exporter exporter = Exporter.newInstance();
@@ -191,8 +194,6 @@ public class CityJSONExportCommand extends ExportController {
                 if (exception != null) {
                     throw exception;
                 } else if (!globalTemplates.isEmpty()) {
-                    CityJSONFormatOptions options = writeOptions.getFormatOptions()
-                            .getOrElse(CityJSONFormatOptions.class, CityJSONFormatOptions::new);
                     globalTemplates.forEach(options::addGlobalTemplate);
                 }
             }
