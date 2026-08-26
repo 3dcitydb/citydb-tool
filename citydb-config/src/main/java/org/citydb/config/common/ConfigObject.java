@@ -10,11 +10,37 @@ import com.alibaba.fastjson2.JSONObject;
 import org.citydb.config.ConfigException;
 import org.citydb.config.SerializableConfig;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class ConfigObject<T> extends LinkedHashMap<String, T> {
+
+    public static <T> ConfigObject<T> of(T config) {
+        return new ConfigObject<T>().set(config);
+    }
+
+    public static <T> ConfigObject<T> of(String name, T config) {
+        return new ConfigObject<T>().set(name, config);
+    }
+
+    public static <T> ConfigObject<T> of(Collection<? extends T> configs) {
+        ConfigObject<T> configObject = new ConfigObject<>();
+        configs.forEach(configObject::set);
+        return configObject;
+    }
+
+    public static <T> ConfigObject<T> of(Map<String, ? extends T> configs) {
+        ConfigObject<T> configObject = new ConfigObject<>();
+        configObject.putAll(configs);
+        return configObject;
+    }
+
+    public static <T> ConfigObject<T> empty() {
+        return new ConfigObject<>();
+    }
 
     public <E extends T> E get(Class<E> type) throws ConfigException {
         return get(getName(type), type);
