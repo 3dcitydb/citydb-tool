@@ -35,7 +35,7 @@ public class FeatureDescriptor extends DatabaseDescriptor {
 
     @Override
     public FeatureDescriptor copy() {
-        return FeatureDescriptor.of(getId(), objectClassId)
+        return new FeatureDescriptor(getId(), objectClassId)
                 .setSequenceId(sequenceId);
     }
 }

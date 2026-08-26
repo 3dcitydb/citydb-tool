@@ -13,7 +13,9 @@ import org.citydb.io.citygml.serializer.ModelSerializer;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.geometry.Point;
+import org.citydb.model.property.ImplicitGeometryDescriptor;
 import org.citydb.model.property.ImplicitGeometryProperty;
+import org.citydb.model.property.ImplicitGeometryReference;
 import org.citygml4j.core.model.CityGMLVersion;
 import org.citygml4j.core.model.core.AbstractAppearanceProperty;
 import org.citygml4j.core.model.core.TransformationMatrix4x4;
@@ -47,19 +49,27 @@ public class ImplicitGeometryAdapter implements ModelBuilder<org.citygml4j.core.
                 target.setReferencePoint(new PointProperty(helper.getPoint(referencePoint))));
 
         ImplicitGeometry implicitGeometry = helper.getOrLookupObject(source);
-        if (implicitGeometry != null && implicitGeometry.hasAppearances()) {
-            implicitGeometry.getAppearances().forEach(property -> {
-                boolean isInline = target.getRelativeGeometry() != null
-                        && target.getRelativeGeometry().isSetInlineObject()
-                        && !helper.lookupAndPut(property.getObject());
-                if (helper.getCityGMLVersion() == CityGMLVersion.v3_0) {
-                    target.getAppearances().add(isInline
-                            ? new AbstractAppearanceProperty(helper.getAppearance(property.getObject()))
-                            : new AbstractAppearanceProperty("#" + property.getObject().getOrCreateObjectId()));
-                } else if (isInline) {
-                    helper.writeAsGlobalFeature(helper.getAppearance(property.getObject()));
-                }
-            });
+        if (implicitGeometry != null) {
+            if (implicitGeometry.hasAppearances()) {
+                implicitGeometry.getAppearances().forEach(property -> {
+                    boolean isInline = target.getRelativeGeometry() != null
+                            && target.getRelativeGeometry().isSetInlineObject()
+                            && !helper.lookupAndPut(property.getObject());
+                    if (helper.getCityGMLVersion() == CityGMLVersion.v3_0) {
+                        target.getAppearances().add(isInline
+                                ? new AbstractAppearanceProperty(helper.getAppearance(property.getObject()))
+                                : new AbstractAppearanceProperty("#" + property.getObject().getOrCreateObjectId()));
+                    } else if (isInline) {
+                        helper.writeAsGlobalFeature(helper.getAppearance(property.getObject()));
+                    }
+                });
+            }
+        } else if (helper.getCityGMLVersion() == CityGMLVersion.v3_0) {
+            source.getReference()
+                    .flatMap(ImplicitGeometryReference::getDescriptor)
+                    .filter(ImplicitGeometryDescriptor::hasAppearanceReferences)
+                    .ifPresent(descriptor -> descriptor.getAppearanceReferences().forEach(reference ->
+                            target.getAppearances().add(new AbstractAppearanceProperty("#" + reference))));
         }
     }
 }

@@ -7,14 +7,14 @@ package org.citydb.model.common;
 
 import java.util.Optional;
 
-public interface InlineOrByReferenceProperty<T extends Referencable> {
+public interface InlineOrByReferenceProperty<T extends Referencable, R> {
     Optional<T> getObject();
 
-    InlineOrByReferenceProperty<T> setObject(T object);
+    InlineOrByReferenceProperty<T, R> setObject(T object);
 
-    Optional<String> getReference();
+    Optional<R> getReference();
 
-    InlineOrByReferenceProperty<T> setReference(String reference);
+    InlineOrByReferenceProperty<T, R> setReference(R reference);
 
-    InlineOrByReferenceProperty<T> setReference(T referencedObject);
+    InlineOrByReferenceProperty<T, R> setReference(T referencedObject);
 }

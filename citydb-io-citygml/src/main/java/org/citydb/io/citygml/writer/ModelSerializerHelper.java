@@ -221,6 +221,7 @@ public class ModelSerializerHelper {
 
     public org.citydb.model.geometry.ImplicitGeometry getOrLookupObject(ImplicitGeometryProperty property) {
         return property.getObject().orElseGet(() -> property.getReference()
+                .map(ImplicitGeometryReference::getObjectId)
                 .map(preprocessor::lookupImplicitGeometry)
                 .orElse(null));
     }

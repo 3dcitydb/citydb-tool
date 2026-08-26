@@ -15,6 +15,7 @@ import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
 import org.citydb.operation.exporter.options.AppearanceOptions;
+import org.citydb.operation.exporter.options.ImplicitGeometryScope;
 import org.citydb.operation.exporter.options.LodOptions;
 import org.citydb.operation.exporter.options.ValidityOptions;
 
@@ -40,6 +41,8 @@ public class ExportOptions {
 
     @JSONField(serialize = false, deserialize = false)
     private OutputFile outputFile;
+    @JSONField(serialize = false, deserialize = false)
+    private ImplicitGeometryScope implicitGeometryScope;
 
     public int getNumberOfThreads() {
         return numberOfThreads;
@@ -123,6 +126,15 @@ public class ExportOptions {
 
     public ExportOptions setOutputDirectory(Path outputDirectory) {
         outputFile = new RegularOutputFile(outputDirectory.resolve("output.tmp"));
+        return this;
+    }
+
+    public ImplicitGeometryScope getImplicitGeometryScope() {
+        return implicitGeometryScope != null ? implicitGeometryScope : ImplicitGeometryScope.GLOBAL;
+    }
+
+    public ExportOptions setImplicitGeometryScope(ImplicitGeometryScope implicitGeometryScope) {
+        this.implicitGeometryScope = implicitGeometryScope;
         return this;
     }
 }
