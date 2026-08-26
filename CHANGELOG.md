@@ -5,8 +5,8 @@
 ### Changed
 - Optimized preprocessing of implicit geometries during CityGML/CityJSON imports to improve performance and reduce
   memory usage.
-- Changed the `TOP_LEVEL_FEATURE` mode of `ImplicitGeometryScope` to return independent copies of implicit geometry
-  objects instead of shared objects, allowing each feature to be processed independently.
+- Changed the `TOP_LEVEL_FEATURE` mode of the `ImplicitGeometryScope` reader option to return independent
+  copies of implicit geometry objects instead of shared objects, allowing each feature to be processed independently.
 - **Breaking**: Removed the `Shareable` base class and restored parent references for implicit geometries.
 
 ### Added
