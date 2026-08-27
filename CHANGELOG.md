@@ -3,50 +3,44 @@
 ## [Unreleased]
 
 ### Changed
+- Improved the performance of exporting features with implicit geometries.
+- Optimized the preprocessing of implicit geometries during imports to improve performance and reduce memory usage.
+- Improved the performance of resolving global appearances when reading CityGML datasets.
 - Renamed the `--plugins` option to `--extensions` to cover all types of citydb-tool extensions.
-- Improved export performance for datasets with implicit geometries by reusing them across top-level features by
-  default.
-- Optimized preprocessing of implicit geometries during CityGML/CityJSON imports, improving performance and reducing
-  memory usage.
-- Improved performance when resolving global appearances while reading and importing CityGML datasets.
-- **Breaking**: Changed the `TOP_LEVEL_FEATURE` mode of the `ImplicitGeometryScope` reader option to return independent
+- **Breaking:** Changed the `TOP_LEVEL_FEATURE` mode of the `ImplicitGeometryScope` reader option to return independent
   copies of implicit geometry objects instead of shared objects, allowing each feature to be processed independently.
-- **Breaking**: Enhanced the Plugin API to support subcommands and feature processors for the `import` and
-  `export` commands.
-- **Breaking**: Made several changes to the data model in `org.citydb.model`, including:
+- **Breaking:** Refactored and enhanced the Plugin API for the `import` and `export` commands.
+- **Breaking:** Made several changes to the data model in `org.citydb.model`, including:
   - Removed the `Shareable` base class and restored parent references for implicit geometries.
   - Refactored the `PropertyMap` API for setting and accessing feature properties.
   - Replaced string-based implicit geometry references with `ImplicitGeometryReference`.
 
 ### Added
-- Added `ImplicitGeometryScope` export option to control how implicit geometries are shared between top-level
-  features when exporting data from the database.
+- Added the `ImplicitGeometryScope` export option to control how implicit geometries are shared between top-level
+  features when exporting from the database.
   - `GLOBAL` (default): Implicit geometries are exported once and reused across all top-level features.
   - `TOP_LEVEL_FEATURE`: Implicit geometries are exported for each top-level feature and reused only within that
     feature. This mode produces self-contained features, simplifying parallel processing but substantially increasing
-    export time. This reflects the previous default behavior.
-- Added `--skip-empty-tiles` option to the `export` command to delete empty tile files during tiled exports.
+    export time. This was the previous default behavior.
+- Added the `--skip-empty-tiles` option to the `export` command to delete empty tile files during tiled exports.
 - Added support for configuring metadata properties in output files through `metadataOptions` in the JSON configuration.
-- Added CityGML write options to the JSON configuration, allowing XML prefixes and schema locations to be customized in
-  output files.
+- Added CityGML write options to the JSON configuration, allowing XML prefixes and schema locations to be customized.
 - Added support for deep copies of all model classes.
-- Added a state-preserving `prepass` to `FeatureReader`, avoiding repeated processing of global appearances and
+- Added a state-preserving `prepass` to `FeatureReader` to avoid repeated processing of global appearances and
   implicit geometries.
 - Added a JSON schema for plugin metadata.
 
 ### Fixed
-- Fixed an issue where duplicate property entries in the database could cause subsequent feature properties to be
-  missing from exports.
-- Fixed CityGML xAL 3.0 address output to use explicit element types following the CityGML 3.0 specification
-  and examples.
-- Fixed reference points of implicit geometries not being transformed into the target reference system during exports.
-  [#83](https://github.com/3dcitydb/citydb-tool/issues/83)
+- Fixed reference points of implicit geometries not being transformed into the target reference system during exports. [#83](https://github.com/3dcitydb/citydb-tool/issues/83)
 - Fixed incorrect envelope computation for implicit geometries during database imports.
-- Fixed resolution of cross-LoD references for implicit geometries.
+- Fixed CityGML xAL 3.0 address output to follow the examples in the CityGML 3.0 specification.
+- Fixed the resolution of cross-LoD references for implicit geometries.
 - Fixed the `mimeType` property not being written in CityGML exports for implicit geometries using library objects.
 - Fixed input files not being closed properly during imports, preventing resource leaks.
-- Fixed incorrect entry names when creating ZIP input files with the `InputFiles` helper.
+- Fixed incorrect entry names when reading ZIP input files.
 - Fixed the LoD filter not being reset between feature exports.
+- Fixed an issue where duplicate property rows in query results could cause subsequent feature properties to be
+  missing from exports.
 
 ## [1.3.2] - 2026-05-31
 
