@@ -13,7 +13,7 @@ See the `LICENSE` file for more details.
 
 ## Latest release
 
-The latest stable release of citydb-tool is `1.3.2`.
+The latest stable release of citydb-tool is `1.4.0`.
 
 Download the latest citydb-tool release as ZIP package
 [here](https://github.com/3dcitydb/citydb-tool/releases/latest). Previous releases are available from the
@@ -42,12 +42,12 @@ Usage: citydb [OPTIONS] COMMAND
 Command-line interface for the 3D City Database.
       [@<filename>...]       One or more argument files containing options.
       --config-file=<file>   Load configuration from this file.
-  -L, --log-level=<level>    Log level: fatal, error, warn, info, debug, trace
+  -L, --log-level=<level>    Log level: error, warn, info, debug, trace
                                (default: info).
       --log-file=<file>      Write log messages to this file.
       --quiet                Disable console log messages.
       --pid-file=<file>      Create a file containing the process ID.
-      --plugins=<dir>        Load plugins from this directory.
+      --extensions=<dir>     Load extensions from this directory.
       --use-plugin=<plugin[=true|false]>[,<plugin[=true|false]>...]
                              Enable or disable plugins with a matching fully
                                qualified class name (default: true).
