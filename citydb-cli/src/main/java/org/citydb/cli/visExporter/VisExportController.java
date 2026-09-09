@@ -27,6 +27,7 @@ import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.feature.Feature;
 import org.citydb.operation.exporter.Exporter;
 import org.citydb.operation.exporter.options.AppearanceOptions;
+import org.citydb.operation.exporter.options.ImplicitGeometryScope;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
@@ -422,6 +423,13 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
 
         // Visualization formats require WGS84 geographic coordinates.
         exportOptions.setTargetSrs(SrsReference.of(4326));
+
+        // Under the default GLOBAL scope only the first feature to use an
+        // implicit-geometry template receives the full geometry; every later
+        // feature carries a bare reference. The vis pipeline consumes
+        // exportFeature output directly and has no resolver for such
+        // references, so every property must bring its prototype inline.
+        exportOptions.setImplicitGeometryScope(ImplicitGeometryScope.TOP_LEVEL_FEATURE);
 
         if (queryOptions != null) {
             if (queryOptions.getLodOptions() != null) {
