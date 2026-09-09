@@ -16,8 +16,13 @@ import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteOptions;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.Coordinate;
+import org.citydb.model.geometry.Point;
+import org.citydb.model.property.ImplicitGeometryProperty;
+import org.citydb.model.util.GeometryInfo;
 import org.citydb.operation.exporter.ExportOptions;
 import org.citydb.operation.exporter.Exporter;
+import org.citydb.operation.exporter.options.ImplicitGeometryScope;
 import org.citydb.query.Query;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.executor.QueryResult;
@@ -61,6 +66,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 abstract class AbstractRailwaySceneExportIT {
     /** Output-file base name; both writers strip the extension to a {@code railway} scene dir. */
     static final String SCENE_NAME = "railway";
+
+    /** The railway scene carries 15 implicit-geometry instances of 3 shared prototypes. */
+    static final int EXPECTED_IMPLICIT_INSTANCES = 15;
 
     private static final String SETUP_HINT =
             "Start the local test citydb and set CITYDB_TEST_PASSWORD (optionally " +
@@ -138,9 +146,13 @@ abstract class AbstractRailwaySceneExportIT {
                 "The database connection dropped before the export started.");
 
         // Visualization formats require WGS84 geographic coordinates; the DB
-        // exporter reprojects via PostGIS as part of the SQL it builds.
+        // exporter reprojects via PostGIS as part of the SQL it builds. The
+        // per-feature implicit-geometry scope mirrors VisExportController:
+        // under the default GLOBAL scope, shared templates arrive as bare
+        // references that the vis pipeline cannot resolve.
         ExportOptions exportOptions = new ExportOptions();
         exportOptions.setTargetSrs(SrsReference.of(4326));
+        exportOptions.setImplicitGeometryScope(ImplicitGeometryScope.TOP_LEVEL_FEATURE);
 
         Query query = new Query();
         QueryExecutor executor = QueryExecutor.builder(adapter).build(query);
@@ -172,6 +184,7 @@ abstract class AbstractRailwaySceneExportIT {
         OutputFile output = new RegularOutputFile(outputDir.resolve(SCENE_NAME + fileExtension));
 
         AtomicInteger written = new AtomicInteger();
+        AtomicInteger implicitInstances = new AtomicInteger();
         Exporter exporter = Exporter.newInstance();
 
         ioAdapter.initialize(getClass().getClassLoader());
@@ -184,10 +197,11 @@ abstract class AbstractRailwaySceneExportIT {
                     Feature feature = exporter.exportFeature(id, sequenceId++).join();
                     assertNotNull(feature, "Exporter returned null for feature id " + id);
 
-                    // Implicit geometries carry an un-reprojected reference point;
-                    // fold the reprojection into the anchor exactly as the CLI
-                    // controller does before handing off to the writer.
+                    // Fold the matrix translation and grid rotation into the
+                    // anchor exactly as the CLI controller does before handing
+                    // off to the writer.
                     ImplicitReferencePointReprojector.reproject(feature, adapter);
+                    implicitInstances.addAndGet(countImplicitInstances(feature));
 
                     Boolean ok = writer.write(feature).join();
                     assertEquals(Boolean.TRUE, ok, "Writer rejected feature id " + id);
@@ -199,9 +213,40 @@ abstract class AbstractRailwaySceneExportIT {
         }
 
         assertEquals(expected, written.get(), "Not all queried features were written.");
+        assertEquals(EXPECTED_IMPLICIT_INSTANCES, implicitInstances.get(),
+                "Wrong number of inline implicit-geometry instances reached the writer.");
 
         // Both writers strip the extension and root the scene under <out>/railway.
         return outputDir.resolve(SCENE_NAME);
+    }
+
+    /**
+     * Count the implicit-geometry instances the feature carries inline and pin
+     * their reprojected anchors to the scene's WGS84 neighborhood. Guards two
+     * silent degradations the structural output checks cannot see: an exporter
+     * scope that replaces shared prototypes with bare references (the writer
+     * skips those without failing), and a reprojection regression that sends
+     * anchors continents away (the writer places them without complaint).
+     */
+    private int countImplicitInstances(Feature feature) {
+        int instances = 0;
+        GeometryInfo geometryInfo = feature.getGeometryInfo(GeometryInfo.Mode.INCLUDE_CONTAINED_FEATURES);
+        for (ImplicitGeometryProperty property : geometryInfo.getImplicitGeometries()) {
+            assertTrue(property.getObject().isPresent(),
+                    "Implicit-geometry property on feature " + feature.getObjectId().orElse("?") +
+                            " carries a bare reference instead of an inline prototype.");
+            Point referencePoint = property.getReferencePoint().orElse(null);
+            if (referencePoint != null) {
+                Coordinate coordinate = referencePoint.getCoordinate();
+                assertTrue(coordinate.getX() > 12.5 && coordinate.getX() < 13.5
+                                && coordinate.getY() > 52.0 && coordinate.getY() < 52.7,
+                        "Reprojected implicit anchor " + coordinate.getX() + "," + coordinate.getY() +
+                                " lies outside the railway scene's WGS84 neighborhood.");
+            }
+            instances++;
+        }
+
+        return instances;
     }
 
     private static String property(String key, String defaultValue) {
