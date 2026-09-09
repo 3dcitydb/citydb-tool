@@ -66,14 +66,16 @@ subprojects {
     extraJavaModuleInfo {
         failOnMissingModuleInfo = false
         deriveAutomaticModuleNamesFromFileNames = true
-        // fastjson2 has a bug (still present in 2.0.64): ObjectWriterProvider
-        // references org.w3c.dom.Node but its module-info is missing
-        // `requires java.xml`, causing IllegalAccessError when serializing
-        // POJOs on the module path.
+        // fastjson2's module-info misses `requires` for JDK modules its code
+        // touches, causing IllegalAccessError on the module path: 2.0.61
+        // referenced org.w3c.dom.Node without java.xml, and 2.0.64 also
+        // references java.util.logging.Logger (KotlinUtils) without
+        // java.logging.
         module('com.alibaba.fastjson2:fastjson2', 'com.alibaba.fastjson2') {
             patchRealModule()
             preserveExisting()
             requires('java.xml')
+            requires('java.logging')
         }
     }
 
