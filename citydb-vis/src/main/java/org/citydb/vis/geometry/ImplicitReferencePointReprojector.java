@@ -26,18 +26,20 @@ import java.util.List;
  * Brings each implicit-geometry instance into the frame
  * {@link ImplicitInstanceTransformer} expects: reference point in EPSG:4326,
  * transformation matrix on local ENU axes with a zero translation column.
- * Both halves of that contract need work, because the database delivers the
- * reference point and the matrix in the source CRS (typically UTM meters) —
- * the schema's hierarchy SQL skips {@code ST_Transform} on
- * {@code val_implicitgeom_refpoint}, and the matrix is stored as a raw float
- * array that no reprojection ever touches.
+ * The database exporter reprojects {@code val_implicitgeom_refpoint} to the
+ * export target SRS (EPSG:4326 in this pipeline) as part of its hierarchy
+ * SQL, but that alone does not satisfy the contract: the matrix is stored as
+ * a raw float array that no reprojection ever touches, so its translation
+ * column stays in source-CRS meters on grid axes and its 3x3 part stays
+ * aligned to grid north.
  *
  * <p>Per implicit-geometry instance:
  * <ol>
- *   <li><b>Anchor.</b> Compute {@code anchor_source = referencePoint + M[*][3]},
- *       reproject it to EPSG:4326 via {@link GeometryAdapter#transform}, write
- *       it back as the new referencePoint, and zero the matrix's translation
- *       column.</li>
+ *   <li><b>Anchor.</b> Bring the reference point back onto source-CRS grid
+ *       axes via {@link GeometryAdapter#transform}, compute
+ *       {@code anchor_source = referencePoint_source + M[*][3]}, reproject it
+ *       to EPSG:4326, write it back as the new referencePoint, and zero the
+ *       matrix's translation column.</li>
  *   <li><b>Orientation.</b> Rotate {@code M_3x3} from source-CRS grid axes onto
  *       ENU axes by the meridian convergence angle measured at the anchor.</li>
  * </ol>
@@ -75,7 +77,8 @@ import java.util.List;
  * out of the GPU-instancing path for no visible gain. A pure rotation leaves
  * the matrix's Gram matrix untouched, so decomposability is preserved exactly.
  *
- * <p>Each instance costs one SQL round-trip; for features with hundreds of
+ * <p>Each instance costs two SQL round-trips (reference point back to source
+ * CRS, then anchor plus probes forward); for features with hundreds of
  * instances this means hundreds of round-trips. Acceptable for typical
  * city-scale data; revisit with a per-region Jacobian cache if profiling shows
  * a hot path (γ varies by only ~0.01°/km, so one probe per square kilometre
@@ -114,31 +117,36 @@ public final class ImplicitReferencePointReprojector {
             if (ref == null || transformationMatrix == null) {
                 continue;
             }
-            // Combine refPoint + M_translation into a single source-CRS anchor,
-            // then reproject the anchor to 4326. This is what folds out the
-            // UTM grid-vs-ENU rotation; see the class javadoc.
             Coordinate refCoord = ref.getCoordinate();
-            double anchorX = refCoord.getX() + transformationMatrix.get(0, 3);
-            double anchorY = refCoord.getY() + transformationMatrix.get(1, 3);
-            double anchorZ = (refCoord.getDimension() == 3 ? refCoord.getZ() : 0.0)
-                    + transformationMatrix.get(2, 3);
-            // The anchor plus two probes offset along the source-CRS axes, sent
-            // as one MultiPoint so the whole instance costs a single round-trip.
-            //
-            // Force SRID to the database's source SRS regardless of any
-            // SRID stamp the JDBC driver attached to the value. The
-            // val_implicitgeom_refpoint column is declared with SRID 4326
-            // in the schema, so PostGIS labels every retrieved point as
-            // 4326 even though the feature-hierarchy SQL skips the transform
-            // and the actual coordinate values stay in source CRS. Without
-            // this override, GeometryAdapter.transform short-circuits as
-            // a no-op (sourceSRID == targetSRID).
-            MultiPoint probes = MultiPoint.of(List.of(
-                    Point.of(Coordinate.of(anchorX, anchorY, anchorZ)),
-                    Point.of(Coordinate.of(anchorX + PROBE_DISTANCE, anchorY, anchorZ)),
-                    Point.of(Coordinate.of(anchorX, anchorY + PROBE_DISTANCE, anchorZ)))
-            ).setSRID(sourceSRID);
             try {
+                // The exporter delivered the reference point in the target SRS,
+                // but M_translation is still source-CRS meters on grid axes —
+                // the two cannot be combined as-is. Bring the point back onto
+                // grid axes first. A detached copy with an explicit SRID stamp
+                // is sent instead of the property's own point: the copy avoids
+                // re-parenting the point, and the stamp keeps this independent
+                // of whatever SRID the JDBC driver attached to the value.
+                Coordinate refSource = geometryAdapter.transform(
+                                Point.of(Coordinate.of(refCoord.getX(), refCoord.getY(),
+                                        refCoord.getDimension() == 3 ? refCoord.getZ() : 0.0))
+                                        .setSRID(TARGET_SRID), sourceSRID)
+                        .getCoordinate();
+
+                // Combine refPoint + M_translation into a single source-CRS anchor,
+                // then reproject the anchor to 4326. This is what folds out the
+                // UTM grid-vs-ENU rotation; see the class javadoc.
+                double anchorX = refSource.getX() + transformationMatrix.get(0, 3);
+                double anchorY = refSource.getY() + transformationMatrix.get(1, 3);
+                double anchorZ = (refSource.getDimension() == 3 ? refSource.getZ() : 0.0)
+                        + transformationMatrix.get(2, 3);
+                // The anchor plus two probes offset along the source-CRS axes,
+                // sent as one MultiPoint so this direction costs a single
+                // round-trip.
+                MultiPoint probes = MultiPoint.of(List.of(
+                        Point.of(Coordinate.of(anchorX, anchorY, anchorZ)),
+                        Point.of(Coordinate.of(anchorX + PROBE_DISTANCE, anchorY, anchorZ)),
+                        Point.of(Coordinate.of(anchorX, anchorY + PROBE_DISTANCE, anchorZ)))
+                ).setSRID(sourceSRID);
                 List<Point> projected = geometryAdapter.transform(probes, TARGET_SRID).getPoints();
                 if (projected.size() != 3) {
                     throw new GeometryException("Expected 3 reprojected probe points, got "
