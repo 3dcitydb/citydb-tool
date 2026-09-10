@@ -35,10 +35,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * indexed against the schema and {@link #resolve(Name)} always returns the
  * default style — overrides are silently ignored.
  * <p>
- * Per-feature-type styling is consumed by the 3D Tiles writer only. The
- * I3S writer uses {@link #defaultStyle()} directly because its node-level
- * material model cannot accommodate per-feature material variation within
- * a node.
+ * Both writers consume per-feature-type styling. The 3D Tiles writer emits
+ * one plain material per distinct style in a node; the I3S writer, whose
+ * node-level material model allows only one material per node, bakes the
+ * resolved colours into COLOR_0 on its styled-colored slots (see
+ * {@link #hasOverrides()}).
  */
 public final class ObjectStyleRegistry {
     private final Map<Name, DefaultObjectStyle> overrides;

@@ -190,8 +190,8 @@ class AttributeProjectionParserTest {
                 // "not of the form field=value" branch, not on the dedicated
                 // empty-field guard: both call sites trim the bracket contents
                 // before parsing, so '=' can never sit at index >= 1 with
-                // nothing but blanks in front of it. See the class javadoc note
-                // on the two guards that are unreachable by construction.
+                // nothing but blanks in front of it, so the empty-field guard
+                // is unreachable by construction.
                 arguments("x:ATTRIBUTES/a[ =1]", "is not of the form"),
                 arguments("x:ATTRIBUTES/a[k=]", "has an empty value"),
                 arguments("x:ATTRIBUTES/a[k='v'x]", "is not terminated with a closing quote"),

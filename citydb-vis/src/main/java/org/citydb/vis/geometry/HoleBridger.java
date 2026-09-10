@@ -303,8 +303,9 @@ final class HoleBridger {
 
     /**
      * Check if the bridge segment (px,py)→(qx,qy) crosses any edge of the ring,
-     * excluding edges that share the vertex at {@code skipVertex}. Inputs are
-     * already in the polygon's 2D projection.
+     * excluding edges that share the vertex at {@code skipVertex}. The bridge
+     * endpoints are already in the polygon's 2D projection; the ring is
+     * projected edge by edge here.
      */
     private static boolean bridgeCrossesEdge(List<double[]> ringScaled,
                                              double px, double py, double qx, double qy,

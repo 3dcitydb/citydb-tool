@@ -56,7 +56,7 @@ import java.util.zip.ZipOutputStream;
  */
 public final class SlpkPackager {
     private static final Logger logger = LoggerFactory.getLogger(SlpkPackager.class);
-    /** Size of a ZIP local file header (signature + fields), excluding filename & extra. */
+    /** Size of a ZIP local file header (signature + fields), excluding filename and extra field. */
     private static final int LOCAL_FILE_HEADER_SIZE = 30;
     /** Size of a single hash index record: 16 bytes MD5 + 8 bytes offset + 4 bytes size. */
     private static final int HASH_RECORD_SIZE = 28;
