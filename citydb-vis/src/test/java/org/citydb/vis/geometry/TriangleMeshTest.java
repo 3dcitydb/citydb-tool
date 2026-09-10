@@ -126,6 +126,25 @@ class TriangleMeshTest {
     }
 
     @Test
+    void removeDuplicateKeepsBothHalvesOfQuadWithRoundCoordinates() {
+        // Regression: the former h * 31 + bits vertex hash made (2,0,0) and
+        // (0,0,2) collide (bits(2.0) = 2^62 and 31^2 = 961 ≡ 1 mod 4), so the
+        // two halves of a 2 m quad on y=0 sharing the diagonal (0,0,0)-(2,0,2)
+        // were deduplicated to one triangle — a hole in template-local meshes.
+        TriangleMesh mesh = new TriangleMesh();
+        int a = mesh.addVertex(0, 0, 0, 0, 1, 0);
+        int b = mesh.addVertex(2, 0, 2, 0, 1, 0);
+        int c = mesh.addVertex(2, 0, 0, 0, 1, 0);
+        int d = mesh.addVertex(0, 0, 2, 0, 1, 0);
+        mesh.addTriangle(a, b, c, 1L, -1, false, ROOF);
+        mesh.addTriangle(a, b, d, 1L, -1, false, ROOF);
+
+        mesh.removeDuplicateTriangles();
+
+        assertEquals(2, mesh.getTriangleCount());
+    }
+
+    @Test
     void resolveTJunctionSplitsEdgeAndInheritsParentAttributes() {
         TriangleMesh mesh = new TriangleMesh();
         // Triangle A: long edge v0->v1 along x, colored ROOF.
