@@ -362,9 +362,10 @@ public class TriangleMesh {
     /**
      * Key for duplicate-triangle detection: three position hashes, compared
      * by value. Using a record gives auto-generated equals/hashCode that
-     * compare all three 64-bit fields. Hash collisions in {@link #vertexHash}
-     * are theoretically possible but vanishingly unlikely for real geographic
-     * coordinate data (birthday-paradox threshold ~4 * 10^9 distinct vertices).
+     * compare all three 64-bit fields. {@link #vertexHash} mixes each
+     * coordinate's bits before combining, so collisions are only the generic
+     * 64-bit kind (birthday-paradox threshold ~4 * 10^9 distinct vertices),
+     * not structural ones.
      */
     private record TriangleKey(long h0, long h1, long h2) {}
 
@@ -411,15 +412,27 @@ public class TriangleMesh {
 
     /**
      * Hash a vertex position to a 64-bit value using exact double bits.
-     * Bit-identical positions always hash equal; collisions are possible in
-     * principle but statistically irrelevant for realistic coordinate data
-     * (birthday-paradox threshold ~4 * 10^9 distinct vertices).
+     * Bit-identical positions always hash equal. Each component is run
+     * through a 64-bit finalizer before the next one is folded in: the plain
+     * {@code h * 31 + bits} chain had structural collisions on round
+     * template-local coordinates â€” {@code (2,0,0)} and {@code (0,0,2)} hashed
+     * equal because {@code bits(2.0) = 2^62} and {@code 31^2 = 961 â‰¡ 1 (mod 4)},
+     * which made the two halves of a 2 m quad look like duplicates. Remaining
+     * collisions are the generic 64-bit kind (birthday-paradox threshold
+     * ~4 * 10^9 distinct vertices).
      */
     private static long vertexHash(double[] pos) {
-        long h = Double.doubleToLongBits(pos[0]);
-        h = h * 31L + Double.doubleToLongBits(pos[1]);
-        h = h * 31L + Double.doubleToLongBits(pos[2]);
+        long h = mix64(Double.doubleToLongBits(pos[0]));
+        h = mix64(h ^ Double.doubleToLongBits(pos[1]));
+        h = mix64(h ^ Double.doubleToLongBits(pos[2]));
         return h;
+    }
+
+    /** SplitMix64 finalizer: a bijective, avalanching 64-bit mixer. */
+    private static long mix64(long z) {
+        z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+        z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+        return z ^ (z >>> 31);
     }
 
     public double[] computeBoundingBox() {
