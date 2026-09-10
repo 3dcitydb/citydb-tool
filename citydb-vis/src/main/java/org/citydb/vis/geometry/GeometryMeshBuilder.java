@@ -48,7 +48,7 @@ public final class GeometryMeshBuilder {
      * {@link GeometryProperty#getParent(Class)}) becomes the per-triangle
      * source surface type for that property's geometry. This is what gives
      * a CityGML 3.0 Building's RoofSurface, WallSurface and GroundSurface
-     * triangles distinct types so the GLB encoder can apply per-feature-type
+     * triangles distinct types so the encoders can apply per-feature-type
      * styling within a single building. When a property has no Feature
      * ancestor (e.g. a Building's own LoD1 box that lives directly under
      * the top-level Feature), {@code defaultSurfaceType} is used.

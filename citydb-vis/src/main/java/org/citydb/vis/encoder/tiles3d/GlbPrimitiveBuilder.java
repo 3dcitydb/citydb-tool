@@ -29,11 +29,13 @@ final class GlbPrimitiveBuilder {
      * {@link PrimitiveArrays#atlasPage} sentinels for the two untextured
      * primitive flavours. {@code _PLAIN} means "no X3DMaterial color" — the
      * primitive carries a {@link DefaultObjectStyle} on
-     * {@link PrimitiveArrays#plainStyle} and gets a per-style PBR material
-     * with {@code NORMAL}-driven Lambertian shading (the only shaded path).
-     * {@code _COLORED} means "has X3DMaterial vertex color" — emits
-     * {@code COLOR_0} with an unlit material so authored thematic colors
-     * render at full intensity. The {@link GltfJsonBuilder} distinguishes
+     * {@link PrimitiveArrays#plainStyle} and gets a per-style material
+     * carrying the style's {@code baseColorFactor}. {@code _COLORED} means
+     * "has X3DMaterial vertex color" — emits {@code COLOR_0} on a material
+     * with default PBR factors so the authored thematic colors show through.
+     * Both flavours are PBR-shaded ({@code NORMAL} present) when
+     * {@code --enable-shading} is on and unlit ({@code KHR_materials_unlit},
+     * no {@code NORMAL}) otherwise. The {@link GltfJsonBuilder} distinguishes
      * the two via the primitive's {@code bvColors >= 0} flag, which is set
      * iff this sentinel was {@code _COLORED}. The instanced-textured sentinel
      * is owned by {@link GltfJsonBuilder#INSTANCED_TEXTURED_PAGE} (which does
@@ -167,7 +169,7 @@ final class GlbPrimitiveBuilder {
                         // the same brightness for every textured triangle in
                         // the node — walls and roofs equally lit, no per-face
                         // dimming on back-facing walls. Mirrors the I3S
-                        // writer (see I3SGeometryEncoder.fillUpInEcef).
+                        // writer (see GeoTransform.EnuBasis.fillUpInEcef).
                         normals[idx * 3] = 0f;
                         normals[idx * 3 + 1] = 1f;
                         normals[idx * 3 + 2] = 0f;

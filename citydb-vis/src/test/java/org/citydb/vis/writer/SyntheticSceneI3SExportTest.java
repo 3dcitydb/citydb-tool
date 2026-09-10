@@ -110,10 +110,10 @@ class SyntheticSceneI3SExportTest extends AbstractSyntheticSceneExportTest {
         formatOptions.setGridEdgeLength(GRID_EDGE_LENGTH);
         Path sceneDir = runExport(tempDir, new I3SAdapter(), formatOptions, ".i3s");
 
-        // The scene mixes textured and untextured buildings in one cell, so the
-        // mixed-node split must yield at least one textured node with a written
-        // atlas. A silent texture-resolution failure degrades to untextured
-        // output without erroring, which is exactly what this guards.
+        // The textured buildings must come through as at least one textured
+        // node with a written atlas. A silent texture-resolution failure
+        // degrades to untextured output without erroring, which is exactly
+        // what this guards.
         List<Path> texturedNodes = new ArrayList<>();
         for (Path node : nodeDirs(layerDir(sceneDir))) {
             Path textures = node.resolve("textures");

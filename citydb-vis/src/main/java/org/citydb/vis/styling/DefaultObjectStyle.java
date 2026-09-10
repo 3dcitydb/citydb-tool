@@ -18,7 +18,7 @@ import java.util.Arrays;
  * Instances are owned by {@link ObjectStyleRegistry}: one default plus
  * zero or more per-feature-type overrides. The 3D Tiles writer emits one
  * plain material per distinct {@link DefaultObjectStyle} used by a node;
- * the I3S writer consumes only the registry's default style.
+ * the I3S writer bakes resolved per-type colours into vertex COLOR_0.
  * <p>
  * Single knob today: {@link #color}, the sRGB RGBA factor written to the
  * plain material's PBR {@code baseColorFactor}. The default is opaque
@@ -29,13 +29,10 @@ import java.util.Arrays;
  * {@link #equals(Object)} / {@link #hashCode()} so the encoder's per-style
  * material dedup keeps working.
  * <p>
- * The plain path is always shaded (PBR + per-face NORMAL + Lambertian).
- * An earlier {@code shaded} toggle was explored but dropped — making I3S
- * actually render unlit was only achievable via the non-spec
- * {@code KHR_materials_unlit} extension and the resulting cross-format /
- * cross-client inconsistency wasn't worth the knob. If you need flat
- * thematic colors, route them through X3DMaterial vertex colors instead;
- * that path is unlit by design.
+ * Shading is not a per-style knob: every path (plain, X3DMaterial-colored,
+ * textured) is PBR + NORMAL + Lambertian under {@code --enable-shading}
+ * and unlit otherwise. A per-style {@code shaded} toggle was explored but
+ * dropped — the cross-format / cross-client inconsistency wasn't worth it.
  * <p>
  * Color values are stored in raw sRGB (the user's authoring space). Each
  * writer is responsible for sRGB→linear conversion when the destination

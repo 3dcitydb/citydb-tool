@@ -278,8 +278,8 @@ public class PolygonTriangulator {
 
         // Add vertices using ORIGINAL coordinates (degrees/meters) for output.
         // A polygon never carries both UV and material color (extractor drops
-        // material entries for textured rings), so the four call paths are
-        // mutually exclusive.
+        // material entries for textured rings), so the three branches below
+        // are mutually exclusive.
         int baseVertex = mesh.getVertexCount();
         for (int i = 0; i < ring.size(); i++) {
             double[] pt = ring.get(i);
@@ -296,7 +296,7 @@ public class PolygonTriangulator {
 
         // Add triangles — if original polygon was CW, swap winding to restore face direction.
         // The colored flag flows from the X3DMaterial extractor; see
-        // TriangleMesh.isTriangleColored for how the GLB writer consumes it.
+        // TriangleMesh.isTriangleColored for how the encoders consume it.
         // The outline-edge mask is computed on the FINAL emitted vertex order
         // (after the winding swap): outlineMask tests ring adjacency in both
         // directions, so no bit permutation is needed for reversed polygons.

@@ -52,8 +52,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * inherited by the forked test JVM, so no Gradle wiring is needed.
  * <p>
  * <b>A missing or unreachable database fails this class; it does not skip it.</b>
- * The class is reachable only through the {@code integrationTest} Gradle task,
- * which CI never invokes, so the only way to get here is to ask for it. Skipping
+ * The class runs only when {@code CITYDB_TEST_PASSWORD} is set (the build
+ * excludes it from {@code test} otherwise), so the only way to get here is to
+ * ask for it. Skipping
  * at that point would report green for the very writer pipeline the run was
  * meant to exercise, and would make a typo'd password indistinguishable from a
  * healthy run. Use {@code gradlew test} for the database-free unit suite.

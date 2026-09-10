@@ -272,7 +272,8 @@ class I3SGeometryEncoderTest {
         // back to the default style. Pin that fallback end-to-end: no
         // COLOR_0 lane, no style-override flag — even though the override
         // key matches the mesh's surface type exactly. The positive
-        // styled-colored slot path is covered by integration tests.
+        // styled-colored slot path (schema-backed overrides) has no
+        // executable coverage yet.
         TriangleMesh mesh = twoFeatureMesh();
         SceneNode node = node(mesh);
         ObjectStyleRegistry registry = ObjectStyleRegistry.builder()
