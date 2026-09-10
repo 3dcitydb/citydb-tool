@@ -497,9 +497,10 @@ public abstract class VisWriter implements FeatureWriter {
     /**
      * Close-phase per-node assembler ({@link NodeAssembler}), built lazily so a
      * subclass's {@link #atlasNeedsWhitePixelSentinel()} override is observed
-     * only after the subclass is fully constructed. Only used during
-     * {@link #writeOutput}, on the single close thread before it fans out, so
-     * the unsynchronized lazy init is safe.
+     * only after the subclass is fully constructed. The unsynchronized lazy
+     * init is safe because every {@link #writeOutput} implementation makes
+     * its first call on the close thread (to fan out the per-node work)
+     * before the parallel per-node lambdas call it again.
      */
     protected final NodeAssembler nodeAssembler() {
         if (nodeAssembler == null) {

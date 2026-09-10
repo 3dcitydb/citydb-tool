@@ -47,8 +47,8 @@ public class I3SJsonSerializer {
     }
 
     /**
-     * Write node pages. Uses a {@code Set<Integer>} to determine which nodes
-     * have geometry (instead of the full nodeFeatureMap).
+     * Write node pages. {@code meshNodeIndices} identifies the nodes that
+     * carry geometry.
      */
     public void writeNodePages(Path layerDir, List<SceneNode> nodes,
                                Set<Integer> meshNodeIndices,

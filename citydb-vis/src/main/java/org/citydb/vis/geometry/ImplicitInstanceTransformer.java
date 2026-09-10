@@ -31,8 +31,10 @@ import java.util.Set;
  * <p><b>Coordinate model:</b>
  * <ul>
  *   <li>Prototype geometry: local Cartesian meters.</li>
- *   <li>Transformation matrix M: rotation/scale + translation in source-CRS
- *       meters (CityGML's transformationMatrix is unit-preserving).</li>
+ *   <li>Transformation matrix M: rotation/scale already re-expressed on the
+ *       local ENU axes by {@link ImplicitReferencePointReprojector}, with a
+ *       zero translation column in the common case; any residual translation
+ *       is a metric ENU offset applied by {@code applyTransform}.</li>
  *   <li>Reference point: target SRS, EPSG:4326 (longitude/latitude in degrees,
  *       Z in meters). The DB exporter forces target SRS = 4326 for vis-export.</li>
  * </ul>

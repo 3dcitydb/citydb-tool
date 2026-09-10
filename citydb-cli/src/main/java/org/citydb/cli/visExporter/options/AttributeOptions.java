@@ -15,7 +15,8 @@ public class AttributeOptions implements Option {
             description = "Declarative whitelist of columns to emit on the per-feature " +
                     "attribute table. Each comma-separated entry has the form " +
                     "'<output_col>:<source>'. <source> is '<TABLE>/[<AGG>]<col_path>' where " +
-                    "TABLE is FEATURE, ATTRIBUTES, or ADDRESS; AGG (optional, defaults to FIRST) " +
+                    "TABLE is FEATURE, ATTRIBUTES, or ADDRESS; AGG (optional, ATTRIBUTES/ADDRESS " +
+                    "only, defaults to FIRST) " +
                     "is FIRST/LAST/COUNT/ALL. For FEATURE, <col_path> is a single field name. " +
                     "For ADDRESS, <col_path> is a single field optionally followed by " +
                     "'[<field>=<value>]' to filter address rows. For ATTRIBUTES, <col_path> is a " +
@@ -35,9 +36,8 @@ public class AttributeOptions implements Option {
                     "'CITY:ADDRESS/[FIRST]city', 'STREET:ADDRESS/[FIRST]street', " +
                     "'HOUSE_NUMBER:ADDRESS/[FIRST]houseNumber', " +
                     "'TARGET_RESOURCE:ATTRIBUTES/[FIRST]externalReference::uri'. " +
-                    "Use picocli's '@file' syntax for long lists, e.g. --attributes @cols.txt " +
-                    "(each non-blank line of <cols.txt> is one entry; '#' comments are NOT " +
-                    "supported in @file mode). Case rules: TABLE, AGG, the '::type' cast, and " +
+                    "For long lists prefer the 'attributes' list of the JSON config file. " +
+                    "Case rules: TABLE, AGG, the '::type' cast, and " +
                     "FEATURE / ADDRESS field names are all case-insensitive; ATTRIBUTES path " +
                     "segments are case-sensitive (they match XML localNames literally). " +
                     "Without this option, every top-level attribute is exported " +
@@ -46,8 +46,8 @@ public class AttributeOptions implements Option {
 
     /**
      * Raw mapping tokens from {@code --attributes}, already comma-split
-     * by picocli. The controller hands these straight to
-     * {@link org.citydb.vis.attribute.AttributeProjection#parse}. Empty
+     * by picocli. The controller copies them onto the format options,
+     * whose {@code buildAttributeProjection()} parses them. Empty
      * list when the option was not provided.
      */
     public List<String> getAttributes() {

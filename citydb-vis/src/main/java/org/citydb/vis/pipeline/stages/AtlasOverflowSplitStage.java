@@ -53,7 +53,7 @@ import java.util.concurrent.TimeUnit;
  * two modes; only the cell-root retention differs.
  * <p>
  * Replaces the silent global texture rescale that {@link TextureAtlasBuilder#build}
- * otherwise applies inside the writer's {@code prepareNodeMesh} step. Each
+ * otherwise applies inside {@code NodeAssembler.prepareNodeMesh}. Each
  * resulting leaf packs its self-contained subset of the parent's textures into
  * a single page at full resolution. Two fallbacks keep recursion bounded:
  * <ol>
@@ -145,8 +145,9 @@ public final class AtlasOverflowSplitStage implements Stage {
         // Parallel worker pass: each cell-root subtree is processed end-to-end
         // by one worker. Workers only mutate their own cell-root subtree and
         // local plan; they read shared stores via thread-safe positional reads.
-        // Size the pool from the resolved --threads count (already floored at 2
-        // by the writer): each worker holds a cell-tree's merged meshes and
+        // Size the pool from the resolved --threads count (the writer floors
+        // only the all-cores default at 2, so an explicit --threads=1 is
+        // floored here): each worker holds a cell-tree's merged meshes and
         // per-feature mesh cache resident, so honoring --threads here is what
         // actually bounds this stage's peak heap.
         int parallelism = Math.max(2, ctx.numberOfThreads());

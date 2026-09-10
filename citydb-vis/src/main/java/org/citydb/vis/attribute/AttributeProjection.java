@@ -22,10 +22,10 @@ import java.util.Objects;
  * Modeled on the spreadsheet plugin's balloon template syntax
  * (e.g. {@code OUTPUT_COL:ADDRESS/[FIRST]street[city='Munich']}),
  * adapted to the runtime Feature object rather than SQL tables.
- * Driven exclusively by the {@code --attributes} CLI option (parsed
- * by {@link AttributeProjectionParser}); use picocli's
- * {@code @file} argument syntax for long lists. Consumed per-feature
- * by {@link AttributeEncoder}.
+ * Driven by the {@code --attributes} CLI option or the {@code attributes}
+ * list of the JSON config (both parsed by {@link AttributeProjectionParser}
+ * via {@code VisFormatOptions.buildAttributeProjection}; the CLI wins when
+ * both are given). Consumed per-feature by {@link AttributeEncoder}.
  */
 public final class AttributeProjection {
     private final List<Mapping> mappings;
@@ -44,10 +44,10 @@ public final class AttributeProjection {
      * {@code null} as the "no projection installed" sentinel. See
      * {@link AttributeProjectionParser} for the grammar.
      * <p>
-     * For long mapping lists, use picocli's built-in {@code @file}
-     * argument syntax (each non-blank line becomes one CLI value).
-     * Note that {@code @file} does not honour {@code #} comments —
-     * keep the file pure mapping lines.
+     * For long mapping lists prefer the JSON config's {@code attributes}
+     * list: picocli {@code @file} expansion tokenizes on whitespace and
+     * quotes, and each resulting token must be a complete
+     * {@code --attributes} argument.
      */
     public static AttributeProjection parse(List<String> tokens) {
         if (tokens == null || tokens.isEmpty()) {
@@ -110,8 +110,8 @@ public final class AttributeProjection {
      * predicate scoping the segment's own children. {@code aggregate}
      * defaults to {@link Aggregate#FIRST}. {@code valueType} is the
      * optional explicit cast applied at the leaf; {@code null} means
-     * "auto-detect" (int → double → string → timestamp → uri, with
-     * recursive fall-through into a {@code "value"} sub-attribute).
+     * "auto-detect" (int → double → string → timestamp → uri → array,
+     * with recursive fall-through into a {@code "value"} sub-attribute).
      * <p>
      * Predicate scope is uniform: at any segment {@code X}, the
      * predicate {@code [k=v]} keeps only those nodes named {@code X}

@@ -39,9 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * (non-null registry, null projection) <em>before</em> either build method runs
  * — every writer reads {@code getStyleRegistry()} unconditionally.
  * <p>
- * The schema-backed half of {@code buildStyleRegistry} is covered by
- * {@code ObjectStyleRegistryTest} and the integration tests; only what is
- * reachable without a live {@code SchemaMapping} is pinned here.
+ * The schema-backed half of {@code buildStyleRegistry} (the hierarchy walk)
+ * has no executable coverage yet; only what is reachable without a live
+ * {@code SchemaMapping} is pinned here.
  */
 class VisFormatOptionsResolveTest {
 

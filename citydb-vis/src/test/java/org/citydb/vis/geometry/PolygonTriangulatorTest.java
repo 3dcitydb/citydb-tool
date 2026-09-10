@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Regression tests for ear-clipping triangulation, pinning the behaviour the
- * duplicated containment check in {@code earClip} guards. The assertions are
+ * containment check in {@code EarClipper} guards. The assertions are
  * deliberately geometric rather than structural: a faithful triangulation
  * exactly tiles the polygon, so the summed triangle area must equal the
  * polygon area (a hole left filled, or overlapping ears produced by a broken
@@ -130,8 +130,8 @@ class PolygonTriangulatorTest {
 
     /**
      * Characterization test for the keyhole-bridging + forced-triple fallback
-     * path, which is the SECOND site of the containment check being
-     * deduplicated. A 4x4 outer square with a centred 1x1 hole drives the
+     * path in {@code HoleBridger}. A 4x4 outer square with a centred 1x1 hole
+     * drives the
      * bridge into the fallback branch. The values below pin the triangulator's
      * <em>current</em> deterministic output (the bridged ring is not perfectly
      * tiled — net area 17 rather than the geometric ideal 15), so the
