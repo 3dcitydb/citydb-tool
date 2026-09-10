@@ -29,8 +29,8 @@ public class SceneLayerDescriptor {
     /**
      * Per-feature-type styling slots. Allocated only when
      * {@code hasStyleOverrides} is true on the scene layer. Carry baked
-     * per-triangle COLOR_0 <i>plus</i> NORMAL so each surface type can
-     * render with its own colour while still picking up Lambertian shading.
+     * per-triangle COLOR_0 so each surface type renders with its own colour,
+     * plus NORMAL under {@code --enable-shading} for Lambertian shading.
      * The OPAQUE / BLEND split mirrors the X3DMaterial pair: a node with
      * any styled triangle below {@code alpha = 1} routes to BLEND.
      */

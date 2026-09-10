@@ -22,8 +22,8 @@ public class TerrainOptions implements Option {
                     "its lowest point sits on the WGS84 ellipsoid (height 0) — " +
                     "useful when no terrain is loaded in the viewer. " +
                     "'cesium-world-terrain' samples the Cesium World Terrain height " +
-                    "at each feature's centroid at export time (requires " +
-                    "--cesium-ion-token) and bakes that as the ground height, so the " +
+                    "at each feature's centroid at export time (requires a Cesium ion " +
+                    "token, see --cesium-ion-token) and bakes that as the ground height, so the " +
                     "export lines up with Cesium World Terrain in the viewer even " +
                     "when the source heights are unreliable or relative. When omitted, " +
                     "features keep their absolute database height (no clamping).")
@@ -52,8 +52,10 @@ public class TerrainOptions implements Option {
 
     /**
      * Maps the kebab-case CLI spelling ({@code ellipsoid},
-     * {@code cesium-world-terrain}) onto {@link ClampMode}; picocli's default
-     * enum matching only accepts the constant names, which carry an underscore.
+     * {@code cesium-world-terrain}) onto {@link ClampMode} through
+     * {@code ClampMode.fromValue}, so the accepted spellings and the error
+     * message for a bad value are owned by the enum rather than by picocli's
+     * built-in enum matching.
      */
     static class ClampModeConverter implements CommandLine.ITypeConverter<ClampMode> {
         @Override
@@ -64,7 +66,8 @@ public class TerrainOptions implements Option {
 
     /**
      * Supplies the kebab-case values for {@code ${COMPLETION-CANDIDATES}} and
-     * shell completion, instead of the enum constant names.
+     * shell completion explicitly, so the help text does not depend on how
+     * picocli renders the enum.
      */
     static class ClampModeCandidates implements Iterable<String> {
         @Override

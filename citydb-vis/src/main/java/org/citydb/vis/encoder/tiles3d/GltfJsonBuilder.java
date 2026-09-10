@@ -24,8 +24,9 @@ import java.util.Map;
 
 /**
  * Fluent builder for the glTF 2.0 JSON chunk of a GLB file. Inputs are
- * supplied in four groups — buffer layout, textures, primitives, metadata —
- * and {@link #build()} produces the UTF-8-encoded JSON bytes.
+ * supplied through the setters — buffer layout, textures, primitives,
+ * instanced nodes, metadata, shading flag — and {@link #build()} produces
+ * the UTF-8-encoded JSON bytes.
  * <p>
  * The document has a single scene containing the merged-mesh node (present
  * when the node has explicit geometry) followed by one node+mesh per
@@ -155,7 +156,8 @@ final class GltfJsonBuilder {
     /**
      * Emit the scene graph: one node for the merged mesh (index 0, present
      * only when the node has main primitives) followed by one node per
-     * instanced batch, each carrying {@code EXT_mesh_gpu_instancing} (TRS +
+     * instanced (prototype × style) group, each carrying
+     * {@code EXT_mesh_gpu_instancing} (TRS +
      * per-instance {@code _FEATURE_ID_0} attributes) and
      * {@code EXT_instance_features} referencing the shared property table.
      * Mesh indices parallel node order.
@@ -773,8 +775,9 @@ final class GltfJsonBuilder {
     /**
      * Per-primitive geometry inputs. {@code atlasPage >= 0} selects the
      * textured path (material indexed by atlas page); negative sentinels
-     * select one of the two untextured materials (plain PBR or unlit
-     * colored). {@code bvNormals}, {@code bvUvs} and {@code bvColors} may
+     * select one of the untextured materials (per-style plain or vertex
+     * colored) or, for {@link #INSTANCED_TEXTURED_PAGE}, the prototype's
+     * own atlas material. {@code bvNormals}, {@code bvUvs} and {@code bvColors} may
      * be {@code -1} when the primitive doesn't carry that attribute. NORMAL
      * is emitted on every path when {@code --enable-shading} is on and
      * dropped on every path otherwise — independent of the path. UV and

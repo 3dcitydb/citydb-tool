@@ -85,7 +85,7 @@ public class I3SWriter extends VisWriter {
         this.jsonSerializer = new I3SJsonSerializer();
     }
 
-    // ---- Format-specific output (Phase 5) -----------------------------------
+    // ---- Format-specific output (Phase 7) -----------------------------------
 
     @Override
     protected void writeOutput(PipelineContext ctx) throws VisExportException {

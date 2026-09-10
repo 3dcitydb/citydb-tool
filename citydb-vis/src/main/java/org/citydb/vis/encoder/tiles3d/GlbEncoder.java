@@ -29,7 +29,7 @@ import java.util.Map;
  * <p>
  * Each GLB contains:
  * <ul>
- *   <li>Mesh geometry: positions (local ENU), normals or UVs, indices</li>
+ *   <li>Mesh geometry: positions (local ENU), optional normals and UVs, indices</li>
  *   <li>Textures: one JPEG atlas per page embedded as buffer views</li>
  *   <li>{@code EXT_mesh_features}: per-vertex feature ID attribute</li>
  *   <li>{@code EXT_structural_metadata}: per-feature property table</li>
@@ -204,8 +204,9 @@ public class GlbEncoder {
      * (texture id, X3DMaterial-colored flag, resolved style, face-range
      * row), then bucket them into the GLB's primitive flavours: one
      * textured primitive per atlas page, one "plain" primitive per
-     * distinct {@link DefaultObjectStyle} (PBR-shaded, default baseColor),
-     * and one "colored" primitive (X3DMaterial vertex colors, unlit). A
+     * distinct {@link DefaultObjectStyle} (the style's baseColorFactor), and
+     * one "colored" primitive (X3DMaterial vertex colors); both are PBR-shaded
+     * only under {@code --enable-shading} and unlit otherwise. A
      * CityGML 3.0 Building with mixed RoofSurface / WallSurface /
      * GroundSurface boundaries therefore emits one plain primitive (and one
      * material) per distinct style used. The face-range index carried on

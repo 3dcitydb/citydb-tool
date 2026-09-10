@@ -20,9 +20,9 @@ import java.util.Map;
 /**
  * Base format options shared by all visualization export formats (I3S, 3D Tiles, etc.).
  * <p>
- * Subclasses add format-specific options (e.g., I3S node page constants,
- * 3D Tiles geometric error strategy) while inheriting the common spatial
- * partitioning and texture handling parameters.
+ * Subclasses add format-specific options (e.g., SLPK packaging for I3S,
+ * GPU instancing and outlines for 3D Tiles) while inheriting the common
+ * spatial partitioning and texture handling parameters.
  */
 public abstract class VisFormatOptions implements OutputFormatOptions {
     // 0 is a sentinel for "auto": PartitioningStage treats it as a single

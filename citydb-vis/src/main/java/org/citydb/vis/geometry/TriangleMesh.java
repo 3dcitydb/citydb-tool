@@ -415,8 +415,8 @@ public class TriangleMesh {
      * Bit-identical positions always hash equal. Each component is run
      * through a 64-bit finalizer before the next one is folded in: the plain
      * {@code h * 31 + bits} chain had structural collisions on round
-     * template-local coordinates â€” {@code (2,0,0)} and {@code (0,0,2)} hashed
-     * equal because {@code bits(2.0) = 2^62} and {@code 31^2 = 961 â‰¡ 1 (mod 4)},
+     * template-local coordinates — {@code (2,0,0)} and {@code (0,0,2)} hashed
+     * equal because {@code bits(2.0) = 2^62} and {@code 31^2 = 961 ≡ 1 (mod 4)},
      * which made the two halves of a 2 m quad look like duplicates. Remaining
      * collisions are the generic 64-bit kind (birthday-paradox threshold
      * ~4 * 10^9 distinct vertices).
@@ -529,14 +529,16 @@ public class TriangleMesh {
         private final List<Integer> textureIds = new ArrayList<>();
         // Set when the triangle's source polygon carried an explicit
         // X3DMaterial color (so its vertex COLOR_0 values are authored, not
-        // WHITE_RGBA padding from merge/mixed-feature processing). Drives the
-        // GLB writer's untextured-plain vs untextured-unlit primitive split so
-        // unappeared surfaces in a colored feature still render PBR-shaded.
+        // WHITE_RGBA padding from merge/mixed-feature processing). Read via
+        // the shared encoder TriangleRouter: the GLB writer splits plain vs
+        // vertex-colored primitives on it, the I3S writer picks the colored
+        // slot and bakes COLOR_0 on it.
         private final BitSet colored = new BitSet();
         // Most-specific Feature ancestor of the triangle's polygon (e.g.
         // RoofSurface / WallSurface for a CityGML 3.0 Building, falling back to
         // the top-level Feature when the geometry is not nested in a boundary
-        // surface). Drives per-feature-type styling on the 3D Tiles plain path.
+        // surface). Drives per-feature-type styling in both writers (resolved
+        // through the shared encoder TriangleRouter).
         // Always non-null when filled in through the standard pipeline.
         private final List<Name> surfaceTypes = new ArrayList<>();
         // Outline-edge mask, one byte per triangle (bits OUTLINE_EDGE_01/12/20).
