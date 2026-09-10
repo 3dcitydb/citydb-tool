@@ -17,8 +17,9 @@ import java.util.List;
  * The hierarchy is built with an edge-length-driven grid: each populated
  * grid cell becomes a single leaf scene node. The format-agnostic
  * {@link org.citydb.vis.scene.CellAggregator} wraps the cell
- * roots in additional structure above the global root, which both writers
- * consume (3D Tiles tile tree, I3S node-page refinement cascade).
+ * roots in additional structure between the global root and the cells,
+ * which both writers consume (3D Tiles tile tree, I3S node-page refinement
+ * cascade).
  */
 public class SceneNode {
     private int index;
@@ -156,7 +157,8 @@ public class SceneNode {
      * style via the {@link org.citydb.vis.styling.ObjectStyleRegistry}.
      * Set by the I3S geometry encoder during per-triangle color resolution.
      * When {@code true}, the node's NodeMesh is routed to the styled-colored
-     * material slot (NORMAL + COLOR_0, shaded). When {@code false}, the
+     * material slot (COLOR_0, plus NORMAL under {@code --enable-shading}).
+     * When {@code false}, the
      * node uses the existing untextured or X3DMaterial-colored slots.
      */
     public SceneNode setHasStyleOverride(boolean hasStyleOverride) {
@@ -191,9 +193,9 @@ public class SceneNode {
      *   <li>{@code NodeAssembler.prepareNodeMesh}: forces single-atlas
      *       {@code RESCALE} fallback regardless of the user's
      *       {@code --atlas-fallback} so the preview always fits one page.</li>
-     *   <li>{@code TilesetSerializer} (3D Tiles): emits {@code refine=REPLACE}
-     *       so children replace this tile when loaded (rather than ADD,
-     *       which would render both at the same time).</li>
+     *   <li>3D Tiles: no dedicated consumer — every tile is written with
+     *       {@code refine=REPLACE} anyway, so the children replace the
+     *       preview when loaded.</li>
      * </ul>
      */
     public boolean isLodPreview() {

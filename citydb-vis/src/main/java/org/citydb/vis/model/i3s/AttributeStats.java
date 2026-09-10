@@ -20,9 +20,11 @@ import java.util.Map;
  * handful of arithmetic ops, so the simpler synchronized form beats
  * managing per-thread shards.
  * <p>
- * Consumed by the I3S attribute encoder to populate the I3S layer's
- * {@code layer.statisticsInfo[]} entries plus the per-attribute
- * {@code layers/0/statistics/f_K/0/index.json} resource files. ArcGIS
+ * Snapshotted by the I3S attribute encoder and written by
+ * {@code I3SJsonSerializer.writeStatistics} as the per-attribute
+ * {@code layers/0/statistics/f_K/0/index.json} resource files (the
+ * {@code layer.statisticsInfo[]} entries pointing at them are built from
+ * the field list alone). ArcGIS
  * Pro reads these to drive its attribute-filter UI (range sliders for
  * numeric, value drop-downs for strings).
  */

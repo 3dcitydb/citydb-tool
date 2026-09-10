@@ -19,7 +19,8 @@ import java.util.Map;
 final class TJunctionEdgeGrid {
     // Cell size (m). Tolerance is ~2 cm; 0.20 m gives ~10× headroom so a
     // vertex query expands into at most 1–8 cells. Long edges (BIM walls,
-    // floor slabs) are inserted into every cell their AABB touches.
+    // floor slabs) are inserted into every cell the segment crosses (DDA
+    // walk in insertEdge, not the full AABB).
     private static final double CELL_SIZE_M = 0.20;
 
     private final Map<Long, IntList> grid;

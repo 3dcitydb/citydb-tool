@@ -99,14 +99,12 @@ public class MaterialDefinition {
     }
 
     /**
-     * Untextured material that consumes per-vertex COLOR_0 <i>and</i>
-     * receives Lambertian shading from the paired
-     * {@link GeometryDefinition#coloredShaded()} layout (which
-     * carries NORMAL alongside COLOR). Used by the per-feature-type styling
-     * pipeline so a uniform-coloured surface — e.g. all of a building's
-     * RoofSurface triangles painted red via {@code --feature-type-style} —
-     * still shows 3D form via per-face shading. Distinct from
-     * {@link #colored(boolean)} (X3DMaterial) which is unlit by design.
+     * Untextured material that consumes per-vertex COLOR_0, used by the
+     * per-feature-type styling slots. Like {@link #colored(boolean)} it is
+     * paired with {@link GeometryDefinition#coloredShaded()} (NORMAL present,
+     * PBR + Lambertian) under {@code --enable-shading} and with
+     * {@link GeometryDefinition#colored()} (unlit) otherwise; the material
+     * JSON is identical to the X3DMaterial one, only the slot differs.
      * <p>
      * {@code blend=true} emits {@code alphaMode=blend} for transparent
      * COLOR_0.a; Cesium decodes COLOR_0 as VEC4 FLOAT (alpha intact).

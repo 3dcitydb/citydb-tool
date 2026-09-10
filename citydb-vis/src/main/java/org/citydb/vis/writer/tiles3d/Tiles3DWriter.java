@@ -133,7 +133,7 @@ public class Tiles3DWriter extends VisWriter {
         return false;
     }
 
-    // ---- Format-specific output (Phase 5) -----------------------------------
+    // ---- Format-specific output (Phase 7) -----------------------------------
 
     @Override
     protected void writeOutput(PipelineContext ctx) throws VisExportException {
@@ -241,7 +241,7 @@ public class Tiles3DWriter extends VisWriter {
      * <p>
      * Atlas mode is picked from the user's {@code --atlas-fallback} setting:
      * <ul>
-     *   <li>{@code expand} → {@link AtlasMode#AUTO}: the GLB encoder spills
+     *   <li>{@code expand} → {@link AtlasMode#AUTO}: the node assembler spills
      *       overflow onto additional atlas pages
      *       ({@link TextureAtlasBuilder#buildMulti}) on every overflowing cell,
      *       preserving source-resolution textures. Under

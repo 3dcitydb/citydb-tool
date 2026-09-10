@@ -196,7 +196,7 @@ public class AttributeEncoder {
      *      own children don't include a matching {@code k=v}.
      * The surviving leaves are then aggregated to a single cell value.
      * <p>
-     * Leaf value extraction follows {@link AttributesSource#valueType}:
+     * Leaf value extraction follows {@link AttributeProjection.AttributesSource#valueType}:
      * when present, strict typed extraction (no auto-fallback into a
      * {@code "value"} sub-attribute); when null, the conventional
      * auto-detection in {@link #getAttributeValue}.

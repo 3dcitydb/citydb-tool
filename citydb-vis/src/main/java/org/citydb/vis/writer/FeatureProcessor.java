@@ -34,8 +34,9 @@ import java.util.function.Supplier;
 /**
  * Triangulates a feature's geometry, optionally clamps it to ground, computes
  * spatial metadata, and persists mesh + attributes + spatial entry to the
- * disk-backed stores. Called once per feature from the writer's async
- * processing pool.
+ * disk-backed stores. Called from the writer's async processing pool once
+ * per feature, plus once per baked implicit-geometry instance (each under
+ * its own feature id).
  */
 public final class FeatureProcessor {
     private final VisExportStores stores;

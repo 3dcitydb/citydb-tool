@@ -119,7 +119,10 @@ final class TJunctionResolver {
         }
     }
 
-    /** Vertex positions scaled to meters (X/Y are stored in degrees). */
+    /**
+     * Vertex positions scaled to meters via the caller's X/Y factors
+     * (degrees→m on the geographic path, 1.0 for template-local meshes).
+     */
     private double[][] scaledPositions() {
         int vertexCount = positions.size();
         double[][] mPos = new double[vertexCount][3];

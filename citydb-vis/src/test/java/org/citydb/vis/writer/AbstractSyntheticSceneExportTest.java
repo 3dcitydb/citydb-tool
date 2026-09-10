@@ -69,8 +69,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <ul>
  *   <li><b>multi-cell grid</b> — features spread over ~220 m at a 50 m grid edge,
  *       so partitioning yields several leaves and aggregation must wrap them;</li>
- *   <li><b>textured and untextured content in the same cell</b> — triggers the
- *       mixed-texture push-down split;</li>
+ *   <li><b>textured and untextured content</b> — textured, X3DMaterial and
+ *       implicit-geometry features side by side (with the 50 m grid the
+ *       per-axis cell height is ~14 m, so no cell is actually mixed and the
+ *       mixed-node split stays a no-op);</li>
  *   <li><b>shared textures</b> — two images across four buildings, pinning the
  *       {@code TextureStore} URI dedup through to the atlas;</li>
  *   <li><b>implicit geometry</b> — three instances of one shared template, which
@@ -196,8 +198,8 @@ abstract class AbstractSyntheticSceneExportTest {
         List<Feature> features = new ArrayList<>(FEATURE_COUNT);
 
         // Textured buildings, one per grid column so partitioning yields
-        // several cells. The first shares cell 0 with an untextured building
-        // and a tree, which is what makes that node mixed.
+        // several cells (the untextured buildings and trees sit in other grid
+        // rows, so no cell mixes textured and untextured content).
         double[] texturedEast = {0, 70, 140, 210};
         for (int i = 0; i < TEXTURED_BUILDINGS; i++) {
             features.add(texturedBuilding("building_tex_" + i, texturedEast[i], 0,
