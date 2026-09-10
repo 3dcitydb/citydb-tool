@@ -98,7 +98,8 @@ public class I3SGeometryEncoder {
     // Why: I3S is one-material-per-node. The styled-colored slot fires only
     // on pure-plain nodes; nodes with texture or X3DMaterial silently fall
     // back (textured=fully dropped or partially baked on white-pixel
-    // triangles; X3DMaterial=baked into colored slot but renders unlit).
+    // triangles; X3DMaterial=baked into the colored slot, which is shaded
+    // only under --enable-shading like every other slot).
     // The writer reads these after parallel encoding to surface a single
     // summary instead of per-node noise.
     private final AtomicInteger texturedNodesWithStyleConfig = new AtomicInteger();
@@ -227,12 +228,12 @@ public class I3SGeometryEncoder {
         // WHITE_RGBA. The per-triangle style itself is read straight off the
         // shared routing facts when baking.
         boolean bakeStyles = buildStyles && anyNonWhiteStyle;
-        // Styled-colored slot (NORMAL + COLOR_0 + alphaMode=blend) is used
-        // only for pure-plain nodes that hit a per-type override. Mixed
-        // nodes stay on the X3DMaterial colored slot 2/3 (one-material-per-
-        // node I3S limit) and bake styled / default colours into COLOR_0
-        // alongside the X3D-authored colours, but render unlit because
-        // colored slot 2/3 has no NORMAL — X3DMaterial unlit policy.
+        // Styled-colored slot (COLOR_0 + alphaMode=blend, plus NORMAL under
+        // --enable-shading) is used only for pure-plain nodes that hit a
+        // per-type override. Mixed nodes stay on the X3DMaterial colored
+        // slot 2/3 (one-material-per-node I3S limit) and bake styled /
+        // default colours into COLOR_0 alongside the X3D-authored colours;
+        // that slot carries NORMAL under the same --enable-shading gate.
         // Textured nodes that hit overrides on their white-pixel triangles
         // stay on the textured slot and bake into COLOR_0 there — the
         // texture sample on those vertices is white, so white × COLOR_0

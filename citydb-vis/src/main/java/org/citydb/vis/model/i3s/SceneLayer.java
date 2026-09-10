@@ -6,8 +6,8 @@
 package org.citydb.vis.model.i3s;
 
 /**
- * Represents the I3S 3D Scene Layer descriptor (3dSceneLayer.json).
- * Describes the overall structure and capabilities of the I3S scene layer.
+ * Layer-level inputs (name, description, WKID, extent) from which
+ * {@link SceneLayerDescriptor} builds the 3dSceneLayer.json descriptor.
  */
 public class SceneLayer {
     public static final String I3S_VERSION = "1.9";

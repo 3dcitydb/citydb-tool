@@ -18,7 +18,7 @@ import java.util.function.Function;
  * <p>
  * When omitted, {@link AttributeEncoder} uses auto-detection: first
  * present value in priority order int → double → string → timestamp →
- * uri, with a fallback into a {@code "value"} sub-attribute. The cast
+ * uri → array, with a fallback into a {@code "value"} sub-attribute. The cast
  * disables both — it pulls strictly the named value type off the leaf,
  * no recursion. Use it when an Attribute carries multiple value types
  * simultaneously (rare) or when the auto-priority would pick the

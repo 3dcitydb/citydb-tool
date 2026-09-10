@@ -37,8 +37,10 @@ import java.util.TreeMap;
  * {@link TextureAtlas#remapUVs}.
  * <p>
  * Atlas dimensions are capped at {@code maxAtlasSize} to stay within WebGL
- * texture size limits; when textures exceed the limit, they are scaled down
- * uniformly to fit.
+ * texture size limits. When textures exceed the limit, the
+ * {@code --atlas-fallback} strategy decides: {@code rescale} scales them
+ * down uniformly to fit, {@code expand} (the default) grows the page up to
+ * the 16K hard cap or spills onto further pages ({@link #buildMulti}).
  * <p>
  * Supports tiled/wrapping textures: when CityGML UV coordinates exceed [0,1],
  * the source texture is repeated in the atlas region to cover the full UV range.
@@ -175,8 +177,8 @@ public final class TextureAtlasBuilder {
      * Compose a single atlas page from its packed regions. Shares the
      * compositing and UV-region steps with {@link #buildSingleAtlas} via
      * {@link #compositeAtlas} / {@link #computeUvRegions}, but skips the
-     * rescale loop and white-pixel reservation since those only apply to the
-     * single-page I3S path. No white pixel is reserved here, so the returned
+     * rescale loop and white-pixel reservation, which belong to the
+     * single-page path. No white pixel is reserved here, so the returned
      * {@code whitePixelUV} is always {@code null}.
      */
     private static TextureAtlas composePage(List<AtlasRegion> regions,

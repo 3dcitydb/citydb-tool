@@ -19,7 +19,7 @@ import java.util.Set;
  *   table         := 'FEATURE' | 'ATTRIBUTES' | 'ADDRESS'
  *   aggregate     := 'FIRST' | 'LAST' | 'COUNT' | 'ALL'
  *   column_path   := segment ( '.' segment )*    (single segment for FEATURE; for ADDRESS a single segment optionally followed by '[' predicate ']')
- *   segment       := [ prefix ':' ] local_name [ '[' predicate ']' ]   (predicate only on ATTRIBUTES segments)
+ *   segment       := [ prefix ':' ] local_name [ '[' predicate ']' ]   (the optional 'prefix:' is accepted on ATTRIBUTES segments only)
  *   predicate     := local_name '=' value
  *   value         := "'" string "'" | integer | decimal | 'true' | 'false'
  *   value_type    := 'int' | 'double' | 'string' | 'timestamp' | 'uri' | 'array' | 'code' | 'uom' | 'content' | 'mimeType'   (ATTRIBUTES only; 'array' emits a "; "-joined ArrayValue; 'code'/'uom'/'content'/'mimeType' expose Attribute metadata fields)
@@ -29,9 +29,8 @@ import java.util.Set;
  * {@code v}. Compose along the path to filter at each step. For ADDRESS,
  * the predicate filters Address rows by matching another column's value.
  * <p>
- * Mappings come in as picocli-split tokens (one per element). For long
- * lists, picocli's built-in {@code @file} argument syntax expands each
- * non-blank line of a file into a separate CLI value. All parse errors
+ * Mappings come in as comma-split tokens (one per element), from the CLI
+ * or from the JSON config. All parse errors
  * throw {@link IllegalArgumentException} with a leading
  * "&lt;location&gt;: ..." prefix so the controller can surface where the
  * bad input is.
