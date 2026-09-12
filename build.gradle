@@ -106,7 +106,7 @@ subprojects {
                 from("$rootDir/resources/javadoc/overview.html") {
                     filteringCharset = 'UTF-8'
                     filter(ReplaceTokens, tokens: [
-                            name   : module,
+                            name: module,
                             version: projectVersion,
                             appName: appName,
                     ])
