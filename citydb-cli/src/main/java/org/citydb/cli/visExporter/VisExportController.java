@@ -368,7 +368,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                     long id = result.getId();
                     exporter.exportFeature(id, sequenceId++).whenComplete((feature, t) -> {
                         if (feature == null) {
-                            abort(null, id, t);
+                            abort(null, id, writer, t);
                             return;
                         }
 
@@ -376,7 +376,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                             ImplicitReferencePointReprojector.reproject(feature, databaseAdapter);
                             writer.write(feature, (success, e) -> {
                                 if (success != Boolean.TRUE) {
-                                    abort(feature, id, e);
+                                    abort(feature, id, writer, e);
                                     return;
                                 }
 
@@ -387,7 +387,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                                 }
                             });
                         } catch (Throwable e) {
-                            abort(feature, id, e);
+                            abort(feature, id, writer, e);
                         }
                     });
                 }
@@ -492,7 +492,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         return writeOptions;
     }
 
-    private void abort(Feature feature, long id, Throwable e) {
+    private void abort(Feature feature, long id, FeatureWriter writer, Throwable e) {
         synchronized (lock) {
             if (shouldRun) {
                 shouldRun = false;
@@ -502,6 +502,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
                         "Failed to export " + feature.getFeatureType().getLocalName() +
                                 feature.getObjectId().map(objectId -> " '" + objectId + "'").orElse("") +
                                 " (ID: " + id + ").", e);
+                writer.cancel();
             }
         }
     }
