@@ -31,7 +31,8 @@ public class GenericAttributeSetAdapter extends AbstractGenericAttributeAdapter<
             }
         }
 
-        target.setDataType(DataType.GENERIC_ATTRIBUTE_SET);
+        target.setCodeSpace(source.getCodeSpace())
+                .setDataType(DataType.GENERIC_ATTRIBUTE_SET);
     }
 
     @Override
@@ -42,6 +43,7 @@ public class GenericAttributeSetAdapter extends AbstractGenericAttributeAdapter<
     @Override
     public void serialize(Attribute source, GenericAttributeSet target, ModelSerializerHelper helper) throws ModelSerializeException {
         super.serialize(source, target, helper);
+        source.getCodeSpace().ifPresent(target::setCodeSpace);
 
         source.getProperties().forEachByNamespace(Namespaces.GENERICS, Attribute.class, attribute -> {
             AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
