@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fixed concurrent modification exceptions in `ModelWalker` during exports with LoD filters.
+
 ## [1.4.0] - 2026-09-02
 
 ### Changed
