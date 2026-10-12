@@ -2,5 +2,5 @@ dependencies {
     api project(':citydb-config')
     api project(':citydb-core')
     api project(':citydb-model')
-    implementation 'org.apache.tika:tika-serialization:4.0.0'
+    implementation 'org.apache.tika:tika-serialization:4.1.0'
 }

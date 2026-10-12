@@ -11,7 +11,7 @@ dependencies {
     api 'org.citydb:sqlbuilder:3.2.0'
     api "org.geotools:gt-referencing:$geotoolsVersion"
     api 'systems.uom:systems-quantity:2.1'
-    implementation 'org.apache.tomcat:tomcat-jdbc:11.0.25'
+    implementation 'org.apache.tomcat:tomcat-jdbc:11.0.27'
     implementation "org.geotools:gt-epsg-wkt:$geotoolsVersion"
     implementation "org.geotools:gt-epsg-extension:$geotoolsVersion"
 }
