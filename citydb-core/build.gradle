@@ -3,5 +3,5 @@ dependencies {
     api 'org.slf4j:slf4j-api:2.0.18'
     api 'org.apache.tika:tika-core:4.1.0'
     implementation 'org.apache.commons:commons-compress:1.28.0'
-    implementation 'com.h2database:h2-mvstore:2.4.252'
+    implementation 'com.h2database:h2-mvstore:2.5.252'
 }
