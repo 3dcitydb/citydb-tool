@@ -252,7 +252,7 @@ public abstract class ImportController implements Command {
 
     protected List<InputFile> getInputFiles(IOAdapter ioAdapter, IOAdapterManager ioManager) throws ExecutionException {
         try {
-            logger.debug("Searching for {} input files...", ioManager.getFileFormat(ioAdapter));
+            logger.info("Searching for {} input files...", ioManager.getFileFormat(ioAdapter));
             return InputFiles.of(inputFileOptions.getFiles())
                     .withFileExtensions(ioManager.getFileExtensions(ioAdapter))
                     .withMediaType(ioManager.getMediaType(ioAdapter))

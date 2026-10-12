@@ -18,6 +18,8 @@ import org.citydb.core.file.input.GZipInputFile;
 import org.citydb.core.file.input.RegularInputFile;
 import org.citydb.core.file.input.ZipInputFile;
 import org.citydb.io.util.MediaTypes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,6 +35,7 @@ import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
 
 public class InputFiles {
+    private static final Logger logger = LoggerFactory.getLogger(InputFiles.class);
     private static final Pattern PATH_ELEMENT_PATTERN = Pattern.compile("[^*?{}!\\[\\]]+");
     private final Collection<String> pathsOrGlobPatterns;
     private final Detector detector;
@@ -133,9 +136,23 @@ public class InputFiles {
                                 if (attrs.isRegularFile()
                                         && matcher.matches(file.toAbsolutePath().normalize())
                                         && (filter == null || filter.test(file))) {
-                                    detect(file, inputFiles, defaultPattern, false);
+                                    if (Files.isReadable(file)) {
+                                        detect(file, inputFiles, defaultPattern, false);
+                                    } else {
+                                        logger.warn("Skipping {} (not readable).", file);
+                                    }
                                 }
 
+                                return FileVisitResult.CONTINUE;
+                            }
+
+                            @Override
+                            public FileVisitResult visitFileFailed(Path file, IOException e) throws IOException {
+                                if (file.equals(path)) {
+                                    throw e;
+                                }
+
+                                logger.warn("Skipping {} ({}).", file, e.getClass().getName());
                                 return FileVisitResult.CONTINUE;
                             }
                         });
