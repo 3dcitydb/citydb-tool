@@ -15,9 +15,11 @@ import org.citydb.model.common.Referencable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.model.property.*;
 import org.citydb.model.util.AffineTransformer;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.feature.FeatureImporter;
+import org.citydb.operation.importer.property.*;
 import org.citydb.operation.importer.reference.CacheType;
 import org.citydb.operation.importer.reference.ReferenceCache;
 import org.citydb.operation.importer.reference.ReferenceManager;
@@ -179,6 +181,38 @@ public class ImportHelper {
             return descriptor;
         } catch (Exception e) {
             throw new ImportException("Failed to import feature.", e);
+        }
+    }
+
+    PropertyDescriptor importProperty(Property<?> property, long featureId) throws ImportException {
+        try {
+            PropertyDescriptor descriptor;
+            if (property instanceof FeatureProperty featureProperty) {
+                descriptor = tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
+                        .doImport(featureProperty, featureId);
+            } else if (property instanceof GeometryProperty geometryProperty) {
+                descriptor = tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
+                        .doImport(geometryProperty, featureId);
+            } else if (property instanceof ImplicitGeometryProperty implicitGeometryProperty) {
+                descriptor = tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
+                        .doImport(implicitGeometryProperty, featureId);
+            } else if (property instanceof AddressProperty addressProperty) {
+                descriptor = tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
+                        .doImport(addressProperty, featureId);
+            } else if (property instanceof AppearanceProperty appearanceProperty) {
+                descriptor = tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
+                        .doImport(appearanceProperty, featureId);
+            } else if (property instanceof Attribute attribute) {
+                descriptor = tableHelper.getOrCreateImporter(AttributeImporter.class)
+                        .doImport(attribute, featureId);
+            } else {
+                throw new ImportException("Unsupported property type: " + property.getClass().getSimpleName());
+            }
+
+            executeBatch(false, transactionMode == Importer.TransactionMode.AUTO_COMMIT);
+            return descriptor;
+        } catch (Exception e) {
+            throw new ImportException("Failed to import property.", e);
         }
     }
 

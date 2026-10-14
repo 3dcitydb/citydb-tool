@@ -8,9 +8,12 @@ package org.citydb.operation.importer;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
+import org.citydb.core.function.CheckedSupplier;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
+import org.citydb.model.property.Property;
+import org.citydb.model.property.PropertyDescriptor;
 import org.citydb.operation.importer.reference.ReferenceManager;
 import org.citydb.operation.importer.util.ImportLogger;
 import org.slf4j.Logger;
@@ -127,13 +130,21 @@ public class Importer {
     }
 
     public CompletableFuture<FeatureDescriptor> importFeature(Feature feature) {
-        CompletableFuture<FeatureDescriptor> result = new CompletableFuture<>();
+        return doImport(() -> contexts.get().importFeature(feature));
+    }
+
+    public CompletableFuture<PropertyDescriptor> importProperty(Property<?> property, long featureId) {
+        return doImport(() -> contexts.get().importProperty(property, featureId));
+    }
+
+    private <T> CompletableFuture<T> doImport(CheckedSupplier<T, Throwable> supplier) {
+        CompletableFuture<T> result = new CompletableFuture<>();
         if (shouldRun) {
             if (state == State.SESSION_STARTED) {
                 countLatch.increment();
                 service.execute(() -> {
                     try {
-                        result.complete(contexts.get().importFeature(feature));
+                        result.complete(supplier.get());
                     } catch (Throwable e) {
                         shouldRun = false;
                         result.completeExceptionally(e);
