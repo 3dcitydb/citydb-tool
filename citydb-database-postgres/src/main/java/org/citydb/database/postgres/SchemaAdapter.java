@@ -168,6 +168,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
+    public FeatureDeleteHelper getFeatureDeleteHelper(Connection connection) throws SQLException {
+        return new FeatureDeleteHelper(connection, adapter);
+    }
+
+    @Override
     public StatisticsHelper getStatisticsHelper() {
         return statisticsHelper;
     }
