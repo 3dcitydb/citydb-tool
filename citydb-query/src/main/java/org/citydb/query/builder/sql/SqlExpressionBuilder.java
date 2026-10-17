@@ -12,8 +12,6 @@ import org.citydb.query.filter.operation.SqlExpression;
 import org.citydb.sqlbuilder.operation.In;
 import org.citydb.sqlbuilder.util.PlainSql;
 
-import java.util.List;
-
 public class SqlExpressionBuilder {
 
     private SqlExpressionBuilder() {
@@ -29,7 +27,7 @@ public class SqlExpressionBuilder {
                 new QueryBuildException("Found illegal content in SQL expression: " + invalid));
 
         return BuildResult.of(In.of(context.getTable().column("id"),
-                        List.of(PlainSql.of(queryExpression)),
+                        PlainSql.of(queryExpression),
                         negate),
                 Type.BOOLEAN);
     }

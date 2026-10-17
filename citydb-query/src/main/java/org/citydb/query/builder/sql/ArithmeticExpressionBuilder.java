@@ -8,6 +8,7 @@ package org.citydb.query.builder.sql;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
 import org.citydb.query.filter.operation.ArithmeticExpression;
+import org.citydb.query.filter.operation.ArithmeticOperator;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.Operators;
 import org.citydb.sqlbuilder.query.Select;
@@ -41,11 +42,22 @@ public class ArithmeticExpressionBuilder {
 
         if (leftOperand.getExpression() instanceof ScalarExpression leftExpression
                 && rightOperand.getExpression() instanceof ScalarExpression rightExpression) {
+            boolean useDoubleDivision = expression.getOperator() == ArithmeticOperator.DIVIDE
+                    && leftOperand.getType() == Type.INTEGER;
+
+            if (useDoubleDivision) {
+                leftOperand.cast(Type.DOUBLE, helper);
+            }
+
             return BuildResult.of(switch (expression.getOperator()) {
                 case PLUS -> Operators.plus(leftExpression, rightExpression);
                 case MINUS -> Operators.minus(leftExpression, rightExpression);
                 case MULTIPLY -> Operators.multiply(leftExpression, rightExpression);
-                case DIVIDE -> Operators.divide(leftExpression, rightExpression);
+                case DIVIDE -> Operators.divide(
+                        useDoubleDivision
+                                ? helper.getOperationHelper().castToDouble(leftExpression)
+                                : leftExpression,
+                        rightExpression);
                 case INT_DIVIDE -> helper.getOperationHelper().intDivision(leftExpression, rightExpression);
                 case POWER -> helper.getOperationHelper().power(leftExpression, rightExpression);
                 case MODULO -> Operators.modulo(leftExpression, rightExpression);
