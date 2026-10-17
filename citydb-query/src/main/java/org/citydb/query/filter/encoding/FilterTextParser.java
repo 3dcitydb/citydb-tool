@@ -28,9 +28,7 @@ public class FilterTextParser {
     }
 
     public Node parseRaw(String text) throws FilterParseException {
-        text = text != null ? text.replaceAll("''", "\\\\'") : "";
-        Tokenizer tokenizer = Tokenizer.of(text);
-
+        Tokenizer tokenizer = Tokenizer.of(text != null ? text : "");
         Node node = readBooleanExpression(tokenizer);
         if (tokenizer.lookAhead() == Token.EOF) {
             return node;

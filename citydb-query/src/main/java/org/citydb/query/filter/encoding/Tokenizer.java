@@ -96,7 +96,7 @@ public class Tokenizer {
     }
 
     private Tokenizer initialize(String text) throws FilterParseException {
-        StreamTokenizer tokenizer = createTokenizer(text);
+        StreamTokenizer tokenizer = createTokenizer(normalizeQuotes(text));
         Token token;
         while ((token = nextToken(tokenizer)) != Token.EOF) {
             TextToken type = token.getType();
@@ -124,6 +124,29 @@ public class Tokenizer {
         }
 
         return this;
+    }
+
+    private String normalizeQuotes(String text) {
+        StringBuilder normalized = new StringBuilder(text.length());
+        boolean inString = false;
+
+        for (int i = 0; i < text.length(); i++) {
+            char character = text.charAt(i);
+            if (character != '\'') {
+                normalized.append(character);
+            } else if (!inString) {
+                normalized.append(character);
+                inString = true;
+            } else if (i + 1 < text.length() && text.charAt(i + 1) == '\'') {
+                normalized.append("\\'");
+                i++;
+            } else {
+                normalized.append(character);
+                inString = false;
+            }
+        }
+
+        return normalized.toString();
     }
 
     private Token rewriteLessThan(Token token, StreamTokenizer tokenizer) throws FilterParseException {
