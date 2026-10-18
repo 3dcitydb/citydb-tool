@@ -94,7 +94,10 @@ public abstract class SqlHelper {
     }
 
     public long count(Select select, Connection connection) throws SQLException {
-        Table table = Table.of(Select.of(select).removeOrderBy());
+        Table table = Table.of(Select.of(select)
+                .removeOrderBy()
+                .removeOffset()
+                .removeFetch());
         Select count = Select.newInstance()
                 .select(Function.of("count", WildcardColumn.of(table)))
                 .from(table);
