@@ -43,6 +43,11 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     }
 
     @Override
+    public BooleanExpression bbox3d(ScalarExpression leftOperand, ScalarExpression rightOperand) {
+        return BinaryComparisonOperation.of(cast(leftOperand), "&&&", cast(rightOperand));
+    }
+
+    @Override
     public BooleanExpression contains(ScalarExpression leftOperand, ScalarExpression rightOperand) {
         return build("st_contains", leftOperand, rightOperand);
     }

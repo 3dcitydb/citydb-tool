@@ -16,6 +16,8 @@ public interface SpatialOperationHelper {
 
     BooleanExpression bbox(ScalarExpression leftOperand, ScalarExpression rightOperand);
 
+    BooleanExpression bbox3d(ScalarExpression leftOperand, ScalarExpression rightOperand);
+
     BooleanExpression contains(ScalarExpression leftOperand, ScalarExpression rightOperand);
 
     BooleanExpression crosses(ScalarExpression leftOperand, ScalarExpression rightOperand);
