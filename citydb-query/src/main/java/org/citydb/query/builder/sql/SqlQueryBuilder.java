@@ -112,8 +112,11 @@ public class SqlQueryBuilder {
             outerQuery.where(Operators.eq(table.column("index"), IntegerLiteral.of(1)));
 
             for (int i = 0; i < select.getOrderBy().size(); i++) {
-                select.select(select.getOrderBy().get(i).getSortExpression().as("order" + i));
-                outerQuery.orderBy(OrderBy.of(table.column("order" + i), select.getOrderBy().get(i).getSortOrder()));
+                OrderBy orderBy = select.getOrderBy().get(i);
+                select.select(orderBy.getSortExpression().as("order" + i));
+                outerQuery.orderBy(OrderBy.of(table.column("order" + i),
+                        orderBy.getSortOrder(),
+                        orderBy.getNullOrder().orElse(null)));
             }
 
             select.removeOrderBy();
