@@ -18,6 +18,7 @@ import org.citydb.query.sorting.Sorting;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.function.WindowFunction;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
+import org.citydb.sqlbuilder.literal.Literal;
 import org.citydb.sqlbuilder.operation.Operators;
 import org.citydb.sqlbuilder.query.OrderBy;
 import org.citydb.sqlbuilder.query.Select;
@@ -89,6 +90,12 @@ public class SqlQueryBuilder {
     }
 
     private Select buildDistinct(Query query, Select select, SqlContext context, SqlBuildOptions options) {
+        Literal<?> offset = select.getOffset().orElse(null);
+        Literal<?> fetch = select.getFetch().orElse(null);
+        select.removeOffset();
+        select.removeFetch();
+
+        Select result;
         if (query.getSorting().isPresent() || options.getColumns().contains("envelope")) {
             Table table = Table.of(select);
             Select outerQuery = Select.newInstance().from(table);
@@ -109,13 +116,18 @@ public class SqlQueryBuilder {
                 outerQuery.orderBy(OrderBy.of(table.column("order" + i), select.getOrderBy().get(i).getSortOrder()));
             }
 
-            if (query.getCountLimit().isEmpty()) {
-                select.removeOrderBy();
-            }
-
-            return outerQuery;
+            select.removeOrderBy();
+            result = outerQuery;
         } else {
-            return select.distinct(true);
+            result = select.distinct(true);
         }
+
+        if (offset != null) {
+            result.offset(offset, fetch);
+        } else if (fetch != null) {
+            result.fetch(fetch);
+        }
+
+        return result;
     }
 }
