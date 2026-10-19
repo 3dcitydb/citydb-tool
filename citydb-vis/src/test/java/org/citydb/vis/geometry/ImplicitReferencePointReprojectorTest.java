@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * angle. These tests fix three properties the downstream pipeline relies on:
  * the recovered angle is exactly the convergence angle even when the Jacobian
  * carries a scale factor, the correction is a pure rotation (so
- * {@link TrsDecomposition} keeps accepting the matrix and the GPU-instancing
+ * {@link TrsDecomposition} keeps accepting the matrix and the implicit-geometry instancing
  * path stays available), and degenerate probes leave the matrix untouched
  * rather than corrupting it.
  */
@@ -140,7 +140,7 @@ class ImplicitReferencePointReprojectorTest {
     }
 
     @Test
-    void correctedMatrixStillDecomposesForGpuInstancing() {
+    void correctedMatrixStillDecomposesForInstancing() {
         // The correction must not push a decomposable matrix past
         // TrsDecomposition's 1e-4 shear tolerance — that would silently drop
         // instances back to the baked path.

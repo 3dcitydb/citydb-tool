@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Plans the processing of one CityGML implicit-geometry instance: decides
- * between the GPU-instancing path (prototype + TRS placement payload) and the
+ * between the implicit-geometry instancing path (prototype + TRS placement payload) and the
  * baked fallback (world-space mesh copy), or skips the instance entirely
  * (pure reference, library object, or missing transformation/reference
  * point — a DEBUG line records each skip reason). Produces a {@link Plan}
@@ -51,7 +51,7 @@ final class ImplicitInstancePlanner {
     }
 
     /**
-     * GPU-instancing payload: the registered prototype plus this instance's
+     * Instancing payload: the registered prototype plus this instance's
      * placement (matrix + decomposition + reference point) and resolved
      * style color. Processed via
      * {@code FeatureProcessor#processInstance}.
@@ -155,7 +155,7 @@ final class ImplicitInstancePlanner {
             return null;
         }
 
-        // GPU-instancing path: register the shared template once and plan
+        // Instancing path: register the shared template once and plan
         // only the per-instance placement. Falls back to baking below when
         // the template is not instanceable or the matrix cannot be expressed
         // as rotation·scale (shear / mirroring).
@@ -171,7 +171,7 @@ final class ImplicitInstancePlanner {
     }
 
     /**
-     * GPU-instancing plan: resolve the template through the
+     * Instancing plan: resolve the template through the
      * {@link PrototypeRegistry} and decompose the transformation matrix.
      * Returns {@code null} when the instance cannot be expressed as
      * prototype + TRS (caller falls back to the baked path).

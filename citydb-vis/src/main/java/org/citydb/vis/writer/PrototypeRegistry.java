@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Process-once registry of implicit-geometry templates for the GPU-instancing
+ * Process-once registry of implicit-geometry templates for the instancing
  * path. Each distinct prototype is triangulated a single time in its own
  * <b>local Cartesian meter</b> frame (no degree conversion — the placement
  * happens per instance via TRS attributes at encode time), and every

@@ -71,7 +71,7 @@ import java.util.Map;
  * <p>
  * This class orchestrates the node encode flow; the heavy lifting lives in
  * package-private companions — {@link GlbPrimitiveBuilder} (triangle subset →
- * vertex arrays → BIN buffer views), {@link InstancedNodeEncoder} (GPU
+ * vertex arrays → BIN buffer views), {@link InstancedNodeEncoder} (implicit-geometry
  * instancing with the per-prototype geometry cache), and
  * {@link PropertyTableEncoder} (property-table columns).
  */

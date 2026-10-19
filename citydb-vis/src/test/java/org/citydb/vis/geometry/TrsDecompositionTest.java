@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * Pins the R·S decomposition contract the GPU-instancing path depends on:
+ * Pins the R·S decomposition contract the implicit-geometry instancing path depends on:
  * a matrix that decomposes must reproduce itself exactly from quaternion +
  * scale (that's what guarantees instanced placement matches the baked
  * per-vertex transform), and shear / mirroring / degenerate matrices must be

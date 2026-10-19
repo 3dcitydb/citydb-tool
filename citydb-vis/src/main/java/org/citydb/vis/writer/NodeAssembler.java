@@ -88,7 +88,7 @@ public final class NodeAssembler {
      * mesh). Empty when the node carries no textured triangles or every
      * referenced texture failed to load.
      * <p>
-     * {@code entries} holds the mesh-backed node entries only; GPU-instanced
+     * {@code entries} holds the mesh-backed node entries only; instanced
      * entries are delivered as {@code instanceBatches} (one batch per
      * referenced prototype, with per-instance placement and attributes) and
      * are always empty for writers without an instancing path (I3S).
@@ -180,7 +180,7 @@ public final class NodeAssembler {
                     // primitive in the GLB and never samples the atlas for
                     // them, so reserving the sentinel just wastes BSP space
                     // and can push a borderline-fitting atlas over the edge,
-                    // triggering needless Phase 2 expansion.
+                    // triggering needless page expansion.
                     boolean needsWhitePixel = hasUntexturedTriangle && atlasNeedsWhitePixelSentinel;
                     AtlasFallbackStrategy strategy = lodPreview
                             ? AtlasFallbackStrategy.RESCALE

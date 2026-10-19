@@ -115,7 +115,7 @@ class SyntheticSceneTiles3DExportTest extends AbstractSyntheticSceneExportTest {
     }
 
     @Test
-    void placesImplicitGeometriesViaGpuInstancingWhenEnabled(@TempDir Path tempDir) throws Exception {
+    void placesImplicitGeometriesViaInstancingWhenEnabled(@TempDir Path tempDir) throws Exception {
         Path sceneDir = runExport(tempDir, new Tiles3DAdapter(),
                 options().setImplicitGeometryInstancing(true), ".3dtiles");
 

@@ -30,7 +30,7 @@ import java.util.Map;
  * <p>
  * The document has a single scene containing the merged-mesh node (present
  * when the node has explicit geometry) followed by one node+mesh per
- * GPU-instanced (prototype × style) group, each carrying
+ * instanced (prototype × style) group, each carrying
  * {@code EXT_mesh_gpu_instancing} + {@code EXT_instance_features}. The
  * merged mesh carries one primitive per atlas page (each backed by its own
  * textured PBR material), one plain primitive per distinct
@@ -68,7 +68,7 @@ final class GltfJsonBuilder {
     // Primitives
     private List<Primitive> primitives = List.of();
 
-    // GPU-instanced nodes (one per prototype × style group); empty when the
+    // Instanced nodes (one per prototype × style group); empty when the
     // node carries no instanced content.
     private List<InstancedNode> instancedNodes = List.of();
 
@@ -807,7 +807,7 @@ final class GltfJsonBuilder {
     }
 
     /**
-     * One GPU-instanced glTF node: the prototype's primitives (all with
+     * One instanced glTF node: the prototype's primitives (all with
      * {@code bvFeatureIds == -1}; textured ones carry their atlas page's
      * bufferView on {@code Primitive.bvInstancedAtlas}) plus the
      * {@code EXT_mesh_gpu_instancing} attribute buffer views.
