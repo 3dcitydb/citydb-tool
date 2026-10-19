@@ -67,10 +67,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * hierarchical transform composition (aggregation nodes and the root tile
  * stay identity). Anchoring per cell keeps vertex magnitudes bounded by the
  * cell size (float32-safe at any dataset extent) and re-establishes the
- * tangent plane at every cell, so Earth curvature no longer lifts cells far
- * from the dataset center off the ground — the previous single-root-transform
- * design floated them by the sagitta d²/2R (tens to hundreds of metres once
- * cells sat tens of kilometres from the dataset center).
+ * tangent plane at every cell, so Earth curvature does not lift cells far
+ * from the dataset center off the ground; a single dataset-wide transform
+ * would float them by the sagitta d²/2R (tens to hundreds of metres for
+ * cells tens of kilometres from the dataset center).
  */
 public class Tiles3DWriter extends VisWriter {
     private final Logger logger = LoggerFactory.getLogger(Tiles3DWriter.class);
@@ -101,7 +101,7 @@ public class Tiles3DWriter extends VisWriter {
     }
 
     /**
-     * GPU instancing for implicit geometries is off by default;
+     * Implicit-geometry instancing is off by default;
      * {@code --implicit-geometry-instancing} opts in, replacing per-instance
      * baked meshes with shared prototype meshes.
      */
@@ -133,7 +133,7 @@ public class Tiles3DWriter extends VisWriter {
         return false;
     }
 
-    // ---- Format-specific output (Phase 7) -----------------------------------
+    // ---- Format-specific output ---------------------------------------------
 
     @Override
     protected void writeOutput(PipelineContext ctx) throws VisExportException {
@@ -161,9 +161,9 @@ public class Tiles3DWriter extends VisWriter {
 
         // Per-cell placement: each populated grid cell (cell root) gets its own
         // ENU-to-ECEF transform tangent to the WGS84 ellipsoid at the cell
-        // center. A single dataset-wide transform (the old design) is only
-        // tangent at one point, so cells far from it float above the ground by
-        // the Earth-curvature sagitta d²/2R (hundreds of metres at state scale).
+        // center. A single dataset-wide transform would be tangent at one point
+        // only, and cells far from it would float above the ground by the
+        // Earth-curvature sagitta d²/2R (hundreds of metres at state scale).
         // cellRootGridCoords' keys are exactly the cell-root node indices.
         Set<Integer> cellRootIndices = ctx.cellRootGridCoords().keySet();
         Map<Integer, double[]> cellTransforms = new HashMap<>();

@@ -103,7 +103,7 @@ public abstract class VisWriter implements FeatureWriter {
     // via nodeAssembler(). Built lazily on first use so atlasNeedsWhitePixelSentinel()
     // (a subclass override) is read only after the subclass is fully constructed.
     private NodeAssembler nodeAssembler;
-    // GPU-instancing prototype registry. Cheap to construct, so it is created
+    // Implicit-geometry instancing prototype registry. Cheap to construct, so it is created
     // eagerly for every writer; it stays empty (and finalizePrototypes is a
     // no-op) for writers without an instancing path (I3S).
     private final PrototypeRegistry prototypeRegistry;
@@ -390,7 +390,7 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     /**
-     * Async dispatch of a GPU-instancing plan via
+     * Async dispatch of an instancing plan via
      * {@link FeatureProcessor#processInstance}, mirroring
      * {@link #dispatchProcessing}'s latch/error handling.
      */
@@ -415,7 +415,7 @@ public abstract class VisWriter implements FeatureWriter {
     }
 
     /**
-     * Whether this writer emits GPU-instanced implicit geometry (glTF
+     * Whether this writer emits instanced implicit geometry (glTF
      * {@code EXT_mesh_gpu_instancing}). Default {@code false}; overridden by
      * {@code Tiles3DWriter} based on the {@code --implicit-geometry-instancing}
      * option. I3S has no instancing concept, so its writer keeps the baked
@@ -476,7 +476,7 @@ public abstract class VisWriter implements FeatureWriter {
             // shared prototype meshes).
             prototypeRegistry.finalizePrototypes(formatOptions, mergeCoplanarOutlineAngle());
 
-            // --- Phase 7: Format-specific output ---
+            // --- Format-specific output ---
             writeOutput(ctx);
         } catch (VisExportException e) {
             throw new WriteException("Failed to write scene layer.", e);

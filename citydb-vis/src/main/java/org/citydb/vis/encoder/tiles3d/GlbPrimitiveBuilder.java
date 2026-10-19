@@ -20,7 +20,7 @@ import java.util.Set;
  * arrays in glTF Y-up ({@link #build}), their BIN buffer views
  * ({@link #writeBuffers}), and the {@link GltfJsonBuilder.Primitive} binding
  * ({@link #toJsonPrimitive}). Shared by the main-mesh path in
- * {@link GlbEncoder} and the GPU-instancing path in
+ * {@link GlbEncoder} and the implicit-geometry instancing path in
  * {@link InstancedNodeEncoder}, which differ only in how they bucket
  * triangles and bind materials.
  */

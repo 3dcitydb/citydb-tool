@@ -22,7 +22,7 @@ import picocli.CommandLine;
         description = "Export data in OGC 3D Tiles 1.1 format.")
 public class Tiles3DExportCommand extends VisExportController<Tiles3DFormatOptions> {
     @CommandLine.Option(names = "--implicit-geometry-instancing",
-            description = "Emit implicit geometries as GPU instances (glTF " +
+            description = "Emit implicit geometries as shared instanced prototypes (glTF " +
                     "EXT_mesh_gpu_instancing + EXT_instance_features): each template mesh " +
                     "is stored once per tile and placed per instance. Instances whose " +
                     "transformation matrix cannot be expressed as rotation and scale " +

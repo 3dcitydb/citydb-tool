@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Encodes GPU-instanced implicit geometry ({@code EXT_mesh_gpu_instancing})
+ * Encodes instanced implicit geometry ({@code EXT_mesh_gpu_instancing})
  * for the GLB path: turns each prototype batch into per-(prototype × style)
  * instanced-node payloads ({@link #build}) and writes their buffer views
  * ({@link #writeBuffers}). The style-independent prototype geometry (welded,
