@@ -17,7 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 /**
- * Disk-backed storage for GPU-instancing payloads: one fixed-size record per
+ * Disk-backed storage for implicit-geometry instancing payloads: one fixed-size record per
  * implicit-geometry instance holding the prototype reference and the decomposed
  * per-instance placement (anchor + rotation + scale).
  * <p>

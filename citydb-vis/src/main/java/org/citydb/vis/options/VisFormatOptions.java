@@ -21,7 +21,7 @@ import java.util.Map;
  * Base format options shared by all visualization export formats (I3S, 3D Tiles, etc.).
  * <p>
  * Subclasses add format-specific options (e.g., SLPK packaging for I3S,
- * GPU instancing and outlines for 3D Tiles) while inheriting the common
+ * implicit-geometry instancing and outlines for 3D Tiles) while inheriting the common
  * spatial partitioning and texture handling parameters.
  */
 public abstract class VisFormatOptions implements OutputFormatOptions {

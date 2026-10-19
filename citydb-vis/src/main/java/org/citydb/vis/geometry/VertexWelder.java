@@ -44,7 +44,7 @@ public class VertexWelder {
      * already.
      * <p>
      * {@code weldTolerance} is expressed in the mesh's own length unit. The
-     * GPU-instancing path welds templates in template-local units before the
+     * implicit-geometry instancing path welds templates in template-local units before the
      * per-instance scale applies: the caller scales the tolerance so its
      * WORLD-space equivalent matches the default for the largest instance —
      * tighter than the default in template units for scaled-up templates,

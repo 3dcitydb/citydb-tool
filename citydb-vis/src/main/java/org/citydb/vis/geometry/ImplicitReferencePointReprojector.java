@@ -74,7 +74,7 @@ import java.util.List;
  * those would buy millimetres on a prototype-sized offset while introducing
  * ~1.4e-3 of shear into {@code M_3x3} — an order of magnitude past
  * {@code TrsDecomposition}'s 1e-4 shear tolerance, which would drop instances
- * out of the GPU-instancing path for no visible gain. A pure rotation leaves
+ * out of the implicit-geometry instancing path for no visible gain. A pure rotation leaves
  * the matrix's Gram matrix untouched, so decomposability is preserved exactly.
  *
  * <p>Each instance costs two SQL round-trips (reference point back to source

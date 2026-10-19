@@ -270,7 +270,7 @@ public class I3SGeometryEncoder {
         // NORMAL emission is gated by --enable-shading on every code path.
         // Without it the legacy buffer schema/binary omit normal and ArcGIS
         // Pro / Online refuse to load the scene layer (red error
-        // indicator) — A/B-tested 2026-05-08. CesiumJS tolerates either
+        // indicator). CesiumJS tolerates either
         // (it picks up shading when normal is present, renders unlit
         // otherwise). Anyone exporting for an ArcGIS target must pass
         // --enable-shading.

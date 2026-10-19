@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Parity test between the two implicit-geometry render paths: a prototype
  * vertex placed via the baked pipeline (per-vertex metric→degree offsets at
  * the anchor, then the encoder's degree→cell-ENU CellFrame math) must land
- * where the GPU-instancing path puts it (prototype vertex in glTF axes ×
+ * where the implicit-geometry instancing path puts it (prototype vertex in glTF axes ×
  * per-instance TRS from {@link InstanceTransformEncoder}).
  * <p>
  * Both paths use the identical spherical degree→meter approximation by

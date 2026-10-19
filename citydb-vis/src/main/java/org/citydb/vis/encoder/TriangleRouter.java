@@ -21,10 +21,10 @@ import java.util.Map;
  * Both encoders must answer the same per-triangle questions before they can
  * emit geometry — "does it carry a texture?", "is it X3DMaterial-colored?",
  * "which {@link DefaultObjectStyle} does its surface type resolve to?", and
- * "which face range (property-table row) does it belong to?". Each encoder
- * used to compute these independently, which let the routing decision drift
- * between formats — a recurring source of mixed-texture / white-pixel bugs.
- * {@link #route} centralizes those facts; each encoder then applies its own
+ * "which face range (property-table row) does it belong to?". Answering
+ * them independently per encoder lets the routing decision drift between
+ * formats (mixed-texture / white-pixel bugs). {@link #route} centralizes
+ * those facts; each encoder then applies its own
  * format policy (multi-primitive vs single buffer, atlas pages, color baking)
  * on top of an identical fact base.
  * <p>

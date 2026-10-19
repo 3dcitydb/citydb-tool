@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * texture is scaled by the user's texture scale and no page exceeds the
  * user's max atlas size — regardless of which build path (single-texture
  * fast path, single-page pack, multi-page spill) the texture set takes.
- * The prototype-atlas path of the GPU-instancing feature relies on this
+ * The prototype-atlas path of the implicit-geometry instancing feature relies on this
  * contract being path-independent.
  */
 class TextureAtlasBuilderTest {
@@ -132,7 +132,7 @@ class TextureAtlasBuilderTest {
     void rescaleFallbackShrinksTexturesToFitMaxAtlasSize(@TempDir Path tempDir) throws IOException {
         TextureStore store = new TextureStore(tempDir);
         // Two 300x300 textures can never share a 256x256 page at scale 1.0.
-        // Phase 1 must retry until two scaled squares fit side by side
+        // The rescale step must retry until two scaled squares fit side by side
         // (2 * 300*scale <= 256, i.e. scale ~0.35 after three attempts:
         // ~0.53 -> ~0.45 -> ~0.35), exercising the attempt+1 tightening.
         Set<Integer> texIds = new HashSet<>();
