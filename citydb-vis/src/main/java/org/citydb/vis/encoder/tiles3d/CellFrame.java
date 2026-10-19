@@ -19,7 +19,7 @@ import org.citydb.vis.util.GeoTransform;
  * tile transform maps into global ECEF. Because the anchor is the cell
  * center (not the whole dataset), positions stay small (bounded by the
  * cell extent) and the tangent plane is re-established at every cell, so
- * Earth curvature no longer lifts far-from-center cells off the ground.
+ * Earth curvature does not lift far-from-center cells off the ground.
  */
 record CellFrame(double scaleX, double scaleY, double scaleZ,
                  float offsetX, float offsetY, float offsetZ) {

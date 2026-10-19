@@ -488,11 +488,11 @@ public final class TextureAtlasBuilder {
         // drawn last — visible as unrelated buildings stealing each other's
         // facade textures.
         //
-        // Two-phase resolution, ordered by the chosen fallback strategy:
+        // Two-step resolution, ordered by the chosen fallback strategy:
         //   - RESCALE: try to honor --max-atlas-size first by shrinking
-        //     textures (Phase 1), expand the page only as a last resort
-        //     (Phase 2). Trades quality for bounded GPU memory.
-        //   - EXPAND: skip Phase 1 entirely. Grow the page directly up to
+        //     textures (rescale step), expand the page only as a last resort
+        //     (expand step). Trades quality for bounded GPU memory.
+        //   - EXPAND: skip the rescale step entirely. Grow the page directly up to
         //     the 16K cap to keep source resolution; only fall back to a
         //     post-expansion rescale if 16K still cannot fit the textures.
         // Per-texture pixel dimensions are clamped at 1 by Math.max(1, …)
@@ -526,7 +526,7 @@ public final class TextureAtlasBuilder {
             }
         }
 
-        // Phase 2: grow the atlas page (doubling) up to the WebGL-safe 16K cap.
+        // Expand step: grow the atlas page (doubling) up to the WebGL-safe 16K cap.
         // For RESCALE this only runs when rescale exhausted at minScale and
         // overflow remains. For EXPAND this is the primary mechanism.
         int currentMaxSize = maxAtlasSize;
@@ -537,7 +537,7 @@ public final class TextureAtlasBuilder {
         // Post-expansion rescale (EXPAND only): if the 16K page still cannot
         // fit the textures, fall back to shrinking them at the expanded size.
         // Last line of defense before the drop path. RESCALE already exhausted
-        // its rescale budget in Phase 1.
+        // its rescale budget in the rescale step.
         if (fallback == AtlasFallbackStrategy.EXPAND && hasAnyOverflow(packed)) {
             for (int attempt = 0; attempt < maxRetries; attempt++) {
                 if (!hasAnyOverflow(packed)) break;

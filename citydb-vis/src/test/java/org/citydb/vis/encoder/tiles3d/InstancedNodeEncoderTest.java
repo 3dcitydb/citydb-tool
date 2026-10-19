@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Verifies the multi-page prototype-atlas wiring of the GPU-instancing
+ * Verifies the multi-page prototype-atlas wiring of the instanced-node
  * encoder: a prototype whose textures were spilled onto two atlas pages must
  * emit one textured primitive per page, each bound to its own embedded atlas
  * bufferView and — at the glTF JSON level — its own material/texture. The

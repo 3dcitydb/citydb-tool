@@ -87,7 +87,7 @@ public final class ImplicitInstanceTransformer {
     /**
      * Deep-copy the prototype geometry without placing it, keeping the local
      * Cartesian meter coordinates, plus the prototype-ring → copy-ring identity
-     * bridge. Used by the GPU-instancing path, which triangulates the template
+     * bridge. Used by the implicit-geometry instancing path, which triangulates the template
      * once in local meters and defers placement to per-instance TRS attributes.
      */
     public static Result copy(Geometry<?> prototype) {
