@@ -511,9 +511,9 @@ public class TriangleMesh {
      * X3DMaterial-colored flag, the source surface feature type, and the
      * outline-edge mask. All six lanes are kept index-aligned: every
      * {@link #add}/{@link #addCopy}/{@link #addAll} appends to all of them
-     * together, so the alignment invariant that used to be re-implemented in
-     * {@link TriangleMesh#merge}, {@link TriangleMesh#removeDuplicateTriangles}
-     * and the T-junction pass now lives in exactly one place.
+     * together, so the alignment invariant lives in exactly one place rather
+     * than separately in {@link TriangleMesh#merge},
+     * {@link TriangleMesh#removeDuplicateTriangles} and the T-junction pass.
      *
      * <p>Struct-of-arrays (rather than a list of record objects) is
      * deliberate: the colored lane is a {@link BitSet} (one bit per triangle)

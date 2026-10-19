@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * <p>
  * Both clamped paths are covered: baked features go through
  * {@link TriangleMesh#clampToGround} (pinned per-vertex in
- * {@code TriangleMeshTest}), while GPU-instanced implicit geometries never
+ * {@code TriangleMeshTest}), while instanced implicit geometries never
  * materialize a mesh and instead have the shift folded into their anchor
  * height by {@link FeatureProcessor#processInstance}.
  * <p>
@@ -225,7 +225,7 @@ class FeatureProcessorClampTest {
         }
     }
 
-    // ---- GPU-instanced implicit geometry ------------------------------------
+    // ---- Instanced implicit geometry ----------------------------------------
 
     @Test
     void instanceClampFoldsTheShiftIntoTheAnchorHeight(@TempDir Path tempDir) throws Exception {

@@ -159,7 +159,7 @@ public final class FeatureProcessor {
     }
 
     /**
-     * Persist one GPU-instanced implicit-geometry occurrence: no mesh is baked —
+     * Persist one instanced implicit-geometry occurrence: no mesh is baked —
      * only the placement payload ({@link InstanceStore}) plus a
      * {@link SpatialEntry} whose {@code meshHandle} is the encoded instance
      * record index, so the instance flows through partitioning and tree

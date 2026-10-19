@@ -7,7 +7,7 @@ package org.citydb.vis.model;
 
 /**
  * One placed instance of a shared implicit-geometry prototype within a node,
- * ready for GPU-instancing encoding.
+ * ready for instanced encoding.
  *
  * @param anchor     anchor position {@code [lon°, lat°, z m]} (EPSG:4326)
  * @param rotation   unit quaternion {@code [x, y, z, w]}, prototype-local → ENU

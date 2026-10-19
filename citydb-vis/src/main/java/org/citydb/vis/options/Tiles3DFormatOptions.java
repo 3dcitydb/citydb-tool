@@ -14,7 +14,7 @@ import org.citydb.config.SerializableConfig;
  */
 @SerializableConfig(name = "3DTiles")
 public class Tiles3DFormatOptions extends VisFormatOptions {
-    // GPU instancing for implicit geometries (glTF EXT_mesh_gpu_instancing +
+    // Implicit-geometry instancing (glTF EXT_mesh_gpu_instancing +
     // EXT_instance_features). Default off for consumers without support for
     // the two extensions; --implicit-geometry-instancing opts in to storing
     // each template mesh once per tile instead of baking a full mesh copy per

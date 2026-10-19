@@ -88,7 +88,7 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
                     "Every .glb tile is empty — geometry/texture encoding produced no content.");
 
             // The railway scene carries 15 implicit-geometry instances of 3
-            // templates (SolitaryVegetationObject trees). With GPU instancing
+            // templates (SolitaryVegetationObject trees). With implicit-geometry instancing
             // enabled on the format options, at least one GLB must place them
             // via EXT_mesh_gpu_instancing — zero instanced tiles would mean
             // every instance silently fell back to the baked path.

@@ -25,7 +25,7 @@ import java.nio.file.Path;
  * below) and 256 TB per shard.
  * <p>
  * <b>Handles are always non-negative.</b> {@link InstanceStore} encodes
- * GPU-instance records as <em>negative</em> pseudo mesh handles, so the sign
+ * instance records as <em>negative</em> pseudo mesh handles, so the sign
  * bit is the discriminator between the two stores throughout the pipeline
  * ({@code InstanceStore.isInstanceHandle}). The constructor enforces the
  * shard ceiling and {@link #load} rejects negative handles rather than
