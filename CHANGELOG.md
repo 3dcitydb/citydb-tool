@@ -2,8 +2,24 @@
 
 ## [Unreleased]
 
+### Changed
+- Changed query sorting to explicitly place `NULL` values last.
+
 ### Fixed
+- Fixed SQL expression and subquery filters being rendered as `IN (null)`.
+- Fixed CQL2 `/` filters with integer operands incorrectly using integer division.
+- Fixed CQL2 `div` filters with mixed numeric operands on PostgreSQL.
+- Fixed unary minus signs being dropped from SQL filters for properties, arithmetic expressions, and functions.
+- Fixed CQL2 filters containing empty string literals failing to parse.
+- Fixed pagination being applied before duplicate joined query rows were reduced to distinct features.
+- Fixed hit counts being limited by query pagination.
+- Fixed `S_DISJOINT` and `NOT S_INTERSECTS` filters on geometry properties by avoiding an incompatible bounding-box
+  prefilter.
+- Fixed 3D BBOX spatial predicates on envelope properties ignoring the Z range.
+- Fixed duplicate export of `class`, `function`, and `usage` classifiers of generic features as generic attributes
+  in CityGML 3.0.
 - Fixed concurrent modification exceptions in `ModelWalker` during exports with LoD filters.
+- Fixed import appearance options not being respected for appearances assigned to implicit geometries.
 - Fixed imports failing when input directories contain unreadable files. Such files are now skipped gracefully with
   a warning.
 - Fixed an incorrect log message that showed the wrong delete mode when running the delete command.
