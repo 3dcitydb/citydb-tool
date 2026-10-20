@@ -17,7 +17,7 @@
   prefilter.
 - Fixed 3D BBOX spatial predicates on envelope properties ignoring the Z range.
 - Fixed duplicate export of `class`, `function`, and `usage` classifiers of generic features as generic attributes
-  in CityGML 3.0.
+  in CityGML exports.
 - Fixed CityGML 1.0 exports containing unsupported CityGML 2.0 constructs.
 - Fixed concurrent modification exceptions in `ModelWalker` during exports with LoD filters.
 - Fixed import appearance options not being respected for appearances assigned to implicit geometries.
