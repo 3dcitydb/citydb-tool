@@ -6,6 +6,7 @@
 - Fixed concurrent modification exceptions in `ModelWalker` during exports with LoD filters.
 - Fixed imports failing when input directories contain unreadable files. Such files are now skipped gracefully with
   a warning.
+- Fixed a regression that could cause texture imports from ZIP archives to fail.
 - Fixed an incorrect log message that showed the wrong delete mode when running the delete command.
 
 ## [1.4.0] - 2026-09-02
