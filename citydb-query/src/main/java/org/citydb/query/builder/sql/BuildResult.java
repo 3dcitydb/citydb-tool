@@ -16,6 +16,7 @@ import org.citydb.sqlbuilder.common.Expression;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
+import org.citydb.sqlbuilder.operation.NumericExpression;
 import org.citydb.sqlbuilder.operation.Operators;
 
 import java.util.*;
@@ -195,6 +196,12 @@ public class BuildResult {
         return predicates == null || predicates.isEmpty()
                 ? predicate
                 : Operators.and(getAndResetPredicates()).add(predicate);
+    }
+
+    void negate() {
+        if (expression instanceof NumericExpression numericExpression) {
+            expression = Operators.negate(numericExpression);
+        }
     }
 
     private void update(Expression expression, Type type) {

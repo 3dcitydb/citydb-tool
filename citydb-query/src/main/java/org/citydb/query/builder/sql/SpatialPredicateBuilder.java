@@ -82,7 +82,11 @@ public class SpatialPredicateBuilder {
                     && (operator == SpatialOperator.INTERSECTS
                     || operator == SpatialOperator.DISJOINT)) {
                 negate = negate ^ operator == SpatialOperator.DISJOINT;
-                expression = helper.getSpatialOperationHelper().bbox(leftExpression, rightExpression);
+                boolean use3d = (leftLiteral != null && leftLiteral.getVertexDimension() == 3)
+                        || (rightLiteral != null && rightLiteral.getVertexDimension() == 3);
+                expression = use3d
+                        ? helper.getSpatialOperationHelper().bbox3d(leftExpression, rightExpression)
+                        : helper.getSpatialOperationHelper().bbox(leftExpression, rightExpression);
             } else {
                 expression = switch (operator) {
                     case CONTAINS -> helper.getSpatialOperationHelper().contains(leftExpression, rightExpression);

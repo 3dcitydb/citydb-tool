@@ -112,7 +112,16 @@ public abstract class AbstractCityObjectAdapter<T extends AbstractCityObject> ex
                     helper.getAppearanceProperty(property, AbstractAppearancePropertyAdapter.class)));
         }
 
+        boolean isGenericFeature = Namespaces.GENERICS.equals(source.getFeatureType().getNamespace());
         source.getAttributes().forEachByNamespace(Namespaces.GENERICS, attribute -> {
+            if (isGenericFeature
+                    && (attribute.getName().getLocalName().equals("class")
+                    || attribute.getName().getLocalName().equals("function")
+                    || attribute.getName().getLocalName().equals("usage"))
+                    && DataType.CODE.getName().equals(attribute.getDataType().orElse(null))) {
+                return;
+            }
+
             AbstractGenericAttribute<?> genericAttribute = helper.getGenericAttribute(attribute);
             if (genericAttribute != null) {
                 target.getGenericAttributes().add(new AbstractGenericAttributeProperty(genericAttribute));

@@ -111,7 +111,14 @@ public class QueryExecutor {
         }
 
         public QueryExecutor build(Query query, SqlBuildOptions options) throws QueryBuildException, IOException {
-            Select select = builder.build(query, options);
+            boolean paginated = query.getCountLimit()
+                    .map(countLimit -> countLimit.getLimit().isPresent() || countLimit.getStartIndex().isPresent())
+                    .orElse(false);
+
+            SqlBuildOptions selectOptions = SqlBuildOptions.of(options)
+                    .omitDistinct(options.isOmitDistinct() && !paginated);
+
+            Select select = builder.build(query, selectOptions);
             Select count = options.isOmitDistinct()
                     ? builder.build(query, SqlBuildOptions.of(options).omitDistinct(false))
                     : select;

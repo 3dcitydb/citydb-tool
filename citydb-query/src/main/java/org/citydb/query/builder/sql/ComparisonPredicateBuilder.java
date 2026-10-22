@@ -222,7 +222,7 @@ public class ComparisonPredicateBuilder {
                 propertyContext.getAndResetPredicates()
                         .forEach(subQuery::where);
 
-                return BuildResult.of(In.of(context.getTable().column("id"), List.of(subQuery), negate));
+                return BuildResult.of(In.of(context.getTable().column("id"), subQuery, negate));
             }
         } else {
             return BuildResult.of(Operators.isNull(operand.getExpression(), negate));

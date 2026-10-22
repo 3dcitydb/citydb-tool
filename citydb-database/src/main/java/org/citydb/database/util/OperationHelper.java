@@ -25,6 +25,8 @@ public abstract class OperationHelper {
         this.schemaAdapter = schemaAdapter;
     }
 
+    public abstract ScalarExpression castToDouble(ScalarExpression expression);
+
     public abstract Expression intDivision(ScalarExpression leftOperand, ScalarExpression rightOperand);
 
     public abstract Expression lower(ScalarExpression expression);

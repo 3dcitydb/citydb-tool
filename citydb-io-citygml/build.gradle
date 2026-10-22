@@ -1,4 +1,4 @@
-def citygml4jVersion = '3.5.1'
+def citygml4jVersion = '3.5.2-SNAPSHOT'
 
 dependencies {
     api "org.citygml4j:citygml4j-xml:$citygml4jVersion"

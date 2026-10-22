@@ -43,6 +43,11 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     }
 
     @Override
+    public BooleanExpression bbox3d(ScalarExpression leftOperand, ScalarExpression rightOperand) {
+        return BinaryComparisonOperation.of(cast(leftOperand), "&&&", cast(rightOperand));
+    }
+
+    @Override
     public BooleanExpression contains(ScalarExpression leftOperand, ScalarExpression rightOperand) {
         return build("st_contains", leftOperand, rightOperand);
     }
@@ -54,7 +59,7 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression disjoint(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return build("st_disjoint", leftOperand, rightOperand);
+        return build("st_disjoint", leftOperand, rightOperand, false);
     }
 
     @Override
@@ -97,9 +102,14 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
     }
 
     private BooleanExpression build(String operationName, ScalarExpression leftOperand, ScalarExpression rightOperand) {
+        return build(operationName, leftOperand, rightOperand, true);
+    }
+
+    private BooleanExpression build(String operationName, ScalarExpression leftOperand, ScalarExpression rightOperand, boolean useBbox) {
         BooleanExpression expression = Operators.eq(Function.of(operationName,
                 prepare(leftOperand), prepare(rightOperand)), TRUE);
-        return requiresNormalization(leftOperand) || requiresNormalization(rightOperand)
+        return useBbox
+                && (requiresNormalization(leftOperand) || requiresNormalization(rightOperand))
                 ? Operators.and(bbox(leftOperand, rightOperand), expression)
                 : expression;
     }

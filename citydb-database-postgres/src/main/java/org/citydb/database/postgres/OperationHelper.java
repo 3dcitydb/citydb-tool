@@ -19,8 +19,13 @@ public class OperationHelper extends org.citydb.database.util.OperationHelper {
     }
 
     @Override
+    public ScalarExpression castToDouble(ScalarExpression expression) {
+        return expression.castAs("double precision");
+    }
+
+    @Override
     public Expression intDivision(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return Function.of("div", leftOperand, rightOperand);
+        return Function.of("div", leftOperand.castAs("numeric"), rightOperand.castAs("numeric"));
     }
 
     @Override

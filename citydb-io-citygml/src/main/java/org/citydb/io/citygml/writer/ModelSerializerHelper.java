@@ -253,16 +253,16 @@ public class ModelSerializerHelper {
     }
 
     public void addStandardObjectClassifiers(Feature source, StandardObjectClassifier target, String namespace) throws ModelSerializeException {
-        Attribute classifier = source.getAttributes().getFirst(Name.of("class", namespace)).orElse(null);
+        Attribute classifier = source.getAttributes().getFirst(Name.of("class", namespace), DataType.CODE).orElse(null);
         if (classifier != null) {
             target.setClassifier(buildObject(classifier, getOrCreateSerializer(CodeAdapter.class)));
         }
 
-        for (Attribute attribute : source.getAttributes().get(Name.of("function", namespace))) {
+        for (Attribute attribute : source.getAttributes().get(Name.of("function", namespace), DataType.CODE)) {
             target.getFunctions().add(buildObject(attribute, getOrCreateSerializer(CodeAdapter.class)));
         }
 
-        for (Attribute attribute : source.getAttributes().get(Name.of("usage", namespace))) {
+        for (Attribute attribute : source.getAttributes().get(Name.of("usage", namespace), DataType.CODE)) {
             target.getUsages().add(buildObject(attribute, getOrCreateSerializer(CodeAdapter.class)));
         }
     }

@@ -101,6 +101,7 @@ public class ModelBuilderHelper {
         computeEnvelopes = options.isComputeEnvelopes();
         implicitGeometryScope = options.getImplicitGeometryScope();
         appearanceHelper.initialize(formatOptions);
+        implicitGeometryHelper.initialize(formatOptions);
         xmlObjects = context != null ? context.getXMLObjects() : null;
         return this;
     }

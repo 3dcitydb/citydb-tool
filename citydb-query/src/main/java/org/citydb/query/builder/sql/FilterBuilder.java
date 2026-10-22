@@ -66,28 +66,35 @@ public class FilterBuilder {
     }
 
     BuildResult build(Expression expression, Select select, SqlContext context, boolean negate, boolean resolveValue) throws QueryBuildException {
+        BuildResult result;
         if (expression instanceof ComparisonPredicate comparisonPredicate) {
-            return comparisonPredicateBuilder.build(comparisonPredicate, select, context, negate);
+            result = comparisonPredicateBuilder.build(comparisonPredicate, select, context, negate);
         } else if (expression instanceof SpatialPredicate spatialPredicate) {
-            return spatialPredicateBuilder.build(spatialPredicate, select, context, negate);
+            result = spatialPredicateBuilder.build(spatialPredicate, select, context, negate);
         } else if (expression instanceof LogicalPredicate logicalPredicate) {
-            return logicalPredicateBuilder.build(logicalPredicate, select, context, negate);
+            result = logicalPredicateBuilder.build(logicalPredicate, select, context, negate);
         } else if (expression instanceof SqlExpression sqlExpression) {
-            return sqlExpressionBuilder.build(sqlExpression, context, negate);
+            result = sqlExpressionBuilder.build(sqlExpression, context, negate);
         } else if (expression instanceof ArithmeticExpression arithmeticExpression) {
-            return arithmeticExpressionBuilder.build(arithmeticExpression, select, context, negate);
+            result = arithmeticExpressionBuilder.build(arithmeticExpression, select, context, negate);
         } else if (expression instanceof Function function) {
-            return functionBuilder.build(function, select, context, negate);
+            result = functionBuilder.build(function, select, context, negate);
         } else if (expression instanceof Literal<?> literal) {
-            return build(literal, negate);
+            result = build(literal, negate);
         } else if (expression instanceof PropertyRef propertyRef) {
-            BuildResult result = BuildResult.of(propertyRef);
-            return resolveValue
+            result = BuildResult.of(propertyRef);
+            result = resolveValue
                     ? result.update(helper.getContextBuilder().build(propertyRef, select, context, true))
                     : result;
         } else {
             throw new QueryBuildException("Unsupported filter expression.");
         }
+
+        if (resolveValue) {
+            applySign(expression, result);
+        }
+
+        return result;
     }
 
     private BuildResult build(Literal<?> literal, boolean negate) throws QueryBuildException {
@@ -132,5 +139,14 @@ public class FilterBuilder {
         });
 
         return requiresLeftJoins[0];
+    }
+
+    private void applySign(Expression expression, BuildResult result) throws QueryBuildException {
+        if (expression instanceof NumericExpression numericExpression
+                && !(expression instanceof NumericLiteral)
+                && numericExpression.getSign() == Sign.MINUS
+                && result.isSetExpression()) {
+            result.negate();
+        }
     }
 }

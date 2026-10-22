@@ -8,6 +8,7 @@ package org.citydb.io.citygml.adapter.geometry.builder;
 import org.citydb.io.citygml.adapter.appearance.builder.AppearanceHelper;
 import org.citydb.io.citygml.builder.ModelBuildException;
 import org.citydb.io.citygml.reader.ModelBuilderHelper;
+import org.citydb.io.citygml.reader.options.FormatOptions;
 import org.citydb.io.citygml.reader.preprocess.ImplicitGeometryResolver;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citydb.model.appearance.Appearance;
@@ -29,10 +30,16 @@ import java.io.IOException;
 public class ImplicitGeometryHelper {
     private final ImplicitGeometryResolver resolver;
     private final ModelBuilderHelper helper;
+    private FormatOptions<?> formatOptions;
 
     public ImplicitGeometryHelper(ImplicitGeometryResolver resolver, ModelBuilderHelper helper) {
         this.resolver = resolver;
         this.helper = helper;
+    }
+
+    public ImplicitGeometryHelper initialize(FormatOptions<?> formatOptions) {
+        this.formatOptions = formatOptions;
+        return this;
     }
 
     public boolean hasImplicitGeometries() {
@@ -83,7 +90,7 @@ public class ImplicitGeometryHelper {
     private ImplicitGeometry buildImplicitGeometry(org.citygml4j.core.model.core.ImplicitGeometry source, boolean force2D) throws ModelBuildException {
         if (source.getRelativeGeometry() != null && source.getRelativeGeometry().getObject() != null) {
             AbstractGeometry template = source.getRelativeGeometry().getObject();
-            AppearanceHelper appearanceHelper = new AppearanceHelper(helper);
+            AppearanceHelper appearanceHelper = new AppearanceHelper(helper).initialize(formatOptions);
             GeometryHelper geometryHelper = new GeometryHelper(appearanceHelper, helper);
 
             Geometry<?> geometry = geometryHelper.getGeometry(template, force2D);
