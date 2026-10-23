@@ -207,7 +207,8 @@ abstract class AbstractSyntheticSceneExportTest {
         }
 
         // Untextured buildings with an X3DMaterial: the COLOR_0 / vertex-colour
-        // path, and the untextured half of the mixed-node split.
+        // path (they share no cell with the textured buildings, so the
+        // mixed-node split stays a no-op — see the class Javadoc).
         features.add(materialBuilding("building_mat_0", 35, 60, Color.of(0.8, 0.2, 0.2)));
         features.add(materialBuilding("building_mat_1", 105, 60, Color.of(0.2, 0.8, 0.4)));
 

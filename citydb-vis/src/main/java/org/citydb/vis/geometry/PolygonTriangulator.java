@@ -277,9 +277,11 @@ public class PolygonTriangulator {
         List<int[]> triangleIndices = EarClipper.clip(scaledRing, projAxis);
 
         // Add vertices using ORIGINAL coordinates (degrees/meters) for output.
-        // A polygon never carries both UV and material color (extractor drops
-        // material entries for textured rings), so the three branches below
-        // are mutually exclusive.
+        // The extractor drops the material color of a ring once that ring
+        // resolved a texture image, so UV and color normally do not coexist.
+        // When they do (texture coordinates whose image could not be
+        // resolved), the UV branch takes precedence while the triangle is
+        // still flagged colored below.
         int baseVertex = mesh.getVertexCount();
         for (int i = 0; i < ring.size(); i++) {
             double[] pt = ring.get(i);

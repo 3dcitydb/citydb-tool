@@ -18,9 +18,9 @@ public class BoundingBoxUtils {
     }
 
     /**
-     * Create an empty accumulator whose mins are {@code +∞} and maxes are
-     * {@code −∞}, so that the first {@code expand*} call produces a valid
-     * box.
+     * Create an empty accumulator whose mins are {@code +Double.MAX_VALUE}
+     * and maxes are {@code -Double.MAX_VALUE}, so that the first
+     * {@code expand*} call produces a valid box.
      */
     public static double[] emptyAabb() {
         return new double[]{
