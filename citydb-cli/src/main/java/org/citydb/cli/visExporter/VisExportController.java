@@ -232,8 +232,8 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         // (whatever their source). Style errors name the offending concept
         // ("default color", "feature type style") and are surfaced as-is.
         // Attribute-projection errors already carry the parser's
-        // "--attributes[i]:" location; we prepend a source attribution
-        // (command-line flag vs. config file) on top of it.
+        // "--attributes[i]:" location, which doubles as the CLI flag
+        // attribution; only config-file input gets an extra source note.
         try {
             options.buildStyleRegistry(schemaMapping);
         } catch (VisExportException e) {
@@ -244,8 +244,8 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             options.buildAttributeProjection();
         } catch (VisExportException e) {
             String prefix = Command.hasMatchedOption("--attributes", commandSpec) ?
-                    "--attributes " :
-                    "Invalid attribute projection: ";
+                    "" :
+                    "Invalid attribute projection in config: ";
             throw new ExecutionException("Error: " + prefix + e.getMessage(), e);
         }
     }

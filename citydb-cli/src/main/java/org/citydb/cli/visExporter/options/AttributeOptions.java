@@ -30,8 +30,8 @@ public class AttributeOptions implements Option {
                     "(codeSpace URI of a CityGML coded value), 'uom' (unit of measure), " +
                     "'content' (generic content blob), 'mimeType' (mime type of the generic " +
                     "content). Without a cast the encoder auto-detects the present " +
-                    "value type (int → double → string → timestamp → uri, with fallback into " +
-                    "a 'value' sub-attribute). Examples: " +
+                    "value type (int → double → string → timestamp → uri → array, with " +
+                    "fallback into a 'value' sub-attribute). Examples: " +
                     "'OBJECTID:FEATURE/objectid', 'HEIGHT:ATTRIBUTES/measuredHeight', " +
                     "'CITY:ADDRESS/[FIRST]city', 'STREET:ADDRESS/[FIRST]street', " +
                     "'HOUSE_NUMBER:ADDRESS/[FIRST]houseNumber', " +
