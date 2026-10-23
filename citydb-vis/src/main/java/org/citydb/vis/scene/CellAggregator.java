@@ -24,7 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  * The aggregation tree inserts synthetic 2×2 parent nodes grouping cells
  * by their grid coordinates, giving each level a well-defined spatial
  * extent and geometric error. For 3D Tiles this, combined with the
- * subtree-size split, keeps every {@code tileset.json}/{@code subtree.json}
+ * per-level subtree split (every node with children becomes its own
+ * subtree file), keeps every {@code tileset.json}/{@code subtree.json}
  * bounded regardless of cell count. For I3S it provides the progressive
  * refinement cascade in the node pages.
  * <p>

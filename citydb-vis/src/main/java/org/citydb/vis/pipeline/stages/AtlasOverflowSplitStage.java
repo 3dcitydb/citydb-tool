@@ -55,11 +55,15 @@ import java.util.concurrent.TimeUnit;
  * Replaces the silent global texture rescale that {@link TextureAtlasBuilder#build}
  * otherwise applies inside {@code NodeAssembler.prepareNodeMesh}. Each
  * resulting leaf packs its self-contained subset of the parent's textures into
- * a single page at full resolution. Two fallbacks keep recursion bounded:
+ * a single page at full resolution. Three fallbacks keep recursion bounded:
  * <ol>
  *   <li>A node containing a single feature whose textures still overflow
  *       cannot be subdivided spatially — accept the rescale path at that
  *       leaf.</li>
+ *   <li>A node whose feature centroids all fall into one quadrant
+ *       (degenerate bbox or tightly packed features) would not separate
+ *       under subdivision — accept the rescale path at that leaf; counted
+ *       together with the single-feature case.</li>
  *   <li>The recursion is depth-capped at {@value #MAX_DEPTH} levels from any
  *       node observed when the stage starts (so a cell root pushed down by
  *       {@link MixedNodeSplitStage} can still subdivide that many extra

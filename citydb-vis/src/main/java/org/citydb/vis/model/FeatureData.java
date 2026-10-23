@@ -19,7 +19,7 @@ public record FeatureData(long id, String objectId, String featureType,
 
     /**
      * Retrieve a field value by name. Handles the fixed header fields
-     * (OBJECTID, featureType) and delegates to the user attribute map
+     * (OID, OBJECTID, featureType) and delegates to the user attribute map
      * for everything else.
      */
     public Object getFieldValue(String fieldName) {

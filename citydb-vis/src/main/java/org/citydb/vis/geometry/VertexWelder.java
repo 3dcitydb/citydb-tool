@@ -19,9 +19,10 @@ import java.util.Map;
  * them to the same Float32 position. Uses a spatial hash grid for O(N)
  * performance instead of O(N²) brute force.
  * <p>
- * UV-aware: two vertices are only welded if they share the same position
- * AND the same UV coordinates (within tolerance). This preserves texture
- * seams where adjacent polygons meet with different UVs.
+ * UV- and color-aware: two vertices are only welded if they share the same
+ * position AND the same UV coordinates AND the same vertex color (each
+ * within tolerance). This preserves texture seams and color boundaries
+ * where adjacent polygons meet with different UVs or materials.
  */
 public class VertexWelder {
     /**
@@ -257,7 +258,7 @@ public class VertexWelder {
                 faceRanges, rangeFeatureIds, vertexCount);
     }
 
-    /** Check whether two Float32 position vectors are bitwise identical. */
+    /** Check whether two Float32 position vectors are equal component-wise. */
     public static boolean positionsEqual(float[] a, float[] b) {
         return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
     }

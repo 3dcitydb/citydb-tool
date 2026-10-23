@@ -44,9 +44,9 @@ public class VisExportStores implements AutoCloseable {
      * Per-feature bit: 1 if the feature contributed any texture to the atlas.
      * Read by the mixed-node split stage to partition each node's features
      * into textured and untextured subsets (one I3S / 3D Tiles node per
-     * subset). Access is synchronized because {@link BitSet} is not
-     * concurrency-safe and writes happen from parallel feature-processing
-     * threads during the write phase.
+     * subset) and by the atlas-overflow split stage. Access is synchronized
+     * because {@link BitSet} is not concurrency-safe and writes happen from
+     * parallel feature-processing threads during the write phase.
      */
     private final BitSet featureTextureFlags = new BitSet();
 

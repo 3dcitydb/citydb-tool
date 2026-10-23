@@ -51,8 +51,9 @@ public class I3SAttributeEncoder extends AttributeEncoder {
     }
 
     /**
-     * Snapshot of all per-attribute statistics gathered during the write
-     * phase. Returned in a fresh map keyed by attribute name; the entries
+     * Snapshot of all per-attribute statistics accumulated by
+     * {@link #writeNodeAttributes} during the close-phase node output.
+     * Returned in a fresh map keyed by attribute name; the entries
      * themselves are immutable {@link AttributeStats.Result} records.
      */
     public Map<String, AttributeStats.Result> snapshotStats() {

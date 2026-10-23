@@ -229,10 +229,11 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
         }
 
         // Build the derived runtime objects from the final string inputs
-        // (whatever their source). The library exceptions name the offending
-        // concept but not the CLI flag; we add the flag attribution here when
-        // the value came from the command line, so a CLI typo still reports
-        // against the flag the user typed (e.g. "Error: --attributes ...").
+        // (whatever their source). Style errors name the offending concept
+        // ("default color", "feature type style") and are surfaced as-is.
+        // Attribute-projection errors already carry the parser's
+        // "--attributes[i]:" location; we prepend a source attribution
+        // (command-line flag vs. config file) on top of it.
         try {
             options.buildStyleRegistry(schemaMapping);
         } catch (VisExportException e) {

@@ -79,7 +79,8 @@ public class TileNode {
     }
 
     /**
-     * Create a root tile with transform and child slots.
+     * Create a root tile with {@code refine=REPLACE}, an optional transform
+     * ({@code null} for identity) and an empty child list.
      */
     static TileNode ofRoot(TileBoundingVolume boundingVolume, double geometricError,
                            double[] transform) {
