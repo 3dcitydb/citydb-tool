@@ -113,8 +113,9 @@ public class SceneLayerDescriptor {
                                                                      boolean hasStyleOverrides,
                                                                      boolean enableShading) {
         // The textured slot (index 1) is filled with a placeholder untextured
-        // definition when the layer has colors but no textures, so that the
-        // OPAQUE/BLEND colored definitions stay at fixed indices 2/3.
+        // definition when the layer has colors or style overrides but no
+        // textures, so that the OPAQUE/BLEND colored definitions stay at
+        // fixed indices 2/3.
         // In a pure-styling layer (overrides but no X3DMaterial) slots 2/3
         // are unreferenced placeholders held for index stability; in a
         // mixed layer they're the active X3DMaterial slots.

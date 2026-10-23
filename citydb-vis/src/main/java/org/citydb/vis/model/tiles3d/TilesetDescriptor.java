@@ -26,8 +26,11 @@ public class TilesetDescriptor {
     private TileNode root;
 
     /**
-     * Create a root tileset descriptor with schema, transform, and a single
-     * external-ref child pointing to the aggregation root's subtree file.
+     * Create a root tileset descriptor with schema and a single external-ref
+     * child pointing to the aggregation root's subtree file. The child sets
+     * no refine of its own and inherits the root's {@code REPLACE}. The
+     * writer passes a {@code null} transform (identity): placement into
+     * ECEF happens per cell, see {@code TilesetSerializer.writeRootTileset}.
      */
     public static TilesetDescriptor ofRoot(double geometricError,
                                            double[] extent,
