@@ -44,6 +44,9 @@ final class GlbPrimitiveBuilder {
     static final int UNTEXTURED_PLAIN_PAGE = -1;
     static final int UNTEXTURED_COLORED_PAGE = -2;
 
+    /** COLOR_0 fallback for a colored-page vertex on a mesh without a color lane. */
+    private static final float[] WHITE_RGBA = {1f, 1f, 1f, 1f};
+
     /**
      * Per-primitive welded vertex arrays plus the accessor facts derived
      * while building them (bounds, unique-feature count, alpha flag).
@@ -105,6 +108,10 @@ final class GlbPrimitiveBuilder {
                                  boolean emitOutlines) {
         boolean textured = atlasPage >= 0 || atlasPage == GltfJsonBuilder.INSTANCED_TEXTURED_PAGE;
         boolean emitColors = atlasPage == UNTEXTURED_COLORED_PAGE;
+        // A triangle can be routed to the colored page only through its
+        // colored flag; guard against a mesh that never grew a color lane so
+        // the lookup below cannot fall off an empty list.
+        boolean meshHasColors = mesh.hasColors();
         // NORMAL emitted on every path when --enable-shading is on. Textured
         // primitives use the up-direction trick (constant +Y in local frame,
         // see normal-write block below) so walls and roofs render at uniform
@@ -192,7 +199,7 @@ final class GlbPrimitiveBuilder {
                     // passes through unchanged. The I3S writer keeps raw
                     // sRGB values per Cesium's I3S loader convention; see
                     // RingAppearance javadoc for rationale.
-                    float[] c = mesh.getColors().get(srcIdx);
+                    float[] c = meshHasColors ? mesh.getColors().get(srcIdx) : WHITE_RGBA;
                     colors[idx * 4] = ColorUtils.srgbToLinear(c[0]);
                     colors[idx * 4 + 1] = ColorUtils.srgbToLinear(c[1]);
                     colors[idx * 4 + 2] = ColorUtils.srgbToLinear(c[2]);

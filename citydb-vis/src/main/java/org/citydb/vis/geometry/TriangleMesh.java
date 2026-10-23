@@ -255,7 +255,10 @@ public class TriangleMesh {
 
     /**
      * Whether the triangle at the given index came from an X3DMaterial-colored
-     * polygon. Always {@code false} when {@link #hasColors()} is {@code false}.
+     * polygon. The flag is stored as passed to {@link #addTriangle} and is not
+     * reconciled with {@link #hasColors()}: the triangulator only sets it on
+     * meshes that carry a color lane, but encoders reading per-vertex colors
+     * must still check {@code hasColors()} before indexing {@link #getColors()}.
      */
     public boolean isTriangleColored(int triIndex) {
         return triangleData.isColored(triIndex);
