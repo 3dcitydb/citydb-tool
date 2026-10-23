@@ -157,15 +157,22 @@ public class PolygonTriangulator {
             return;
         }
 
-        // Look up UV coordinates and texture ID for the exterior ring
-        List<TextureCoordinate> outerTexCoords = texCoordMap != null
-                ? texCoordMap.get(exteriorRing) : null;
-        boolean hasUV = outerTexCoords != null && outerTexCoords.size() >= outerPoints.size();
+        // Look up texture ID and UV coordinates for the exterior ring. UVs
+        // are only used when the ring resolved a texture id: the extractor
+        // keeps the coordinates of a texture whose image could not be
+        // resolved, but TriangleRouter treats every triangle without a
+        // texture id as untextured, so such UVs would only flag the mesh as
+        // textured without a texture to sample.
         int polyTextureId = (ringTextureMap != null)
                 ? ringTextureMap.getOrDefault(exteriorRing, -1) : -1;
+        List<TextureCoordinate> outerTexCoords = polyTextureId >= 0 && texCoordMap != null
+                ? texCoordMap.get(exteriorRing) : null;
+        boolean hasUV = outerTexCoords != null && outerTexCoords.size() >= outerPoints.size();
         // Per-polygon RGBA from X3DMaterial; null when the ring has no
         // material assignment. Texture wins over material — the extractor
-        // already drops material entries for rings that have a texture id.
+        // already drops material entries for rings that have a texture id —
+        // so a ring whose texture image is unresolved falls back to its
+        // material color.
         float[] polyColor = ringColorMap != null ? ringColorMap.get(exteriorRing) : null;
 
         // Compute centroid latitude for degree-to-meter conversion; identity
@@ -277,11 +284,10 @@ public class PolygonTriangulator {
         List<int[]> triangleIndices = EarClipper.clip(scaledRing, projAxis);
 
         // Add vertices using ORIGINAL coordinates (degrees/meters) for output.
-        // The extractor drops the material color of a ring once that ring
-        // resolved a texture image, so UV and color normally do not coexist.
-        // When they do (texture coordinates whose image could not be
-        // resolved), the UV branch takes precedence while the triangle is
-        // still flagged colored below.
+        // A ring never carries both UV and material color: UVs require a
+        // texture id, and the extractor drops material entries for rings
+        // that have one. The three branches below are therefore mutually
+        // exclusive.
         int baseVertex = mesh.getVertexCount();
         for (int i = 0; i < ring.size(); i++) {
             double[] pt = ring.get(i);
