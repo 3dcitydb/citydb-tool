@@ -16,6 +16,7 @@
 - Fixed `S_DISJOINT` and `NOT S_INTERSECTS` filters on geometry properties by avoiding an incompatible bounding-box
   prefilter.
 - Fixed 3D BBOX spatial predicates on envelope properties ignoring the Z range.
+- Fixed sorting by property paths with a feature type restriction ignoring the type restriction.
 - Fixed duplicate export of `class`, `function`, and `usage` classifiers of generic features as generic attributes
   in CityGML exports.
 - Fixed CityGML 1.0 exports containing unsupported CityGML 2.0 constructs.

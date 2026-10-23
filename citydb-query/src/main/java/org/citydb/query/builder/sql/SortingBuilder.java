@@ -28,7 +28,9 @@ public class SortingBuilder {
 
     void build(Sorting sorting, Select select, SqlContext context) throws QueryBuildException {
         if (sorting.hasSortBy()) {
-            helper.getContextBuilder().useLeftJoins(true);
+            helper.getContextBuilder()
+                    .useLeftJoins(true)
+                    .restrictTargetTypesInJoins(true);
             for (SortBy sortBy : sorting.getSortBy()) {
                 select.orderBy(build(sortBy, select, context));
             }
