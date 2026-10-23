@@ -35,7 +35,7 @@ import java.util.NoSuchElementException;
  * the current chunk.
  * <p>
  * <b>Thread-safety contract:</b> writes are safe from multiple threads
- * (per-shard {@code synchronized} on the file channel). Iteration is
+ * (per-shard {@code synchronized} on the shard object). Iteration is
  * <em>not</em> concurrent-safe and assumes the write phase has ended —
  * callers must externally quiesce writers before iterating. After
  * {@link #close()}, no further reads or writes are permitted.

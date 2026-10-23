@@ -71,7 +71,7 @@ public class I3SJsonSerializer {
 
     /**
      * Write per-node feature metadata to {@code features/0/index.json} in the
-     * I3S 1.9{@code NodeFeatureData} schema. Per-feature {@code mbb} is the
+     * I3S 1.9 {@code NodeFeatureData} schema. Per-feature {@code mbb} is the
      * exact AABB of the feature's triangles (from
      * {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder.NodeGeometryResult})
      * and {@code position} is its centroid. The ArcGIS Maps SDK for JavaScript

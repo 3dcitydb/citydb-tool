@@ -233,9 +233,8 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
      * overrides applied; idempotent.
      * <p>
      * The thrown message names the offending concept ("default color",
-     * "feature type style") but deliberately not the CLI flag — the caller
-     * (which knows whether the value came from the CLI or a config file)
-     * adds that attribution.
+     * "feature type style") but not the CLI flag, since the value may have
+     * come from the CLI or from a config file; the caller surfaces it as-is.
      *
      * @throws VisExportException if a color string is malformed or a feature
      *                            type style key is not a known qualified name
@@ -248,8 +247,10 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
      * Parse {@link #getAttributes} into the runtime {@link #attributeProjection}.
      * Call once after the config has been loaded and any CLI override applied;
      * idempotent. {@code null}/empty input yields a {@code null} projection
-     * ("export every top-level attribute"). The thrown message carries only the
-     * parser's reason; the caller adds the source attribution.
+     * ("export every top-level attribute"). The thrown message already carries
+     * the parser's {@code --attributes[i]: } location prefix, whether the
+     * tokens came from the CLI or from a config file; the caller adds a
+     * source note only for config-file input.
      *
      * @throws VisExportException if an attribute mapping token cannot be parsed
      */
