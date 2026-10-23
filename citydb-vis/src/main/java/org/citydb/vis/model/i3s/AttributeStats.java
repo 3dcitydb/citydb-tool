@@ -90,11 +90,11 @@ public abstract class AttributeStats {
                 return new Result(0, 0, 0, 0, 0, 0, 0, null, 0);
             }
             double avg = sum / count;
-            // Variance using Welford-equivalent identity (E[X²] - E[X]²)
-            // is fine here: counts/sums are bounded and pre-aggregated, so
-            // catastrophic cancellation isn't a real risk on attribute
-            // distributions in city models. Clamp tiny negatives from
-            // float rounding to 0.
+            // Variance via the naive sum-of-squares identity (E[X²] - E[X]²)
+            // rather than Welford's algorithm is fine here: counts/sums are
+            // bounded and pre-aggregated, so catastrophic cancellation isn't
+            // a real risk on attribute distributions in city models. Clamp
+            // tiny negatives from float rounding to 0.
             double variance = (sumOfSquares - sum * sum / count) / count;
             if (variance < 0) variance = 0;
             double stddev = Math.sqrt(variance);
