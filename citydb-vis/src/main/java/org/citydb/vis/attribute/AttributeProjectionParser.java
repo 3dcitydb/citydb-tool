@@ -47,7 +47,7 @@ final class AttributeProjectionParser {
             AttributeProjection.Mapping mapping = parseMapping(tokens.get(i).trim(), location);
             if (!seen.add(mapping.outputColumn())) {
                 throw new IllegalArgumentException(location + ": duplicate output column '"
-                        + mapping.outputColumn() + "' inside --attributes (declared twice on the CLI).");
+                        + mapping.outputColumn() + "' inside --attributes (declared twice).");
             }
             out.add(mapping);
         }

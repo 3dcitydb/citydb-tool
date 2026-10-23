@@ -5,6 +5,7 @@
 
 package org.citydb.vis.geometry;
 
+import org.citydb.model.appearance.TextureCoordinate;
 import org.citydb.model.common.Name;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.LinearRing;
@@ -13,7 +14,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -413,5 +416,37 @@ class PolygonTriangulatorTest {
 
         assertEquals(2, first.getTriangleCount());
         assertEquals(2, second.getTriangleCount());
+    }
+
+    /**
+     * A ring whose texture image could not be resolved keeps its texture
+     * coordinates but never receives a texture id. Those UVs are dead data
+     * (the router treats texture-id-less triangles as untextured), so the
+     * triangulator must ignore them and let the ring's X3DMaterial colour
+     * through — otherwise the triangle ends up flagged colored on a mesh
+     * without a colour lane and the mesh is marked textured for nothing.
+     */
+    @Test
+    void uvsWithoutTextureIdFallBackToMaterialColor() {
+        LinearRing outer = ring(new double[]{0, 0}, new double[]{1, 0},
+                new double[]{1, 1}, new double[]{0, 1}, new double[]{0, 0});
+        Map<LinearRing, List<TextureCoordinate>> uvs = new IdentityHashMap<>();
+        uvs.put(outer, List.of(TextureCoordinate.of(0, 0), TextureCoordinate.of(1, 0),
+                TextureCoordinate.of(1, 1), TextureCoordinate.of(0, 1), TextureCoordinate.of(0, 0)));
+        Map<LinearRing, float[]> colors = new IdentityHashMap<>();
+        colors.put(outer, new float[]{1f, 0f, 0f, 1f});
+
+        TriangleMesh mesh = new PolygonTriangulator(false).triangulate(Polygon.of(outer), 1L, WALL,
+                new RingAttributes(uvs, new IdentityHashMap<>(), colors));
+
+        assertFalse(mesh.hasTexCoords(), "UVs without a texture id must not be emitted");
+        assertTrue(mesh.hasColors(), "material colour must survive");
+        assertEquals(mesh.getVertexCount(), mesh.getColors().size());
+        assertEquals(1f, mesh.getColors().get(0)[0]);
+        assertEquals(0f, mesh.getColors().get(0)[1]);
+        for (int t = 0; t < mesh.getTriangles().size(); t++) {
+            assertTrue(mesh.isTriangleColored(t));
+            assertEquals(-1, mesh.getTriangleTextureIds().get(t));
+        }
     }
 }
