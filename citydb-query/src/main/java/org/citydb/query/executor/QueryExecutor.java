@@ -5,7 +5,6 @@
 
 package org.citydb.query.executor;
 
-import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.srs.SpatialReference;
@@ -16,8 +15,6 @@ import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
 import org.citydb.sqlbuilder.query.Select;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -31,15 +28,17 @@ public class QueryExecutor {
     private final Select select;
     private final Select count;
     private final Select extent;
-    private final PersistentMapStore store;
+    private final boolean deduplicateIds;
+    private final Path tempDirectory;
     private final DatabaseAdapter adapter;
     private final SqlHelper helper;
 
-    private QueryExecutor(Select select, Select count, Select extent, PersistentMapStore store, DatabaseAdapter adapter) {
+    private QueryExecutor(Select select, Select count, Select extent, boolean deduplicateIds, Path tempDirectory, DatabaseAdapter adapter) {
         this.select = select;
         this.count = count;
         this.extent = extent;
-        this.store = store;
+        this.deduplicateIds = deduplicateIds;
+        this.tempDirectory = tempDirectory;
         this.adapter = adapter;
         helper = adapter.getSchemaAdapter().getSqlHelper();
     }
@@ -83,15 +82,27 @@ public class QueryExecutor {
     }
 
     public QueryResult executeQuery() throws SQLException {
-        return executeQuery(adapter.getPool().getConnection());
+        return executeQuery(adapter.getPool().getConnection(), true);
     }
 
     public QueryResult executeQuery(Connection connection) throws SQLException {
-        return new QueryResult(connection, helper.prepareStatement(select, connection), store);
+        return executeQuery(connection, false);
+    }
+
+    private QueryResult executeQuery(Connection connection, boolean closeConnection) throws SQLException {
+        PreparedStatement stmt = null;
+        try {
+            stmt = helper.prepareStatement(select, connection);
+            return new QueryResult(connection, stmt, deduplicateIds, tempDirectory, closeConnection);
+        } catch (SQLException e) {
+            try (Connection connectionToClose = closeConnection ? connection : null;
+                 PreparedStatement stmtToClose = stmt) {
+                throw e;
+            }
+        }
     }
 
     public static class Builder {
-        private final Logger logger = LoggerFactory.getLogger(Builder.class);
         private final DatabaseAdapter adapter;
         private final SqlQueryBuilder builder;
         private Path tempDirectory;
@@ -110,33 +121,24 @@ public class QueryExecutor {
             return build(query, SqlBuildOptions.defaults());
         }
 
-        public QueryExecutor build(Query query, SqlBuildOptions options) throws QueryBuildException, IOException {
-            boolean paginated = query.getCountLimit()
-                    .map(countLimit -> countLimit.getLimit().isPresent() || countLimit.getStartIndex().isPresent())
-                    .orElse(false);
-
+        public QueryExecutor build(Query query, SqlBuildOptions options) throws QueryBuildException {
             SqlBuildOptions selectOptions = SqlBuildOptions.of(options)
-                    .omitDistinct(options.isOmitDistinct() && !paginated);
+                    .omitDistinct(options.isOmitDistinct() && !isPaginated(query));
 
             Select select = builder.build(query, selectOptions);
             Select count = options.isOmitDistinct()
                     ? builder.build(query, SqlBuildOptions.of(options).omitDistinct(false))
                     : select;
 
-            PersistentMapStore store = null;
-            if (options.isOmitDistinct() && !select.toSql().equals(count.toSql())) {
-                store = PersistentMapStore.builder()
-                        .tempDirectory(tempDirectory)
-                        .build();
-                logger.debug("Initialized distinct id cache at {}.", store.getBackingFile());
-            }
+            boolean deduplicateIds = options.isOmitDistinct() && !select.toSql().equals(count.toSql());
+            Select extentQuery = buildExtentQuery(query, options);
 
-            return new QueryExecutor(select, count, buildExtentQuery(query, options), store, adapter);
+            return new QueryExecutor(select, count, extentQuery, deduplicateIds, tempDirectory, adapter);
         }
 
         private Select buildExtentQuery(Query query, SqlBuildOptions options) throws QueryBuildException {
             Select extent = builder.build(query, SqlBuildOptions.of(options)
-                            .omitDistinct(true)
+                            .omitDistinct(!isPaginated(query))
                             .withColumn("envelope"))
                     .removeSelect()
                     .removeOrderBy()
@@ -146,6 +148,12 @@ public class QueryExecutor {
                     .getSpatialOperationHelper()
                     .extent(extent.getFrom().get(0).column("envelope"))
                     .as("extent"));
+        }
+
+        private boolean isPaginated(Query query) {
+            return query.getCountLimit()
+                    .map(limit -> limit.getLimit().isPresent() || limit.getStartIndex().isPresent())
+                    .orElse(false);
         }
     }
 }
