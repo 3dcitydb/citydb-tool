@@ -12,7 +12,10 @@ import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.common.*;
 import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.*;
-import org.citydb.query.filter.operation.*;
+import org.citydb.query.filter.operation.ArithmeticExpression;
+import org.citydb.query.filter.operation.NumericExpression;
+import org.citydb.query.filter.operation.SqlExpression;
+import org.citydb.sqlbuilder.join.Joins;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.query.Select;
@@ -22,21 +25,22 @@ import java.sql.Timestamp;
 
 public class FilterBuilder {
     private final BuilderHelper helper;
-    private final ComparisonPredicateBuilder comparisonPredicateBuilder;
     private final SpatialPredicateBuilder spatialPredicateBuilder;
     private final LogicalPredicateBuilder logicalPredicateBuilder;
     private final SqlExpressionBuilder sqlExpressionBuilder;
     private final ArithmeticExpressionBuilder arithmeticExpressionBuilder;
     private final FunctionBuilder functionBuilder;
+    private final PredicateQueryBuilder predicateQueryBuilder;
 
     private FilterBuilder(BuilderHelper helper) {
         this.helper = helper;
-        comparisonPredicateBuilder = ComparisonPredicateBuilder.of(this, helper);
         spatialPredicateBuilder = SpatialPredicateBuilder.of(this, helper);
         logicalPredicateBuilder = LogicalPredicateBuilder.of(this);
         sqlExpressionBuilder = SqlExpressionBuilder.newInstance();
         arithmeticExpressionBuilder = ArithmeticExpressionBuilder.of(this, helper);
         functionBuilder = FunctionBuilder.of(this, helper);
+        predicateQueryBuilder = PredicateQueryBuilder.of(ComparisonPredicateBuilder.of(this, helper),
+                spatialPredicateBuilder);
     }
 
     static FilterBuilder of(BuilderHelper helper) {
@@ -44,9 +48,6 @@ public class FilterBuilder {
     }
 
     void build(Filter filter, SpatialReference filterSrs, Select select, SqlContext context) throws QueryBuildException {
-        helper.getContextBuilder()
-                .useLeftJoins(requiresLeftJoins(filter))
-                .restrictTargetTypesInJoins(false);
         spatialPredicateBuilder.setFilterSrs(filterSrs);
         select.where(build(filter.getExpression(), select, context));
     }
@@ -67,12 +68,20 @@ public class FilterBuilder {
         return build(expression, select, context, negate, true);
     }
 
+    BuildResult build(Expression expression, Select select, SqlContext context, String joinType) throws QueryBuildException {
+        return build(expression, select, context, joinType, false, true);
+    }
+
     BuildResult build(Expression expression, Select select, SqlContext context, boolean negate, boolean resolveValue) throws QueryBuildException {
+        return build(expression, select, context, Joins.INNER_JOIN, negate, resolveValue);
+    }
+
+    BuildResult build(Expression expression, Select select, SqlContext context, String joinType, boolean negate, boolean resolveValue) throws QueryBuildException {
         BuildResult result;
         if (expression instanceof ComparisonPredicate comparisonPredicate) {
-            result = comparisonPredicateBuilder.build(comparisonPredicate, select, context, negate);
+            result = predicateQueryBuilder.build(comparisonPredicate, context, negate);
         } else if (expression instanceof SpatialPredicate spatialPredicate) {
-            result = spatialPredicateBuilder.build(spatialPredicate, select, context, negate);
+            result = predicateQueryBuilder.build(spatialPredicate, context, negate);
         } else if (expression instanceof LogicalPredicate logicalPredicate) {
             result = logicalPredicateBuilder.build(logicalPredicate, select, context, negate);
         } else if (expression instanceof SqlExpression sqlExpression) {
@@ -85,9 +94,10 @@ public class FilterBuilder {
             result = build(literal, negate);
         } else if (expression instanceof PropertyRef propertyRef) {
             result = BuildResult.of(propertyRef);
-            result = resolveValue
-                    ? result.update(helper.getContextBuilder().build(propertyRef, select, context, true))
-                    : result;
+            if (resolveValue) {
+                SqlContext scope = context.isIsolated() ? SqlContext.isolatedOf(context) : context;
+                result.update(helper.getContextBuilder().build(propertyRef, select, scope, joinType, true));
+            }
         } else {
             throw new QueryBuildException("Unsupported filter expression.");
         }
@@ -100,7 +110,7 @@ public class FilterBuilder {
     }
 
     private BuildResult build(Literal<?> literal, boolean negate) throws QueryBuildException {
-        if (literal instanceof org.citydb.query.filter.literal.BooleanLiteral booleanLiteral) {
+        if (literal instanceof BooleanLiteral booleanLiteral) {
             return BuildResult.of(Placeholder.of(booleanLiteral.getValue() ^ negate), Type.BOOLEAN);
         } else if (literal instanceof NumericLiteral numericLiteral) {
             return numericLiteral.isInteger()
@@ -123,27 +133,7 @@ public class FilterBuilder {
         }
     }
 
-    private boolean requiresLeftJoins(Filter filter) {
-        boolean[] requiresLeftJoins = new boolean[1];
-        filter.getExpression().accept(new FilterWalker() {
-            @Override
-            public void visit(Expression expression) {
-                if (!requiresLeftJoins[0]) {
-                    if (expression instanceof BinaryBooleanPredicate predicate) {
-                        requiresLeftJoins[0] = predicate.getOperator() == BooleanOperator.OR;
-                    } else if (expression instanceof IsNull) {
-                        requiresLeftJoins[0] = true;
-                    }
-
-                    super.visit(expression);
-                }
-            }
-        });
-
-        return requiresLeftJoins[0];
-    }
-
-    private void applySign(Expression expression, BuildResult result) throws QueryBuildException {
+    private void applySign(Expression expression, BuildResult result) {
         if (expression instanceof NumericExpression numericExpression
                 && !(expression instanceof NumericLiteral)
                 && numericExpression.getSign() == Sign.MINUS

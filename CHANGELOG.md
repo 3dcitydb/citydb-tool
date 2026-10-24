@@ -6,6 +6,8 @@
 - Query sorting now explicitly places `NULL` values last.
 
 ### Fixed
+- Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
+  predicates combined with `AND` or `OR` now follow CQL2 semantics instead of matching unrelated values.
 - Fixed SQL expression and subquery filters being rendered as `IN (null)`.
 - Fixed CQL2 `/` filters with integer operands incorrectly using integer division.
 - Fixed CQL2 `div` filters with mixed numeric operands on PostgreSQL.

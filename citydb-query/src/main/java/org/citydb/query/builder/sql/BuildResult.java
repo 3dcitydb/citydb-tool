@@ -29,21 +29,30 @@ public class BuildResult {
     private Expression expression;
     private Type type;
     private List<BooleanExpression> predicates;
+    private List<Expression> operands;
 
-    private BuildResult(PropertyRef propertyRef, Expression expression, Type type, List<BooleanExpression> predicates) {
+    private BuildResult(PropertyRef propertyRef, Expression expression, Type type) {
         this.propertyRef = propertyRef;
         this.expression = expression;
         this.type = type;
-        this.predicates = predicates;
     }
 
     static BuildResult of(Expression expression, Type type, List<BuildResult> operands) {
-        return new BuildResult(null, expression, type, operands != null
-                ? operands.stream()
-                .map(BuildResult::getAndResetPredicates)
-                .flatMap(Collection::stream)
-                .toList()
-                : null);
+        BuildResult result = new BuildResult(null, expression, type);
+
+        if (operands != null) {
+            result.predicates = new ArrayList<>(operands.size());
+            result.operands = new ArrayList<>(operands.size());
+
+            for (BuildResult operand : operands) {
+                result.predicates.addAll(operand.getAndResetPredicates());
+                if (operand.isSetExpression()) {
+                    result.operands.add(operand.getExpression());
+                }
+            }
+        }
+
+        return result;
     }
 
     static BuildResult of(Expression expression, Type type, BuildResult... operands) {
@@ -51,7 +60,7 @@ public class BuildResult {
     }
 
     static BuildResult of(Expression expression, Type type) {
-        return new BuildResult(null, expression, type, null);
+        return new BuildResult(null, expression, type);
     }
 
     static BuildResult of(BooleanExpression expression, List<BuildResult> operands) {
@@ -67,7 +76,7 @@ public class BuildResult {
     }
 
     static BuildResult of(PropertyRef propertyRef) {
-        return new BuildResult(propertyRef, null, Type.UNDEFINED, null);
+        return new BuildResult(propertyRef, null, Type.UNDEFINED);
     }
 
     boolean isSetPropertyRef() {
@@ -84,6 +93,10 @@ public class BuildResult {
 
     Expression getExpression() {
         return expression;
+    }
+
+    List<Expression> getOperands() {
+        return operands != null ? operands : Collections.emptyList();
     }
 
     Type getType() {
@@ -224,7 +237,7 @@ public class BuildResult {
         }
     }
 
-    private List<BooleanExpression> getAndResetPredicates() {
+    List<BooleanExpression> getAndResetPredicates() {
         List<BooleanExpression> predicates = this.predicates != null
                 ? this.predicates
                 : Collections.emptyList();
