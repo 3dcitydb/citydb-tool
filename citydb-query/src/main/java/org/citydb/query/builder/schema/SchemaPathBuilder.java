@@ -92,7 +92,7 @@ public class SchemaPathBuilder {
                 parent.child(child);
                 parent = propertyRef.getChild().isPresent()
                         ? appendTarget(child, propertyRef.getChild().get())
-                        : child;
+                        : appendFilterTarget(child);
             } while ((propertyRef = propertyRef.getChild().orElse(null)) != null);
         }
 
@@ -240,6 +240,21 @@ public class SchemaPathBuilder {
     }
 
     private Node appendTarget(Node parent, PropertyRef childRef) throws SchemaPathException {
+        SchemaObject target = getTarget(parent);
+        return target != null && getNode(childRef, parent, false) == null
+                ? parent.child(Node.of(target))
+                : parent;
+    }
+
+    private Node appendFilterTarget(Node node) {
+        return node.getPredicate().isPresent()
+                && node.getSchemaObject() instanceof DataType
+                && getTarget(node) instanceof FeatureType target
+                ? node.child(Node.of(target))
+                : node;
+    }
+
+    private SchemaObject getTarget(Node parent) {
         SchemaObject target = null;
         if (parent.getSchemaObject() instanceof Property property) {
             if (property.getTargetFeature().isPresent()) {
@@ -266,9 +281,7 @@ public class SchemaPathBuilder {
             }
         }
 
-        return target != null && getNode(childRef, parent, false) == null
-                ? parent.child(Node.of(target))
-                : parent;
+        return target;
     }
 
     private boolean isValidTarget(FeatureType featureType, Node node) {

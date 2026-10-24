@@ -36,6 +36,7 @@ public class SqlContextBuilder {
     private final FilterBuilder filterBuilder;
     private final BuilderHelper helper;
     private String joinType = Joins.LEFT_JOIN;
+    private boolean restrictTargetTypesInJoins;
 
     private SqlContextBuilder(FilterBuilder filterBuilder, BuilderHelper helper) {
         this.filterBuilder = filterBuilder;
@@ -48,6 +49,11 @@ public class SqlContextBuilder {
 
     SqlContextBuilder useLeftJoins(boolean useLeftJoins) {
         joinType = useLeftJoins ? Joins.LEFT_JOIN : Joins.INNER_JOIN;
+        return this;
+    }
+
+    SqlContextBuilder restrictTargetTypesInJoins(boolean restrictTargetTypesInJoins) {
+        this.restrictTargetTypesInJoins = restrictTargetTypesInJoins;
         return this;
     }
 
@@ -210,6 +216,9 @@ public class SqlContextBuilder {
                     BooleanExpression expression = helper.getFeatureTypesBuilder().build(target, toTable);
                     if (useLateral) {
                         getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
+                    } else if (restrictTargetTypesInJoins) {
+                        // a where condition would turn the left join into an inner join
+                        join.condition(expression);
                     } else {
                         predicates.add(expression);
                     }

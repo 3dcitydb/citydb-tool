@@ -44,7 +44,8 @@ public class SpatialOperationHelper implements org.citydb.database.util.SpatialO
 
     @Override
     public BooleanExpression bbox3d(ScalarExpression leftOperand, ScalarExpression rightOperand) {
-        return BinaryComparisonOperation.of(cast(leftOperand), "&&&", cast(rightOperand));
+        return Operators.and(bbox(leftOperand, rightOperand),
+                BinaryComparisonOperation.of(cast(leftOperand), "&&&", cast(rightOperand)));
     }
 
     @Override

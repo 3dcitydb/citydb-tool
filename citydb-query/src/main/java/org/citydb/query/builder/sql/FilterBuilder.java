@@ -44,7 +44,9 @@ public class FilterBuilder {
     }
 
     void build(Filter filter, SpatialReference filterSrs, Select select, SqlContext context) throws QueryBuildException {
-        helper.getContextBuilder().useLeftJoins(requiresLeftJoins(filter));
+        helper.getContextBuilder()
+                .useLeftJoins(requiresLeftJoins(filter))
+                .restrictTargetTypesInJoins(false);
         spatialPredicateBuilder.setFilterSrs(filterSrs);
         select.where(build(filter.getExpression(), select, context));
     }
