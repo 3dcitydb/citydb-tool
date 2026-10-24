@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Changed
-- Changed query sorting to explicitly place `NULL` values last.
+- Query sorting now explicitly places `NULL` values last.
 
 ### Fixed
 - Fixed SQL expression and subquery filters being rendered as `IN (null)`.
