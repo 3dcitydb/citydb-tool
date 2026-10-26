@@ -24,19 +24,19 @@ public class QueryResult implements AutoCloseable {
     private final PreparedStatement stmt;
     private final boolean deduplicateIds;
     private final Path tempDirectory;
-    private final boolean closeConnection;
+    private final boolean ownsConnection;
     private final ResultSet rs;
     private IdCache idCache;
 
     private record IdCache(Set<Long> distinctIds, PersistentMapStore store) {
     }
 
-    QueryResult(Connection connection, PreparedStatement stmt, boolean deduplicateIds, Path tempDirectory, boolean closeConnection) throws SQLException {
+    QueryResult(Connection connection, PreparedStatement stmt, boolean deduplicateIds, Path tempDirectory, boolean ownsConnection) throws SQLException {
         this.connection = connection;
         this.stmt = stmt;
         this.deduplicateIds = deduplicateIds;
         this.tempDirectory = tempDirectory;
-        this.closeConnection = closeConnection;
+        this.ownsConnection = ownsConnection;
         rs = stmt.executeQuery();
     }
 
@@ -89,7 +89,7 @@ public class QueryResult implements AutoCloseable {
 
     @Override
     public void close() throws SQLException {
-        try (Connection connection = closeConnection ? this.connection : null;
+        try (Connection connection = ownsConnection ? this.connection : null;
              PreparedStatement stmt = this.stmt;
              ResultSet rs = this.rs) {
         } finally {

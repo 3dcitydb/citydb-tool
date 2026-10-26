@@ -25,6 +25,17 @@ public class TempTable implements AutoCloseable {
     private final Map<String, Map<String, Integer>> properties;
     private final TempTableHelper helper;
 
+    public enum DataType {
+        INTEGER,
+        LONG,
+        DOUBLE,
+        NUMERIC,
+        STRING,
+        TIMESTAMP,
+        TIMESTAMP_WITH_TIMEZONE,
+        GEOMETRY
+    }
+
     private TempTable(Connection connection, String name, Map<String, DataType> columns,
                       Map<String, Map<String, Integer>> properties, DatabaseAdapter adapter) {
         this.connection = connection;
@@ -105,31 +116,21 @@ public class TempTable implements AutoCloseable {
 
     @Override
     public void close() throws SQLException {
-        try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate("drop table " + prefixedName);
-            connection.commit();
-        } finally {
-            connection.close();
-        }
-    }
+        try (Connection connectionToClose = connection) {
+            try (Statement stmt = connection.createStatement()) {
+                stmt.executeUpdate("drop table " + prefixedName);
+            }
 
-    public enum DataType {
-        INTEGER,
-        LONG,
-        DOUBLE,
-        NUMERIC,
-        STRING,
-        TIMESTAMP,
-        TIMESTAMP_WITH_TIMEZONE,
-        GEOMETRY
+            connection.commit();
+        }
     }
 
     public static class Builder {
         private final DatabaseAdapter adapter;
         private final String name;
         private final Map<String, DataType> columns = new LinkedHashMap<>();
-        private Map<String, Boolean> indexes = new HashMap<>();
-        private Map<String, Map<String, Integer>> properties = new HashMap<>();
+        private final Map<List<String>, Boolean> indexes = new LinkedHashMap<>();
+        private final Map<String, Map<String, Integer>> properties = new HashMap<>();
 
         Builder(DatabaseAdapter adapter) {
             this.adapter = adapter;
@@ -189,11 +190,25 @@ public class TempTable implements AutoCloseable {
         }
 
         public Builder index(String column) {
-            return index(name, false);
+            return index(column, false);
         }
 
         public Builder index(String column, boolean ignoreNulls) {
-            indexes.put(column.toLowerCase(Locale.ROOT), ignoreNulls);
+            return index(List.of(column), ignoreNulls);
+        }
+
+        public Builder index(List<String> columns) {
+            return index(columns, false);
+        }
+
+        public Builder index(List<String> columns, boolean ignoreNulls) {
+            if (columns == null || columns.isEmpty()) {
+                throw new IllegalArgumentException("Index columns must not be null or empty.");
+            }
+
+            indexes.put(columns.stream()
+                    .map(column -> column.toLowerCase(Locale.ROOT))
+                    .toList(), ignoreNulls);
             return this;
         }
 
@@ -207,31 +222,49 @@ public class TempTable implements AutoCloseable {
         }
 
         public TempTable create() throws DatabaseException, SQLException {
-            return create(adapter.getPool().getConnection());
-        }
-
-        public TempTable create(Connection connection) throws DatabaseException, SQLException {
             if (columns.isEmpty()) {
                 throw new DatabaseException("No columns have been defined for the temporary table.");
             }
 
-            TempTable tempTable = new TempTable(connection, name, columns, properties, adapter);
-            try (Statement stmt = connection.createStatement()) {
-                stmt.executeUpdate(adapter.getSchemaAdapter().getTempTableHelper().getCreateTempTable(name,
-                        columns.entrySet().stream().collect(Collectors.toMap(
-                                Map.Entry::getKey,
-                                e -> tempTable.getDatabaseType(e.getKey()),
-                                (a, b) -> a,
-                                LinkedHashMap::new))));
+            for (List<String> indexColumns : indexes.keySet()) {
+                if (indexColumns.size() > 1 && indexColumns.stream()
+                        .anyMatch(column -> columns.get(column) == DataType.GEOMETRY)) {
+                    throw new DatabaseException("A multi-column index must not include a geometry column.");
+                }
             }
 
-            for (Map.Entry<String, Boolean> entry : indexes.entrySet()) {
-                adapter.getSchemaAdapter().getIndexHelper().create(
-                        Index.of("idx_" + createUniqueName(), name, entry.getKey(),
-                                columns.get(entry.getKey()) == DataType.GEOMETRY
-                                        ? Index.Type.SPATIAL
-                                        : Index.Type.NORMAL),
-                        entry.getValue(), connection);
+            Connection connection = adapter.getPool().getConnection(false);
+            TempTable tempTable = new TempTable(connection, name, columns, properties, adapter);
+            try {
+                try (Statement stmt = connection.createStatement()) {
+                    stmt.executeUpdate(adapter.getSchemaAdapter().getTempTableHelper().getCreateTempTable(name,
+                            columns.entrySet().stream().collect(Collectors.toMap(
+                                    Map.Entry::getKey,
+                                    e -> tempTable.getDatabaseType(e.getKey()),
+                                    (a, b) -> a,
+                                    LinkedHashMap::new))));
+                }
+
+                for (Map.Entry<List<String>, Boolean> entry : indexes.entrySet()) {
+                    List<String> indexColumns = entry.getKey();
+                    Index.Type indexType = indexColumns.size() == 1
+                            && columns.get(indexColumns.get(0)) == DataType.GEOMETRY
+                            ? Index.Type.SPATIAL
+                            : Index.Type.NORMAL;
+
+                    adapter.getSchemaAdapter().getIndexHelper().create(
+                            Index.of("idx_" + createUniqueName(), name, indexColumns, indexType),
+                            entry.getValue(), connection);
+                }
+            } catch (Exception e) {
+                try (Connection connectionToClose = connection;
+                     Statement stmt = connection.createStatement()) {
+                    stmt.executeUpdate("drop table if exists " + tempTable.prefixedName);
+                } catch (SQLException error) {
+                    e.addSuppressed(error);
+                }
+
+                throw e;
             }
 
             return tempTable;
