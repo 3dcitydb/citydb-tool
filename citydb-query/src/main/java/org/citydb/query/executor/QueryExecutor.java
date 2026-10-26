@@ -15,8 +15,8 @@ import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
 import org.citydb.sqlbuilder.query.Select;
+import org.citydb.sqlbuilder.schema.Table;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -117,7 +117,7 @@ public class QueryExecutor {
             return this;
         }
 
-        public QueryExecutor build(Query query) throws QueryBuildException, IOException {
+        public QueryExecutor build(Query query) throws QueryBuildException {
             return build(query, SqlBuildOptions.defaults());
         }
 
@@ -126,28 +126,35 @@ public class QueryExecutor {
                     .omitDistinct(options.isOmitDistinct() && !isPaginated(query));
 
             Select select = builder.build(query, selectOptions);
-            Select count = options.isOmitDistinct()
-                    ? builder.build(query, SqlBuildOptions.of(options).omitDistinct(false))
-                    : select;
+            Select count = builder.build(Query.of(query)
+                            .setSorting(null)
+                            .setCountLimit(null),
+                    SqlBuildOptions.defaults());
+            Select extent = buildExtentQuery(query, options);
 
-            boolean deduplicateIds = options.isOmitDistinct() && !select.toSql().equals(count.toSql());
-            Select extentQuery = buildExtentQuery(query, options);
+            boolean deduplicateIds = selectOptions.isOmitDistinct()
+                    && !select.toSql().equals(builder.build(Query.of(query),
+                    SqlBuildOptions.of(selectOptions).omitDistinct(false)).toSql());
 
-            return new QueryExecutor(select, count, extentQuery, deduplicateIds, tempDirectory, adapter);
+            return new QueryExecutor(select, count, extent, deduplicateIds, tempDirectory, adapter);
         }
 
         private Select buildExtentQuery(Query query, SqlBuildOptions options) throws QueryBuildException {
-            Select extent = builder.build(query, SqlBuildOptions.of(options)
-                            .omitDistinct(!isPaginated(query))
-                            .withColumn("envelope"))
-                    .removeSelect()
-                    .removeOrderBy()
-                    .removeGroupBy();
+            boolean paginated = isPaginated(query);
+            Query extentQuery = !paginated
+                    ? Query.of(query).setSorting(null)
+                    : query;
 
-            return extent.select(adapter.getGeometryAdapter()
-                    .getSpatialOperationHelper()
-                    .extent(extent.getFrom().get(0).column("envelope"))
-                    .as("extent"));
+            Table features = Table.of(builder.build(extentQuery, SqlBuildOptions.of(options)
+                    .omitDistinct(!paginated)
+                    .withColumn("envelope")));
+
+            return Select.newInstance()
+                    .select(adapter.getGeometryAdapter()
+                            .getSpatialOperationHelper()
+                            .extent(features.column("envelope"))
+                            .as("extent"))
+                    .from(features);
         }
 
         private boolean isPaginated(Query query) {

@@ -79,8 +79,12 @@ public class TilingHelper {
         if (tiling.getExtent().isEmpty()) {
             logger.info("Computing tiling extent...");
             try {
+                Query extentQuery = Query.of(query)
+                        .setSorting(null)
+                        .setCountLimit(null);
+
                 queryExtent = QueryExecutor.builder(adapter)
-                        .build(query, SqlBuildOptions.defaults().omitDistinct(true))
+                        .build(extentQuery, SqlBuildOptions.defaults().omitDistinct(true))
                         .computeExtent();
                 tiling.setExtent(queryExtent);
             } catch (Exception e) {
