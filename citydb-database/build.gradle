@@ -2,7 +2,7 @@ import org.apache.tools.ant.filters.ReplaceTokens
 
 def citydbName = rootProject.ext.citydbName
 def citydbShortName = rootProject.ext.citydbShortName
-def geotoolsVersion = '35.1'
+def geotoolsVersion = '35.2'
 
 dependencies {
     api project(':citydb-core')
