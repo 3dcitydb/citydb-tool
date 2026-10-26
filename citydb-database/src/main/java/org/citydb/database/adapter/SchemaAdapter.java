@@ -54,6 +54,8 @@ public abstract class SchemaAdapter {
 
     public abstract SequenceHelper getSequenceHelper(Connection connection) throws SQLException;
 
+    public abstract FeatureDeleteHelper getFeatureDeleteHelper(Connection connection) throws SQLException;
+
     public abstract StatisticsHelper getStatisticsHelper();
 
     public abstract TempTableHelper getTempTableHelper();
@@ -63,10 +65,6 @@ public abstract class SchemaAdapter {
     protected abstract Version getCityDBVersion(Connection connection) throws SQLException;
 
     protected abstract boolean schemaExists(String schemaName, Version version, Connection connection) throws SQLException;
-
-    public FeatureDeleteHelper getFeatureDeleteHelper(Connection connection) throws SQLException {
-        return FeatureDeleteHelper.of(connection, adapter);
-    }
 
     void buildSchemaMapping() throws SchemaException {
         schemaMapping = SchemaMappingBuilder.newInstance().build(adapter);
