@@ -102,6 +102,9 @@ public abstract class ExportController implements Command {
     protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
     }
 
+    protected void beforeTileExport(TileExportContext context, ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
+    }
+
     protected void afterExport(boolean success, FeatureStatistics statistics) throws ExecutionException {
     }
 
@@ -153,6 +156,9 @@ public abstract class ExportController implements Command {
                                 .omitDistinct(true)
                                 .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
                         helper.resolveAgainstWorkingDir(tempDirectory));
+
+                beforeTileExport(new TileExportContext(tile, executor, connection.getConnection()),
+                        exportOptions, writeOptions, databaseAdapter);
 
                 Path file = helper.resolveAgainstWorkingDir(
                         tilingHelper.getOutputFile(outputFileOptions.getFile(), tile));
