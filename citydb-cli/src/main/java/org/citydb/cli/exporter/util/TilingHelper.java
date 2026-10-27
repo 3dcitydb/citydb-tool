@@ -5,7 +5,6 @@
 
 package org.citydb.cli.exporter.util;
 
-import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.util.TokenReplacer;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -46,25 +45,24 @@ public class TilingHelper implements AutoCloseable {
     private final Logger logger = LoggerFactory.getLogger(TilingHelper.class);
     private final Tiling tiling;
     private final Query query;
-    private final CommandHelper helper;
+    private final Connection connection;
     private final DatabaseAdapter adapter;
     private final boolean useTiling;
     private TileMatrix tileMatrix;
     private Envelope queryExtent;
-    private Connection connection;
     private TempTable pageTable;
     private boolean closed;
 
-    private TilingHelper(Tiling tiling, Query query, CommandHelper helper, DatabaseAdapter adapter) {
+    private TilingHelper(Tiling tiling, Query query, Connection connection, DatabaseAdapter adapter) {
         this.tiling = tiling;
         this.query = query;
-        this.helper = helper;
+        this.connection = connection;
         this.adapter = adapter;
         useTiling = tiling != NO_TILING;
     }
 
-    public static TilingHelper of(Tiling tiling, Query query, CommandHelper helper, DatabaseAdapter adapter) throws ExecutionException {
-        TilingHelper tilingHelper = new TilingHelper(tiling, query, helper, adapter);
+    public static TilingHelper of(Tiling tiling, Query query, Connection connection, DatabaseAdapter adapter) throws ExecutionException {
+        TilingHelper tilingHelper = new TilingHelper(tiling, query, connection, adapter);
         try {
             return tilingHelper.createPageTable().buildTileMatrix();
         } catch (Throwable e) {
@@ -93,13 +91,13 @@ public class TilingHelper implements AutoCloseable {
         if (useTiling && isPaginated()) {
             logger.info("Querying features of the requested page...");
             try {
-                connection = adapter.getPool().getConnection(false);
                 pageTable = TempTable.builder(adapter)
                         .longColumn("id")
                         .index("id")
                         .create(connection);
 
-                long features = helper.getQueryExecutor(query, SqlBuildOptions.defaults(), adapter)
+                long features = QueryExecutor.builder(adapter)
+                        .build(query, SqlBuildOptions.defaults())
                         .insertIdsInto(pageTable, "id");
                 logger.debug("Stored {} feature(s) of the requested page in temporary table {}.", features,
                         pageTable.getQualifiedName());
@@ -185,23 +183,23 @@ public class TilingHelper implements AutoCloseable {
             String input = outputFile.toString();
             String resolved = TokenReplacer.replaceTileTokens(input, tile);
 
-            if (resolved.equals(input)
-                    && (tileMatrix == null || tileMatrix.size() > 1)) {
-                resolved = getDefaultOutputFile(input, tile);
+            if (!resolved.equals(input)) {
+                return Path.of(resolved);
+            } else if (tileMatrix == null || tileMatrix.size() > 1) {
+                return getDefaultOutputFile(outputFile, tile);
             }
-
-            outputFile = Path.of(resolved);
         }
 
-        return helper.resolveAgainstWorkingDir(outputFile);
+        return outputFile;
     }
 
-    private String getDefaultOutputFile(String file, Tile tile) {
+    private Path getDefaultOutputFile(Path file, Tile tile) {
         String suffix = "_" + tile.getColumn() + "_" + tile.getRow();
-        int index = file.lastIndexOf('.');
-        return index > 0
-                ? file.substring(0, index) + suffix + "." + file.substring(index + 1)
-                : file + suffix;
+        String fileName = file.getFileName().toString();
+        int index = fileName.lastIndexOf('.');
+        return file.resolveSibling(index > 0
+                ? fileName.substring(0, index) + suffix + fileName.substring(index)
+                : fileName + suffix);
     }
 
     @Override
@@ -213,14 +211,6 @@ public class TilingHelper implements AutoCloseable {
                     pageTable.close();
                 } catch (SQLException e) {
                     logger.warn("Failed to drop the temporary table {}.", pageTable.getQualifiedName(), e);
-                }
-            }
-
-            if (connection != null) {
-                try (Connection connection = this.connection) {
-                    connection.rollback();
-                } catch (SQLException e) {
-                    logger.warn("Failed to release the database connection of the page table.", e);
                 }
             }
         }

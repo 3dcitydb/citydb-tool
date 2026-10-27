@@ -16,6 +16,7 @@ import org.citydb.cli.exporter.util.MetadataHelper;
 import org.citydb.cli.exporter.util.SequentialWriter;
 import org.citydb.cli.exporter.util.TilingHelper;
 import org.citydb.cli.util.FeatureStatistics;
+import org.citydb.cli.util.RollbackConnection;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
@@ -137,7 +138,8 @@ public abstract class ExportController implements Command {
         FeatureStatistics statistics = new FeatureStatistics(databaseAdapter);
         AtomicLong counter = new AtomicLong();
 
-        try (TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseAdapter)) {
+        try (RollbackConnection connection = RollbackConnection.of(databaseAdapter);
+             TilingHelper tilingHelper = TilingHelper.of(tiling, query, connection.getConnection(), databaseAdapter)) {
             if (tilingHelper.isUseTiling()) {
                 logger.info("Processing {} tile(s) based on provided tiling scheme.",
                         tilingHelper.getTileMatrix().size());
@@ -152,7 +154,8 @@ public abstract class ExportController implements Command {
                                 .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
                         helper.resolveAgainstWorkingDir(tempDirectory));
 
-                Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
+                Path file = helper.resolveAgainstWorkingDir(
+                        tilingHelper.getOutputFile(outputFileOptions.getFile(), tile));
                 FeatureStatistics tileStatistics = new FeatureStatistics(databaseAdapter);
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
