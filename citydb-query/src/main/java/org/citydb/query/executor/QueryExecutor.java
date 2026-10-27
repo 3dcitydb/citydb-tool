@@ -9,11 +9,13 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.srs.SpatialReference;
 import org.citydb.database.util.SqlHelper;
+import org.citydb.database.util.TempTable;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
+import org.citydb.sqlbuilder.insert.Insert;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 
@@ -30,15 +32,18 @@ public class QueryExecutor {
     private final Select extent;
     private final boolean deduplicateIds;
     private final Path tempDirectory;
+    private final Connection connection;
     private final DatabaseAdapter adapter;
     private final SqlHelper helper;
 
-    private QueryExecutor(Select select, Select count, Select extent, boolean deduplicateIds, Path tempDirectory, DatabaseAdapter adapter) {
+    private QueryExecutor(Select select, Select count, Select extent, boolean deduplicateIds, Path tempDirectory,
+                          Connection connection, DatabaseAdapter adapter) {
         this.select = select;
         this.count = count;
         this.extent = extent;
         this.deduplicateIds = deduplicateIds;
         this.tempDirectory = tempDirectory;
+        this.connection = connection;
         this.adapter = adapter;
         helper = adapter.getSchemaAdapter().getSqlHelper();
     }
@@ -52,7 +57,9 @@ public class QueryExecutor {
     }
 
     public long countHits() throws SQLException {
-        return helper.count(count);
+        return connection != null
+                ? helper.count(count, connection)
+                : helper.count(count);
     }
 
     public long countHits(Connection connection) throws SQLException {
@@ -60,8 +67,12 @@ public class QueryExecutor {
     }
 
     public Envelope computeExtent() throws GeometryException, SQLException {
-        try (Connection connection = adapter.getPool().getConnection()) {
+        if (connection != null) {
             return computeExtent(connection);
+        } else {
+            try (Connection connection = adapter.getPool().getConnection()) {
+                return computeExtent(connection);
+            }
         }
     }
 
@@ -81,8 +92,39 @@ public class QueryExecutor {
         return null;
     }
 
+    public long insertIdsInto(TempTable tempTable, String column) throws SQLException {
+        TempTable.DataType type = tempTable.getDataType(column);
+        if (type == null) {
+            throw new SQLException("The column '" + column + "' is not defined for the temporary table " +
+                    tempTable.getQualifiedName() + ".");
+        } else if (type != TempTable.DataType.LONG) {
+            throw new SQLException("The column '" + column + "' of the temporary table " +
+                    tempTable.getQualifiedName() + " must be of type " + TempTable.DataType.LONG + " to store " +
+                    "feature ids, but is of type " + type + ".");
+        }
+
+        Select features = Select.of(select);
+        if (features.getOffset().isEmpty() && features.getFetch().isEmpty()) {
+            features.removeOrderBy();
+        }
+
+        Table table = Table.of(features);
+        Insert insert = Insert.into(tempTable.getTable())
+                .columns(column)
+                .query(Select.newInstance()
+                        .distinct(deduplicateIds)
+                        .select(table.column("id"))
+                        .from(table));
+
+        try (PreparedStatement stmt = helper.prepareStatement(insert, tempTable.getConnection())) {
+            return stmt.executeUpdate();
+        }
+    }
+
     public QueryResult executeQuery() throws SQLException {
-        return executeQuery(adapter.getPool().getConnection(), true);
+        return connection != null
+                ? executeQuery(connection, false)
+                : executeQuery(adapter.getPool().getConnection(), true);
     }
 
     public QueryResult executeQuery(Connection connection) throws SQLException {
@@ -106,6 +148,7 @@ public class QueryExecutor {
         private final DatabaseAdapter adapter;
         private final SqlQueryBuilder builder;
         private Path tempDirectory;
+        private Connection connection;
 
         private Builder(DatabaseAdapter adapter) {
             this.adapter = Objects.requireNonNull(adapter, "The database adapter must not be null.");
@@ -117,6 +160,11 @@ public class QueryExecutor {
             return this;
         }
 
+        public Builder connection(Connection connection) {
+            this.connection = connection;
+            return this;
+        }
+
         public QueryExecutor build(Query query) throws QueryBuildException {
             return build(query, SqlBuildOptions.defaults());
         }
@@ -125,18 +173,21 @@ public class QueryExecutor {
             SqlBuildOptions selectOptions = SqlBuildOptions.of(options)
                     .omitDistinct(options.isOmitDistinct() && !isPaginated(query));
 
+            SqlBuildOptions countOptions = SqlBuildOptions.defaults();
+            options.getTempTableFilters().forEach(countOptions::withTempTableFilter);
+
             Select select = builder.build(query, selectOptions);
             Select count = builder.build(Query.of(query)
                             .setSorting(null)
                             .setCountLimit(null),
-                    SqlBuildOptions.defaults());
+                    countOptions);
             Select extent = buildExtentQuery(query, options);
 
             boolean deduplicateIds = selectOptions.isOmitDistinct()
                     && !select.toSql().equals(builder.build(Query.of(query),
                     SqlBuildOptions.of(selectOptions).omitDistinct(false)).toSql());
 
-            return new QueryExecutor(select, count, extent, deduplicateIds, tempDirectory, adapter);
+            return new QueryExecutor(select, count, extent, deduplicateIds, tempDirectory, connection, adapter);
         }
 
         private Select buildExtentQuery(Query query, SqlBuildOptions options) throws QueryBuildException {

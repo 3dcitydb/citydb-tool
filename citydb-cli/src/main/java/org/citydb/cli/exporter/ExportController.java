@@ -137,8 +137,7 @@ public abstract class ExportController implements Command {
         FeatureStatistics statistics = new FeatureStatistics(databaseAdapter);
         AtomicLong counter = new AtomicLong();
 
-        try {
-            TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseAdapter);
+        try (TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseAdapter)) {
             if (tilingHelper.isUseTiling()) {
                 logger.info("Processing {} tile(s) based on provided tiling scheme.",
                         tilingHelper.getTileMatrix().size());
@@ -147,12 +146,11 @@ public abstract class ExportController implements Command {
             TileIterator iterator = tilingHelper.getTileMatrix().getTileIterator();
             while (iterator.hasNext()) {
                 Tile tile = iterator.next();
-                QueryExecutor executor = helper.getQueryExecutor(tilingHelper.getTileQuery(tile),
+                QueryExecutor executor = tilingHelper.getQueryExecutor(tile,
                         SqlBuildOptions.defaults()
                                 .omitDistinct(true)
                                 .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
-                        helper.resolveAgainstWorkingDir(tempDirectory),
-                        databaseAdapter);
+                        helper.resolveAgainstWorkingDir(tempDirectory));
 
                 Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
                 FeatureStatistics tileStatistics = new FeatureStatistics(databaseAdapter);

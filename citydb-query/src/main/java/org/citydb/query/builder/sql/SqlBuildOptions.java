@@ -5,14 +5,12 @@
 
 package org.citydb.query.builder.sql;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 public class SqlBuildOptions {
     private boolean omitDistinct;
     private Set<String> columns = new LinkedHashSet<>();
+    private List<TempTableFilter> tempTableFilters = new ArrayList<>();
 
     private SqlBuildOptions() {
     }
@@ -20,6 +18,7 @@ public class SqlBuildOptions {
     private SqlBuildOptions(SqlBuildOptions options) {
         omitDistinct = options.omitDistinct;
         columns = new LinkedHashSet<>(options.columns);
+        tempTableFilters = new ArrayList<>(options.tempTableFilters);
     }
 
     public static SqlBuildOptions defaults() {
@@ -54,6 +53,26 @@ public class SqlBuildOptions {
     public SqlBuildOptions withColumns(String... columns) {
         if (columns != null) {
             Arrays.stream(columns).forEach(this::withColumn);
+        }
+
+        return this;
+    }
+
+    public List<TempTableFilter> getTempTableFilters() {
+        return tempTableFilters;
+    }
+
+    public SqlBuildOptions withTempTableFilter(TempTableFilter tempTableFilter) {
+        if (tempTableFilter != null) {
+            tempTableFilters.add(tempTableFilter);
+        }
+
+        return this;
+    }
+
+    public SqlBuildOptions withTempTableFilters(TempTableFilter... tempTableFilters) {
+        if (tempTableFilters != null) {
+            Arrays.stream(tempTableFilters).forEach(this::withTempTableFilter);
         }
 
         return this;

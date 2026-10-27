@@ -67,6 +67,11 @@ public class SqlQueryBuilder {
             }
         }
 
+        List<TempTableFilter> tempTableFilters = options.getTempTableFilters();
+        if (!tempTableFilters.isEmpty()) {
+            TempTableFilterBuilder.newInstance().build(tempTableFilters, select, context);
+        }
+
         LodFilter lodFilter = query.getLodFilter().orElse(null);
         if (lodFilter != null) {
             LodFilterBuilder.of(helper).build(lodFilter, select, context);

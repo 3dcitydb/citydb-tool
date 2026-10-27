@@ -8,6 +8,7 @@ package org.citydb.database.util;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
+import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -57,16 +58,24 @@ public class TempTable implements AutoCloseable {
         return name;
     }
 
-    public String getSchema() {
-        return schema;
-    }
-
     public String getQualifiedName() {
         return qualifiedName;
     }
 
+    public Table getTable() {
+        return Table.of(name, schema);
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
     public List<String> getColumns() {
         return List.copyOf(columns.keySet());
+    }
+
+    public boolean hasColumn(String column) {
+        return columns.containsKey(column.toLowerCase(Locale.ROOT));
     }
 
     public DataType getDataType(String column) {

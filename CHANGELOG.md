@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added
+- Added API support for restricting database queries to features stored in a temporary table.
+
+### Fixed
+- Fixed `--limit` and `--start-index` being applied to each tile separately in tiled exports. Pagination now applies
+  to the whole export, and the tiles only split the selected features across files.
+
 ## [1.4.1] - 2026-10-26
 
 ### Changed
