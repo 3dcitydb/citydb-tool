@@ -8,6 +8,7 @@ package org.citydb.database.util;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Set;
 
 public abstract class DeleteHelper implements AutoCloseable {
     protected final Connection connection;
@@ -16,13 +17,13 @@ public abstract class DeleteHelper implements AutoCloseable {
         this.connection = connection;
     }
 
-    public abstract void deleteFeature(long id) throws SQLException;
+    public abstract boolean deleteFeature(long id) throws SQLException;
 
-    public abstract void deleteFeatures(Collection<Long> ids) throws SQLException;
+    public abstract Set<Long> deleteFeatures(Collection<Long> ids) throws SQLException;
 
-    public abstract void terminateFeature(long id, String metadata, boolean cascade) throws SQLException;
+    public abstract boolean terminateFeature(long id, String metadata, boolean cascade) throws SQLException;
 
-    public abstract void terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException;
+    public abstract Set<Long> terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException;
 
     @Override
     public abstract void close() throws SQLException;

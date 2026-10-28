@@ -10,8 +10,11 @@ import org.citydb.database.util.SqlHelper;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
     private final SqlHelper helper;
@@ -27,38 +30,32 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
         schema = adapter.getConnectionDetails().getSchema();
     }
 
-    private PreparedStatement prepareDeleteStatement() throws SQLException {
-        return connection.prepareCall("{call citydb_pkg.delete_feature(?, ?)}");
-    }
-
-    private PreparedStatement prepareTerminateStatement() throws SQLException {
-        return connection.prepareCall("{call citydb_pkg.terminate_feature(?, ?, ?, ?)}");
-    }
-
     @Override
-    public void deleteFeature(long id) throws SQLException {
+    public boolean deleteFeature(long id) throws SQLException {
         if (deleteFeatureStmt == null) {
             deleteFeatureStmt = prepareDeleteStatement();
         }
 
         deleteFeatureStmt.setLong(1, id);
         deleteFeatureStmt.setString(2, schema);
-        deleteFeatureStmt.execute();
+
+        return !getIds(deleteFeatureStmt).isEmpty();
     }
 
     @Override
-    public void deleteFeatures(Collection<Long> ids) throws SQLException {
+    public Set<Long> deleteFeatures(Collection<Long> ids) throws SQLException {
         if (deleteFeaturesStmt == null) {
             deleteFeaturesStmt = prepareDeleteStatement();
         }
 
         helper.setLongArrayOrNull(deleteFeaturesStmt, 1, ids);
         deleteFeaturesStmt.setString(2, schema);
-        deleteFeaturesStmt.execute();
+
+        return getIds(deleteFeaturesStmt);
     }
 
     @Override
-    public void terminateFeature(long id, String metadata, boolean cascade) throws SQLException {
+    public boolean terminateFeature(long id, String metadata, boolean cascade) throws SQLException {
         if (terminateFeatureStmt == null) {
             terminateFeatureStmt = prepareTerminateStatement();
         }
@@ -67,11 +64,12 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
         terminateFeatureStmt.setString(2, schema);
         helper.setJsonOrNull(terminateFeatureStmt, 3, metadata);
         terminateFeatureStmt.setBoolean(4, cascade);
-        terminateFeatureStmt.execute();
+
+        return !getIds(terminateFeatureStmt).isEmpty();
     }
 
     @Override
-    public void terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException {
+    public Set<Long> terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException {
         if (terminateFeaturesStmt == null) {
             terminateFeaturesStmt = prepareTerminateStatement();
         }
@@ -80,34 +78,38 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
         terminateFeaturesStmt.setString(2, schema);
         helper.setJsonOrNull(terminateFeaturesStmt, 3, metadata);
         terminateFeaturesStmt.setBoolean(4, cascade);
-        terminateFeaturesStmt.execute();
+
+        return getIds(terminateFeaturesStmt);
     }
 
-    @Override
-    public void close() throws SQLException {
-        SQLException exception = null;
-        for (PreparedStatement stmt : new PreparedStatement[]{
-                deleteFeatureStmt, deleteFeaturesStmt, terminateFeatureStmt, terminateFeaturesStmt}) {
-            if (stmt != null) {
-                try {
-                    stmt.close();
-                } catch (SQLException e) {
-                    if (exception == null) {
-                        exception = e;
-                    } else {
-                        exception.addSuppressed(e);
-                    }
+    private PreparedStatement prepareDeleteStatement() throws SQLException {
+        return connection.prepareStatement("select * from citydb_pkg.delete_feature(?, ?)");
+    }
+
+    private PreparedStatement prepareTerminateStatement() throws SQLException {
+        return connection.prepareStatement("select * from citydb_pkg.terminate_feature(?, ?, ?, ?)");
+    }
+
+    private Set<Long> getIds(PreparedStatement stmt) throws SQLException {
+        Set<Long> ids = new HashSet<>();
+        try (ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                long id = rs.getLong(1);
+                if (!rs.wasNull()) {
+                    ids.add(id);
                 }
             }
         }
 
-        deleteFeatureStmt = null;
-        deleteFeaturesStmt = null;
-        terminateFeatureStmt = null;
-        terminateFeaturesStmt = null;
+        return ids;
+    }
 
-        if (exception != null) {
-            throw exception;
+    @Override
+    public void close() throws SQLException {
+        try (PreparedStatement deleteFeatureStmt = this.deleteFeatureStmt;
+             PreparedStatement deleteFeaturesStmt = this.deleteFeaturesStmt;
+             PreparedStatement terminateFeatureStmt = this.terminateFeatureStmt;
+             PreparedStatement terminateFeaturesStmt = this.terminateFeaturesStmt) {
         }
     }
 }
