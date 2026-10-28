@@ -168,6 +168,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
+    public DeleteHelper getDeleteHelper(Connection connection) {
+        return new DeleteHelper(connection, adapter);
+    }
+
+    @Override
     public StatisticsHelper getStatisticsHelper() {
         return statisticsHelper;
     }
