@@ -9,7 +9,7 @@ import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.exporter.ExportController;
 import org.citydb.cli.exporter.ExportOptions;
-import org.citydb.cli.exporter.TileExportContext;
+import org.citydb.cli.exporter.QueryContext;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -163,7 +163,7 @@ public class CityJSONExportCommand extends ExportController {
     }
 
     @Override
-    protected void beforeTileExport(TileExportContext context, ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
+    protected void beforeTileExport(QueryContext context, ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
         if (!useGlobalTemplates) {
             return;
         }

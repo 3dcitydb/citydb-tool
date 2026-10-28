@@ -3,10 +3,9 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.cli.exporter.util;
+package org.citydb.cli.exporter;
 
 import org.citydb.cli.ExecutionException;
-import org.citydb.cli.util.TokenReplacer;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.util.TempTable;
 import org.citydb.model.common.Namespaces;
@@ -35,44 +34,35 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Optional;
 
-public class TilingHelper implements AutoCloseable {
-    private static final Tiling NO_TILING = Tiling.newInstance()
-            .setExtent(Envelope.of(
-                    Coordinate.of(-Double.MAX_VALUE, -Double.MAX_VALUE),
-                    Coordinate.of(Double.MAX_VALUE, Double.MAX_VALUE)))
-            .setScheme(MatrixScheme.of(1, 1));
-
-    private final Logger logger = LoggerFactory.getLogger(TilingHelper.class);
+public class ExportQueryHelper implements AutoCloseable {
+    private final Logger logger = LoggerFactory.getLogger(ExportQueryHelper.class);
     private final Tiling tiling;
     private final Query query;
-    private final Connection connection;
     private final DatabaseAdapter adapter;
     private final boolean useTiling;
+    private Connection connection;
     private TileMatrix tileMatrix;
     private Envelope queryExtent;
     private TempTable pageTable;
     private boolean closed;
 
-    private TilingHelper(Tiling tiling, Query query, Connection connection, DatabaseAdapter adapter) {
-        this.tiling = tiling;
+    private ExportQueryHelper(Tiling tiling, Query query, DatabaseAdapter adapter) {
+        this.tiling = tiling != null ? tiling : noTiling();
         this.query = query;
-        this.connection = connection;
         this.adapter = adapter;
-        useTiling = tiling != NO_TILING;
+        useTiling = tiling != null;
     }
 
-    public static TilingHelper of(Tiling tiling, Query query, Connection connection, DatabaseAdapter adapter) throws ExecutionException {
-        TilingHelper tilingHelper = new TilingHelper(tiling, query, connection, adapter);
+    static ExportQueryHelper of(Tiling tiling, Query query, DatabaseAdapter adapter) throws ExecutionException {
+        ExportQueryHelper queryHelper = new ExportQueryHelper(tiling, query, adapter);
         try {
-            return tilingHelper.createPageTable().buildTileMatrix();
+            return queryHelper.createConnection()
+                    .createPageTable()
+                    .buildTileMatrix();
         } catch (Throwable e) {
-            tilingHelper.close();
+            queryHelper.close();
             throw e;
         }
-    }
-
-    public static Tiling noTiling() {
-        return NO_TILING;
     }
 
     public boolean isUseTiling() {
@@ -87,7 +77,32 @@ public class TilingHelper implements AutoCloseable {
         return Optional.ofNullable(queryExtent);
     }
 
-    private TilingHelper createPageTable() throws ExecutionException {
+    public QueryContext getQueryContext(Tile tile, SqlBuildOptions options, Path tempDirectory) throws ExecutionException {
+        if (closed) {
+            throw new ExecutionException("The export query helper has already been closed.");
+        }
+
+        try {
+            QueryExecutor executor = QueryExecutor.builder(adapter)
+                    .tempDirectory(tempDirectory)
+                    .connection(connection)
+                    .build(getTileQuery(tile), getTileBuildOptions(options));
+            return new QueryContext(tile, executor, connection);
+        } catch (QueryBuildException e) {
+            throw new ExecutionException("Failed to build database query.", e);
+        }
+    }
+
+    private ExportQueryHelper createConnection() throws ExecutionException {
+        try {
+            connection = adapter.getPool().getConnection(false);
+            return this;
+        } catch (SQLException e) {
+            throw new ExecutionException("Failed to get a database connection.", e);
+        }
+    }
+
+    private ExportQueryHelper createPageTable() throws ExecutionException {
         if (useTiling && isPaginated()) {
             logger.info("Querying features of the requested page...");
             try {
@@ -109,7 +124,7 @@ public class TilingHelper implements AutoCloseable {
         return this;
     }
 
-    private TilingHelper buildTileMatrix() throws ExecutionException {
+    private ExportQueryHelper buildTileMatrix() throws ExecutionException {
         if (tiling.getExtent().isEmpty()) {
             logger.info("Computing tiling extent...");
             try {
@@ -132,21 +147,6 @@ public class TilingHelper implements AutoCloseable {
             return this;
         } catch (TilingException e) {
             throw new ExecutionException("Failed to build the tile matrix.", e);
-        }
-    }
-
-    public QueryExecutor getQueryExecutor(Tile tile, SqlBuildOptions options, Path tempDirectory) throws ExecutionException {
-        if (closed) {
-            throw new ExecutionException("The tiling helper has already been closed.");
-        }
-
-        try {
-            return QueryExecutor.builder(adapter)
-                    .tempDirectory(tempDirectory)
-                    .connection(connection)
-                    .build(getTileQuery(tile), getTileBuildOptions(options));
-        } catch (QueryBuildException e) {
-            throw new ExecutionException("Failed to build database query.", e);
         }
     }
 
@@ -178,28 +178,12 @@ public class TilingHelper implements AutoCloseable {
                 .orElse(false);
     }
 
-    public Path getOutputFile(Path outputFile, Tile tile) {
-        if (useTiling) {
-            String input = outputFile.toString();
-            String resolved = TokenReplacer.replaceTileTokens(input, tile);
-
-            if (!resolved.equals(input)) {
-                return Path.of(resolved);
-            } else if (tileMatrix == null || tileMatrix.size() > 1) {
-                return getDefaultOutputFile(outputFile, tile);
-            }
-        }
-
-        return outputFile;
-    }
-
-    private Path getDefaultOutputFile(Path file, Tile tile) {
-        String suffix = "_" + tile.getColumn() + "_" + tile.getRow();
-        String fileName = file.getFileName().toString();
-        int index = fileName.lastIndexOf('.');
-        return file.resolveSibling(index > 0
-                ? fileName.substring(0, index) + suffix + fileName.substring(index)
-                : fileName + suffix);
+    private Tiling noTiling() {
+        return Tiling.newInstance()
+                .setExtent(Envelope.of(
+                        Coordinate.of(-Double.MAX_VALUE, -Double.MAX_VALUE),
+                        Coordinate.of(Double.MAX_VALUE, Double.MAX_VALUE)))
+                .setScheme(MatrixScheme.of(1, 1));
     }
 
     @Override
@@ -211,6 +195,14 @@ public class TilingHelper implements AutoCloseable {
                     pageTable.close();
                 } catch (SQLException e) {
                     logger.warn("Failed to drop the temporary table {}.", pageTable.getQualifiedName(), e);
+                }
+            }
+
+            if (connection != null) {
+                try (Connection connection = this.connection) {
+                    connection.rollback();
+                } catch (SQLException e) {
+                    logger.warn("Failed to release the database connection.", e);
                 }
             }
         }

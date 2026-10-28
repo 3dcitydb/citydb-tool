@@ -10,12 +10,12 @@ import org.citydb.util.tiling.Tile;
 
 import java.sql.Connection;
 
-public final class TileExportContext {
+public final class QueryContext {
     private final Tile tile;
     private final QueryExecutor queryExecutor;
     private final Connection connection;
 
-    TileExportContext(Tile tile, QueryExecutor queryExecutor, Connection connection) {
+    QueryContext(Tile tile, QueryExecutor queryExecutor, Connection connection) {
         this.tile = tile;
         this.queryExecutor = queryExecutor;
         this.connection = connection;

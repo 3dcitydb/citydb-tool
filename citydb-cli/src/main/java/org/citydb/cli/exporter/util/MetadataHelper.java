@@ -18,7 +18,6 @@ import org.citydb.io.writer.options.MetadataOptions;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.util.tiling.Tile;
-import org.citydb.util.tiling.Tiling;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,15 +28,15 @@ public class MetadataHelper {
     private final DatabaseAdapter adapter;
     private final boolean useTiling;
 
-    private MetadataHelper(ExportOptions exportOptions, WriteOptions writeOptions, Tiling tiling, DatabaseAdapter adapter) {
+    private MetadataHelper(ExportOptions exportOptions, WriteOptions writeOptions, boolean useTiling, DatabaseAdapter adapter) {
         this.adapter = adapter;
+        this.useTiling = useTiling;
         metadataOptions = writeOptions.getMetadataOptions().orElse(null);
         targetSrs = exportOptions.getTargetSrs().orElse(null);
-        useTiling = tiling != TilingHelper.noTiling();
     }
 
-    public static MetadataHelper of(ExportOptions exportOptions, WriteOptions writeOptions, Tiling tiling, DatabaseAdapter adapter) {
-        return new MetadataHelper(exportOptions, writeOptions, tiling, adapter);
+    public static MetadataHelper of(ExportOptions exportOptions, WriteOptions writeOptions, boolean useTiling, DatabaseAdapter adapter) {
+        return new MetadataHelper(exportOptions, writeOptions, useTiling, adapter);
     }
 
     public Metadata getMetadata(QueryExecutor executor, OutputFile outputFile, Tile tile) throws ExecutionException {
