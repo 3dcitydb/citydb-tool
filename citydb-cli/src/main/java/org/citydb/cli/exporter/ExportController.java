@@ -14,8 +14,8 @@ import org.citydb.cli.exporter.options.QueryOptions;
 import org.citydb.cli.exporter.options.TilingOptions;
 import org.citydb.cli.exporter.util.MetadataHelper;
 import org.citydb.cli.exporter.util.SequentialWriter;
-import org.citydb.cli.exporter.util.TilingHelper;
 import org.citydb.cli.util.FeatureStatistics;
+import org.citydb.cli.util.TokenReplacer;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.config.common.SrsReference;
@@ -47,6 +47,7 @@ import picocli.CommandLine;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ExportController implements Command {
@@ -101,6 +102,9 @@ public abstract class ExportController implements Command {
     protected void beforeExport(ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
     }
 
+    protected void beforeTileExport(QueryContext context, ExportOptions exportOptions, WriteOptions writeOptions, DatabaseAdapter adapter) throws ExecutionException {
+    }
+
     protected void afterExport(boolean success, FeatureStatistics statistics) throws ExecutionException {
     }
 
@@ -131,30 +135,32 @@ public abstract class ExportController implements Command {
         beforeExport(exportOptions, writeOptions, featureProcessors, databaseAdapter);
 
         Query query = getQuery(exportOptions);
-        Tiling tiling = getTiling(exportOptions, writeOptions);
-        MetadataHelper metadataHelper = MetadataHelper.of(exportOptions, writeOptions, tiling, databaseAdapter);
+        Tiling tiling = getTiling(exportOptions, writeOptions).orElse(null);
+        MetadataHelper metadataHelper = MetadataHelper.of(exportOptions, writeOptions, tiling != null, databaseAdapter);
 
         FeatureStatistics statistics = new FeatureStatistics(databaseAdapter);
         AtomicLong counter = new AtomicLong();
 
-        try {
-            TilingHelper tilingHelper = TilingHelper.of(tiling, query, helper, databaseAdapter);
-            if (tilingHelper.isUseTiling()) {
+        try (ExportQueryHelper queryHelper = ExportQueryHelper.of(tiling, query, databaseAdapter)) {
+            if (queryHelper.isUseTiling()) {
                 logger.info("Processing {} tile(s) based on provided tiling scheme.",
-                        tilingHelper.getTileMatrix().size());
+                        queryHelper.getTileMatrix().size());
             }
 
-            TileIterator iterator = tilingHelper.getTileMatrix().getTileIterator();
+            TileIterator iterator = queryHelper.getTileMatrix().getTileIterator();
             while (iterator.hasNext()) {
                 Tile tile = iterator.next();
-                QueryExecutor executor = helper.getQueryExecutor(tilingHelper.getTileQuery(tile),
+                QueryContext context = queryHelper.getQueryContext(tile,
                         SqlBuildOptions.defaults()
                                 .omitDistinct(true)
-                                .withColumn(tilingHelper.isUseTiling() ? "envelope" : null),
-                        helper.resolveAgainstWorkingDir(tempDirectory),
-                        databaseAdapter);
+                                .withColumn(queryHelper.isUseTiling() ? "envelope" : null),
+                        helper.resolveAgainstWorkingDir(tempDirectory));
+                QueryExecutor executor = context.getQueryExecutor();
 
-                Path file = tilingHelper.getOutputFile(outputFileOptions.getFile(), tile);
+                beforeTileExport(context, exportOptions, writeOptions, databaseAdapter);
+
+                Path file = helper.resolveAgainstWorkingDir(getOutputFile(outputFileOptions.getFile(), tile,
+                        queryHelper));
                 FeatureStatistics tileStatistics = new FeatureStatistics(databaseAdapter);
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
@@ -162,7 +168,7 @@ public abstract class ExportController implements Command {
                     Exporter exporter = Exporter.newInstance();
                     exportOptions.setOutputFile(outputFile);
 
-                    logger.info("{}Exporting to {} file {}.", getTileCounter(tilingHelper, tile),
+                    logger.info("{}Exporting to {} file {}.", getTileCounter(queryHelper, tile),
                             ioManager.getFileFormat(ioAdapter), outputFile.getFile());
 
                     Metadata metadata = metadataHelper.getMetadata(executor, outputFile, tile);
@@ -177,7 +183,7 @@ public abstract class ExportController implements Command {
                         while (shouldRun && result.hasNext()) {
                             long id = result.getId();
 
-                            if (tilingHelper.isUseTiling() && !tile.isOnTile(databaseAdapter
+                            if (queryHelper.isUseTiling() && !tile.isOnTile(databaseAdapter
                                     .getGeometryAdapter()
                                     .getEnvelope(result.get(rs -> rs.getObject("envelope"))))) {
                                 continue;
@@ -224,7 +230,7 @@ public abstract class ExportController implements Command {
                     throw new ExecutionException("A fatal error has occurred during export.", e);
                 } finally {
                     statistics.merge(tileStatistics);
-                    if (tilingHelper.isUseTiling()) {
+                    if (queryHelper.isUseTiling()) {
                         logStatistics(tileStatistics, "Tile export summary:", Level.DEBUG);
                         if (tileStatistics.isEmpty() && writeOptions.isSkipEmptyTiles()) {
                             logger.debug("Deleting empty tile file {}.", file);
@@ -264,16 +270,16 @@ public abstract class ExportController implements Command {
         }
     }
 
-    protected Tiling getTiling(ExportOptions exportOptions, WriteOptions writeOptions) throws ExecutionException {
+    protected Optional<Tiling> getTiling(ExportOptions exportOptions, WriteOptions writeOptions) throws ExecutionException {
         if (tilingOptions != null) {
             if (tilingOptions.isSkipEmptyTiles()) {
                 writeOptions.setSkipEmptyTiles(true);
             }
 
-            return tilingOptions.getTiling();
+            return Optional.ofNullable(tilingOptions.getTiling());
         }
 
-        return exportOptions.getTiling().orElseGet(TilingHelper::noTiling);
+        return exportOptions.getTiling();
     }
 
     protected ExportOptions getExportOptions() throws ExecutionException {
@@ -418,11 +424,35 @@ public abstract class ExportController implements Command {
         return appearanceOptions;
     }
 
-    private String getTileCounter(TilingHelper helper, Tile tile) {
-        return helper.isUseTiling()
-                ? "[" + (tile.getRow() * helper.getTileMatrix().getColumns() + tile.getColumn() + 1) + "|"
-                + helper.getTileMatrix().size() + "] "
+    private String getTileCounter(ExportQueryHelper queryHelper, Tile tile) {
+        return queryHelper.isUseTiling()
+                ? "[" + (tile.getRow() * queryHelper.getTileMatrix().getColumns() + tile.getColumn() + 1) + "|"
+                + queryHelper.getTileMatrix().size() + "] "
                 : "";
+    }
+
+    private Path getOutputFile(Path outputFile, Tile tile, ExportQueryHelper queryHelper) {
+        if (queryHelper.isUseTiling()) {
+            String input = outputFile.toString();
+            String resolved = TokenReplacer.replaceTileTokens(input, tile);
+
+            if (!resolved.equals(input)) {
+                return Path.of(resolved);
+            } else if (queryHelper.getTileMatrix().size() > 1) {
+                return getDefaultOutputFile(outputFile, tile);
+            }
+        }
+
+        return outputFile;
+    }
+
+    private Path getDefaultOutputFile(Path file, Tile tile) {
+        String suffix = "_" + tile.getColumn() + "_" + tile.getRow();
+        String fileName = file.getFileName().toString();
+        int index = fileName.lastIndexOf('.');
+        return file.resolveSibling(index > 0
+                ? fileName.substring(0, index) + suffix + fileName.substring(index)
+                : fileName + suffix);
     }
 
     private void logStatistics(FeatureStatistics statistics, String title, Level level) {

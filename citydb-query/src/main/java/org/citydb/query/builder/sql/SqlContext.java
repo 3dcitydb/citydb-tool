@@ -17,13 +17,25 @@ import java.util.*;
 public class SqlContext {
     private final SchemaObject object;
     private final Table table;
+    private final boolean isolated;
     private List<BooleanExpression> predicates;
     private Map<Name, SqlContext> subContexts;
     private SqlContext parent;
 
-    private SqlContext(SchemaObject object, Table table) {
+    private SqlContext(SchemaObject object, Table table, boolean isolated) {
         this.object = Objects.requireNonNull(object, "The schema object must not be null.");
         this.table = Objects.requireNonNull(table, "The table must not be null.");
+        this.isolated = isolated;
+    }
+
+    private SqlContext(SchemaObject object, Table table) {
+        this(object, table, false);
+    }
+
+    static SqlContext isolatedOf(SqlContext other) {
+        SqlContext context = new SqlContext(other.object, other.table, true);
+        context.parent = other.parent;
+        return context;
     }
 
     static SqlContext of(FeatureType featureType, BuilderHelper helper) {
@@ -33,10 +45,6 @@ public class SqlContext {
     static SqlContext of(Node node, Table table) {
         Objects.requireNonNull(node, "The node must not be null.");
         return new SqlContext(node.getSchemaObject(), table);
-    }
-
-    static SqlContext of(SqlContext other, BuilderHelper helper) {
-        return new SqlContext(other.object, helper.getTable(other.table.getName()));
     }
 
     SchemaObject getSchemaObject() {
@@ -49,6 +57,10 @@ public class SqlContext {
 
     Table getTable() {
         return table;
+    }
+
+    boolean isIsolated() {
+        return isolated;
     }
 
     Node getSchemaPath() {

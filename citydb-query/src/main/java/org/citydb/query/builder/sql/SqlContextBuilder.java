@@ -29,14 +29,14 @@ import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.sqlbuilder.schema.WildcardColumn;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class SqlContextBuilder {
     private final FilterBuilder filterBuilder;
     private final BuilderHelper helper;
-    private String joinType = Joins.LEFT_JOIN;
-    private boolean restrictTargetTypesInJoins;
 
     private SqlContextBuilder(FilterBuilder filterBuilder, BuilderHelper helper) {
         this.filterBuilder = filterBuilder;
@@ -47,41 +47,32 @@ public class SqlContextBuilder {
         return new SqlContextBuilder(filterBuilder, helper);
     }
 
-    SqlContextBuilder useLeftJoins(boolean useLeftJoins) {
-        joinType = useLeftJoins ? Joins.LEFT_JOIN : Joins.INNER_JOIN;
-        return this;
+    SqlContext build(PropertyRef propertyRef, Select select, SqlContext context, String joinType) throws QueryBuildException {
+        return build(propertyRef, select, context, joinType, false);
     }
 
-    SqlContextBuilder restrictTargetTypesInJoins(boolean restrictTargetTypesInJoins) {
-        this.restrictTargetTypesInJoins = restrictTargetTypesInJoins;
-        return this;
-    }
-
-    SqlContext build(PropertyRef propertyRef, Select select, SqlContext context) throws QueryBuildException {
-        return build(propertyRef, select, context, false);
-    }
-
-    SqlContext build(PropertyRef propertyRef, Select select, SqlContext context, boolean resolveValue) throws QueryBuildException {
+    SqlContext build(PropertyRef propertyRef, Select select, SqlContext context, String joinType, boolean resolveValue) throws QueryBuildException {
         try {
             return build(helper.getSchemaPathBuilder()
-                    .build(propertyRef, context.getSchemaPath(), resolveValue), select, context);
+                    .build(propertyRef, context.getSchemaPath(), resolveValue), select, context, joinType);
         } catch (SchemaPathException e) {
             throw new QueryBuildException("Failed to build property reference.", e);
         }
     }
 
-    SqlContext build(Node node, Select select, SqlContext context) throws QueryBuildException {
+    SqlContext build(Node node, Select select, SqlContext context, String joinType) throws QueryBuildException {
         if (node.getName().equals(context.getName())
                 && node.getPredicate().isEmpty()) {
             node = node.getChild().orElse(null);
         }
 
-        return node != null ? buildPath(node, select, context) : context;
+        return node != null ? buildPath(node, select, context, joinType) : context;
     }
 
-    private SqlContext buildPath(Node node, Select select, SqlContext context) throws QueryBuildException {
+    private SqlContext buildPath(Node node, Select select, SqlContext context, String joinType) throws QueryBuildException {
         Table table = context.getTable();
         List<BooleanExpression> predicates = new ArrayList<>();
+        Map<Node, List<Predicate>> nodePredicates = resolvePredicates(node);
 
         do {
             SqlContext subContext = context.getSubContext(node);
@@ -99,9 +90,9 @@ public class SqlContextBuilder {
                     throw new QueryBuildException("Expected table " + geometry.getTable().getName() +
                             " as context for " + geometry + " but found " + table.getName() + ".");
                 } else if (node.getSchemaObject() instanceof Property property) {
-                    table = build(property, select, table, node, useLateral, predicates);
+                    table = build(property, select, table, node, joinType, useLateral, predicates);
                 } else if (node.getSchemaObject() instanceof GenericAttribute attribute) {
-                    table = build(attribute, select, table, useLateral);
+                    table = build(attribute, select, table, joinType, useLateral);
                 }
 
                 subContext = SqlContext.of(node, table);
@@ -114,7 +105,7 @@ public class SqlContextBuilder {
                     if (child != null
                             && (!(child instanceof Property property)
                             || !type.getDeclaredProperties().containsKey(property.getName()))) {
-                        table = build(type, select, table, node, useLateral, predicates);
+                        table = build(type, select, table, node, joinType, useLateral, predicates);
                     }
                 }
             } else {
@@ -122,8 +113,8 @@ public class SqlContextBuilder {
             }
 
             context = subContext;
-            if (node.getPredicate().isPresent()) {
-                predicates.add(filterBuilder.build(node.getPredicate().get(), select, context));
+            for (Predicate predicate : nodePredicates.getOrDefault(node, List.of())) {
+                predicates.add(filterBuilder.build(predicate, select, context));
             }
         } while ((node = node.getChild().orElse(null)) != null);
 
@@ -131,18 +122,19 @@ public class SqlContextBuilder {
         return context;
     }
 
-    private Table build(Joinable joinable, Select select, Table table, Node node, boolean useLateral, List<BooleanExpression> predicates) throws QueryBuildException {
+    private Table build(Joinable joinable, Select select, Table table, Node node, String joinType, boolean useLateral,
+                        List<BooleanExpression> predicates) throws QueryBuildException {
         if (joinable.getJoin().isPresent()) {
             org.citydb.database.schema.Join join = joinable.getJoin().get();
-            table = build(join, table, helper.getTable(join.getTable()), select, node, useLateral, predicates);
+            table = build(join, table, helper.getTable(join.getTable()), select, node, joinType, useLateral, predicates);
         } else if (joinable.getJoinTable().isPresent()) {
-            table = build(joinable.getJoinTable().get(), table, select, node, useLateral, predicates);
+            table = build(joinable.getJoinTable().get(), table, select, node, joinType, useLateral, predicates);
         }
 
         return table;
     }
 
-    private Table build(GenericAttribute attribute, Select select, Table table, boolean useLateral) throws QueryBuildException {
+    private Table build(GenericAttribute attribute, Select select, Table table, String joinType, boolean useLateral) throws QueryBuildException {
         String fromColumn = "id";
         Table toTable = helper.getTable(org.citydb.database.schema.Table.PROPERTY);
         String toColumn = helper.matches(org.citydb.database.schema.Table.PROPERTY, table)
@@ -174,7 +166,8 @@ public class SqlContextBuilder {
         return joinTable;
     }
 
-    private Table build(JoinTable joinTable, Table fromTable, Select select, Node node, boolean useLateral, List<BooleanExpression> predicates) throws QueryBuildException {
+    private Table build(JoinTable joinTable, Table fromTable, Select select, Node node, String joinType,
+                        boolean useLateral, List<BooleanExpression> predicates) throws QueryBuildException {
         if (!helper.matches(joinTable.getSourceJoin().getTable(), fromTable)) {
             throw new QueryBuildException("Expected table " + joinTable.getSourceJoin().getTable().getName() +
                     " as context for " + node + " but found " + fromTable.getName() + ".");
@@ -183,11 +176,12 @@ public class SqlContextBuilder {
         Table intermediateTable = helper.getTable(joinTable.getTable());
         Table toTable = helper.getTable(joinTable.getTargetJoin().getTable());
 
-        build(joinTable.getSourceJoin(), fromTable, intermediateTable, select, node, useLateral, predicates);
-        return build(joinTable.getTargetJoin(), intermediateTable, toTable, select, node, false, predicates);
+        build(joinTable.getSourceJoin(), fromTable, intermediateTable, select, node, joinType, useLateral, predicates);
+        return build(joinTable.getTargetJoin(), intermediateTable, toTable, select, node, joinType, false, predicates);
     }
 
-    private Table build(org.citydb.database.schema.Join source, Table fromTable, Table toTable, Select select, Node node, boolean useLateral, List<BooleanExpression> predicates) throws QueryBuildException {
+    private Table build(org.citydb.database.schema.Join source, Table fromTable, Table toTable, Select select,
+                        Node node, String joinType, boolean useLateral, List<BooleanExpression> predicates) throws QueryBuildException {
         Table joinTable = useLateral
                 ? buildLateralQuery(fromTable, source.getFromColumn(), toTable, source.getToColumn())
                 : toTable;
@@ -216,8 +210,7 @@ public class SqlContextBuilder {
                     BooleanExpression expression = helper.getFeatureTypesBuilder().build(target, toTable);
                     if (useLateral) {
                         getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
-                    } else if (restrictTargetTypesInJoins) {
-                        // a where condition would turn the left join into an inner join
+                    } else if (joinType.equals(Joins.LEFT_JOIN)) {
                         join.condition(expression);
                     } else {
                         predicates.add(expression);
@@ -300,5 +293,30 @@ public class SqlContextBuilder {
         });
 
         return requiresLateralJoin[0];
+    }
+
+    private Map<Node, List<Predicate>> resolvePredicates(Node node) {
+        Map<Node, List<Predicate>> nodePredicates = new IdentityHashMap<>();
+        do {
+            Predicate predicate = node.getPredicate().orElse(null);
+            if (predicate != null) {
+                Node target = requiresLateralJoin(predicate)
+                        ? node
+                        : getPredicateTarget(node);
+                nodePredicates.computeIfAbsent(target, key -> new ArrayList<>())
+                        .add(predicate);
+            }
+        } while ((node = node.getChild().orElse(null)) != null);
+
+        return nodePredicates;
+    }
+
+    private Node getPredicateTarget(Node node) {
+        return node.downStream()
+                .skip(1)
+                .dropWhile(child -> child.getSchemaObject() instanceof DataType)
+                .findFirst()
+                .filter(child -> child.getSchemaObject() instanceof FeatureType)
+                .orElse(node);
     }
 }
