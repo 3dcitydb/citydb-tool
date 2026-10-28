@@ -262,7 +262,7 @@ public abstract class VisExportController<T extends VisFormatOptions> implements
             featureCount = QueryExecutor.builder(databaseAdapter)
                     .build(getQuery(exportOptions))
                     .countHits();
-        } catch (QueryBuildException | SQLException | IOException e) {
+        } catch (QueryBuildException | SQLException e) {
             throw new ExecutionException("Failed to count features for texture-bucket sizing.", e);
         }
 
