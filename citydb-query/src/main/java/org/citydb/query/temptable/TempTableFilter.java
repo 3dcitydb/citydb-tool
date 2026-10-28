@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.query.builder.sql;
+package org.citydb.query.temptable;
 
 import org.citydb.database.util.TempTable;
 

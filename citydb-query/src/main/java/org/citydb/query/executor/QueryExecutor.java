@@ -173,14 +173,11 @@ public class QueryExecutor {
             SqlBuildOptions selectOptions = SqlBuildOptions.of(options)
                     .omitDistinct(options.isOmitDistinct() && !isPaginated(query));
 
-            SqlBuildOptions countOptions = SqlBuildOptions.defaults();
-            options.getTempTableFilters().forEach(countOptions::withTempTableFilter);
-
             Select select = builder.build(query, selectOptions);
             Select count = builder.build(Query.of(query)
                             .setSorting(null)
                             .setCountLimit(null),
-                    countOptions);
+                    SqlBuildOptions.defaults());
             Select extent = buildExtentQuery(query, options);
 
             boolean deduplicateIds = selectOptions.isOmitDistinct()

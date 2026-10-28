@@ -14,13 +14,13 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
-import org.citydb.query.builder.sql.TempTableFilter;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.common.Predicate;
 import org.citydb.query.filter.literal.BBoxLiteral;
 import org.citydb.query.filter.literal.PropertyRef;
 import org.citydb.query.filter.operation.Operators;
+import org.citydb.query.temptable.TempTableFilter;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileMatrix;
 import org.citydb.util.tiling.Tiling;
@@ -86,7 +86,7 @@ public class ExportQueryHelper implements AutoCloseable {
             QueryExecutor executor = QueryExecutor.builder(adapter)
                     .tempDirectory(tempDirectory)
                     .connection(connection)
-                    .build(getTileQuery(tile), getTileBuildOptions(options));
+                    .build(getTileQuery(tile), options);
             return new QueryContext(tile, executor, connection);
         } catch (QueryBuildException e) {
             throw new ExecutionException("Failed to build database query.", e);
@@ -128,13 +128,13 @@ public class ExportQueryHelper implements AutoCloseable {
         if (tiling.getExtent().isEmpty()) {
             logger.info("Computing tiling extent...");
             try {
-                Query extentQuery = Query.of(query)
+                Query extentQuery = restrictToPage(Query.of(query)
                         .setSorting(null)
-                        .setCountLimit(null);
+                        .setCountLimit(null));
 
                 queryExtent = QueryExecutor.builder(adapter)
                         .connection(connection)
-                        .build(extentQuery, getTileBuildOptions(SqlBuildOptions.defaults().omitDistinct(true)))
+                        .build(extentQuery, SqlBuildOptions.defaults().omitDistinct(true))
                         .computeExtent();
                 tiling.setExtent(queryExtent);
             } catch (Exception e) {
@@ -152,10 +152,7 @@ public class ExportQueryHelper implements AutoCloseable {
 
     private Query getTileQuery(Tile tile) {
         if (useTiling) {
-            Query tileQuery = pageTable != null
-                    ? Query.of(query).setCountLimit(null)
-                    : Query.of(query);
-
+            Query tileQuery = restrictToPage(Query.of(query));
             Predicate bboxFilter = PropertyRef.of("envelope", Namespaces.CORE)
                     .intersects(BBoxLiteral.of(tile.getExtent()));
             return tileQuery.setFilter(query.getFilter()
@@ -166,10 +163,11 @@ public class ExportQueryHelper implements AutoCloseable {
         }
     }
 
-    private SqlBuildOptions getTileBuildOptions(SqlBuildOptions options) {
+    private Query restrictToPage(Query query) {
+        // the page table already restricts the features to the requested page
         return pageTable != null
-                ? options.withTempTableFilter(TempTableFilter.of(pageTable, "id"))
-                : options;
+                ? query.setCountLimit(null).addTempTableFilter(TempTableFilter.of(pageTable, "id"))
+                : query;
     }
 
     private boolean isPaginated() {
