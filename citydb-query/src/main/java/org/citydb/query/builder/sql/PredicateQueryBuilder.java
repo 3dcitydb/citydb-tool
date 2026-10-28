@@ -14,7 +14,6 @@ import org.citydb.sqlbuilder.common.SqlWalker;
 import org.citydb.sqlbuilder.join.Join;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
-import org.citydb.sqlbuilder.operation.Exists;
 import org.citydb.sqlbuilder.operation.Operators;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Column;
@@ -51,7 +50,7 @@ public class PredicateQueryBuilder {
         boolean someValueMatches = negate == isInverted(predicate);
         if (someValueMatches) {
             Select matchingValues = toSubQuery(query, result, Values.MATCHING);
-            return BuildResult.of(Exists.of(matchingValues));
+            return BuildResult.of(Operators.exists(matchingValues));
         }
 
         // build the positive form, e.g. p = x for NOT p = x, or p IS NOT NULL for p IS NULL
@@ -61,15 +60,15 @@ public class PredicateQueryBuilder {
         if (predicate instanceof IsNull) {
             // p IS NULL: no non-null value exists
             Select nonNullValues = toSubQuery(positiveQuery, positive, Values.MATCHING);
-            return BuildResult.of(Exists.of(nonNullValues, true));
+            return BuildResult.of(Operators.notExists(nonNullValues));
         }
 
         // values exist, and none matches the positive form or is null
         Select values = toSubQuery(query, result, Values.ALL);
         Select matchingOrNullValues = toSubQuery(positiveQuery, positive, Values.MATCHING_OR_NULL);
         return BuildResult.of(Operators.and(
-                Exists.of(values),
-                Exists.of(matchingOrNullValues, true)));
+                Operators.exists(values),
+                Operators.notExists(matchingOrNullValues)));
     }
 
     private BuildResult build(Predicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
