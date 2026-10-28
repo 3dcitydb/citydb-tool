@@ -5,6 +5,7 @@
 
 package org.citydb.query.builder.sql;
 
+import org.citydb.query.temptable.TempTableFilter;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
 import org.citydb.sqlbuilder.operation.Exists;
 import org.citydb.sqlbuilder.operation.Operators;
