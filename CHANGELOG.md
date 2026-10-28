@@ -2,12 +2,22 @@
 
 ## [Unreleased]
 
-### Changed
-- Query sorting now explicitly places `NULL` values last.
+### Added
+- Added API support for restricting database queries to features stored in a temporary table.
 
 ### Fixed
 - Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
   predicates combined with `AND` or `OR` now follow CQL2 semantics instead of matching unrelated values.
+- Fixed `--limit` and `--start-index` being applied to each tile separately in tiled exports. Pagination now applies
+  to the whole export, and the tiles only split the selected features across files.
+- Fixed global templates missing from all but the first tile file in tiled `CityJSONSeq` exports.
+
+## [1.4.1] - 2026-10-26
+
+### Changed
+- Query sorting now explicitly places `NULL` values last.
+
+### Fixed
 - Fixed SQL expression and subquery filters being rendered as `IN (null)`.
 - Fixed CQL2 `/` filters with integer operands incorrectly using integer division.
 - Fixed CQL2 `div` filters with mixed numeric operands on PostgreSQL.
@@ -170,7 +180,8 @@
 
 This is the initial release of citydb-tool.
 
-[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.4.0..HEAD
+[Unreleased]: https://github.com/3dcitydb/citydb-tool/compare/v1.4.1..HEAD
+[1.4.1]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.4.1
 [1.4.0]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.4.0
 [1.3.2]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.2
 [1.3.1]: https://github.com/3dcitydb/citydb-tool/releases/tag/v1.3.1

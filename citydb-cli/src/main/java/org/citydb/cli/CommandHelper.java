@@ -151,8 +151,6 @@ public class CommandHelper {
                     .build(query, options);
         } catch (QueryBuildException e) {
             throw new ExecutionException("Failed to build database query.", e);
-        } catch (IOException e) {
-            throw new ExecutionException("Failed to build database query executor.", e);
         }
     }
 
