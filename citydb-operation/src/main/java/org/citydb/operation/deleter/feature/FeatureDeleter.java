@@ -6,7 +6,6 @@
 package org.citydb.operation.deleter.feature;
 
 import com.alibaba.fastjson2.JSONObject;
-import org.citydb.database.util.FeatureDeleteHelper;
 import org.citydb.operation.deleter.DeleteException;
 import org.citydb.operation.deleter.DeleteHelper;
 import org.citydb.operation.deleter.common.DatabaseDeleter;
@@ -17,12 +16,12 @@ import java.time.OffsetDateTime;
 import java.util.Set;
 
 public class FeatureDeleter extends DatabaseDeleter {
-    private final FeatureDeleteHelper featureDeleteHelper;
+    private final org.citydb.database.util.DeleteHelper deleteHelper;
     private final JSONObject metadata = new JSONObject();
 
     public FeatureDeleter(DeleteHelper helper) throws SQLException {
         super(helper);
-        featureDeleteHelper = adapter.getSchemaAdapter().getFeatureDeleteHelper(helper.getConnection());
+        deleteHelper = adapter.getSchemaAdapter().getDeleteHelper(helper.getConnection());
         helper.getOptions().getReasonForUpdate().ifPresent(reasonForUpdate ->
                 metadata.put("reason_for_update", reasonForUpdate));
         helper.getOptions().getLineage().ifPresent(lineage ->
@@ -40,15 +39,15 @@ public class FeatureDeleter extends DatabaseDeleter {
         if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
             metadata.put("termination_date", helper.getOptions().getTerminationDate()
                     .orElseGet(() -> OffsetDateTime.now().withNano(0)));
-            featureDeleteHelper.terminateFeatures(ids, metadata.toString(),
+            deleteHelper.terminateFeatures(ids, metadata.toString(),
                     helper.getOptions().isTerminateWithSubFeatures());
         } else {
-            featureDeleteHelper.deleteFeatures(ids);
+            deleteHelper.deleteFeatures(ids);
         }
     }
 
     @Override
     public void close() throws SQLException {
-        featureDeleteHelper.close();
+        deleteHelper.close();
     }
 }

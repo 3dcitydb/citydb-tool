@@ -54,7 +54,7 @@ public abstract class SchemaAdapter {
 
     public abstract SequenceHelper getSequenceHelper(Connection connection) throws SQLException;
 
-    public abstract FeatureDeleteHelper getFeatureDeleteHelper(Connection connection) throws SQLException;
+    public abstract DeleteHelper getDeleteHelper(Connection connection) throws SQLException;
 
     public abstract StatisticsHelper getStatisticsHelper();
 

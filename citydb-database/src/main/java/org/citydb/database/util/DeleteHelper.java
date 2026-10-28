@@ -9,14 +9,18 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 
-public abstract class FeatureDeleteHelper implements AutoCloseable {
+public abstract class DeleteHelper implements AutoCloseable {
     protected final Connection connection;
 
-    protected FeatureDeleteHelper(Connection connection) {
+    protected DeleteHelper(Connection connection) {
         this.connection = connection;
     }
 
+    public abstract void deleteFeature(long id) throws SQLException;
+
     public abstract void deleteFeatures(Collection<Long> ids) throws SQLException;
+
+    public abstract void terminateFeature(long id, String metadata, boolean cascade) throws SQLException;
 
     public abstract void terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException;
 
