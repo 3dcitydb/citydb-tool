@@ -89,13 +89,13 @@ public class QueryExecutor {
         return executeQuery(connection, false);
     }
 
-    private QueryResult executeQuery(Connection connection, boolean closeConnection) throws SQLException {
+    private QueryResult executeQuery(Connection connection, boolean ownsConnection) throws SQLException {
         PreparedStatement stmt = null;
         try {
             stmt = helper.prepareStatement(select, connection);
-            return new QueryResult(connection, stmt, deduplicateIds, tempDirectory, closeConnection);
+            return new QueryResult(connection, stmt, deduplicateIds, tempDirectory, ownsConnection);
         } catch (SQLException e) {
-            try (Connection connectionToClose = closeConnection ? connection : null;
+            try (Connection connectionToClose = ownsConnection ? connection : null;
                  PreparedStatement stmtToClose = stmt) {
                 throw e;
             }

@@ -31,4 +31,6 @@ public interface TempTableHelper {
     String getGeometry();
 
     String getCreateTempTable(String name, Map<String, String> columns);
+
+    String getDropTempTable(String name);
 }

@@ -80,4 +80,9 @@ public class TempTableHelper implements org.citydb.database.util.TempTableHelper
                         .orElse("") +
                 ")";
     }
+
+    @Override
+    public String getDropTempTable(String name) {
+        return "drop table " + adapter.getConnectionDetails().getSchema() + "." + name;
+    }
 }
