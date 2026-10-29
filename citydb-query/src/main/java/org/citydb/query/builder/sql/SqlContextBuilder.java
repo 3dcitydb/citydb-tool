@@ -268,7 +268,7 @@ public class SqlContextBuilder {
 
     private Table buildLateralQuery(Table fromTable, String fromColumn, Table toTable, String toColumn) {
         Select select = Select.newInstance()
-                .select(WildcardColumn.of(toTable))
+                .select(WildcardColumn.newInstance())
                 .select(WindowFunction.of(Function.of("row_number"), Window.empty()
                                 .partitionBy(toTable.column(toColumn))
                                 .orderBy(toTable.column("id")))
