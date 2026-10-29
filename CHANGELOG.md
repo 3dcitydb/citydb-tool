@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+- Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
+  geometry or dropping all geometry of a feature.
+
 ## [1.4.1] - 2026-10-26
 
 ### Changed

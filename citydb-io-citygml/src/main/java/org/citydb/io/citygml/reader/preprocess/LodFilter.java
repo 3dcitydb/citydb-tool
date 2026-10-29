@@ -17,7 +17,6 @@ import org.xmlobjects.gml.model.geometry.Envelope;
 import org.xmlobjects.model.Child;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class LodFilter {
     private final boolean[] lods = {false, false, false, false, false};
@@ -61,8 +60,8 @@ public class LodFilter {
         return this;
     }
 
-    LodFilter withCityObjectGroups(ConcurrentLinkedQueue<CityObjectGroup> groups) {
-        groupRemover = new CityObjectGroupRemover(groups);
+    LodFilter withCityObjectGroupRemover(CityObjectGroupRemover groupRemover) {
+        this.groupRemover = groupRemover;
         return this;
     }
 

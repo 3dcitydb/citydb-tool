@@ -62,11 +62,10 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class DeprecatedPropertiesProcessor {
     private final Copier copier;
     private final DeprecatedPropertiesWalker deprecatedPropertiesWalker = new DeprecatedPropertiesWalker();
-    private final LodFilter lodFilter = new LodFilter()
-            .setMode(LodFilter.Mode.REMOVE)
-            .keepEmptyObjects(false)
-            .updateExtents(false);
+    private final LodFilter lod3Filter = createLodFilter(3);
+    private final LodFilter lod4Filter = createLodFilter(4);
 
+    private CityObjectGroupRemover groupRemover;
     private boolean useLod4AsLod3;
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
@@ -103,7 +102,9 @@ public class DeprecatedPropertiesProcessor {
     }
 
     DeprecatedPropertiesProcessor withCityObjectGroups(ConcurrentLinkedQueue<CityObjectGroup> cityObjectGroups) {
-        lodFilter.withCityObjectGroups(cityObjectGroups);
+        groupRemover = new CityObjectGroupRemover(cityObjectGroups);
+        lod3Filter.withCityObjectGroupRemover(groupRemover);
+        lod4Filter.withCityObjectGroupRemover(groupRemover);
         return this;
     }
 
@@ -112,17 +113,29 @@ public class DeprecatedPropertiesProcessor {
             GeometryInfo geometryInfo = feature.getGeometryInfo(true);
             if (geometryInfo.hasGeometries(4) || geometryInfo.hasImplicitGeometries(4)) {
                 if (geometryInfo.hasGeometries(3) || geometryInfo.hasImplicitGeometries(3)) {
-                    lodFilter.withLods(3).filter(feature);
+                    lod3Filter.filter(feature);
                 }
             }
         }
 
         feature.accept(deprecatedPropertiesWalker);
-        return !useLod4AsLod3 || lodFilter.withLods(4).filter(feature);
+        return !useLod4AsLod3 || lod4Filter.filter(feature);
     }
 
     void postprocess() {
-        lodFilter.postprocess();
+        if (useLod4AsLod3) {
+            lod4Filter.postprocess();
+        } else if (groupRemover != null) {
+            groupRemover.postprocess();
+        }
+    }
+
+    private static LodFilter createLodFilter(int lod) {
+        return new LodFilter()
+                .withLods(lod)
+                .setMode(LodFilter.Mode.REMOVE)
+                .keepEmptyObjects(false)
+                .updateExtents(false);
     }
 
     private class DeprecatedPropertiesWalker extends ObjectWalker {
