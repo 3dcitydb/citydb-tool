@@ -20,6 +20,7 @@ import org.citydb.query.filter.encoding.FilterConfigReader;
 import org.citydb.query.filter.encoding.FilterConfigWriter;
 import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
+import org.citydb.query.temptable.TempTableFilter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +36,8 @@ public class Query {
     private LodFilter lodFilter;
     private Sorting sorting;
     private CountLimit countLimit;
+    @JSONField(serialize = false, deserialize = false)
+    private List<TempTableFilter> tempTableFilters;
 
     public static Query newInstance() {
         return new Query();
@@ -47,7 +50,8 @@ public class Query {
                 .setFilterSrs(other.filterSrs)
                 .setLodFilter(other.lodFilter)
                 .setSorting(other.sorting)
-                .setCountLimit(other.countLimit);
+                .setCountLimit(other.countLimit)
+                .setTempTableFilters(other.tempTableFilters != null ? new ArrayList<>(other.tempTableFilters) : null);
     }
 
     public boolean hasFeatureTypes() {
@@ -137,6 +141,31 @@ public class Query {
 
     public Query setCountLimit(CountLimit countLimit) {
         this.countLimit = countLimit;
+        return this;
+    }
+
+    public boolean hasTempTableFilters() {
+        return tempTableFilters != null && !tempTableFilters.isEmpty();
+    }
+
+    public List<TempTableFilter> getTempTableFilters() {
+        if (tempTableFilters == null) {
+            tempTableFilters = new ArrayList<>();
+        }
+
+        return tempTableFilters;
+    }
+
+    public Query setTempTableFilters(List<TempTableFilter> tempTableFilters) {
+        this.tempTableFilters = tempTableFilters;
+        return this;
+    }
+
+    public Query addTempTableFilter(TempTableFilter tempTableFilter) {
+        if (tempTableFilter != null) {
+            getTempTableFilters().add(tempTableFilter);
+        }
+
         return this;
     }
 }
