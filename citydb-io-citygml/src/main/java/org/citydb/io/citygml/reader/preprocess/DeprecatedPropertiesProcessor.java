@@ -6,13 +6,13 @@
 package org.citydb.io.citygml.reader.preprocess;
 
 import org.citydb.io.citygml.reader.util.FeatureHelper;
+import org.citydb.io.reader.options.EmptyFeatureMode;
 import org.citygml4j.core.model.bridge.*;
 import org.citygml4j.core.model.building.AbstractBuilding;
 import org.citygml4j.core.model.building.BuildingFurniture;
 import org.citygml4j.core.model.building.BuildingInstallation;
 import org.citygml4j.core.model.building.BuildingRoom;
 import org.citygml4j.core.model.cityfurniture.CityFurniture;
-import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.construction.AbstractFillingSurface;
 import org.citygml4j.core.model.construction.RoofSurface;
@@ -57,7 +57,6 @@ import org.xmlobjects.gml.model.geometry.aggregates.*;
 import org.xmlobjects.gml.model.geometry.complexes.CompositeSurface;
 import org.xmlobjects.gml.model.geometry.primitives.*;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DeprecatedPropertiesProcessor {
     private final Copier copier;
@@ -101,8 +100,8 @@ public class DeprecatedPropertiesProcessor {
         return this;
     }
 
-    DeprecatedPropertiesProcessor withCityObjectGroups(ConcurrentLinkedQueue<CityObjectGroup> cityObjectGroups) {
-        groupRemover = new CityObjectGroupRemover(cityObjectGroups);
+    DeprecatedPropertiesProcessor withCityObjectGroupRemover(CityObjectGroupRemover groupRemover) {
+        this.groupRemover = groupRemover;
         lod3Filter.withCityObjectGroupRemover(groupRemover);
         lod4Filter.withCityObjectGroupRemover(groupRemover);
         return this;
@@ -134,7 +133,7 @@ public class DeprecatedPropertiesProcessor {
         return new LodFilter()
                 .withLods(lod)
                 .setMode(LodFilter.Mode.REMOVE)
-                .keepEmptyObjects(false)
+                .emptyFeatures(EmptyFeatureMode.REMOVE)
                 .updateExtents(false);
     }
 

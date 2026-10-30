@@ -11,6 +11,7 @@ import org.citydb.core.file.InputFile;
 import org.citydb.io.citygml.reader.CityGMLReaderFactory;
 import org.citydb.io.reader.ReadException;
 import org.citydb.io.reader.options.ImplicitGeometryScope;
+import org.citydb.io.reader.options.LodOptions;
 import org.citygml4j.core.model.appearance.Appearance;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.core.AbstractFeature;
@@ -41,6 +42,7 @@ public class CityGMLPreprocessor {
     private final ConcurrentLinkedQueue<CityObjectGroup> cityObjectGroups = new ConcurrentLinkedQueue<>();
     private final ReferenceResolver referenceResolver = DefaultReferenceResolver.newInstance();
 
+    private LodFilter lodFilter;
     private boolean resolveCrossLodReferences = true;
     private int numberOfThreads;
     private Throwable exception;
@@ -81,6 +83,11 @@ public class CityGMLPreprocessor {
         crossLodResolver.setMode(resolveCrossLodReferences
                 ? CrossLodReferenceResolver.Mode.RESOLVE
                 : CrossLodReferenceResolver.Mode.REMOVE_LOD4_REFERENCES);
+        return this;
+    }
+
+    public CityGMLPreprocessor setLodOptions(LodOptions lodOptions) {
+        lodFilter = LodFilter.of(lodOptions);
         return this;
     }
 
@@ -164,7 +171,11 @@ public class CityGMLPreprocessor {
                 }
 
                 if (shouldRun && !cityObjectGroups.isEmpty()) {
-                    propertiesProcessor.withCityObjectGroups(cityObjectGroups);
+                    CityObjectGroupRemover groupRemover = new CityObjectGroupRemover(cityObjectGroups);
+                    propertiesProcessor.withCityObjectGroupRemover(groupRemover);
+                    if (lodFilter != null) {
+                        lodFilter.withCityObjectGroupRemover(groupRemover);
+                    }
                 }
             }
 
@@ -230,12 +241,16 @@ public class CityGMLPreprocessor {
             crossLodResolver.resolveCrossLodReferences(feature);
         }
 
-        return propertiesProcessor.process(feature);
+        return propertiesProcessor.process(feature)
+                && (lodFilter == null || lodFilter.filter(feature));
     }
 
     public void postprocess() {
         if (shouldRun) {
             propertiesProcessor.postprocess();
+            if (lodFilter != null) {
+                lodFilter.postprocess();
+            }
         }
     }
 

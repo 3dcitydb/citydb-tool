@@ -74,7 +74,8 @@ public class CityJSONReader extends FeatureReader {
         factory = CityJSONReaderFactory.newInstance(cityJSONContext, options, formatOptions);
         filter = options.getFilter().orElseGet(Filter::acceptAll);
         preprocessor = new CityJSONPreprocessor()
-                .setImplicitGeometryScope(options.getImplicitGeometryScope());
+                .setImplicitGeometryScope(options.getImplicitGeometryScope())
+                .setLodOptions(options.getLodOptions().orElse(null));
     }
 
     @Override
@@ -109,8 +110,9 @@ public class CityJSONReader extends FeatureReader {
                 countLatch.increment();
                 service.execute(() -> {
                     try {
-                        preprocessor.process(feature);
-                        Feature object = helpers.get().getTopLevelFeature(feature);
+                        Feature object = preprocessor.process(feature)
+                                ? helpers.get().getTopLevelFeature(feature)
+                                : null;
                         if (object != null) {
                             Filter.Result result = filter.test(object);
                             if (result == Filter.Result.ACCEPT) {

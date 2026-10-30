@@ -6,6 +6,8 @@
 package org.citydb.io.citygml.reader.preprocess;
 
 import org.citydb.io.citygml.reader.util.FeatureHelper;
+import org.citydb.io.reader.options.EmptyFeatureMode;
+import org.citydb.io.reader.options.LodOptions;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.core.AbstractFeature;
@@ -20,12 +22,11 @@ import java.util.*;
 
 public class LodFilter {
     private final boolean[] lods = {false, false, false, false, false};
-    private final ExtentUpdater extentUpdater = new ExtentUpdater();
 
     private Mode mode = Mode.KEEP;
     private boolean updateExtents;
     private CityObjectGroupRemover groupRemover;
-    private boolean keepEmptyObjects;
+    private EmptyFeatureMode emptyFeatures = EmptyFeatureMode.REMOVE;
 
     public enum Mode {
         KEEP,
@@ -37,6 +38,34 @@ public class LodFilter {
         public String toString() {
             return name().toLowerCase(Locale.ROOT);
         }
+    }
+
+    static LodFilter of(LodOptions options) {
+        if (options == null) {
+            return null;
+        }
+
+        Mode mode = switch (options.getMode()) {
+            case KEEP -> Mode.KEEP;
+            case REMOVE -> Mode.REMOVE;
+            case MINIMUM -> Mode.MINIMUM;
+            case MAXIMUM -> Mode.MAXIMUM;
+        };
+
+        int[] lods;
+        if (options.hasLods()) {
+            lods = options.getLods().stream().mapToInt(Integer::intValue).toArray();
+        } else if (mode == Mode.MINIMUM || mode == Mode.MAXIMUM) {
+            lods = new int[]{0, 1, 2, 3, 4};
+        } else {
+            return null;
+        }
+
+        return new LodFilter()
+                .withLods(lods)
+                .setMode(mode)
+                .emptyFeatures(options.getEmptyFeatures())
+                .updateExtents(options.isUpdateExtents());
     }
 
     LodFilter withLods(int... lods) {
@@ -65,16 +94,16 @@ public class LodFilter {
         return this;
     }
 
-    LodFilter keepEmptyObjects(boolean keepEmptyObjects) {
-        this.keepEmptyObjects = keepEmptyObjects;
+    LodFilter emptyFeatures(EmptyFeatureMode emptyFeatures) {
+        this.emptyFeatures = emptyFeatures != null ? emptyFeatures : EmptyFeatureMode.REMOVE;
         return this;
     }
 
     boolean filter(AbstractFeature feature) {
-        return filter(feature, keepEmptyObjects);
+        return filter(feature, emptyFeatures);
     }
 
-    private boolean filter(AbstractFeature feature, boolean keepEmptyObjects) {
+    private boolean filter(AbstractFeature feature, EmptyFeatureMode emptyFeatures) {
         GeometryInfo geometryInfo = feature.getGeometryInfo(true);
         boolean[] filter = createLodFilter(geometryInfo);
 
@@ -91,13 +120,13 @@ public class LodFilter {
             FeatureInfo featureInfo = new FeatureInfo();
             Set<String> removedFeatureIds = new HashSet<>();
 
-            removeGeometries(geometries, featureInfo, keepEmptyObjects);
-            remove = removeEmptyFeatures(feature, featureInfo, keepEmptyObjects, removedFeatureIds);
+            removeGeometries(geometries, featureInfo, emptyFeatures == EmptyFeatureMode.KEEP);
+            remove = removeEmptyFeatures(feature, true, featureInfo, emptyFeatures, removedFeatureIds);
             removeAppearances(geometries, remove, feature);
             removeFeatureProperties(removedFeatureIds, remove, feature);
 
             if (!remove && updateExtents) {
-                feature.accept(extentUpdater);
+                feature.accept(new ExtentUpdater());
             }
         }
 
@@ -107,7 +136,7 @@ public class LodFilter {
     public void postprocess() {
         if (groupRemover != null && groupRemover.hasCityObjectGroups()) {
             for (CityObjectGroup group : groupRemover.getCityObjectGroups()) {
-                if (!filter(group, true)) {
+                if (!filter(group, EmptyFeatureMode.KEEP)) {
                     group.setGroupMembers(null);
                 }
             }
@@ -131,15 +160,16 @@ public class LodFilter {
         }
     }
 
-    private boolean removeEmptyFeatures(AbstractFeature feature, FeatureInfo featureInfo, boolean keepEmptyObjects, Set<String> removedFeatureIds) {
+    private boolean removeEmptyFeatures(AbstractFeature feature, boolean isTopLevel, FeatureInfo featureInfo, EmptyFeatureMode emptyFeatures, Set<String> removedFeatureIds) {
         boolean empty = true;
         for (AbstractFeature child : featureInfo.getChildren(feature)) {
-            if (!removeEmptyFeatures(child, featureInfo, keepEmptyObjects, removedFeatureIds)) {
+            if (!removeEmptyFeatures(child, false, featureInfo, emptyFeatures, removedFeatureIds)) {
                 empty = false;
             }
         }
 
-        if (empty && !keepEmptyObjects) {
+        if (empty && emptyFeatures != EmptyFeatureMode.KEEP
+                && !(isTopLevel && emptyFeatures == EmptyFeatureMode.KEEP_TOP_LEVEL)) {
             GeometryInfo geometryInfo = feature.getGeometryInfo(true);
             if (!geometryInfo.hasLodGeometries() && !geometryInfo.hasLodImplicitGeometries()) {
                 if (feature.getParent() != null && feature.getParent().getParent() instanceof GMLObject parent) {

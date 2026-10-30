@@ -11,6 +11,7 @@ import org.citydb.config.common.ConfigObject;
 import org.citydb.io.reader.filter.Filter;
 import org.citydb.io.reader.options.ImplicitGeometryScope;
 import org.citydb.io.reader.options.InputFormatOptions;
+import org.citydb.io.reader.options.LodOptions;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -22,6 +23,7 @@ public class ReadOptions {
     private int numberOfThreads;
     private String encoding;
     private boolean computeEnvelopes;
+    private LodOptions lodOptions;
     private ConfigObject<InputFormatOptions> formatOptions;
 
     @JSONField(serialize = false, deserialize = false)
@@ -75,6 +77,15 @@ public class ReadOptions {
 
     public ReadOptions setComputeEnvelopes(boolean computeEnvelopes) {
         this.computeEnvelopes = computeEnvelopes;
+        return this;
+    }
+
+    public Optional<LodOptions> getLodOptions() {
+        return Optional.ofNullable(lodOptions);
+    }
+
+    public ReadOptions setLodOptions(LodOptions lodOptions) {
+        this.lodOptions = lodOptions;
         return this;
     }
 

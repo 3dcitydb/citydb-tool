@@ -88,6 +88,7 @@ public class CityGMLReader extends FeatureReader {
                 .mapLod0RoofEdge(formatOptions.isMapLod0RoofEdge())
                 .mapLod1MultiSurfaces(formatOptions.isMapLod1MultiSurfaces())
                 .setImplicitGeometryScope(options.getImplicitGeometryScope())
+                .setLodOptions(options.getLodOptions().orElse(null))
                 .setNumberOfThreads(options.getNumberOfThreads());
     }
 
