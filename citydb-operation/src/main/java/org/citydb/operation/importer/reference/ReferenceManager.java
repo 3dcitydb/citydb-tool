@@ -7,6 +7,7 @@ package org.citydb.operation.importer.reference;
 
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
+import org.citydb.core.function.CheckedRunnable;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportOptions;
@@ -15,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,6 +25,7 @@ public class ReferenceManager {
     private final Logger logger = LoggerFactory.getLogger(ReferenceManager.class);
     private final DatabaseAdapter adapter;
     private final PersistentMapStore store;
+    private final Connection connection;
     private final ExecutorService service;
     private final CountLatch countLatch;
     private final int batchSize;
@@ -30,11 +33,14 @@ public class ReferenceManager {
     private Throwable exception;
     private volatile boolean shouldRun = true;
 
-    private ReferenceManager(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options) {
+    private ReferenceManager(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options, Connection connection) {
         this.adapter = adapter;
         this.store = store;
+        this.connection = connection;
 
-        service = Executors.newFixedThreadPool(options.getNumberOfThreads() > 0
+        service = Executors.newFixedThreadPool(connection != null
+                ? 1
+                : options.getNumberOfThreads() > 0
                 ? options.getNumberOfThreads()
                 : Math.max(2, Runtime.getRuntime().availableProcessors()));
         countLatch = new CountLatch();
@@ -42,7 +48,11 @@ public class ReferenceManager {
     }
 
     public static ReferenceManager newInstance(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options) {
-        return new ReferenceManager(adapter, store, options);
+        return new ReferenceManager(adapter, store, options, null);
+    }
+
+    public static ReferenceManager newInstance(DatabaseAdapter adapter, PersistentMapStore store, ImportOptions options, Connection connection) {
+        return new ReferenceManager(adapter, store, options, connection);
     }
 
     public void storeReferences(ReferenceCache cache) {
@@ -92,33 +102,41 @@ public class ReferenceManager {
 
     private <K, V> void store(Map<K, V> unresolved, String name) {
         Map<K, V> values = new HashMap<>(unresolved);
-        countLatch.increment();
-        service.execute(() -> {
-            try {
-                store.getOrCreateMap(name).putAll(values);
-            } finally {
-                countLatch.decrement();
-            }
-        });
+        execute(() -> store.getOrCreateMap(name).putAll(values));
     }
 
     private void update(Map<Long, Long> resolved, CacheType type) {
         Map<Long, Long> values = new HashMap<>(resolved);
+        execute(() -> {
+            if (connection != null) {
+                update(values, type, connection);
+            } else {
+                try (Connection connection = adapter.getPool().getConnection(true)) {
+                    update(values, type, connection);
+                }
+            }
+        });
+    }
+
+    private void update(Map<Long, Long> values, CacheType type, Connection connection) throws SQLException {
+        try (PreparedStatement stmt = connection.prepareStatement("update " +
+                adapter.getConnectionDetails().getSchema() + "." + type.getTable() +
+                " set " + type.getColumn() + " = ? where id = ?")) {
+            for (Map.Entry<Long, Long> entry : values.entrySet()) {
+                stmt.setLong(1, entry.getValue());
+                stmt.setLong(2, entry.getKey());
+                stmt.addBatch();
+            }
+
+            stmt.executeBatch();
+        }
+    }
+
+    private void execute(CheckedRunnable<Throwable> action) {
         countLatch.increment();
         service.execute(() -> {
             try {
-                try (Connection connection = adapter.getPool().getConnection(true);
-                     PreparedStatement stmt = connection.prepareStatement("update " +
-                             adapter.getConnectionDetails().getSchema() + "." + type.getTable() +
-                             " set " + type.getColumn() + " = ? where id = ?")) {
-                    for (Map.Entry<Long, Long> entry : values.entrySet()) {
-                        stmt.setLong(1, entry.getValue());
-                        stmt.setLong(2, entry.getKey());
-                        stmt.addBatch();
-                    }
-
-                    stmt.executeBatch();
-                }
+                action.run();
             } catch (Throwable e) {
                 shouldRun = false;
                 exception = e;

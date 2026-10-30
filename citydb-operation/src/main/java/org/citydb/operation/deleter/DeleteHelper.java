@@ -26,22 +26,25 @@ public class DeleteHelper {
     private final TableHelper tableHelper;
     private final List<DeleteLogEntry> logEntries = new ArrayList<>();
     private final Deleter.TransactionMode transactionMode;
+    private final boolean ownsConnection;
     private final int batchSize;
     private final int commitAfter;
 
     private int commitCounter;
 
-    DeleteHelper(DatabaseAdapter adapter, Connection connection, DeleteOptions options, DeleteLogger logger,
-                 Deleter.TransactionMode transactionMode) {
+    DeleteHelper(DatabaseAdapter adapter, Connection connection, boolean ownsConnection, DeleteOptions options,
+                 DeleteLogger logger, Deleter.TransactionMode transactionMode) {
         this.adapter = adapter;
         this.connection = connection;
+        this.ownsConnection = ownsConnection;
         this.options = options;
         this.logger = logger;
-        this.transactionMode = transactionMode;
+        this.transactionMode = ownsConnection ? transactionMode : null;
 
         tableHelper = new TableHelper(this);
         batchSize = adapter.getSchemaAdapter().getDefaultBatchSize();
-        commitAfter = transactionMode != Deleter.TransactionMode.NO_COMMIT
+        commitAfter = this.transactionMode == Deleter.TransactionMode.COMMIT_BATCHES
+                || this.transactionMode == Deleter.TransactionMode.ROLLBACK
                 ? options.getCommitAfter() > 0 ? options.getCommitAfter() : DeleteOptions.DEFAULT_COMMIT_AFTER
                 : 0;
     }
@@ -74,7 +77,7 @@ public class DeleteHelper {
                 logEntries.add(DeleteLogEntry.of(Table.FEATURE, id));
             }
 
-            executeBatch(false, transactionMode == Deleter.TransactionMode.AUTO_COMMIT);
+            executeBatch(false, transactionMode == Deleter.TransactionMode.COMMIT_BATCHES);
         } catch (Exception e) {
             throw new DeleteException("Failed to delete feature (ID: " + id + ").", e);
         }
@@ -87,15 +90,18 @@ public class DeleteHelper {
                     deleter.executeBatch();
                 }
 
-                if (commit) {
+                if (commit && ownsConnection) {
                     connection.commit();
-                } else if (transactionMode == Deleter.TransactionMode.AUTO_ROLLBACK) {
+                } else if (transactionMode == Deleter.TransactionMode.ROLLBACK) {
                     connection.rollback();
                 }
 
-                updateDeleteLog(commit);
+                updateDeleteLog(commit && ownsConnection);
             } catch (SQLException e) {
-                connection.rollback();
+                if (ownsConnection) {
+                    connection.rollback();
+                }
+
                 throw e;
             } finally {
                 commitCounter = 0;

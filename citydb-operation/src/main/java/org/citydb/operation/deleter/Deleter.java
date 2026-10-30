@@ -7,6 +7,7 @@ package org.citydb.operation.deleter;
 
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
+import org.citydb.core.function.CheckedConsumer;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.operation.deleter.util.DeleteLogger;
 
@@ -17,32 +18,34 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
-public class Deleter {
-    private ExecutorService service;
+public class Deleter implements AutoCloseable {
+    private ThreadPoolExecutor service;
+    private Connection externalConnection;
     private Connection connection;
     private ThreadLocal<DeleteHelper> contexts;
     private Set<DeleteHelper> helpers;
     private DeleteLogger logger;
     private CountLatch countLatch;
     private Throwable exception;
-    private TransactionMode transactionMode = TransactionMode.NO_COMMIT;
+    private TransactionMode transactionMode = TransactionMode.COMMIT_SESSION;
 
     private volatile State state = State.SESSION_NOT_STARTED;
     private volatile boolean shouldRun;
 
     public enum TransactionMode {
-        AUTO_COMMIT,
-        AUTO_ROLLBACK,
-        NO_COMMIT
+        COMMIT_BATCHES,
+        COMMIT_SESSION,
+        ROLLBACK
     }
 
     public enum State {
         SESSION_NOT_STARTED,
         SESSION_STARTED,
-        SESSION_COMMITTED,
-        SESSION_ABORTED
+        SESSION_COMPLETED,
+        SESSION_ABORTED,
+        CLOSED
     }
 
     private Deleter() {
@@ -70,6 +73,19 @@ public class Deleter {
         return this;
     }
 
+    public Optional<Connection> getConnection() {
+        return Optional.ofNullable(externalConnection);
+    }
+
+    public Deleter setConnection(Connection connection) {
+        if (state == State.SESSION_STARTED) {
+            throw new IllegalStateException("Illegal to set the connection during a session.");
+        }
+
+        externalConnection = connection;
+        return this;
+    }
+
     public State getState() {
         return state;
     }
@@ -81,26 +97,31 @@ public class Deleter {
     public Deleter startSession(DatabaseAdapter adapter, DeleteOptions options) throws DeleteException {
         if (state == State.SESSION_STARTED) {
             return this;
+        } else if (state == State.CLOSED) {
+            throw new DeleteException("Illegal to start a session after the deleter has been closed.");
         }
 
         Objects.requireNonNull(adapter, "The database adapter must not be null.");
         Objects.requireNonNull(options, "The delete options must not be null.");
 
+        boolean ownsConnection = externalConnection == null;
         try {
-            connection = adapter.getPool().getConnection(false);
+            connection = ownsConnection ? adapter.getPool().getConnection(false) : externalConnection;
         } catch (SQLException e) {
             throw new DeleteException("Failed to connect to the database.", e);
         }
 
-        helpers = ConcurrentHashMap.newKeySet();
-        service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+        exception = null;
+        updateService(ownsConnection && options.getNumberOfThreads() > 0
                 ? options.getNumberOfThreads()
                 : 1);
 
+        helpers = ConcurrentHashMap.newKeySet();
         countLatch = new CountLatch();
         contexts = ThreadLocal.withInitial(() -> {
             try {
-                DeleteHelper helper = new DeleteHelper(adapter, connection, options, logger, transactionMode);
+                DeleteHelper helper = new DeleteHelper(adapter, connection, ownsConnection, options,
+                        logger, transactionMode);
                 helpers.add(helper);
                 return helper;
             } catch (Exception e) {
@@ -140,56 +161,54 @@ public class Deleter {
         return result;
     }
 
-    public void commitSession() throws DeleteException {
-        if (state == State.SESSION_NOT_STARTED
-                || state == State.SESSION_COMMITTED
-                || state == State.SESSION_ABORTED) {
+    public void flush() throws DeleteException {
+        if (state != State.SESSION_STARTED) {
             return;
-        } else if (transactionMode == TransactionMode.AUTO_ROLLBACK) {
-            throw new DeleteException("Illegal to commit a session in auto-rollback mode.");
         }
 
         try {
-            state = State.SESSION_COMMITTED;
-            countLatch.await();
-
-            for (DeleteHelper helper : helpers) {
-                countLatch.increment();
-                service.execute(() -> {
-                    try {
-                        helper.executeBatch(true, true);
-                        helper.close();
-                    } catch (Throwable e) {
-                        exception = e;
-                    } finally {
-                        countLatch.decrement();
-                    }
-                });
-            }
-
-            countLatch.await();
-            if (exception != null) {
-                throw exception;
-            }
+            execute(helper -> helper.executeBatch(true, false));
         } catch (Throwable e) {
             shouldRun = false;
-            throw new DeleteException("Failed to commit delete session.", e);
+            throw new DeleteException("Failed to flush delete session.", e);
+        }
+    }
+
+    public void completeSession() throws DeleteException {
+        if (state != State.SESSION_STARTED) {
+            return;
+        } else if (externalConnection == null && transactionMode == TransactionMode.ROLLBACK) {
+            throw new DeleteException("Illegal to complete a session in rollback mode.");
+        }
+
+        countLatch.await();
+        if (!shouldRun) {
+            abortSession();
+            throw new DeleteException("Failed to complete delete session because a delete has failed.");
+        }
+
+        try {
+            state = State.SESSION_COMPLETED;
+            execute(helper -> {
+                helper.executeBatch(true, externalConnection == null);
+                helper.close();
+            });
+        } catch (Throwable e) {
+            shouldRun = false;
+            throw new DeleteException("Failed to complete delete session.", e);
         } finally {
-            close();
+            endSession();
         }
     }
 
     public void abortSession() throws DeleteException {
-        if (state == State.SESSION_NOT_STARTED
-                || state == State.SESSION_COMMITTED
-                || state == State.SESSION_ABORTED) {
+        if (state != State.SESSION_STARTED) {
             return;
         }
 
         try {
             state = State.SESSION_ABORTED;
             countLatch.await();
-
             for (DeleteHelper helper : helpers) {
                 helper.close();
             }
@@ -197,17 +216,69 @@ public class Deleter {
             shouldRun = false;
             throw new DeleteException("Failed to abort delete session.", e);
         } finally {
-            close();
+            endSession();
         }
     }
 
-    private void close() {
+    @Override
+    public void close() throws DeleteException {
+        if (state == State.CLOSED) {
+            return;
+        }
+
         try {
-            connection.close();
+            abortSession();
+        } finally {
+            state = State.CLOSED;
+            if (service != null) {
+                service.shutdown();
+            }
+        }
+    }
+
+    private void execute(CheckedConsumer<DeleteHelper, Throwable> action) throws Throwable {
+        countLatch.await();
+        for (DeleteHelper helper : helpers) {
+            countLatch.increment();
+            service.execute(() -> {
+                try {
+                    action.accept(helper);
+                } catch (Throwable e) {
+                    exception = e;
+                } finally {
+                    countLatch.decrement();
+                }
+            });
+        }
+
+        countLatch.await();
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
+    private void updateService(int threads) {
+        if (service != null && service.getMaximumPoolSize() != threads) {
+            service.shutdown();
+            service = null;
+        }
+
+        if (service == null) {
+            service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
+        }
+    }
+
+    private void endSession() {
+        try {
+            if (connection != null && connection != externalConnection) {
+                connection.close();
+            }
         } catch (SQLException e) {
             //
         } finally {
-            service.shutdown();
+            connection = null;
+            helpers = null;
+            contexts = null;
         }
     }
 }

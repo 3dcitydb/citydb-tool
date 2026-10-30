@@ -35,51 +35,51 @@ public class DuplicateDeleter {
 
     void deleteDuplicates(Map<Long, Boolean> databaseIds) throws ExecutionException {
         AtomicLong counter = new AtomicLong();
-        Deleter deleter = Deleter.newInstance()
+        boolean successful;
+
+        try (Deleter deleter = Deleter.newInstance()
                 .setTransactionMode(preview
-                        ? Deleter.TransactionMode.AUTO_ROLLBACK
-                        : Deleter.TransactionMode.AUTO_COMMIT);
+                        ? Deleter.TransactionMode.ROLLBACK
+                        : Deleter.TransactionMode.COMMIT_BATCHES)) {
+            deleter.startSession(adapter, new DeleteOptions()
+                    .setReasonForUpdate("Duplicate deletion")
+                    .setMode(options.getMode() == ImportMode.TERMINATE_EXISTING
+                            ? DeleteMode.TERMINATE
+                            : DeleteMode.DELETE));
 
-        try {
-            try {
-                deleter.startSession(adapter, new DeleteOptions()
-                        .setReasonForUpdate("Duplicate deletion")
-                        .setMode(options.getMode() == ImportMode.TERMINATE_EXISTING
-                                ? DeleteMode.TERMINATE
-                                : DeleteMode.DELETE));
-
-                Iterator<Long> iterator = databaseIds.keySet().iterator();
-                while (shouldRun && iterator.hasNext()) {
-                    long id = iterator.next();
-                    deleter.deleteFeature(id).whenComplete((success, t) -> {
-                        if (success == Boolean.TRUE) {
-                            long count = counter.incrementAndGet();
-                            if (count % 1000 == 0) {
-                                logger.info("{} duplicates processed.", count);
-                            }
-                        } else {
-                            shouldRun = false;
-                            exception = t;
-                            logger.error("Failed to delete duplicate feature (ID: {}).", id);
+            Iterator<Long> iterator = databaseIds.keySet().iterator();
+            while (shouldRun && iterator.hasNext()) {
+                long id = iterator.next();
+                deleter.deleteFeature(id).whenComplete((success, t) -> {
+                    if (success == Boolean.TRUE) {
+                        long count = counter.incrementAndGet();
+                        if (count % 1000 == 0) {
+                            logger.info("{} duplicates processed.", count);
                         }
-                    });
-                }
-
-                if (exception != null) {
-                    throw exception;
-                }
-            } finally {
-                if (shouldRun && !preview && deleter.wasSuccessful()) {
-                    deleter.commitSession();
-                } else {
-                    deleter.abortSession();
-                }
+                    } else {
+                        shouldRun = false;
+                        exception = t;
+                        logger.error("Failed to delete duplicate feature (ID: {}).", id);
+                    }
+                });
             }
+
+            if (exception != null) {
+                throw exception;
+            }
+
+            if (shouldRun && !preview && deleter.wasSuccessful()) {
+                deleter.completeSession();
+            } else {
+                deleter.abortSession();
+            }
+
+            successful = deleter.wasSuccessful();
         } catch (Throwable e) {
             throw new ExecutionException("Failed to delete duplicate features.", e);
         }
 
-        if (!shouldRun || !deleter.wasSuccessful()) {
+        if (!shouldRun || !successful) {
             throw new ExecutionException("Failed to delete duplicate features.");
         }
     }

@@ -8,6 +8,7 @@ package org.citydb.operation.importer;
 import org.citydb.core.cache.PersistentMapStore;
 import org.citydb.core.concurrent.CountLatch;
 import org.citydb.core.concurrent.ExecutorHelper;
+import org.citydb.core.function.CheckedConsumer;
 import org.citydb.core.function.CheckedSupplier;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.feature.Feature;
@@ -20,39 +21,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 
-public class Importer {
+public class Importer implements AutoCloseable {
     private final Logger logger = LoggerFactory.getLogger(Importer.class);
-    private ExecutorService service;
+    private ThreadPoolExecutor service;
     private PersistentMapStore store;
     private ReferenceManager referenceManager;
     private ThreadLocal<ImportHelper> contexts;
     private Set<ImportHelper> helpers;
     private ImportLogger importLogger;
+    private Connection connection;
     private CountLatch countLatch;
     private Throwable exception;
-    private TransactionMode transactionMode = TransactionMode.AUTO_COMMIT;
+    private TransactionMode transactionMode = TransactionMode.COMMIT_BATCHES;
 
     private volatile State state = State.SESSION_NOT_STARTED;
     private volatile boolean shouldRun;
 
     public enum TransactionMode {
-        AUTO_COMMIT,
-        AUTO_ROLLBACK,
-        NO_COMMIT
+        COMMIT_BATCHES,
+        COMMIT_SESSION,
+        ROLLBACK
     }
 
     public enum State {
         SESSION_NOT_STARTED,
         SESSION_STARTED,
-        SESSION_COMMITTED,
-        SESSION_ABORTED
+        SESSION_COMPLETED,
+        SESSION_ABORTED,
+        CLOSED
     }
 
     private Importer() {
@@ -80,6 +84,19 @@ public class Importer {
         return this;
     }
 
+    public Optional<Connection> getConnection() {
+        return Optional.ofNullable(connection);
+    }
+
+    public Importer setConnection(Connection connection) {
+        if (state == State.SESSION_STARTED) {
+            throw new IllegalStateException("Illegal to set the connection during a session.");
+        }
+
+        this.connection = connection;
+        return this;
+    }
+
     public State getState() {
         return state;
     }
@@ -91,31 +108,40 @@ public class Importer {
     public Importer startSession(DatabaseAdapter adapter, ImportOptions options) throws ImportException {
         if (state == State.SESSION_STARTED) {
             return this;
+        } else if (state == State.CLOSED) {
+            throw new ImportException("Illegal to start a session after the importer has been closed.");
         }
 
         Objects.requireNonNull(adapter, "The database adapter must not be null.");
         Objects.requireNonNull(options, "The import options must not be null.");
 
         try {
-            store = PersistentMapStore.builder()
-                    .tempDirectory(options.getTempDirectory().orElse(null))
-                    .build();
-            logger.debug("Initialized cache for resolving references at {}.", store.getBackingFile());
+            if (store == null) {
+                store = PersistentMapStore.builder()
+                        .tempDirectory(options.getTempDirectory().orElse(null))
+                        .build();
+                logger.debug("Initialized cache for resolving references at {}.", store.getBackingFile());
+            } else {
+                store.clear();
+            }
         } catch (IOException e) {
             throw new ImportException("Failed to initialize local cache.", e);
         }
 
-        referenceManager = ReferenceManager.newInstance(adapter, store, options);
-        helpers = ConcurrentHashMap.newKeySet();
-        service = ExecutorHelper.newFixedAndBlockingThreadPool(options.getNumberOfThreads() > 0
+        exception = null;
+        referenceManager = ReferenceManager.newInstance(adapter, store, options, connection);
+        updateService(connection != null
+                ? 1
+                : options.getNumberOfThreads() > 0
                 ? options.getNumberOfThreads()
                 : Math.max(2, Runtime.getRuntime().availableProcessors()));
 
+        helpers = ConcurrentHashMap.newKeySet();
         countLatch = new CountLatch();
         contexts = ThreadLocal.withInitial(() -> {
             try {
                 ImportHelper helper = new ImportHelper(adapter, options, referenceManager, store,
-                        importLogger, transactionMode);
+                        importLogger, connection, transactionMode);
                 helpers.add(helper);
                 return helper;
             } catch (Exception e) {
@@ -162,37 +188,38 @@ public class Importer {
         return result;
     }
 
-    public void commitSession() throws ImportException {
-        if (state == State.SESSION_NOT_STARTED
-                || state == State.SESSION_COMMITTED
-                || state == State.SESSION_ABORTED) {
+    public void flush() throws ImportException {
+        if (state != State.SESSION_STARTED) {
             return;
-        } else if (transactionMode == TransactionMode.AUTO_ROLLBACK) {
-            throw new ImportException("Illegal to commit a session in auto-rollback mode.");
         }
 
         try {
-            state = State.SESSION_COMMITTED;
-            countLatch.await();
+            execute(helper -> helper.executeBatch(true, false));
+        } catch (Throwable e) {
+            shouldRun = false;
+            throw new ImportException("Failed to flush import session.", e);
+        }
+    }
 
-            for (ImportHelper helper : helpers) {
-                countLatch.increment();
-                service.execute(() -> {
-                    try {
-                        helper.executeBatch(true, true);
-                        helper.close();
-                    } catch (Throwable e) {
-                        exception = e;
-                    } finally {
-                        countLatch.decrement();
-                    }
-                });
-            }
+    public void completeSession() throws ImportException {
+        if (state != State.SESSION_STARTED) {
+            return;
+        } else if (connection == null && transactionMode == TransactionMode.ROLLBACK) {
+            throw new ImportException("Illegal to complete a session in rollback mode.");
+        }
 
-            countLatch.await();
-            if (exception != null) {
-                throw exception;
-            }
+        countLatch.await();
+        if (!shouldRun) {
+            abortSession();
+            throw new ImportException("Failed to complete import session because an import has failed.");
+        }
+
+        try {
+            state = State.SESSION_COMPLETED;
+            execute(helper -> {
+                helper.executeBatch(true, connection == null);
+                helper.close();
+            });
 
             try {
                 referenceManager.resolveReferences();
@@ -201,23 +228,20 @@ public class Importer {
             }
         } catch (Throwable e) {
             shouldRun = false;
-            throw new ImportException("Failed to commit import session.", e);
+            throw new ImportException("Failed to complete import session.", e);
         } finally {
-            close();
+            endSession();
         }
     }
 
     public void abortSession() throws ImportException {
-        if (state == State.SESSION_NOT_STARTED
-                || state == State.SESSION_COMMITTED
-                || state == State.SESSION_ABORTED) {
+        if (state != State.SESSION_STARTED) {
             return;
         }
 
         try {
             state = State.SESSION_ABORTED;
             countLatch.await();
-
             for (ImportHelper helper : helpers) {
                 helper.close();
             }
@@ -227,12 +251,72 @@ public class Importer {
             shouldRun = false;
             throw new ImportException("Failed to abort import session.", e);
         } finally {
-            close();
+            endSession();
         }
     }
 
-    private void close() {
-        service.shutdown();
-        store.close();
+    @Override
+    public void close() throws ImportException {
+        if (state == State.CLOSED) {
+            return;
+        }
+
+        try {
+            abortSession();
+        } finally {
+            state = State.CLOSED;
+            if (service != null) {
+                service.shutdown();
+            }
+
+            if (store != null) {
+                store.close();
+            }
+        }
+    }
+
+    private void execute(CheckedConsumer<ImportHelper, Throwable> action) throws Throwable {
+        countLatch.await();
+        for (ImportHelper helper : helpers) {
+            countLatch.increment();
+            service.execute(() -> {
+                try {
+                    action.accept(helper);
+                } catch (Throwable e) {
+                    exception = e;
+                } finally {
+                    countLatch.decrement();
+                }
+            });
+        }
+
+        countLatch.await();
+        if (exception != null) {
+            throw exception;
+        }
+    }
+
+    private void updateService(int threads) {
+        if (service != null && service.getMaximumPoolSize() != threads) {
+            service.shutdown();
+            service = null;
+        }
+
+        if (service == null) {
+            service = ExecutorHelper.newFixedAndBlockingThreadPool(threads);
+        }
+    }
+
+    private void endSession() {
+        try {
+            referenceManager.close();
+        } catch (ImportException e) {
+            //
+        } finally {
+            referenceManager = null;
+            helpers = null;
+            contexts = null;
+            store.clear();
+        }
     }
 }

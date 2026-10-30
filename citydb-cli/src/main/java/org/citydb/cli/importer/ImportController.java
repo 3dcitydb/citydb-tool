@@ -161,14 +161,12 @@ public abstract class ImportController implements Command {
             logger.info("Import is running in preview mode. Features will not be imported.");
         }
 
-        try (DuplicateController duplicateController = DuplicateController.of(importOptions, databaseAdapter,
-                preview)) {
-            Importer importer = Importer.newInstance()
-                    .setTransactionMode(preview
-                            ? Importer.TransactionMode.AUTO_ROLLBACK
-                            : Importer.TransactionMode.AUTO_COMMIT)
-                    .setImportLogger(importLogger);
-
+        try (DuplicateController duplicateController = DuplicateController.of(importOptions, databaseAdapter, preview);
+             Importer importer = Importer.newInstance()
+                     .setTransactionMode(preview
+                             ? Importer.TransactionMode.ROLLBACK
+                             : Importer.TransactionMode.COMMIT_BATCHES)
+                     .setImportLogger(importLogger)) {
             AtomicLong counter = new AtomicLong();
             ImportOptionsHelper optionsHelper = ImportOptionsHelper.of(importOptions);
 
@@ -222,7 +220,7 @@ public abstract class ImportController implements Command {
                         throw e;
                     } finally {
                         if (shouldRun && !preview && importer.wasSuccessful()) {
-                            importer.commitSession();
+                            importer.completeSession();
                         } else {
                             importer.abortSession();
                         }

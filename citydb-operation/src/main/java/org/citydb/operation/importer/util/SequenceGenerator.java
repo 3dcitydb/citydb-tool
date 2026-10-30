@@ -45,6 +45,16 @@ public class SequenceGenerator {
     public SequenceValues generateNextValues(Visitable visitable) throws SQLException {
         Processor processor = new Processor();
         visitable.accept(processor);
+        return generateNextValues(processor);
+    }
+
+    public SequenceValues generateNextValues(Property<?> property) throws SQLException {
+        Processor processor = new Processor();
+        processor.walk(property);
+        return generateNextValues(processor);
+    }
+
+    private SequenceValues generateNextValues(Processor processor) throws SQLException {
         if (processor.exception != null) {
             throw processor.exception;
         }

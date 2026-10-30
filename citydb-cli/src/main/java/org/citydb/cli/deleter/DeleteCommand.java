@@ -91,8 +91,7 @@ public class DeleteCommand implements Command {
         boolean autoCommit = !preview && commitAfter > 0;
 
         DeleteLogger deleteLogger = new DeleteLogger(autoCommit, databaseAdapter);
-        Deleter deleter = Deleter.newInstance()
-                .setDeleteLogger(deleteLogger);
+        Deleter.TransactionMode transactionMode = Deleter.TransactionMode.COMMIT_SESSION;
 
         Query query = getQuery(deleteOptions);
         QueryExecutor executor = helper.getQueryExecutor(query,
@@ -102,6 +101,7 @@ public class DeleteCommand implements Command {
 
         IndexMode indexMode = deleteOptions.getIndexMode();
         AtomicLong counter = new AtomicLong();
+        boolean successful = false;
 
         if (indexMode != IndexMode.KEEP) {
             logger.info("Dropping database indexes...");
@@ -115,12 +115,12 @@ public class DeleteCommand implements Command {
         if (preview) {
             logger.info("Delete is running in preview mode. Features will not be deleted.");
             if (commitAfter > 0) {
-                deleter.setTransactionMode(Deleter.TransactionMode.AUTO_ROLLBACK);
+                transactionMode = Deleter.TransactionMode.ROLLBACK;
                 deleteOptions.setCommitAfter(commitAfter);
             }
         } else if (autoCommit) {
             logger.info("Committing delete operation after {} feature(s).", commitAfter);
-            deleter.setTransactionMode(Deleter.TransactionMode.AUTO_COMMIT);
+            transactionMode = Deleter.TransactionMode.COMMIT_BATCHES;
             deleteOptions.setCommitAfter(commitAfter);
         } else {
             logger.info("Committing delete operation in a single transaction.");
@@ -130,7 +130,10 @@ public class DeleteCommand implements Command {
             logger.debug("Querying features for deletion...");
             logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
-            try (QueryResult result = executor.executeQuery()) {
+            try (Deleter deleter = Deleter.newInstance()
+                    .setDeleteLogger(deleteLogger)
+                    .setTransactionMode(transactionMode);
+                 QueryResult result = executor.executeQuery()) {
                 deleter.startSession(databaseAdapter, deleteOptions);
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
@@ -148,12 +151,14 @@ public class DeleteCommand implements Command {
                         }
                     });
                 }
-            } finally {
+
                 if (shouldRun && !preview && deleter.wasSuccessful()) {
-                    deleter.commitSession();
+                    deleter.completeSession();
                 } else {
                     deleter.abortSession();
                 }
+
+                successful = deleter.wasSuccessful();
             }
 
             if (shouldRun && indexMode == IndexMode.DROP_CREATE) {
@@ -164,7 +169,7 @@ public class DeleteCommand implements Command {
             logger.warn("Database delete aborted due to an error.");
             throw new ExecutionException("A fatal error has occurred during delete.", e);
         } finally {
-            if ((deleter.getState() == Deleter.State.SESSION_COMMITTED || autoCommit || preview)
+            if ((successful || autoCommit || preview)
                     && !deleteLogger.getStatistics().isEmpty()) {
                 logger.info(!preview ? "Delete summary:" : "Preview of features to be deleted:");
                 deleteLogger.getStatistics().logFeatureSummary(Level.INFO);
