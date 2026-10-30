@@ -71,17 +71,13 @@ public class DatabaseManager {
         connectionDetails.getProperties().forEach((k, v) -> dbProperties.setProperty(k, String.valueOf(v)));
         poolProperties.setDbProperties(dbProperties);
 
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
         try {
-            Thread.currentThread().setContextClassLoader(adapter.getClass().getClassLoader());
             dataSource = new DataSource(poolProperties);
             dataSource.createPool();
             adapter.initialize(Pool.newInstance(this), connectionDetails);
         } catch (DatabaseException | SQLException e) {
             disconnect();
             throw e;
-        } finally {
-            Thread.currentThread().setContextClassLoader(loader);
         }
 
         Version version = adapter.getDatabaseMetadata().getVersion();
