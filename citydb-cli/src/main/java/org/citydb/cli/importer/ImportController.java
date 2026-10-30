@@ -5,7 +5,6 @@
 
 package org.citydb.cli.importer;
 
-import org.citydb.cli.CliConstants;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.*;
@@ -23,7 +22,6 @@ import org.citydb.core.file.InputFile;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterManager;
-import org.citydb.io.InputFiles;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
 import org.citydb.io.reader.filter.FilterException;
@@ -36,7 +34,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import picocli.CommandLine;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -124,7 +121,7 @@ public abstract class ImportController implements Command {
         IOAdapterManager ioManager = helper.getIOAdapterManager();
         IOAdapter ioAdapter = getIOAdapter(ioManager);
 
-        List<InputFile> inputFiles = getInputFiles(ioAdapter, ioManager);
+        List<InputFile> inputFiles = helper.getInputFiles(inputFileOptions, ioAdapter);
         if (inputFiles.isEmpty()) {
             logger.warn("No files found at {}.", inputFileOptions.joinFiles());
             return true;
@@ -247,19 +244,6 @@ public abstract class ImportController implements Command {
         }
 
         return shouldRun;
-    }
-
-    protected List<InputFile> getInputFiles(IOAdapter ioAdapter, IOAdapterManager ioManager) throws ExecutionException {
-        try {
-            logger.info("Searching for {} input files...", ioManager.getFileFormat(ioAdapter));
-            return InputFiles.of(inputFileOptions.getFiles())
-                    .withFileExtensions(ioManager.getFileExtensions(ioAdapter))
-                    .withMediaType(ioManager.getMediaType(ioAdapter))
-                    .withBaseDirectory(CliConstants.WORKING_DIR)
-                    .find();
-        } catch (IOException e) {
-            throw new ExecutionException("Failed to create list of input files.", e);
-        }
     }
 
     protected Filter getFilter(ImportOptions importOptions, DatabaseAdapter adapter) throws ExecutionException {

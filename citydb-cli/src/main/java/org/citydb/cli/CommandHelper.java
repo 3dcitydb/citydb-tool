@@ -6,11 +6,13 @@
 package org.citydb.cli;
 
 import org.citydb.cli.common.ConnectionOptions;
+import org.citydb.cli.common.InputFileOptions;
 import org.citydb.cli.logging.LoggerManager;
 import org.citydb.cli.util.ExtensionClassLoader;
 import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
+import org.citydb.core.file.InputFile;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -22,8 +24,10 @@ import org.citydb.database.postgres.PostgresqlAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.schema.ValidityReference;
 import org.citydb.database.util.IndexHelper;
+import org.citydb.io.IOAdapter;
 import org.citydb.io.IOAdapterException;
 import org.citydb.io.IOAdapterManager;
+import org.citydb.io.InputFiles;
 import org.citydb.operation.exporter.options.ValidityOptions;
 import org.citydb.plugin.Extension;
 import org.citydb.plugin.PluginManager;
@@ -138,6 +142,20 @@ public class CommandHelper {
 
     public IOAdapterManager getIOAdapterManager() throws ExecutionException {
         return ioAdapterManager.get();
+    }
+
+    public List<InputFile> getInputFiles(InputFileOptions options, IOAdapter ioAdapter) throws ExecutionException {
+        IOAdapterManager ioManager = getIOAdapterManager();
+        try {
+            logger.info("Searching for {} input files...", ioManager.getFileFormat(ioAdapter));
+            return InputFiles.of(options.getFiles())
+                    .withFileExtensions(ioManager.getFileExtensions(ioAdapter))
+                    .withMediaType(ioManager.getMediaType(ioAdapter))
+                    .withBaseDirectory(CliConstants.WORKING_DIR)
+                    .find();
+        } catch (IOException e) {
+            throw new ExecutionException("Failed to create list of input files.", e);
+        }
     }
 
     public QueryExecutor getQueryExecutor(Query query, SqlBuildOptions options, DatabaseAdapter adapter) throws ExecutionException {
