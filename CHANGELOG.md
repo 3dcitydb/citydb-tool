@@ -5,6 +5,11 @@
 ### Fixed
 - Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
   geometry or dropping all geometry of a feature.
+- When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
+  feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
+  is only kept if it is earlier.
+- When exporting, the creation and termination dates of contained features are written if they differ from the dates
+  of their parent.
 
 ## [1.4.1] - 2026-10-26
 
