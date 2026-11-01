@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+- **Breaking**: The `--[no-]terminate-all` parameter was removed from the `delete` command. A terminate operation
+  now always terminates subfeatures, so every feature below a terminated feature is terminated itself.
+
 ### Fixed
 - Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
   geometry or dropping all geometry of a feature.

@@ -21,9 +21,9 @@ public abstract class DeleteHelper implements AutoCloseable {
 
     public abstract Set<Long> deleteFeatures(Collection<Long> ids) throws SQLException;
 
-    public abstract boolean terminateFeature(long id, String metadata, boolean cascade) throws SQLException;
+    public abstract boolean terminateFeature(long id, String metadata) throws SQLException;
 
-    public abstract Set<Long> terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException;
+    public abstract Set<Long> terminateFeatures(Collection<Long> ids, String metadata) throws SQLException;
 
     @Override
     public abstract void close() throws SQLException;

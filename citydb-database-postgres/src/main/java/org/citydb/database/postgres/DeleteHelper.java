@@ -55,7 +55,7 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
     }
 
     @Override
-    public boolean terminateFeature(long id, String metadata, boolean cascade) throws SQLException {
+    public boolean terminateFeature(long id, String metadata) throws SQLException {
         if (terminateFeatureStmt == null) {
             terminateFeatureStmt = prepareTerminateStatement();
         }
@@ -63,13 +63,12 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
         terminateFeatureStmt.setLong(1, id);
         terminateFeatureStmt.setString(2, schema);
         helper.setJsonOrNull(terminateFeatureStmt, 3, metadata);
-        terminateFeatureStmt.setBoolean(4, cascade);
 
         return !getIds(terminateFeatureStmt).isEmpty();
     }
 
     @Override
-    public Set<Long> terminateFeatures(Collection<Long> ids, String metadata, boolean cascade) throws SQLException {
+    public Set<Long> terminateFeatures(Collection<Long> ids, String metadata) throws SQLException {
         if (terminateFeaturesStmt == null) {
             terminateFeaturesStmt = prepareTerminateStatement();
         }
@@ -77,7 +76,6 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
         helper.setLongArrayOrNull(terminateFeaturesStmt, 1, ids);
         terminateFeaturesStmt.setString(2, schema);
         helper.setJsonOrNull(terminateFeaturesStmt, 3, metadata);
-        terminateFeaturesStmt.setBoolean(4, cascade);
 
         return getIds(terminateFeaturesStmt);
     }
@@ -87,7 +85,7 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
     }
 
     private PreparedStatement prepareTerminateStatement() throws SQLException {
-        return connection.prepareStatement("select * from citydb_pkg.terminate_feature(?, ?, ?, ?)");
+        return connection.prepareStatement("select * from citydb_pkg.terminate_feature(?, ?, ?)");
     }
 
     private Set<Long> getIds(PreparedStatement stmt) throws SQLException {
