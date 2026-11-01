@@ -3,8 +3,9 @@
 ## [Unreleased]
 
 ### Changed
-- **Breaking**: The `--[no-]terminate-all` parameter was removed from the `delete` command. A terminate operation
-  now always terminates subfeatures, so every feature below a terminated feature is terminated itself.
+- **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
+  every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
+  `terminateWithSubFeatures` setting of the JSON configuration were removed.
 
 ### Fixed
 - Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
