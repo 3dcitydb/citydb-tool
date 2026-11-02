@@ -25,6 +25,7 @@ import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.reference.CacheType;
+import org.citydb.operation.importer.util.Lifespan;
 import org.citydb.operation.importer.util.TableHelper;
 import org.slf4j.event.Level;
 
@@ -176,6 +177,14 @@ public abstract class DatabaseImporter {
 
     protected OffsetDateTime getImportTime() {
         return helper.getImportTime();
+    }
+
+    protected Lifespan getInheritedLifespan() {
+        return helper.getInheritedLifespan();
+    }
+
+    protected void setInheritedLifespan(Lifespan inheritedLifespan) {
+        helper.setInheritedLifespan(inheritedLifespan);
     }
 
     protected FileLocator getFileLocator(ExternalFile file) {

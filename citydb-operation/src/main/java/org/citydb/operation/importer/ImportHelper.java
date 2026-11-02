@@ -56,6 +56,7 @@ public class ImportHelper {
     private final int batchSize;
 
     private OffsetDateTime importTime;
+    private Lifespan inheritedLifespan = Lifespan.NONE;
     private SequenceValues sequenceValues;
     private boolean shouldCommit;
 
@@ -106,6 +107,14 @@ public class ImportHelper {
 
     public OffsetDateTime getImportTime() {
         return importTime;
+    }
+
+    public Lifespan getInheritedLifespan() {
+        return inheritedLifespan;
+    }
+
+    public void setInheritedLifespan(Lifespan inheritedLifespan) {
+        this.inheritedLifespan = inheritedLifespan != null ? inheritedLifespan : Lifespan.NONE;
     }
 
     public SequenceValues getSequenceValues() {
@@ -174,6 +183,7 @@ public class ImportHelper {
             }
 
             importTime = OffsetDateTime.now().withNano(0);
+            inheritedLifespan = Lifespan.NONE;
             sequenceValues = sequenceGenerator.generateNextValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
@@ -195,6 +205,7 @@ public class ImportHelper {
             }
 
             importTime = OffsetDateTime.now().withNano(0);
+            inheritedLifespan = Lifespan.NONE;
             sequenceValues = sequenceGenerator.generateNextValues(property);
 
             PropertyDescriptor descriptor;

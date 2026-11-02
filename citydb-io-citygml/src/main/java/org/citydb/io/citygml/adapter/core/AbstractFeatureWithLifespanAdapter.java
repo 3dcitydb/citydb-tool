@@ -10,7 +10,11 @@ import org.citydb.io.citygml.reader.ModelBuilderHelper;
 import org.citydb.io.citygml.serializer.ModelSerializeException;
 import org.citydb.io.citygml.writer.ModelSerializerHelper;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.property.FeatureProperty;
+import org.citydb.model.property.RelationType;
 import org.citygml4j.core.model.core.AbstractFeatureWithLifespan;
+
+import java.time.OffsetDateTime;
 
 public abstract class AbstractFeatureWithLifespanAdapter<T extends AbstractFeatureWithLifespan> extends AbstractFeatureAdapter<T> {
 
@@ -27,12 +31,31 @@ public abstract class AbstractFeatureWithLifespanAdapter<T extends AbstractFeatu
     public void serialize(Feature source, T target, ModelSerializerHelper helper) throws ModelSerializeException {
         super.serialize(source, target, helper);
         boolean isTopLevel = source.getParent().isEmpty();
+        Feature parent = !isTopLevel ? getContainingFeature(source) : null;
+
+        source.getCreationDate()
+                .filter(value -> parent == null || !isEqual(value, parent.getCreationDate().orElse(null)))
+                .ifPresent(target::setCreationDate);
+        source.getTerminationDate()
+                .filter(value -> parent == null || !isEqual(value, parent.getTerminationDate().orElse(null)))
+                .ifPresent(target::setTerminationDate);
 
         if (isTopLevel) {
-            source.getCreationDate().ifPresent(target::setCreationDate);
-            source.getTerminationDate().ifPresent(target::setTerminationDate);
             source.getValidFrom().ifPresent(target::setValidFrom);
             source.getValidTo().ifPresent(target::setValidTo);
         }
+    }
+
+    private Feature getContainingFeature(Feature feature) {
+        return feature.getParent()
+                .filter(FeatureProperty.class::isInstance)
+                .map(FeatureProperty.class::cast)
+                .filter(property -> property.getRelationType() == RelationType.CONTAINS)
+                .map(property -> property.getParent(Feature.class))
+                .orElse(null);
+    }
+
+    private boolean isEqual(OffsetDateTime date, OffsetDateTime parentDate) {
+        return parentDate != null && date.isEqual(parentDate);
     }
 }
