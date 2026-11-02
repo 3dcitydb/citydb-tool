@@ -41,10 +41,6 @@ public class DeleteCommand implements Command {
             description = "Delete mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
     private Mode mode;
 
-    @CommandLine.Option(names = "--no-terminate-all", negatable = true, defaultValue = "true",
-            description = "Also terminate sub-features (default: ${DEFAULT-VALUE}).")
-    private boolean terminateAll;
-
     @CommandLine.Mixin
     protected IndexOptions indexOptions;
 
@@ -209,10 +205,6 @@ public class DeleteCommand implements Command {
 
         if (Command.hasMatchedOption("--commit", commandSpec)) {
             deleteOptions.setCommitAfter(commit);
-        }
-
-        if (Command.hasMatchedOption("--no-terminate-all", commandSpec)) {
-            deleteOptions.setTerminateWithSubFeatures(terminateAll);
         }
 
         if (Command.hasMatchedOption("--index-mode", commandSpec)) {

@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 ### Changed
+- **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
+  every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
+  `terminateWithSubFeatures` setting of the JSON configuration were removed.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
   is only kept if it is earlier.
