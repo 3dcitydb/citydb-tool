@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- * Copyright virtualcitysystems GmbH <https://vc.systems>
+ * Copyright Stuttgart Technical University of Applied Sciences <www.hft-stuttgart.de>
  */
 
 package org.citydb.database.connection;
@@ -35,14 +35,11 @@ public class DriverDataSource implements DataSource {
         return new DriverDataSource(driver, url, properties);
     }
 
-    public static DriverDataSource of(Class<?> driverClass, String url, Properties properties) throws SQLException {
+    public static DriverDataSource of(Class<? extends Driver> driverClass, String url, Properties properties)
+            throws SQLException {
         Objects.requireNonNull(driverClass, "The JDBC driver class must not be null.");
-        if (!Driver.class.isAssignableFrom(driverClass)) {
-            throw new SQLException("The class " + driverClass.getName() + " is not a JDBC driver.");
-        }
-
         try {
-            return new DriverDataSource((Driver) driverClass.getDeclaredConstructor().newInstance(), url, properties);
+            return new DriverDataSource(driverClass.getDeclaredConstructor().newInstance(), url, properties);
         } catch (ReflectiveOperationException | RuntimeException e) {
             throw new SQLException("Failed to instantiate the JDBC driver " + driverClass.getName() + ".", e);
         }

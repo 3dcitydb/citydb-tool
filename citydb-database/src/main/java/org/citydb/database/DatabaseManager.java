@@ -17,6 +17,7 @@ import org.citydb.database.connection.PoolOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Properties;
@@ -71,16 +72,19 @@ public class DatabaseManager {
         Properties dbProperties = new Properties();
         adapter.setDefaultConnectionProperties(dbProperties);
         connectionDetails.getProperties().forEach((k, v) -> dbProperties.setProperty(k, String.valueOf(v)));
+        dbProperties.setProperty(DriverDataSource.USER_PROPERTY, connectionDetails.getUser());
+        if (connectionDetails.getPassword() != null) {
+            dbProperties.setProperty(DriverDataSource.PASSWORD_PROPERTY, connectionDetails.getPassword());
+        }
 
         try {
-            Class<?> driverClass = adapter.getDriverClass();
+            Class<? extends Driver> driverClass = adapter.getDriverClass();
             if (driverClass == null) {
                 throw new DatabaseException("The database adapter " + adapter.getClass().getName() +
                         " does not provide a JDBC driver class.");
             }
 
-            poolProperties.setDataSource(DriverDataSource.of(driverClass, url,
-                    getConnectionProperties(dbProperties, connectionDetails)));
+            poolProperties.setDataSource(DriverDataSource.of(driverClass, url, dbProperties));
 
             dataSource = new DataSource(poolProperties);
             dataSource.createPool();
@@ -104,20 +108,6 @@ public class DatabaseManager {
         } catch (DatabaseAdapterException e) {
             throw new DatabaseException("Failed to load database adapters.", e);
         }
-    }
-
-    private Properties getConnectionProperties(Properties dbProperties, ConnectionDetails connectionDetails) {
-        Properties properties = new Properties();
-        properties.putAll(dbProperties);
-        if (connectionDetails.getUser() != null) {
-            properties.setProperty(DriverDataSource.USER_PROPERTY, connectionDetails.getUser());
-        }
-
-        if (connectionDetails.getPassword() != null) {
-            properties.setProperty(DriverDataSource.PASSWORD_PROPERTY, connectionDetails.getPassword());
-        }
-
-        return properties;
     }
 
     public boolean isConnected() {
