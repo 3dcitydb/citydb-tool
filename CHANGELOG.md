@@ -5,6 +5,7 @@
 ### Fixed
 - Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
   geometry or dropping all geometry of a feature.
+- Fixed reading CityGML 2.0/1.0 `BuildingPart` elements nested within other `BuildingPart` elements.
 
 ## [1.4.1] - 2026-10-26
 
