@@ -17,17 +17,17 @@ import java.sql.SQLException;
 public class EnvelopeHelper extends org.citydb.database.util.EnvelopeHelper {
     private final DatabaseAdapter adapter;
     private final String schema;
-    private final PreparedStatement stmt;
+    private PreparedStatement stmt;
 
-    EnvelopeHelper(Connection connection, DatabaseAdapter adapter) throws SQLException {
+    EnvelopeHelper(Connection connection, DatabaseAdapter adapter) {
         super(connection);
         this.adapter = adapter;
         schema = adapter.getConnectionDetails().getSchema();
-        stmt = connection.prepareStatement("select citydb_pkg.get_feature_envelope(?, ?, ?, ?)");
     }
 
     @Override
     public Envelope getFeatureEnvelope(long id, Mode mode) throws GeometryException, SQLException {
+        PreparedStatement stmt = getOrCreateStatement();
         stmt.setLong(1, id);
         stmt.setString(2, schema);
         stmt.setInt(3, mode == Mode.RECOMPUTE || mode == Mode.RECOMPUTE_AND_STORE ? 1 : 0);
@@ -42,6 +42,7 @@ public class EnvelopeHelper extends org.citydb.database.util.EnvelopeHelper {
 
     @Override
     public void updateFeatureEnvelope(long id) throws SQLException {
+        PreparedStatement stmt = getOrCreateStatement();
         stmt.setLong(1, id);
         stmt.setString(2, schema);
         stmt.setInt(3, 1);
@@ -51,8 +52,18 @@ public class EnvelopeHelper extends org.citydb.database.util.EnvelopeHelper {
         }
     }
 
+    private PreparedStatement getOrCreateStatement() throws SQLException {
+        if (stmt == null) {
+            stmt = connection.prepareStatement("select citydb_pkg.get_feature_envelope(?, ?, ?, ?)");
+        }
+
+        return stmt;
+    }
+
     @Override
     public void close() throws SQLException {
-        stmt.close();
+        if (stmt != null) {
+            stmt.close();
+        }
     }
 }
