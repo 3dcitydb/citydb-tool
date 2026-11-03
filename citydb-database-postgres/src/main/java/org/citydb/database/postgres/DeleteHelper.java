@@ -14,15 +14,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
     private final SqlHelper helper;
     private final String schema;
     private PreparedStatement deleteFeatureStmt;
-    private PreparedStatement deleteFeaturesStmt;
     private PreparedStatement terminateFeatureStmt;
-    private PreparedStatement terminateFeaturesStmt;
 
     DeleteHelper(Connection connection, DatabaseAdapter adapter) {
         super(connection);
@@ -32,60 +31,37 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
 
     @Override
     public boolean deleteFeature(long id) throws SQLException {
-        if (deleteFeatureStmt == null) {
-            deleteFeatureStmt = prepareDeleteStatement();
-        }
-
-        deleteFeatureStmt.setLong(1, id);
-        deleteFeatureStmt.setString(2, schema);
-
-        return !getIds(deleteFeatureStmt).isEmpty();
+        return !deleteFeatures(List.of(id)).isEmpty();
     }
 
     @Override
     public Set<Long> deleteFeatures(Collection<Long> ids) throws SQLException {
-        if (deleteFeaturesStmt == null) {
-            deleteFeaturesStmt = prepareDeleteStatement();
+        if (deleteFeatureStmt == null) {
+            deleteFeatureStmt = connection.prepareStatement("select * from citydb_pkg.delete_feature(?, ?)");
         }
 
-        helper.setLongArrayOrNull(deleteFeaturesStmt, 1, ids);
-        deleteFeaturesStmt.setString(2, schema);
+        helper.setLongArrayOrNull(deleteFeatureStmt, 1, ids);
+        deleteFeatureStmt.setString(2, schema);
 
-        return getIds(deleteFeaturesStmt);
+        return getIds(deleteFeatureStmt);
     }
 
     @Override
     public boolean terminateFeature(long id, String metadata) throws SQLException {
-        if (terminateFeatureStmt == null) {
-            terminateFeatureStmt = prepareTerminateStatement();
-        }
-
-        terminateFeatureStmt.setLong(1, id);
-        terminateFeatureStmt.setString(2, schema);
-        helper.setJsonOrNull(terminateFeatureStmt, 3, metadata);
-
-        return !getIds(terminateFeatureStmt).isEmpty();
+        return !terminateFeatures(List.of(id), metadata).isEmpty();
     }
 
     @Override
     public Set<Long> terminateFeatures(Collection<Long> ids, String metadata) throws SQLException {
-        if (terminateFeaturesStmt == null) {
-            terminateFeaturesStmt = prepareTerminateStatement();
+        if (terminateFeatureStmt == null) {
+            terminateFeatureStmt = connection.prepareStatement("select * from citydb_pkg.terminate_feature(?, ?, ?)");
         }
 
-        helper.setLongArrayOrNull(terminateFeaturesStmt, 1, ids);
-        terminateFeaturesStmt.setString(2, schema);
-        helper.setJsonOrNull(terminateFeaturesStmt, 3, metadata);
+        helper.setLongArrayOrNull(terminateFeatureStmt, 1, ids);
+        terminateFeatureStmt.setString(2, schema);
+        helper.setJsonOrNull(terminateFeatureStmt, 3, metadata);
 
-        return getIds(terminateFeaturesStmt);
-    }
-
-    private PreparedStatement prepareDeleteStatement() throws SQLException {
-        return connection.prepareStatement("select * from citydb_pkg.delete_feature(?, ?)");
-    }
-
-    private PreparedStatement prepareTerminateStatement() throws SQLException {
-        return connection.prepareStatement("select * from citydb_pkg.terminate_feature(?, ?, ?)");
+        return getIds(terminateFeatureStmt);
     }
 
     private Set<Long> getIds(PreparedStatement stmt) throws SQLException {
@@ -104,10 +80,8 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
 
     @Override
     public void close() throws SQLException {
-        try (PreparedStatement deleteFeatureStmt = this.deleteFeatureStmt;
-             PreparedStatement deleteFeaturesStmt = this.deleteFeaturesStmt;
-             PreparedStatement terminateFeatureStmt = this.terminateFeatureStmt;
-             PreparedStatement terminateFeaturesStmt = this.terminateFeaturesStmt) {
+        try (PreparedStatement deleteFeaturesStmt = this.deleteFeatureStmt;
+             PreparedStatement terminateFeaturesStmt = this.terminateFeatureStmt) {
         }
     }
 }

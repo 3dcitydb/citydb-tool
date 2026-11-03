@@ -56,6 +56,8 @@ public abstract class SchemaAdapter {
 
     public abstract DeleteHelper getDeleteHelper(Connection connection) throws SQLException;
 
+    public abstract EnvelopeHelper getEnvelopeHelper(Connection connection) throws SQLException;
+
     public abstract StatisticsHelper getStatisticsHelper();
 
     public abstract TempTableHelper getTempTableHelper();
