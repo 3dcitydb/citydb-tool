@@ -5,6 +5,7 @@
 
 package org.citydb.database.postgres;
 
+import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.util.SqlHelper;
 
@@ -47,19 +48,19 @@ public class DeleteHelper extends org.citydb.database.util.DeleteHelper {
     }
 
     @Override
-    public boolean terminateFeature(long id, String metadata) throws SQLException {
+    public boolean terminateFeature(long id, JSONObject metadata) throws SQLException {
         return !terminateFeatures(List.of(id), metadata).isEmpty();
     }
 
     @Override
-    public Set<Long> terminateFeatures(Collection<Long> ids, String metadata) throws SQLException {
+    public Set<Long> terminateFeatures(Collection<Long> ids, JSONObject metadata) throws SQLException {
         if (terminateFeatureStmt == null) {
             terminateFeatureStmt = connection.prepareStatement("select * from citydb_pkg.terminate_feature(?, ?, ?)");
         }
 
         helper.setLongArrayOrNull(terminateFeatureStmt, 1, ids);
         terminateFeatureStmt.setString(2, schema);
-        helper.setJsonOrNull(terminateFeatureStmt, 3, metadata);
+        helper.setJsonOrNull(terminateFeatureStmt, 3, metadata != null ? metadata.toString() : null);
 
         return getIds(terminateFeatureStmt);
     }

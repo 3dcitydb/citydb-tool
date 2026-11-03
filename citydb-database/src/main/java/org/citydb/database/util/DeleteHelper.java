@@ -5,6 +5,8 @@
 
 package org.citydb.database.util;
 
+import com.alibaba.fastjson2.JSONObject;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
@@ -21,9 +23,9 @@ public abstract class DeleteHelper implements AutoCloseable {
 
     public abstract Set<Long> deleteFeatures(Collection<Long> ids) throws SQLException;
 
-    public abstract boolean terminateFeature(long id, String metadata) throws SQLException;
+    public abstract boolean terminateFeature(long id, JSONObject metadata) throws SQLException;
 
-    public abstract Set<Long> terminateFeatures(Collection<Long> ids, String metadata) throws SQLException;
+    public abstract Set<Long> terminateFeatures(Collection<Long> ids, JSONObject metadata) throws SQLException;
 
     @Override
     public abstract void close() throws SQLException;

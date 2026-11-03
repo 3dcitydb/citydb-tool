@@ -39,7 +39,7 @@ public class FeatureDeleter extends DatabaseDeleter {
         if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
             metadata.put("termination_date", helper.getOptions().getTerminationDate()
                     .orElseGet(() -> OffsetDateTime.now().withNano(0)));
-            deleteHelper.terminateFeatures(ids, metadata.toString());
+            deleteHelper.terminateFeatures(ids, metadata);
         } else {
             deleteHelper.deleteFeatures(ids);
         }
