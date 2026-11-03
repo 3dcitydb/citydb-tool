@@ -25,7 +25,7 @@ public class PostgresqlAdapter extends DatabaseAdapter {
     private Version sfcgalVersion;
 
     @Override
-    public Class<?> getDriverClass() {
+    public Class<? extends Driver> getDriverClass() {
         return Driver.class;
     }
 

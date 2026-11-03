@@ -12,10 +12,12 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
+import org.citydb.database.connection.DriverDataSource;
 import org.citydb.database.connection.PoolOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Properties;
@@ -52,13 +54,14 @@ public class DatabaseManager {
             connectionDetails.setPort(adapter.getDefaultPort());
         }
 
+        String url = adapter.getConnectionString(connectionDetails.getHost(),
+                connectionDetails.getPort(),
+                connectionDetails.getDatabase());
+
         PoolProperties poolProperties = new PoolProperties();
-        poolProperties.setDriverClassName(adapter.getDriverClass().getName());
         poolProperties.setUsername(connectionDetails.getUser());
         poolProperties.setPassword(connectionDetails.getPassword());
-        poolProperties.setUrl(adapter.getConnectionString(connectionDetails.getHost(),
-                connectionDetails.getPort(),
-                connectionDetails.getDatabase()));
+        poolProperties.setUrl(url);
 
         poolProperties.setInitialSize(0);
         poolProperties.setDefaultAutoCommit(false);
@@ -69,9 +72,20 @@ public class DatabaseManager {
         Properties dbProperties = new Properties();
         adapter.setDefaultConnectionProperties(dbProperties);
         connectionDetails.getProperties().forEach((k, v) -> dbProperties.setProperty(k, String.valueOf(v)));
-        poolProperties.setDbProperties(dbProperties);
+        dbProperties.setProperty(DriverDataSource.USER_PROPERTY, connectionDetails.getUser());
+        if (connectionDetails.getPassword() != null) {
+            dbProperties.setProperty(DriverDataSource.PASSWORD_PROPERTY, connectionDetails.getPassword());
+        }
 
         try {
+            Class<? extends Driver> driverClass = adapter.getDriverClass();
+            if (driverClass == null) {
+                throw new DatabaseException("The database adapter " + adapter.getClass().getName() +
+                        " does not provide a JDBC driver class.");
+            }
+
+            poolProperties.setDataSource(DriverDataSource.of(driverClass, url, dbProperties));
+
             dataSource = new DataSource(poolProperties);
             dataSource.createPool();
             adapter.initialize(Pool.newInstance(this), connectionDetails);
