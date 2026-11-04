@@ -242,6 +242,7 @@ public class Importer implements AutoCloseable {
         try {
             state = State.SESSION_ABORTED;
             countLatch.await();
+
             for (ImportHelper helper : helpers) {
                 helper.close();
             }

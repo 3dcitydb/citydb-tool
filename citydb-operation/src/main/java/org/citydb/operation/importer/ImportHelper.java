@@ -68,9 +68,9 @@ public class ImportHelper {
         this.referenceManager = referenceManager;
         this.store = store;
         this.importLogger = importLogger;
-        this.transactionMode = connection == null ? transactionMode : null;
 
         ownsConnection = connection == null;
+        this.transactionMode = ownsConnection ? transactionMode : null;
         this.connection = ownsConnection ? adapter.getPool().getConnection(false) : connection;
 
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();

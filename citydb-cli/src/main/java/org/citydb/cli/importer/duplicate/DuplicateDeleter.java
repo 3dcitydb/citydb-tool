@@ -37,15 +37,17 @@ public class DuplicateDeleter {
         AtomicLong counter = new AtomicLong();
         boolean successful;
 
-        try (Deleter deleter = Deleter.newInstance()
-                .setTransactionMode(preview
-                        ? Deleter.TransactionMode.ROLLBACK
-                        : Deleter.TransactionMode.COMMIT_BATCHES)) {
-            deleter.startSession(adapter, new DeleteOptions()
+        try (Deleter deleter = Deleter.newInstance()) {
+            DeleteOptions deleteOptions = new DeleteOptions()
                     .setReasonForUpdate("Duplicate deletion")
                     .setMode(options.getMode() == ImportMode.TERMINATE_EXISTING
                             ? DeleteMode.TERMINATE
-                            : DeleteMode.DELETE));
+                            : DeleteMode.DELETE);
+
+            deleter.setTransactionMode(preview
+                            ? Deleter.TransactionMode.ROLLBACK
+                            : Deleter.TransactionMode.COMMIT_BATCHES)
+                    .startSession(adapter, deleteOptions);
 
             Iterator<Long> iterator = databaseIds.keySet().iterator();
             while (shouldRun && iterator.hasNext()) {

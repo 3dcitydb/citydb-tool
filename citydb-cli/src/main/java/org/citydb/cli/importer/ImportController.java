@@ -159,11 +159,7 @@ public abstract class ImportController implements Command {
         }
 
         try (DuplicateController duplicateController = DuplicateController.of(importOptions, databaseAdapter, preview);
-             Importer importer = Importer.newInstance()
-                     .setTransactionMode(preview
-                             ? Importer.TransactionMode.ROLLBACK
-                             : Importer.TransactionMode.COMMIT_BATCHES)
-                     .setImportLogger(importLogger)) {
+             Importer importer = Importer.newInstance()) {
             AtomicLong counter = new AtomicLong();
             ImportOptionsHelper optionsHelper = ImportOptionsHelper.of(importOptions);
 
@@ -181,7 +177,11 @@ public abstract class ImportController implements Command {
                             }
                         }
 
-                        importer.startSession(databaseAdapter, optionsHelper.update(importOptions, inputFile));
+                        importer.setTransactionMode(preview
+                                        ? Importer.TransactionMode.ROLLBACK
+                                        : Importer.TransactionMode.COMMIT_BATCHES)
+                                .setImportLogger(importLogger)
+                                .startSession(databaseAdapter, optionsHelper.update(importOptions, inputFile));
 
                         reader.read(candidate -> {
                             Feature feature;

@@ -126,11 +126,12 @@ public class DeleteCommand implements Command {
             logger.debug("Querying features for deletion...");
             logger.trace("Using SQL query:\n{}", helper.getFormattedSql(executor.getSelect(), databaseAdapter));
 
-            try (Deleter deleter = Deleter.newInstance()
-                    .setDeleteLogger(deleteLogger)
-                    .setTransactionMode(transactionMode);
+            try (Deleter deleter = Deleter.newInstance();
                  QueryResult result = executor.executeQuery()) {
-                deleter.startSession(databaseAdapter, deleteOptions);
+                deleter.setDeleteLogger(deleteLogger)
+                        .setTransactionMode(transactionMode)
+                        .startSession(databaseAdapter, deleteOptions);
+
                 while (shouldRun && result.hasNext()) {
                     long id = result.getId();
                     deleteLogger.add(id, result.getObjectClassId());
