@@ -27,7 +27,10 @@ public class EnvelopeHelper extends org.citydb.database.util.EnvelopeHelper {
 
     @Override
     public Envelope getFeatureEnvelope(long id, Mode mode) throws GeometryException, SQLException {
-        PreparedStatement stmt = getOrCreateStatement();
+        if (stmt == null) {
+            stmt = connection.prepareStatement("select citydb_pkg.get_feature_envelope(?, ?, ?, ?)");
+        }
+
         stmt.setLong(1, id);
         stmt.setString(2, schema);
         stmt.setInt(3, mode == Mode.RECOMPUTE || mode == Mode.RECOMPUTE_AND_STORE ? 1 : 0);
@@ -38,26 +41,6 @@ public class EnvelopeHelper extends org.citydb.database.util.EnvelopeHelper {
                     ? adapter.getGeometryAdapter().getEnvelope(rs.getObject(1))
                     : null;
         }
-    }
-
-    @Override
-    public void updateFeatureEnvelope(long id) throws SQLException {
-        PreparedStatement stmt = getOrCreateStatement();
-        stmt.setLong(1, id);
-        stmt.setString(2, schema);
-        stmt.setInt(3, 1);
-        stmt.setInt(4, 1);
-
-        try (ResultSet rs = stmt.executeQuery()) {
-        }
-    }
-
-    private PreparedStatement getOrCreateStatement() throws SQLException {
-        if (stmt == null) {
-            stmt = connection.prepareStatement("select citydb_pkg.get_feature_envelope(?, ?, ?, ?)");
-        }
-
-        return stmt;
     }
 
     @Override

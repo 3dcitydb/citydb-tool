@@ -27,8 +27,6 @@ public abstract class EnvelopeHelper implements AutoCloseable {
 
     public abstract Envelope getFeatureEnvelope(long id, Mode mode) throws GeometryException, SQLException;
 
-    public abstract void updateFeatureEnvelope(long id) throws SQLException;
-
     @Override
     public abstract void close() throws SQLException;
 }
