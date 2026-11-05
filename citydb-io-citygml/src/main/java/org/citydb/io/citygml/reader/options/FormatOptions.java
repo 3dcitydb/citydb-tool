@@ -11,6 +11,7 @@ import java.util.Optional;
 
 public abstract class FormatOptions<T extends FormatOptions<T>> implements InputFormatOptions {
     private AppearanceOptions appearanceOptions;
+    private LodOptions lodOptions;
 
     protected abstract T self();
 
@@ -20,6 +21,15 @@ public abstract class FormatOptions<T extends FormatOptions<T>> implements Input
 
     public T setAppearanceOptions(AppearanceOptions appearanceOptions) {
         this.appearanceOptions = appearanceOptions;
+        return self();
+    }
+
+    public Optional<LodOptions> getLodOptions() {
+        return Optional.ofNullable(lodOptions);
+    }
+
+    public T setLodOptions(LodOptions lodOptions) {
+        this.lodOptions = lodOptions;
         return self();
     }
 }

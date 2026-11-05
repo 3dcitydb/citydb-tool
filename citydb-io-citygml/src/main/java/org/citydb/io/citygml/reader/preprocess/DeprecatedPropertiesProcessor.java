@@ -5,8 +5,8 @@
 
 package org.citydb.io.citygml.reader.preprocess;
 
+import org.citydb.io.citygml.reader.options.EmptyFeatureMode;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
-import org.citydb.io.reader.options.EmptyFeatureMode;
 import org.citygml4j.core.model.bridge.*;
 import org.citygml4j.core.model.building.AbstractBuilding;
 import org.citygml4j.core.model.building.BuildingFurniture;

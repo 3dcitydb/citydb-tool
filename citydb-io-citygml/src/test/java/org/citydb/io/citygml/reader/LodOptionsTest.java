@@ -10,12 +10,12 @@ import org.citydb.core.file.input.RegularInputFile;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.CityJSONAdapter;
+import org.citydb.io.citygml.reader.options.*;
 import org.citydb.io.reader.FeatureReader;
 import org.citydb.io.reader.ReadOptions;
-import org.citydb.io.reader.options.EmptyFeatureMode;
-import org.citydb.io.reader.options.LodMode;
-import org.citydb.io.reader.options.LodOptions;
 import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.SurfaceCollection;
 import org.citydb.model.property.FeatureProperty;
 import org.citydb.model.property.GeometryProperty;
 import org.citydb.model.property.ImplicitGeometryProperty;
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -214,15 +215,71 @@ public class LodOptionsTest {
     }
 
     @Test
+    void cityJSONLodMapping() throws Exception {
+        String content = """
+                {
+                  "type": "CityJSON",
+                  "version": "2.0",
+                  "transform": {"scale": [1.0, 1.0, 1.0], "translate": [0.0, 0.0, 0.0]},
+                  "CityObjects": {
+                    "A": {
+                      "type": "Building",
+                      "geometry": [
+                        {"type": "Solid", "lod": "2.0", "boundaries": [[[[0, 1, 2, 3]]]]},
+                        {"type": "MultiSurface", "lod": "2.1", "boundaries": [[[0, 1, 2, 3]], [[3, 2, 1, 0]]]},
+                        {"type": "MultiSurface", "lod": "2.2", "boundaries": [[[0, 1, 2, 3]]]}
+                      ]
+                    }
+                  },
+                  "vertices": [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]
+                }
+                """;
+
+        // only one sub-LoD per integer LoD is imported
+        assertEquals(List.of("MULTI_SURFACE (1)"), readGeometryTypes(content, null));
+        assertEquals(List.of("SOLID"), readGeometryTypes(content, new LodMappingOptions()
+                .setStrategy(LodMappingStrategy.MINIMUM)));
+        assertEquals(List.of("MULTI_SURFACE (2)"), readGeometryTypes(content, new LodMappingOptions()
+                .withMapping(2, "2.1")));
+
+        // the strategy is used if the city object has no geometry in the mapped LoD
+        assertEquals(List.of("SOLID"), readGeometryTypes(content, new LodMappingOptions()
+                .withMapping(2, "2.3")
+                .setStrategy(LodMappingStrategy.MINIMUM)));
+
+        // invalid mappings are ignored
+        assertEquals(List.of("MULTI_SURFACE (1)"), readGeometryTypes(content, new LodMappingOptions()
+                .withMapping(2, "3.1")));
+        assertEquals(List.of("MULTI_SURFACE (1)"), readGeometryTypes(content, new LodMappingOptions()
+                .withMapping(2, "two")));    }
+
+    @Test
     void lodOptionsFromJson() {
-        ReadOptions options = JSON.parseObject("""
+        CityGMLFormatOptions options = JSON.parseObject("""
                 {"lodOptions": {"lods": [2, 3], "mode": "maximum", "emptyFeatures": "keepTopLevel"}}""",
-                ReadOptions.class);
+                CityGMLFormatOptions.class);
         LodOptions lodOptions = options.getLodOptions().orElseThrow();
         assertEquals(Set.of(2, 3), lodOptions.getLods());
         assertEquals(LodMode.MAXIMUM, lodOptions.getMode());
         assertEquals(EmptyFeatureMode.KEEP_TOP_LEVEL, lodOptions.getEmptyFeatures());
         assertTrue(lodOptions.isUpdateExtents());
+    }
+
+    @Test
+    void lodMappingFromJson() {
+        CityJSONFormatOptions options = JSON.parseObject("""
+                {"lodMapping": {"strategy": "minimum", "mappings": {"2": "2.2"}}, "lodOptions": {"lods": [2]}}""",
+                CityJSONFormatOptions.class);
+        LodMappingOptions lodMapping = options.getLodMapping().orElseThrow();
+        assertEquals(LodMappingStrategy.MINIMUM, lodMapping.getStrategy());
+        assertEquals(Map.of(2, "2.2"), lodMapping.getMappings());
+        assertEquals(Set.of(2), options.getLodOptions().orElseThrow().getLods());
+        assertEquals(LodMappingStrategy.MAXIMUM, new LodMappingOptions().getStrategy());
+
+        LodMappingOptions roundTrip = JSON.parseObject(JSON.toJSONString(options), CityJSONFormatOptions.class)
+                .getLodMapping().orElseThrow();
+        assertEquals(LodMappingStrategy.MINIMUM, roundTrip.getStrategy());
+        assertEquals(Map.of(2, "2.2"), roundTrip.getMappings());
     }
 
     private LodOptions integrationOptions(int lod) {
@@ -233,22 +290,45 @@ public class LodOptionsTest {
     }
 
     private List<String> read(IOAdapter adapter, String fileName, String content, LodOptions lodOptions) throws Exception {
+        FormatOptions<?> formatOptions = adapter instanceof CityJSONAdapter
+                ? new CityJSONFormatOptions()
+                : new CityGMLFormatOptions();
+
+        List<String> features = new ArrayList<>();
+        read(adapter, fileName, content, formatOptions.setLodOptions(lodOptions),
+                feature -> features.add(describe(feature)));
+
+        Collections.sort(features);
+        return features;
+    }
+
+    private List<String> readGeometryTypes(String content, LodMappingOptions lodMapping) throws Exception {
+        List<String> types = new ArrayList<>();
+        read(new CityJSONAdapter(), "test.city.json", content, new CityJSONFormatOptions().setLodMapping(lodMapping), feature ->
+                feature.getGeometries().getAll().forEach(property -> {
+                    Geometry<?> geometry = property.getObject();
+                    types.add(geometry instanceof SurfaceCollection<?> surfaces
+                            ? geometry.getGeometryType().name() + " (" + surfaces.getPolygons().size() + ")"
+                            : geometry.getGeometryType().name());
+                }));
+
+        return types;
+    }
+
+    private void read(IOAdapter adapter, String fileName, String content, FormatOptions<?> formatOptions,
+                      Consumer<Feature> consumer) throws Exception {
         Path file = tempDir.resolve(fileName);
         Files.writeString(file, content);
         adapter.initialize(adapter.getClass().getClassLoader());
 
         ReadOptions options = new ReadOptions()
                 .setNumberOfThreads(1)
-                .setTempDirectory(tempDir)
-                .setLodOptions(lodOptions);
+                .setTempDirectory(tempDir);
+        options.getFormatOptions().set(formatOptions);
 
-        List<String> features = new ArrayList<>();
         try (FeatureReader reader = adapter.createReader(new RegularInputFile(file), options)) {
-            reader.read(feature -> features.add(describe(feature)));
+            reader.read(consumer);
         }
-
-        Collections.sort(features);
-        return features;
     }
 
     private String describe(Feature feature) {

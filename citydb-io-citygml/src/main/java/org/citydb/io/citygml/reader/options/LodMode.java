@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.io.reader.options;
+package org.citydb.io.citygml.reader.options;
 
 public enum LodMode {
     KEEP("keep"),

@@ -75,7 +75,7 @@ public class CityJSONReader extends FeatureReader {
         filter = options.getFilter().orElseGet(Filter::acceptAll);
         preprocessor = new CityJSONPreprocessor()
                 .setImplicitGeometryScope(options.getImplicitGeometryScope())
-                .setLodOptions(options.getLodOptions().orElse(null));
+                .setLodOptions(formatOptions.getLodOptions().orElse(null));
     }
 
     @Override

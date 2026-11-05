@@ -5,9 +5,9 @@
 
 package org.citydb.io.citygml.reader.preprocess;
 
+import org.citydb.io.citygml.reader.options.EmptyFeatureMode;
+import org.citydb.io.citygml.reader.options.LodOptions;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
-import org.citydb.io.reader.options.EmptyFeatureMode;
-import org.citydb.io.reader.options.LodOptions;
 import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.core.AbstractFeature;
