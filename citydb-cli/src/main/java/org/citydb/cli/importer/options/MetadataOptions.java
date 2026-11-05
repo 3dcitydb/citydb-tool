@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 public class MetadataOptions implements Option {
     @CommandLine.Option(names = "--creation-date",
             description = "Time in <YYYY-MM-DD> or <YYYY-MM-DDThh:mm:ss[(+|-)hh:mm]> format or 'now' " +
-                    "to use as creation date (default: attribute value or now).")
+                    "to use as creation date (default: attribute value, parent value or now).")
     private String time;
 
     @CommandLine.Option(names = "--lineage",
