@@ -82,9 +82,7 @@ public class FeatureStatistics {
 
     private String mapToString(Map.Entry<Integer, Long> entry) {
         Name featureType = schemaMapping.getFeatureType(entry.getKey()).getName();
-        String alias = schemaMapping.getNamespaceByURI(featureType.getNamespace()).getAlias().orElse(null);
-        String qName = alias != null ? alias + ":" + featureType.getLocalName() : featureType.getLocalName();
-        return qName + ": " + entry.getValue();
+        return schemaMapping.getPrefixedName(featureType) + ": " + entry.getValue();
     }
 
     public void clear() {
