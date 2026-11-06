@@ -69,6 +69,12 @@ public class ReferenceManager {
         }
     }
 
+    public void storeTargets(CacheType type, Map<String, Long> targets) {
+        if (!targets.isEmpty()) {
+            store(targets, type.ordinal() + "t");
+        }
+    }
+
     public void resolveReferences() {
         countLatch.await();
         for (CacheType type : CacheType.values()) {

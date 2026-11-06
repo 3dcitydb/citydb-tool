@@ -15,6 +15,7 @@ import org.citydb.model.feature.Feature;
 import org.citydb.model.feature.FeatureDescriptor;
 import org.citydb.model.property.Property;
 import org.citydb.model.property.PropertyDescriptor;
+import org.citydb.operation.importer.reference.CacheType;
 import org.citydb.operation.importer.reference.ReferenceManager;
 import org.citydb.operation.importer.util.ImportLogger;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -161,6 +163,15 @@ public class Importer implements AutoCloseable {
 
     public CompletableFuture<PropertyDescriptor> importProperty(Property<?> property, long featureId) {
         return doImport(() -> contexts.get().importProperty(property, featureId));
+    }
+
+    public Importer registerTargets(CacheType type, Map<String, Long> targets) throws ImportException {
+        if (state != State.SESSION_STARTED) {
+            throw new ImportException("Illegal to register reference targets outside a session.");
+        }
+
+        referenceManager.storeTargets(type, targets);
+        return this;
     }
 
     private <T> CompletableFuture<T> doImport(CheckedSupplier<T, Throwable> supplier) {
