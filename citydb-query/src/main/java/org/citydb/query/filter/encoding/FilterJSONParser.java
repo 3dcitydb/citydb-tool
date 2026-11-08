@@ -169,10 +169,7 @@ public class FilterJSONParser {
 
     private BooleanExpression readNotPredicate(JSONArray args) throws FilterParseException {
         if (args.size() == 1) {
-            BooleanExpression booleanExpression = readExpression(args.get(0), BooleanExpression.class);
-            return booleanExpression instanceof Predicate predicate
-                    ? predicate.negate()
-                    : Not.of(booleanExpression);
+            return Not.of(readExpression(args.get(0), BooleanExpression.class));
         } else {
             throw new FilterParseException("A NOT predicate requires one operand.");
         }

@@ -52,8 +52,8 @@ public class SpatialPredicateBuilder {
     }
 
     private BuildResult build(BinarySpatialPredicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult leftOperand = filterBuilder.build(predicate.getLeftOperand(), select, context, negate);
-        BuildResult rightOperand = filterBuilder.build(predicate.getRightOperand(), select, context, negate);
+        BuildResult leftOperand = filterBuilder.build(predicate.getLeftOperand(), select, context);
+        BuildResult rightOperand = filterBuilder.build(predicate.getRightOperand(), select, context);
 
         helper.cast(leftOperand, rightOperand);
         leftOperand.requireType(Type.SPATIAL_TYPES, () -> "A value of type '" + leftOperand.getType() +
@@ -109,8 +109,8 @@ public class SpatialPredicateBuilder {
     }
 
     private BuildResult build(DWithin dWithin, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult leftOperand = filterBuilder.build(dWithin.getLeftOperand(), select, context, negate);
-        BuildResult rightOperand = filterBuilder.build(dWithin.getRightOperand(), select, context, negate);
+        BuildResult leftOperand = filterBuilder.build(dWithin.getLeftOperand(), select, context);
+        BuildResult rightOperand = filterBuilder.build(dWithin.getRightOperand(), select, context);
 
         helper.cast(leftOperand, rightOperand);
         leftOperand.requireType(Type.SPATIAL_TYPES, () -> "A value of type '" + leftOperand.getType() +

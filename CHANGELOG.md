@@ -16,6 +16,8 @@
   of their parent.
 
 ### Fixed
+- Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
+  predicates combined with `AND` or `OR` now follow CQL2 semantics instead of matching unrelated values.
 - Fixed `--limit` and `--start-index` being applied to each tile separately in tiled exports. Pagination now applies
   to the whole export, and the tiles only split the selected features across files.
 - Fixed global templates missing from all but the first tile file in tiled `CityJSONSeq` exports.

@@ -11,6 +11,7 @@ import org.citydb.query.filter.literal.PropertyRef;
 import org.citydb.query.sorting.SortBy;
 import org.citydb.query.sorting.SortOrder;
 import org.citydb.query.sorting.Sorting;
+import org.citydb.sqlbuilder.join.Joins;
 import org.citydb.sqlbuilder.query.OrderBy;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.query.Selection;
@@ -28,9 +29,6 @@ public class SortingBuilder {
 
     void build(Sorting sorting, Select select, SqlContext context) throws QueryBuildException {
         if (sorting.hasSortBy()) {
-            helper.getContextBuilder()
-                    .useLeftJoins(true)
-                    .restrictTargetTypesInJoins(true);
             for (SortBy sortBy : sorting.getSortBy()) {
                 select.orderBy(build(sortBy, select, context));
             }
@@ -45,7 +43,7 @@ public class SortingBuilder {
                     "a sortBy operation.");
         }
 
-        BuildResult sortExpression = helper.getFilterBuilder().build(propertyRef, select, context);
+        BuildResult sortExpression = helper.getFilterBuilder().build(propertyRef, select, context, Joins.LEFT_JOIN);
         sortExpression.requireType(Type.SCALAR_TYPES, () -> "A value of type '" + sortExpression.getType() +
                 "' cannot be used as sort expression of a sortBy operation.");
 

@@ -5,7 +5,6 @@
 
 package org.citydb.query.builder.sql;
 
-import org.citydb.database.schema.*;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
 import org.citydb.query.builder.schema.Node;
@@ -18,6 +17,7 @@ import org.citydb.query.filter.operation.ComparisonOperator;
 import org.citydb.query.filter.operation.IsNull;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.common.SqlWalker;
+import org.citydb.sqlbuilder.join.Joins;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.literal.StringLiteral;
@@ -61,8 +61,8 @@ public class ComparisonPredicateBuilder {
     }
 
     private BuildResult build(BinaryComparisonPredicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult leftOperand = filterBuilder.build(predicate.getLeftOperand(), select, context, negate);
-        BuildResult rightOperand = filterBuilder.build(predicate.getRightOperand(), select, context, negate);
+        BuildResult leftOperand = filterBuilder.build(predicate.getLeftOperand(), select, context);
+        BuildResult rightOperand = filterBuilder.build(predicate.getRightOperand(), select, context);
 
         helper.cast(leftOperand, rightOperand);
         leftOperand.requireType(Type.SCALAR_TYPES, () -> "A value of type '" + leftOperand.getType() +
@@ -92,9 +92,9 @@ public class ComparisonPredicateBuilder {
     }
 
     private BuildResult build(Between between, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult operand = filterBuilder.build(between.getOperand(), select, context, negate);
-        BuildResult lowerBound = filterBuilder.build(between.getLowerBound(), select, context, negate);
-        BuildResult upperBound = filterBuilder.build(between.getUpperBound(), select, context, negate);
+        BuildResult operand = filterBuilder.build(between.getOperand(), select, context);
+        BuildResult lowerBound = filterBuilder.build(between.getLowerBound(), select, context);
+        BuildResult upperBound = filterBuilder.build(between.getUpperBound(), select, context);
 
         operand.requireType(Type.NUMERIC_TYPES, () -> "A value of type '" + operand.getType() +
                 "' cannot be used as operand of a between predicate.");
@@ -116,10 +116,10 @@ public class ComparisonPredicateBuilder {
     }
 
     private BuildResult build(org.citydb.query.filter.operation.In in, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult operand = filterBuilder.build(in.getOperand(), select, context, negate);
+        BuildResult operand = filterBuilder.build(in.getOperand(), select, context);
         List<BuildResult> values = new ArrayList<>(in.getValues().size());
         for (Expression expression : in.getValues()) {
-            values.add(filterBuilder.build(expression, select, context, negate));
+            values.add(filterBuilder.build(expression, select, context));
         }
 
         helper.cast(values);
@@ -162,15 +162,10 @@ public class ComparisonPredicateBuilder {
     }
 
     private BuildResult build(IsNull isNull, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult operand = filterBuilder.build(isNull.getOperand(), select, context, negate, false);
+        BuildResult operand = filterBuilder.build(isNull.getOperand(), select, context, false, false);
         negate = negate ^ isNull.getOperator() == ComparisonOperator.IS_NOT_NULL;
 
         if (operand.isSetPropertyRef()) {
-            if (operand.getPropertyRef().getFilter().isPresent()) {
-                throw new QueryBuildException("Predicates on the last step of the property reference of an " +
-                        "isNull predicate are not supported.");
-            }
-
             Node node;
             try {
                 node = helper.getSchemaPathBuilder().build(operand.getPropertyRef(), context.getSchemaPath(), false);
@@ -178,60 +173,22 @@ public class ComparisonPredicateBuilder {
                 throw new QueryBuildException("Failed to build property reference.", e);
             }
 
-            Node last = node.last();
-            if (last.getSchemaObject() instanceof ValueObject valueObject
-                    && valueObject.getValue().flatMap(Value::getColumn).isPresent()) {
-                operand.update(helper.getContextBuilder().build(node, select, context));
+            operand.update(helper.getContextBuilder().build(node, select, context, Joins.INNER_JOIN));
+            if (operand.isSetExpression()) {
                 return BuildResult.of(Operators.isNull(operand.getExpression(), negate), operand);
+            } else if (select.getJoins().isEmpty()) {
+                return BuildResult.of(Placeholder.of(negate), Type.BOOLEAN, operand);
             } else {
-                SqlContext subQueryContext = SqlContext.of(context, helper);
-                Select subQuery = Select.newInstance()
-                        .select(subQueryContext.getTable().column("id"))
-                        .from(subQueryContext.getTable());
-
-                if (subQueryContext.getSchemaObject() instanceof FeatureType featureType
-                        && helper.matches(Table.FEATURE, subQueryContext.getTable())) {
-                    helper.getFeatureTypesBuilder().build(featureType, subQuery, subQueryContext);
-                }
-
-                SqlContext propertyContext = helper.getContextBuilder().build(
-                        operand.getPropertyRef(), subQuery, subQueryContext, false);
-                Joinable joinable = last.upStream()
-                        .map(Node::getSchemaObject)
-                        .filter(Joinable.class::isInstance)
-                        .map(Joinable.class::cast)
-                        .filter(candidate -> candidate.getJoin().isPresent() || candidate.getJoinTable().isPresent())
-                        .findAny().orElse(null);
-                if (joinable != null) {
-                    org.citydb.sqlbuilder.schema.Table table = propertyContext.getTable();
-                    if (joinable.getJoin().isPresent()) {
-                        Join join = joinable.getJoin().get();
-                        subQuery.where(helper.matches(join.getTable(), table)
-                                ? table.column(join.getToColumn()).isNull()
-                                : table.column(join.getFromColumn()).isNull());
-                    } else if (joinable.getJoinTable().isPresent()) {
-                        JoinTable joinTable = joinable.getJoinTable().get();
-                        subQuery.where(helper.matches(joinTable.getTargetJoin().getTable(), table)
-                                ? table.column(joinTable.getTargetJoin().getToColumn()).isNull()
-                                : table.column(joinTable.getSourceJoin().getFromColumn()).isNull());
-                    }
-                } else {
-                    subQuery.where(propertyContext.getTable().column("id").isNull());
-                }
-
-                propertyContext.getAndResetPredicates()
-                        .forEach(subQuery::where);
-
-                return BuildResult.of(In.of(context.getTable().column("id"), subQuery, negate));
+                return BuildResult.of(null, operand);
             }
         } else {
-            return BuildResult.of(Operators.isNull(operand.getExpression(), negate));
+            return BuildResult.of(Operators.isNull(operand.getExpression(), negate), operand);
         }
     }
 
     private BuildResult build(org.citydb.query.filter.operation.Like like, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        BuildResult operand = filterBuilder.build(like.getOperand(), select, context, negate);
-        BuildResult pattern = filterBuilder.build(like.getPattern(), select, context, negate, false);
+        BuildResult operand = filterBuilder.build(like.getOperand(), select, context);
+        BuildResult pattern = filterBuilder.build(like.getPattern(), select, context, false, false);
 
         operand.cast(Type.STRING, helper);
         operand.requireType(Type.STRING, () -> "A value of type '" + operand.getType() +
