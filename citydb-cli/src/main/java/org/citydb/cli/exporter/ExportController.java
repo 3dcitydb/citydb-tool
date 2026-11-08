@@ -164,8 +164,8 @@ public abstract class ExportController implements Command {
                 FeatureStatistics tileStatistics = new FeatureStatistics(databaseAdapter);
 
                 try (OutputFile outputFile = builder.newOutputFile(file);
-                     FeatureWriter writer = createWriter(outputFile, writeOptions, query, ioAdapter)) {
-                    Exporter exporter = Exporter.newInstance();
+                     FeatureWriter writer = createWriter(outputFile, writeOptions, query, ioAdapter);
+                     Exporter exporter = Exporter.newInstance()) {
                     exportOptions.setOutputFile(outputFile);
 
                     logger.info("{}Exporting to {} file {}.", getTileCounter(queryHelper, tile),
@@ -222,8 +222,6 @@ public abstract class ExportController implements Command {
                                 }
                             });
                         }
-                    } finally {
-                        exporter.closeSession();
                     }
                 } catch (Throwable e) {
                     logger.warn("Database export aborted due to an error.");

@@ -20,7 +20,6 @@ public class DeleteOptions {
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private DeleteMode mode = DeleteMode.TERMINATE;
     private int commitAfter;
-    private boolean terminateWithSubFeatures = true;
     private OffsetDateTime terminationDate;
     private String updatingPerson;
     private String reasonForUpdate;
@@ -44,15 +43,6 @@ public class DeleteOptions {
 
     public DeleteOptions setCommitAfter(int commitAfter) {
         this.commitAfter = commitAfter;
-        return this;
-    }
-
-    public boolean isTerminateWithSubFeatures() {
-        return terminateWithSubFeatures;
-    }
-
-    public DeleteOptions setTerminateWithSubFeatures(boolean terminateWithSubFeatures) {
-        this.terminateWithSubFeatures = terminateWithSubFeatures;
         return this;
     }
 

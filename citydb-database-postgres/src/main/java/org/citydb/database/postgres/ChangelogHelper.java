@@ -30,10 +30,15 @@ public class ChangelogHelper implements org.citydb.database.util.ChangelogHelper
 
     @Override
     public boolean isChangelogEnabled(String schemaName, Connection connection) throws SQLException {
-        String sql = "select 1 from information_schema.triggers " +
-                "where trigger_schema = ? " +
-                "and event_object_table = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
-                "and trigger_name = 'feature_changelog_trigger' " +
+        String sql = "select 1 from pg_catalog.pg_trigger t " +
+                "join pg_catalog.pg_class c on c.oid = t.tgrelid " +
+                "join pg_catalog.pg_namespace n on n.oid = c.relnamespace " +
+                "join pg_catalog.pg_proc p on p.oid = t.tgfoid " +
+                "where n.nspname = ? " +
+                "and c.relname = '" + org.citydb.database.schema.Table.FEATURE.getName() + "' " +
+                "and p.proname = 'log_feature_changes' " +
+                "and not t.tgisinternal " +
+                "and t.tgenabled <> 'D' " +
                 "limit 1";
 
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {

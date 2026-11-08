@@ -30,6 +30,9 @@ public class ImportOptions {
     private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
+    
+    @JSONField(serialize = false, deserialize = false)
+    private OffsetDateTime importTime;
 
     public boolean isFailFast() {
         return failFast;
@@ -113,6 +116,15 @@ public class ImportOptions {
 
     public ImportOptions setAffineTransform(Matrix3x4 affineTransform) {
         this.affineTransform = affineTransform;
+        return this;
+    }
+
+    public Optional<OffsetDateTime> getImportTime() {
+        return Optional.ofNullable(importTime);
+    }
+
+    public ImportOptions setImportTime(OffsetDateTime importTime) {
+        this.importTime = importTime;
         return this;
     }
 }

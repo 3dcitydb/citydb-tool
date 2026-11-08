@@ -45,18 +45,24 @@ public class SchemaMapping {
         return namespacesByAlias.getOrDefault(alias, Namespace.UNDEFINED);
     }
 
-    public Name resolvePrefixedName(PrefixedName name) {
-        return name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)
-                ? Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI())
-                : Name.of(name.getLocalName(), name.getNamespace());
-    }
-
     void addNamespace(Namespace namespace) {
         namespacesById.put(namespace.getId(), namespace);
         namespacesByURI.put(namespace.getURI(), namespace);
         namespace.getAlias().ifPresent(alias -> namespacesByAlias.put(alias, namespace));
     }
 
+    public String getPrefixedName(Name name) {
+        return getNamespace(name).getAlias()
+                .map(alias -> alias + ":" + name.getLocalName())
+                .orElse(name.getLocalName());
+    }
+
+    public Name resolvePrefixedName(PrefixedName name) {
+        return name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)
+                ? Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI())
+                : Name.of(name.getLocalName(), name.getNamespace());
+    }
+    
     public Collection<DataType> getDataTypes() {
         return dataTypesById.values();
     }

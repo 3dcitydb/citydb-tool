@@ -273,6 +273,24 @@ public class ModelWalker implements Visitor {
         }
     }
 
+    public void walk(Property<?> property) {
+        if (property instanceof FeatureProperty featureProperty) {
+            visit(featureProperty);
+        } else if (property instanceof GeometryProperty geometryProperty) {
+            visit(geometryProperty);
+        } else if (property instanceof ImplicitGeometryProperty implicitGeometryProperty) {
+            visit(implicitGeometryProperty);
+        } else if (property instanceof AppearanceProperty appearanceProperty) {
+            visit(appearanceProperty);
+        } else if (property instanceof AddressProperty addressProperty) {
+            visit(addressProperty);
+        } else if (property instanceof Attribute attribute) {
+            visit(attribute);
+        } else if (property != null) {
+            visit(property);
+        }
+    }
+
     private void visitObject(Object object) {
         if (object instanceof Visitable visitable) {
             visitable.accept(this);

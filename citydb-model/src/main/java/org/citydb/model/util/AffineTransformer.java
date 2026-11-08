@@ -14,6 +14,7 @@ import org.citydb.model.common.Visitable;
 import org.citydb.model.feature.Feature;
 import org.citydb.model.geometry.*;
 import org.citydb.model.property.ImplicitGeometryProperty;
+import org.citydb.model.property.Property;
 import org.citydb.model.util.matrix.Matrix;
 import org.citydb.model.walker.ModelWalker;
 
@@ -70,6 +71,10 @@ public class AffineTransformer {
 
     public void transform(Visitable visitable) {
         visitable.accept(processor);
+    }
+
+    public void transform(Property<?> property) {
+        processor.walk(property);
     }
 
     public void transform(Envelope envelope) {
