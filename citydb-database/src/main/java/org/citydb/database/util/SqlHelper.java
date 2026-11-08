@@ -99,7 +99,7 @@ public abstract class SqlHelper {
                 .removeOffset()
                 .removeFetch());
         Select count = Select.newInstance()
-                .select(Function.of("count", WildcardColumn.of(table)))
+                .select(Function.of("count", WildcardColumn.newInstance()))
                 .from(table);
 
         try (PreparedStatement stmt = prepareStatement(count, connection);

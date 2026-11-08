@@ -5,12 +5,28 @@
 ### Added
 - Added API support for restricting database queries to features stored in a temporary table.
 
+### Changed
+- **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
+  every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
+  `terminateWithSubFeatures` setting of the JSON configuration were removed.
+- When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
+  feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
+  is only kept if it is earlier.
+- When exporting, the creation and termination dates of contained features are written if they differ from the dates
+  of their parent.
+
 ### Fixed
 - Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
   predicates combined with `AND` or `OR` now follow CQL2 semantics instead of matching unrelated values.
 - Fixed `--limit` and `--start-index` being applied to each tile separately in tiled exports. Pagination now applies
   to the whole export, and the tiles only split the selected features across files.
 - Fixed global templates missing from all but the first tile file in tiled `CityJSONSeq` exports.
+- Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
+  geometry or dropping all geometry of a feature.
+- Fixed reading CityGML 2.0/1.0 `BuildingPart` elements nested within other `BuildingPart` elements.
+- Fixed external database adapters whose JDBC driver is placed in the `extensions` directory failing as soon as
+  the connection pool creates additional physical connections. The pool no longer loads the driver by class name
+  but uses a driver instance provided by the database adapter.
 
 ## [1.4.1] - 2026-10-26
 

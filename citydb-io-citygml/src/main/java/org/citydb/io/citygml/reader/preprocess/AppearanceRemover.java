@@ -11,23 +11,25 @@ import org.citygml4j.core.model.core.AbstractFeature;
 import org.citygml4j.core.visitor.ObjectWalker;
 import org.xmlobjects.gml.model.GMLObject;
 import org.xmlobjects.gml.model.base.AbstractInlineOrByReferenceProperty;
+import org.xmlobjects.gml.model.feature.FeatureProperty;
 import org.xmlobjects.gml.model.geometry.AbstractGeometry;
 import org.xmlobjects.gml.model.geometry.GeometryProperty;
 import org.xmlobjects.gml.model.geometry.aggregates.MultiSurface;
 import org.xmlobjects.gml.model.geometry.primitives.AbstractSurface;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class AppearanceRemover {
     private final AppearanceHelper helper;
     private final TargetProcessor targetProcessor = new TargetProcessor();
     private final Set<String> surfaceDataIds = new HashSet<>();
+    private final Set<String> geometryIds;
 
     AppearanceRemover(AbstractFeature feature) {
         helper = new AppearanceHelper(feature);
+        geometryIds = helper.hasAppearances()
+                ? new GeometryIdCollector().collect(feature)
+                : Collections.emptySet();
     }
 
     List<Appearance> getAppearances() {
@@ -94,7 +96,7 @@ public class AppearanceRemover {
         }
 
         private void process(AbstractGeometry geometry) {
-            if (geometry.getId() != null) {
+            if (geometry.getId() != null && !geometryIds.contains(geometry.getId())) {
                 List<TextureAssociationProperty> properties = helper.getAndRemoveParameterizedTextures(geometry.getId());
                 if (properties != null) {
                     for (TextureAssociationProperty property : properties) {
@@ -135,6 +137,44 @@ public class AppearanceRemover {
             if (appearance.getSurfaceData().remove(surfaceData.getParent(AbstractSurfaceDataProperty.class))
                     && surfaceData.getId() != null) {
                 surfaceDataIds.add(surfaceData.getId());
+            }
+        }
+    }
+
+    private static class GeometryIdCollector extends ObjectWalker {
+        private final Set<String> ids = new HashSet<>();
+
+        Set<String> collect(AbstractFeature feature) {
+            feature.accept(this);
+            return ids;
+        }
+
+        @Override
+        public void visit(FeatureProperty<?> property) {
+            if (property.isSetInlineObject()) {
+                super.visit(property);
+            }
+        }
+
+        @Override
+        public void visit(Appearance appearance) {
+        }
+
+        @Override
+        public void visit(AbstractSurface surface) {
+            add(surface);
+            super.visit(surface);
+        }
+
+        @Override
+        public void visit(MultiSurface multiSurface) {
+            add(multiSurface);
+            super.visit(multiSurface);
+        }
+
+        private void add(AbstractGeometry geometry) {
+            if (geometry.getId() != null) {
+                ids.add(geometry.getId());
             }
         }
     }

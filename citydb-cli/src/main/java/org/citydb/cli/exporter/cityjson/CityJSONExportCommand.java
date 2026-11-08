@@ -171,12 +171,12 @@ public class CityJSONExportCommand extends ExportController {
         try {
             logger.debug("Retrieving global template geometries...");
             Map<ImplicitGeometry, String> globalTemplates = new IdentityHashMap<>();
-            Exporter exporter = Exporter.newInstance();
             SqlHelper helper = adapter.getSchemaAdapter().getSqlHelper();
             SqlObject query = adapter.getSchemaAdapter()
                     .getRecursiveImplicitGeometryQuery(context.getQueryExecutor().getSelect());
 
-            try (PreparedStatement stmt = helper.prepareStatement(query, context.getConnection());
+            try (Exporter exporter = Exporter.newInstance();
+                 PreparedStatement stmt = helper.prepareStatement(query, context.getConnection());
                  ResultSet rs = stmt.executeQuery()) {
                 exporter.startSession(adapter, exportOptions);
                 while (shouldRun && rs.next()) {
@@ -192,8 +192,6 @@ public class CityJSONExportCommand extends ExportController {
                         }
                     });
                 }
-            } finally {
-                exporter.closeSession();
             }
 
             if (exception != null) {

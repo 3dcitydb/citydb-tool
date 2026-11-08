@@ -51,23 +51,28 @@ public class ImportHelper {
     private final Map<CacheType, ReferenceCache> caches = new EnumMap<>(CacheType.class);
     private final List<ImportLogEntry> logEntries = new ArrayList<>();
     private final Importer.TransactionMode transactionMode;
+    private final boolean ownsConnection;
     private final boolean failFast;
     private final int batchSize;
 
     private OffsetDateTime importTime;
+    private Lifespan inheritedLifespan = Lifespan.NONE;
     private SequenceValues sequenceValues;
     private boolean shouldCommit;
 
     ImportHelper(DatabaseAdapter adapter, ImportOptions options, ReferenceManager referenceManager,
-                 PersistentMapStore store, ImportLogger importLogger, Importer.TransactionMode transactionMode) throws SQLException {
+                 PersistentMapStore store, ImportLogger importLogger, Connection connection,
+                 Importer.TransactionMode transactionMode) throws SQLException {
         this.adapter = adapter;
         this.options = options;
         this.referenceManager = referenceManager;
         this.store = store;
         this.importLogger = importLogger;
-        this.transactionMode = transactionMode;
 
-        connection = adapter.getPool().getConnection(false);
+        ownsConnection = connection == null;
+        this.transactionMode = ownsConnection ? transactionMode : null;
+        this.connection = ownsConnection ? adapter.getPool().getConnection(false) : connection;
+
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         tableHelper = new TableHelper(this);
         sequenceGenerator = new SequenceGenerator(this);
@@ -104,6 +109,14 @@ public class ImportHelper {
         return importTime;
     }
 
+    public Lifespan getInheritedLifespan() {
+        return inheritedLifespan;
+    }
+
+    public void setInheritedLifespan(Lifespan inheritedLifespan) {
+        this.inheritedLifespan = inheritedLifespan != null ? inheritedLifespan : Lifespan.NONE;
+    }
+
     public SequenceValues getSequenceValues() {
         return sequenceValues;
     }
@@ -130,7 +143,7 @@ public class ImportHelper {
 
     public String getObjectSignature(Feature feature) {
         String objectId = feature.getObjectId().orElse(null);
-        return feature.getFeatureType().getLocalName() +
+        return schemaMapping.getPrefixedName(feature.getFeatureType()) +
                 (objectId != null ? " '" + objectId + "'" : "");
     }
 
@@ -169,7 +182,8 @@ public class ImportHelper {
                 transformer.transform(feature);
             }
 
-            importTime = OffsetDateTime.now().withNano(0);
+            importTime = options.getImportTime().orElseGet(() -> OffsetDateTime.now().withNano(0));
+            inheritedLifespan = Lifespan.NONE;
             sequenceValues = sequenceGenerator.generateNextValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
 
@@ -177,7 +191,7 @@ public class ImportHelper {
                 logEntries.add(ImportLogEntry.of(feature, descriptor));
             }
 
-            executeBatch(false, transactionMode == Importer.TransactionMode.AUTO_COMMIT);
+            executeBatch(false, transactionMode == Importer.TransactionMode.COMMIT_BATCHES);
             return descriptor;
         } catch (Exception e) {
             throw new ImportException("Failed to import feature.", e);
@@ -186,6 +200,14 @@ public class ImportHelper {
 
     PropertyDescriptor importProperty(Property<?> property, long featureId) throws ImportException {
         try {
+            if (transformer != null) {
+                transformer.transform(property);
+            }
+
+            importTime = options.getImportTime().orElseGet(() -> OffsetDateTime.now().withNano(0));
+            inheritedLifespan = Lifespan.NONE;
+            sequenceValues = sequenceGenerator.generateNextValues(property);
+
             PropertyDescriptor descriptor;
             if (property instanceof FeatureProperty featureProperty) {
                 descriptor = tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
@@ -209,7 +231,7 @@ public class ImportHelper {
                 throw new ImportException("Unsupported property type: " + property.getClass().getSimpleName());
             }
 
-            executeBatch(false, transactionMode == Importer.TransactionMode.AUTO_COMMIT);
+            executeBatch(false, transactionMode == Importer.TransactionMode.COMMIT_BATCHES);
             return descriptor;
         } catch (Exception e) {
             throw new ImportException("Failed to import property.", e);
@@ -239,15 +261,18 @@ public class ImportHelper {
                     referenceManager.storeReferences(cache);
                 }
 
-                if (commit) {
+                if (commit && ownsConnection) {
                     connection.commit();
-                } else if (transactionMode == Importer.TransactionMode.AUTO_ROLLBACK) {
+                } else if (transactionMode == Importer.TransactionMode.ROLLBACK) {
                     connection.rollback();
                 }
 
-                updateImportLog(commit);
+                updateImportLog(commit && ownsConnection);
             } catch (SQLException e) {
-                connection.rollback();
+                if (ownsConnection) {
+                    connection.rollback();
+                }
+
                 throw e;
             } finally {
                 shouldCommit = false;
@@ -275,7 +300,9 @@ public class ImportHelper {
         try {
             tableHelper.close();
         } finally {
-            connection.close();
+            if (ownsConnection) {
+                connection.close();
+            }
         }
     }
 }

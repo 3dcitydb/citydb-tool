@@ -5,6 +5,7 @@
 
 package org.citydb.io.citygml.reader.preprocess;
 
+import org.citydb.io.citygml.reader.options.EmptyFeatureMode;
 import org.citydb.io.citygml.reader.util.FeatureHelper;
 import org.citygml4j.core.model.bridge.*;
 import org.citygml4j.core.model.building.AbstractBuilding;
@@ -12,7 +13,6 @@ import org.citygml4j.core.model.building.BuildingFurniture;
 import org.citygml4j.core.model.building.BuildingInstallation;
 import org.citygml4j.core.model.building.BuildingRoom;
 import org.citygml4j.core.model.cityfurniture.CityFurniture;
-import org.citygml4j.core.model.cityobjectgroup.CityObjectGroup;
 import org.citygml4j.core.model.common.GeometryInfo;
 import org.citygml4j.core.model.construction.AbstractFillingSurface;
 import org.citygml4j.core.model.construction.RoofSurface;
@@ -57,16 +57,14 @@ import org.xmlobjects.gml.model.geometry.aggregates.*;
 import org.xmlobjects.gml.model.geometry.complexes.CompositeSurface;
 import org.xmlobjects.gml.model.geometry.primitives.*;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DeprecatedPropertiesProcessor {
     private final Copier copier;
     private final DeprecatedPropertiesWalker deprecatedPropertiesWalker = new DeprecatedPropertiesWalker();
-    private final LodFilter lodFilter = new LodFilter()
-            .setMode(LodFilter.Mode.REMOVE)
-            .keepEmptyObjects(false)
-            .updateExtents(false);
+    private final LodFilter lod3Filter = createLodFilter(3);
+    private final LodFilter lod4Filter = createLodFilter(4);
 
+    private CityObjectGroupRemover groupRemover;
     private boolean useLod4AsLod3;
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
@@ -102,8 +100,10 @@ public class DeprecatedPropertiesProcessor {
         return this;
     }
 
-    DeprecatedPropertiesProcessor withCityObjectGroups(ConcurrentLinkedQueue<CityObjectGroup> cityObjectGroups) {
-        lodFilter.withCityObjectGroups(cityObjectGroups);
+    DeprecatedPropertiesProcessor withCityObjectGroupRemover(CityObjectGroupRemover groupRemover) {
+        this.groupRemover = groupRemover;
+        lod3Filter.withCityObjectGroupRemover(groupRemover);
+        lod4Filter.withCityObjectGroupRemover(groupRemover);
         return this;
     }
 
@@ -112,17 +112,29 @@ public class DeprecatedPropertiesProcessor {
             GeometryInfo geometryInfo = feature.getGeometryInfo(true);
             if (geometryInfo.hasGeometries(4) || geometryInfo.hasImplicitGeometries(4)) {
                 if (geometryInfo.hasGeometries(3) || geometryInfo.hasImplicitGeometries(3)) {
-                    lodFilter.withLods(3).filter(feature);
+                    lod3Filter.filter(feature);
                 }
             }
         }
 
         feature.accept(deprecatedPropertiesWalker);
-        return !useLod4AsLod3 || lodFilter.withLods(4).filter(feature);
+        return !useLod4AsLod3 || lod4Filter.filter(feature);
     }
 
     void postprocess() {
-        lodFilter.postprocess();
+        if (useLod4AsLod3) {
+            lod4Filter.postprocess();
+        } else if (groupRemover != null) {
+            groupRemover.postprocess();
+        }
+    }
+
+    private static LodFilter createLodFilter(int lod) {
+        return new LodFilter()
+                .withLods(lod)
+                .setMode(LodFilter.Mode.REMOVE)
+                .emptyFeatures(EmptyFeatureMode.REMOVE)
+                .updateExtents(false);
     }
 
     private class DeprecatedPropertiesWalker extends ObjectWalker {

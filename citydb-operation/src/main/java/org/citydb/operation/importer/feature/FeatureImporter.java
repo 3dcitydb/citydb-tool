@@ -16,6 +16,7 @@ import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.options.CreationDateMode;
 import org.citydb.operation.importer.property.*;
 import org.citydb.operation.importer.reference.CacheType;
+import org.citydb.operation.importer.util.Lifespan;
 
 import java.sql.SQLException;
 import java.sql.Types;
@@ -52,6 +53,7 @@ public class FeatureImporter extends DatabaseImporter {
         int objectClassId = schemaMapping.getFeatureType(feature.getFeatureType()).getId();
         String objectId = feature.getObjectId().orElse(null);
         OffsetDateTime importTime = getImportTime();
+        Lifespan inheritedLifespan = getInheritedLifespan();
 
         stmt.setLong(1, featureId);
         stmt.setInt(2, objectClassId);
@@ -64,19 +66,28 @@ public class FeatureImporter extends DatabaseImporter {
         setStringOrNull(9, feature.getReasonForUpdate().orElse(reasonForUpdate));
         setStringOrNull(10, feature.getLineage().orElse(lineage));
 
+        Lifespan lifespan = isContained(feature) ? inheritedLifespan : Lifespan.NONE;
         OffsetDateTime creationDate = switch (creationDateMode) {
             case OVERWRITE_WITH_FIXED -> this.creationDate != null ? this.creationDate : importTime;
             case OVERWRITE_WITH_NOW -> importTime;
-            default -> feature.getCreationDate().orElse(importTime);
+            default -> feature.getCreationDate()
+                    .orElse(lifespan.getCreationDate().orElse(importTime));
         };
 
+        OffsetDateTime terminationDate = feature.getTerminationDate()
+                .map(value -> lifespan.getTerminationDate()
+                        .filter(inheritedValue -> inheritedValue.isBefore(value))
+                        .orElse(value))
+                .orElse(lifespan.getTerminationDate().orElse(null));
+
         stmt.setObject(11, creationDate, Types.TIMESTAMP_WITH_TIMEZONE);
-        setTimestampOrNull(12, feature.getTerminationDate().orElse(null));
+        setTimestampOrNull(12, terminationDate);
         setTimestampOrNull(13, feature.getValidFrom().orElse(null));
         setTimestampOrNull(14, feature.getValidTo().orElse(null));
 
         addBatch();
         cacheTarget(CacheType.FEATURE, objectId, featureId);
+        setInheritedLifespan(Lifespan.of(creationDate, terminationDate));
 
         if (feature.hasAttributes()) {
             for (Attribute attribute : feature.getAttributes().getAll()) {
@@ -114,8 +125,17 @@ public class FeatureImporter extends DatabaseImporter {
             }
         }
 
+        setInheritedLifespan(inheritedLifespan);
         FeatureDescriptor descriptor = FeatureDescriptor.of(featureId, objectClassId);
         feature.setDescriptor(descriptor);
         return descriptor;
+    }
+
+    private boolean isContained(Feature feature) {
+        return feature.getParent()
+                .filter(FeatureProperty.class::isInstance)
+                .map(FeatureProperty.class::cast)
+                .filter(property -> property.getRelationType() == RelationType.CONTAINS)
+                .isPresent();
     }
 }

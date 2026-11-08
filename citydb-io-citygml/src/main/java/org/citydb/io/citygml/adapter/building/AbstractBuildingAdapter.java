@@ -131,6 +131,12 @@ public abstract class AbstractBuildingAdapter<T extends AbstractBuilding> extend
                 helper.addCurveGeometry(Name.of("lod4TerrainIntersectionCurve", Namespaces.DEPRECATED),
                         properties.getLod4TerrainIntersectionCurve(), Lod.of(4), target);
             }
+
+            if (properties.isSetConsistsOfBuildingParts()) {
+                for (BuildingPartProperty property : properties.getConsistsOfBuildingParts()) {
+                    helper.addContainedFeature(Name.of("buildingPart", Namespaces.BUILDING), property, target);
+                }
+            }
         }
     }
 

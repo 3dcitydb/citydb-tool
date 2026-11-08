@@ -19,7 +19,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
-public class Exporter {
+public class Exporter implements AutoCloseable {
     private ExecutorService service;
     private ImplicitGeometryRegistry implicitGeometryRegistry;
     private ThreadLocal<ExportHelper> contexts;
@@ -138,5 +138,10 @@ public class Exporter {
             service.shutdown();
             implicitGeometryRegistry.clear();
         }
+    }
+
+    @Override
+    public void close() throws ExportException {
+        closeSession();
     }
 }

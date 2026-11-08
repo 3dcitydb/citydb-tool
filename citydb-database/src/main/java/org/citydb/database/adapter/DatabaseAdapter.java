@@ -15,6 +15,7 @@ import org.citydb.database.schema.SchemaException;
 import org.citydb.database.srs.SpatialReference;
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Properties;
@@ -26,7 +27,7 @@ public abstract class DatabaseAdapter {
     private GeometryAdapter geometryAdapter;
     private DatabaseMetadata databaseMetadata;
 
-    public abstract Class<?> getDriverClass();
+    public abstract Class<? extends Driver> getDriverClass();
 
     public abstract int getDefaultPort();
 
