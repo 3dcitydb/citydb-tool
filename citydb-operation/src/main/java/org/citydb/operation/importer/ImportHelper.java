@@ -143,7 +143,7 @@ public class ImportHelper {
 
     public String getObjectSignature(Feature feature) {
         String objectId = feature.getObjectId().orElse(null);
-        return feature.getFeatureType().getLocalName() +
+        return schemaMapping.getPrefixedName(feature.getFeatureType()) +
                 (objectId != null ? " '" + objectId + "'" : "");
     }
 
@@ -182,7 +182,7 @@ public class ImportHelper {
                 transformer.transform(feature);
             }
 
-            importTime = OffsetDateTime.now().withNano(0);
+            importTime = options.getImportTime().orElseGet(() -> OffsetDateTime.now().withNano(0));
             inheritedLifespan = Lifespan.NONE;
             sequenceValues = sequenceGenerator.generateNextValues(feature);
             FeatureDescriptor descriptor = tableHelper.getOrCreateImporter(FeatureImporter.class).doImport(feature);
@@ -204,7 +204,7 @@ public class ImportHelper {
                 transformer.transform(property);
             }
 
-            importTime = OffsetDateTime.now().withNano(0);
+            importTime = options.getImportTime().orElseGet(() -> OffsetDateTime.now().withNano(0));
             inheritedLifespan = Lifespan.NONE;
             sequenceValues = sequenceGenerator.generateNextValues(property);
 
