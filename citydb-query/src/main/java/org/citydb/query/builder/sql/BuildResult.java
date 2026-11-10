@@ -21,7 +21,6 @@ import org.citydb.sqlbuilder.operation.Operators;
 
 import java.util.*;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class BuildResult {
     private final PropertyRef propertyRef;
@@ -96,11 +95,8 @@ public class BuildResult {
 
     void requireType(EnumSet<Type> types, Supplier<String> message) throws QueryBuildException {
         if (type == Type.UNDEFINED && !types.contains(Type.UNDEFINED)) {
-            String hint = types.stream()
-                    .map(type -> "'" + type + "'")
-                    .collect(Collectors.joining(", "));
-            throw new QueryBuildException("Found untyped attribute '" + getName() + "' but expected a " +
-                    hint + ". Use explicit type casts.");
+            throw new QueryBuildException("'" + getName() + "' has no value. Use a nested property or a type cast " +
+                    "for generic attributes.");
         } else if (!types.contains(type)) {
             throw new QueryBuildException(message.get());
         }
