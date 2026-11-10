@@ -7,6 +7,11 @@
   geometry or dropping all geometry of a feature.
 - Fixed reading CityGML 2.0/1.0 `BuildingPart` elements nested within other `BuildingPart` elements.
 - Fixed `citydb.bat` not passing `APP_HOME` and `WORKING_DIR` to the Java process.
+- Fixed CQL2 property references with an undefined namespace prefix being silently resolved as if they had no prefix.
+  Such references now fail with an error.
+- Fixed CQL2 property references below complex attributes, addresses, or column-based properties being silently
+  resolved as generic attributes.
+- Fixed empty WKT geometries in CQL2 filters causing parse or database errors. They are now rejected with an error.
 
 ## [1.4.1] - 2026-10-26
 
