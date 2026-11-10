@@ -61,11 +61,10 @@ application {
         doLast {
             def windows = getWindowsScript()
             def unix = getUnixScript()
-            windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
-                    .replaceFirst('set MODULE_PATH=.*', 'set MODULE_PATH=%APP_HOME%\\\\lib')
-                    .replace('endlocal & "%JAVA_EXE%"', '"%JAVA_EXE%"')
-            unix.text = unix.text.replaceFirst('(?m)^MODULE_PATH=.*',
-                    'MODULE_PATH=\\$APP_HOME/lib\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
+            windows.text = replaceOrFail(windows.text, '(?m)^set MODULE_PATH=.*',
+                    'set MODULE_PATH=%APP_HOME%\\\\lib', windows.name)
+            unix.text = replaceOrFail(unix.text, '(?m)^MODULE_PATH=.*',
+                    'MODULE_PATH=\\$APP_HOME/lib', unix.name)
         }
     }
 }
@@ -124,4 +123,12 @@ static def parseVersion(String versionString) {
         throw new GradleException("Failed to parse the version '$versionString'. Use SemVer notation.")
     }
     version
+}
+
+static String replaceOrFail(String text, String regex, String replacement, String file) {
+    def matcher = text =~ regex
+    if (!matcher.find()) {
+        throw new GradleException("Pattern '$regex' not found in start script $file.")
+    }
+    matcher.replaceFirst(replacement)
 }

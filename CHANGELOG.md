@@ -17,6 +17,7 @@
   is only kept if it is earlier.
 - When exporting, the creation and termination dates of contained features are written if they differ from the dates
   of their parent.
+- The start scripts no longer set the `APP_HOME` and `WORKING_DIR` environment variables.
 
 ### Fixed
 - Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
@@ -32,7 +33,6 @@
 - Fixed CQL2 property references below complex attributes, addresses, or column-based properties being silently
   resolved as generic attributes.
 - Fixed empty WKT geometries in CQL2 filters causing parse or database errors. They are now rejected with an error.
-- Fixed `citydb.bat` not passing `APP_HOME` and `WORKING_DIR` to the Java process.
 - Fixed external database adapters whose JDBC driver is placed in the `extensions` directory failing as soon as
   the connection pool creates additional physical connections. The pool no longer loads the driver by class name
   but uses a driver instance provided by the database adapter.

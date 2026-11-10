@@ -6,6 +6,7 @@
 package org.citydb.cli;
 
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
@@ -20,19 +21,9 @@ public class CliConstants {
     public static final String EXTENSIONS_DIR = "extensions";
 
     static {
-        String appHome = System.getenv("APP_HOME");
-        if (appHome == null || appHome.isBlank()) {
-            appHome = ".";
-        }
-
-        String workingDir = System.getenv("WORKING_DIR");
-        if (workingDir == null || workingDir.isBlank()) {
-            workingDir = ".";
-        }
-
         try {
-            APP_HOME = Path.of(appHome).toAbsolutePath().normalize();
-            WORKING_DIR = Path.of(workingDir).toAbsolutePath().normalize();
+            APP_HOME = getAppHome();
+            WORKING_DIR = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize application directories.", e);
         }
@@ -47,5 +38,17 @@ public class CliConstants {
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize application properties.", e);
         }
+    }
+
+    private static Path getAppHome() throws Exception {
+        Path location = Path.of(CliConstants.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        if (Files.isRegularFile(location)
+                && location.getParent() != null
+                && location.getParent().getFileName().toString().equals("lib")
+                && location.getParent().getParent() != null) {
+            return location.getParent().getParent().toAbsolutePath().normalize();
+        }
+
+        return Path.of(".").toAbsolutePath().normalize();
     }
 }
