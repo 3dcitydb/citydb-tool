@@ -63,6 +63,7 @@ application {
             def unix = getUnixScript()
             windows.text = windows.text.replaceFirst('set APP_HOME=.*', '$0\r\nset WORKING_DIR=%CD%')
                     .replaceFirst('set MODULE_PATH=.*', 'set MODULE_PATH=%APP_HOME%\\\\lib')
+                    .replace('endlocal & "%JAVA_EXE%"', '"%JAVA_EXE%"')
             unix.text = unix.text.replaceFirst('(?m)^MODULE_PATH=.*',
                     'MODULE_PATH=\\$APP_HOME/lib\n\nexport APP_HOME\nexport WORKING_DIR=\\$(pwd -P)')
         }
