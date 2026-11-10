@@ -7,6 +7,7 @@ package org.citydb.cli.importer.citygml;
 
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.AppearanceOptions;
+import org.citydb.cli.common.LodFilterOptions;
 import org.citydb.cli.common.UpgradeOptions;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
@@ -30,6 +31,9 @@ public class CityGMLImportCommand extends ImportController {
     @CommandLine.Option(names = {"-x", "--xsl-transform"}, split = ",", paramLabel = "<stylesheet>",
             description = "Apply XSLT stylesheets to transform input.")
     private String[] stylesheets;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private LodFilterOptions lodFilterOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     private AppearanceOptions appearanceOptions;
@@ -74,6 +78,10 @@ public class CityGMLImportCommand extends ImportController {
             if (upgradeOptions.getMapLod1MultiSurface() != null) {
                 options.setMapLod1MultiSurfaces(upgradeOptions.getMapLod1MultiSurface());
             }
+        }
+
+        if (lodFilterOptions != null) {
+            options.setLodOptions(lodFilterOptions.toLodOptions(options.getLodOptions().orElse(null)));
         }
 
         if (appearanceOptions != null) {

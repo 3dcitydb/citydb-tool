@@ -8,6 +8,7 @@ package org.citydb.cli.importer.cityjson;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.Command;
+import org.citydb.cli.common.LodFilterOptions;
 import org.citydb.cli.common.LodMappingOptions;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
@@ -31,6 +32,9 @@ public class CityJSONImportCommand extends ImportController {
 
     @CommandLine.ArgGroup(exclusive = false)
     private LodMappingOptions lodMappingOptions;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private LodFilterOptions lodFilterOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     private AppearanceOptions appearanceOptions;
@@ -58,6 +62,10 @@ public class CityJSONImportCommand extends ImportController {
 
         if (lodMappingOptions != null) {
             options.setLodMapping(lodMappingOptions.toLodMappingOptions(options.getLodMapping().orElse(null)));
+        }
+
+        if (lodFilterOptions != null) {
+            options.setLodOptions(lodFilterOptions.toLodOptions(options.getLodOptions().orElse(null)));
         }
 
         if (appearanceOptions != null) {

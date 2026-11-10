@@ -3,8 +3,10 @@
 ## [Unreleased]
 
 ### Added
-- Added API support for restricting database queries to features stored in a temporary table.
+- Added the `--lod` and `--lod-mode` options to the `import citygml` and `import cityjson` commands for filtering
+  geometries by LoD.
 - Added support for defining a mapping of CityJSON LoDs in the `import cityjson` command.
+- Added API support for restricting database queries to features stored in a temporary table.
 
 ### Changed
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
