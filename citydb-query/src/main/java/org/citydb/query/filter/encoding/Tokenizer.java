@@ -224,8 +224,7 @@ public class Tokenizer {
     private Token rewriteGeometry(Token token, StreamTokenizer tokenizer) throws FilterParseException {
         StringBuilder wkt = new StringBuilder(token.getValue());
         if (lookAhead(tokenizer).getValue().equalsIgnoreCase("EMPTY")) {
-            nextToken(tokenizer);
-            return Token.of(token.getType(), wkt.append(" EMPTY").toString());
+            throw new FilterParseException("Empty geometries are not supported as literals.");
         } else {
             if (lookAhead(tokenizer).getValue().equalsIgnoreCase("Z")
                     || lookAhead(tokenizer).getValue().equalsIgnoreCase("M")

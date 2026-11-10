@@ -9,6 +9,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.*;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
+import org.citydb.model.common.PrefixedName;
 import org.citydb.query.builder.common.TypeCast;
 import org.citydb.query.filter.literal.PropertyRef;
 
@@ -156,7 +157,8 @@ public class SchemaPathBuilder {
                 && (name.getNamespace().equals(Namespaces.GENERICS)
                 || name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE))) {
             Table table = getTable(parent);
-            if (table == Table.FEATURE || table == Table.PROPERTY) {
+            if ((parent.getSchemaObject() instanceof FeatureType || parent.getSchemaObject() instanceof GenericAttribute)
+                    && (table == Table.FEATURE || table == Table.PROPERTY)) {
                 GenericAttribute attribute = GenericAttribute.of(name);
                 if (propertyRef.getTypeCast().isPresent()) {
                     attribute.setType(propertyRef.getTypeCast()
@@ -220,8 +222,16 @@ public class SchemaPathBuilder {
         return type != DataType.UNDEFINED ? type : null;
     }
 
-    private Name getName(PropertyRef propertyRef) {
-        return schemaMapping.resolvePrefixedName(propertyRef.getName());
+    private Name getName(PropertyRef propertyRef) throws SchemaPathException {
+        PrefixedName name = propertyRef.getName();
+        String prefix = name.getPrefix().orElse(null);
+        if (prefix != null
+                && name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)
+                && schemaMapping.getNamespaceByAlias(prefix) == Namespace.UNDEFINED) {
+            throw new SchemaPathException("The namespace prefix '" + prefix + "' of '" + name + "' is undefined.");
+        }
+
+        return schemaMapping.resolvePrefixedName(name);
     }
 
     private Table getTable(Node node) {
