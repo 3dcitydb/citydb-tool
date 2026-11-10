@@ -4,6 +4,7 @@
 
 ### Added
 - Added API support for restricting database queries to features stored in a temporary table.
+- Added support for defining a mapping of CityJSON LoDs in the `import cityjson` command.
 
 ### Changed
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so

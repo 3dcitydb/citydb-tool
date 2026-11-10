@@ -8,6 +8,7 @@ package org.citydb.cli.importer.cityjson;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.AppearanceOptions;
 import org.citydb.cli.common.Command;
+import org.citydb.cli.common.LodMappingOptions;
 import org.citydb.cli.importer.ImportController;
 import org.citydb.config.ConfigException;
 import org.citydb.config.common.ConfigObject;
@@ -27,6 +28,9 @@ public class CityJSONImportCommand extends ImportController {
             description = "Map city objects from unsupported extensions onto generic city objects " +
                     "(default: ${DEFAULT-VALUE}).")
     private boolean mapUnknownObjects;
+
+    @CommandLine.ArgGroup(exclusive = false)
+    private LodMappingOptions lodMappingOptions;
 
     @CommandLine.ArgGroup(exclusive = false)
     private AppearanceOptions appearanceOptions;
@@ -50,6 +54,10 @@ public class CityJSONImportCommand extends ImportController {
 
         if (Command.hasMatchedOption("--no-map-unknown-objects", commandSpec)) {
             options.setMapUnsupportedTypesToGenerics(mapUnknownObjects);
+        }
+
+        if (lodMappingOptions != null) {
+            options.setLodMapping(lodMappingOptions.toLodMappingOptions(options.getLodMapping().orElse(null)));
         }
 
         if (appearanceOptions != null) {
