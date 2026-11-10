@@ -27,6 +27,7 @@
 - Fixed CityGML imports with `--use-lod4-as-lod3` and several threads randomly keeping the original LoD3
   geometry or dropping all geometry of a feature.
 - Fixed reading CityGML 2.0/1.0 `BuildingPart` elements nested within other `BuildingPart` elements.
+- Fixed `citydb.bat` not passing `APP_HOME` and `WORKING_DIR` to the Java process.
 - Fixed external database adapters whose JDBC driver is placed in the `extensions` directory failing as soon as
   the connection pool creates additional physical connections. The pool no longer loads the driver by class name
   but uses a driver instance provided by the database adapter.
