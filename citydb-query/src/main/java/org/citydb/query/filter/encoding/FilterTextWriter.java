@@ -253,7 +253,7 @@ public class FilterTextWriter {
         @Override
         public void visit(StringLiteral literal) {
             builder.append("'")
-                    .append(literal.getValue().replaceAll("'", "''"))
+                    .append(literal.getValue().replace("\\", "\\\\").replace("'", "''"))
                     .append("'");
         }
 

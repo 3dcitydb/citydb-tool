@@ -11,6 +11,7 @@ import java.io.StringReader;
 import java.util.*;
 
 public class Tokenizer {
+    private static final String ESCAPED_CHARACTERS = "'\\abtnvfr";
     private final List<Token> tokens = new ArrayList<>();
     private final Deque<Integer> states = new ArrayDeque<>();
     private int index;
@@ -132,11 +133,17 @@ public class Tokenizer {
 
         for (int i = 0; i < text.length(); i++) {
             char character = text.charAt(i);
-            if (character != '\'') {
+            if (!inString) {
                 normalized.append(character);
-            } else if (!inString) {
+                inString = character == '\'';
+            } else if (character == '\\') {
+                if (i + 1 < text.length() && isEscapedCharacter(text.charAt(i + 1))) {
+                    normalized.append(character).append(text.charAt(++i));
+                } else {
+                    normalized.append("\\\\");
+                }
+            } else if (character != '\'') {
                 normalized.append(character);
-                inString = true;
             } else if (i + 1 < text.length() && text.charAt(i + 1) == '\'') {
                 normalized.append("\\'");
                 i++;
@@ -292,6 +299,10 @@ public class Tokenizer {
         } catch (NumberFormatException e) {
             return false;
         }
+    }
+
+    private boolean isEscapedCharacter(char character) {
+        return ESCAPED_CHARACTERS.indexOf(character) != -1;
     }
 
     private Token nextToken(StreamTokenizer tokenizer) throws FilterParseException {

@@ -12,6 +12,8 @@
 - Fixed CQL2 property references below complex attributes, addresses, or column-based properties being silently
   resolved as generic attributes.
 - Fixed empty WKT geometries in CQL2 filters causing parse or database errors. They are now rejected with an error.
+- Fixed backslashes being removed from CQL2 text string literals unless they start an escape sequence for a quote,
+  backslash, or control character. LIKE patterns such as `'%\_%'` now match a literal underscore.
 
 ## [1.4.1] - 2026-10-26
 
