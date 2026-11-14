@@ -95,7 +95,10 @@ public class ImplicitGeometryExporter extends DatabaseExporter {
                     String mimeType = rs.getString("mime_type");
                     ExternalFile libraryObject = externalFileHelper.createExternalFile(id, uri, mimeType);
                     if (libraryObject != null) {
-                        blobExporter.addBatch(id, libraryObject);
+                        if (externalFileHelper.isWriteFiles()) {
+                            blobExporter.addBatch(id, libraryObject);
+                        }
+
                         implicitGeometry = ImplicitGeometry.of(libraryObject
                                 .setMimeType(mimeType)
                                 .setMimeTypeCodeSpace(rs.getString("mime_type_codespace")));

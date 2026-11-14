@@ -52,7 +52,7 @@ public abstract class TextureExporter extends SurfaceDataExporter {
                         .setMimeType(mimeType)
                         .setMimeTypeCodeSpace(rs.getString("mime_type_codespace")));
 
-                if (!helper.lookupAndPut(textureImage)) {
+                if (externalFileHelper.isWriteFiles() && !helper.lookupAndPut(textureImage)) {
                     blobExporter.addBatch(texImageId, textureImage);
                 }
             }

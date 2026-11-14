@@ -5,6 +5,7 @@
 
 package org.citydb.cli;
 
+import org.apache.logging.log4j.LogManager;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.Option;
@@ -97,6 +98,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
 
     static {
         System.setProperty("picocli.disable.closures", "true");
+        System.setProperty("log4j2.shutdownHookEnabled", "false");
     }
 
     public static Launcher newInstance() {
@@ -104,7 +106,9 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
     }
 
     public static void main(String[] args) {
-        System.exit(new Launcher().run(args));
+        int exitCode = new Launcher().run(args);
+        LogManager.shutdown();
+        System.exit(exitCode);
     }
 
     public Launcher withPlugin(Plugin plugin) {

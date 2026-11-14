@@ -30,7 +30,7 @@ public class ImportOptions {
     private String lineage;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
-    
+
     @JSONField(serialize = false, deserialize = false)
     private OffsetDateTime importTime;
 

@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.cli.exporter.util;
+package org.citydb.io.writer.util;
 
 import org.citydb.io.writer.FeatureWriter;
 import org.citydb.io.writer.WriteException;

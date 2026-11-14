@@ -14,10 +14,7 @@ import org.citydb.core.file.output.RegularOutputFile;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
-import org.citydb.operation.exporter.options.AppearanceOptions;
-import org.citydb.operation.exporter.options.ImplicitGeometryScope;
-import org.citydb.operation.exporter.options.LodOptions;
-import org.citydb.operation.exporter.options.ValidityOptions;
+import org.citydb.operation.exporter.options.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -43,6 +40,8 @@ public class ExportOptions {
     private OutputFile outputFile;
     @JSONField(serialize = false, deserialize = false)
     private ImplicitGeometryScope implicitGeometryScope;
+    @JSONField(serialize = false, deserialize = false)
+    private ExternalFileResolver externalFileResolver;
 
     public int getNumberOfThreads() {
         return numberOfThreads;
@@ -135,6 +134,15 @@ public class ExportOptions {
 
     public ExportOptions setImplicitGeometryScope(ImplicitGeometryScope implicitGeometryScope) {
         this.implicitGeometryScope = implicitGeometryScope;
+        return this;
+    }
+
+    public Optional<ExternalFileResolver> getExternalFileResolver() {
+        return Optional.ofNullable(externalFileResolver);
+    }
+
+    public ExportOptions setExternalFileResolver(ExternalFileResolver externalFileResolver) {
+        this.externalFileResolver = externalFileResolver;
         return this;
     }
 }

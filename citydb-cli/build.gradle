@@ -56,6 +56,7 @@ application {
     mainClass = 'org.citydb.cli.Launcher'
     applicationName = appCliCommand
     executableDir = ''
+    applicationDefaultJvmArgs = ['--add-modules', 'ALL-DEFAULT']
 
     startScripts {
         doLast {

@@ -7,17 +7,22 @@
   geometries by LoD.
 - Added support for defining a mapping of CityJSON LoDs in the `import cityjson` command.
 - Added API support for restricting database queries to features stored in a temporary table.
+- Added API support for referencing texture images and library objects by URI instead of writing them to files when
+  exporting.
 
 ### Changed
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
   every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
   `terminateWithSubFeatures` setting of the JSON configuration were removed.
+- **Breaking**: Moved `SequentialWriter` from `citydb-cli` to `citydb-io` so that it can be reused outside the CLI.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
   is only kept if it is earlier.
 - When exporting, the creation and termination dates of contained features are written if they differ from the dates
   of their parent.
 - The start scripts no longer set the `APP_HOME` and `WORKING_DIR` environment variables.
+- The start scripts make all default JDK modules available, so that plugins can use JDK modules not required by
+  citydb-tool itself.
 
 ### Fixed
 - Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
@@ -38,6 +43,8 @@
 - Fixed external database adapters whose JDBC driver is placed in the `extensions` directory failing as soon as
   the connection pool creates additional physical connections. The pool no longer loads the driver by class name
   but uses a driver instance provided by the database adapter.
+- Fixed log messages being lost when the JVM shuts down, for example on `Ctrl+C`, because log4j was stopped before
+  running commands had finished logging.
 
 ## [1.4.1] - 2026-10-26
 

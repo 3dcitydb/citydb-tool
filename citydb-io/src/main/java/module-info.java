@@ -15,6 +15,7 @@ module org.citydb.io {
     exports org.citydb.io.writer;
     exports org.citydb.io.writer.metadata;
     exports org.citydb.io.writer.options;
+    exports org.citydb.io.writer.util;
 
     uses org.citydb.io.IOAdapter;
 }

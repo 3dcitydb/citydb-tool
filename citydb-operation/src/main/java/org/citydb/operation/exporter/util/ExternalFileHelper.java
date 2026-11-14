@@ -13,10 +13,12 @@ import org.citydb.core.file.OutputFile;
 import org.citydb.model.common.ExternalFile;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
+import org.citydb.operation.exporter.options.ExternalFileResolver;
 
 public class ExternalFileHelper {
     private final OutputFile outputFile;
     private final boolean useAbsoluteResourcePaths;
+    private final ExternalFileResolver resolver;
     private String outputFolder;
     private String fileNamePrefix;
     private boolean createUniqueFileNames;
@@ -28,6 +30,11 @@ public class ExternalFileHelper {
     private ExternalFileHelper(ExportHelper helper) {
         outputFile = helper.getOptions().getOutputFile();
         useAbsoluteResourcePaths = helper.getOptions().isUseAbsoluteResourcePaths();
+        resolver = helper.getOptions().getExternalFileResolver().orElse(null);
+    }
+
+    public boolean isWriteFiles() {
+        return resolver == null;
     }
 
     public static ExternalFileHelper newInstance(ExportHelper helper) {
@@ -60,6 +67,10 @@ public class ExternalFileHelper {
         String fileName = createUniqueFileNames || uri == null
                 ? getFileNamePrefix() + id + getFileExtension(uri, mimeType)
                 : getFileNamePrefix() + uri;
+
+        if (resolver != null) {
+            return ExternalFile.of(resolver.resolve(outputFolder, fileName));
+        }
 
         String path;
         int index;
