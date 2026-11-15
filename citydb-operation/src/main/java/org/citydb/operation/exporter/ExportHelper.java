@@ -19,7 +19,6 @@ import org.citydb.model.util.IdCreator;
 import org.citydb.operation.exporter.feature.FeatureHierarchyExporter;
 import org.citydb.operation.exporter.geometry.ImplicitGeometryExporter;
 import org.citydb.operation.exporter.options.LodOptions;
-import org.citydb.operation.exporter.options.ValidityOptions;
 import org.citydb.operation.exporter.util.*;
 import org.citydb.sqlbuilder.query.Selection;
 import org.citydb.sqlbuilder.schema.Column;
@@ -56,7 +55,7 @@ public class ExportHelper {
         schemaMapping = adapter.getSchemaAdapter().getSchemaMapping();
         targetSrs = adapter.getGeometryAdapter().getSrsHelper().getSpatialReference(options.getTargetSrs().orElse(null))
                 .orElse(adapter.getDatabaseMetadata().getSpatialReference());
-        validityFilter = new ValidityFilter(options.getValidityOptions().orElseGet(ValidityOptions::new));
+        validityFilter = new ValidityFilter(options.getValidity().orElse(null));
         lodFilter = new LodFilter(options.getLodOptions().orElseGet(LodOptions::new));
         postprocessor = new Postprocessor(this);
         tableHelper = new TableHelper(this);

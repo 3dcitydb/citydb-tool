@@ -14,6 +14,7 @@ import org.citydb.database.srs.SrsException;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.model.common.PrefixedName;
+import org.citydb.model.feature.Validity;
 import org.citydb.model.geometry.SpatialObject;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
@@ -35,6 +36,8 @@ public class BuilderHelper {
     private final FeatureTypesBuilder featureTypesBuilder;
     private final FilterBuilder filterBuilder;
     private final SqlContextBuilder contextBuilder;
+    private final ValidityBuilder validityBuilder;
+    private Validity validity;
 
     private BuilderHelper(DatabaseAdapter adapter) {
         this.adapter = Objects.requireNonNull(adapter, "The database adapter must not be null.");
@@ -42,6 +45,7 @@ public class BuilderHelper {
         featureTypesBuilder = FeatureTypesBuilder.of(this);
         filterBuilder = FilterBuilder.of(this);
         contextBuilder = SqlContextBuilder.of(filterBuilder, this);
+        validityBuilder = ValidityBuilder.of(this);
     }
 
     static BuilderHelper of(DatabaseAdapter adapter) {
@@ -66,6 +70,18 @@ public class BuilderHelper {
 
     SqlContextBuilder getContextBuilder() {
         return contextBuilder;
+    }
+
+    ValidityBuilder getValidityBuilder() {
+        return validityBuilder;
+    }
+
+    Validity getValidity() {
+        return validity;
+    }
+
+    void setValidity(Validity validity) {
+        this.validity = validity;
     }
 
     OperationHelper getOperationHelper() {

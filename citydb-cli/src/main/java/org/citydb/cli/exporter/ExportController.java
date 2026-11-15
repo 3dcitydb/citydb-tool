@@ -262,7 +262,9 @@ public abstract class ExportController implements Command {
                     ? queryOptions.getQuery()
                     : exportOptions.getQuery().orElseGet(Query::new);
 
-            return helper.setValidityFilter(query, exportOptions.getValidityOptions().orElse(null));
+            helper.setValidity(query, validityOptions);
+            exportOptions.setValidity(query.getValidity().orElse(null));
+            return query;
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -310,10 +312,6 @@ public abstract class ExportController implements Command {
                         .setExportAppearances(queryOptions.getAppearanceOptions().isProcessAppearances())
                         .setThemes(queryOptions.getAppearanceOptions().getThemes());
             }
-        }
-
-        if (validityOptions != null) {
-            exportOptions.setValidityOptions(validityOptions.getExportValidityOptions());
         }
 
         return exportOptions;

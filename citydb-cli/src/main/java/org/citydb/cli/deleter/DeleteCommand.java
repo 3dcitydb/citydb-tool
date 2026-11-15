@@ -186,7 +186,7 @@ public class DeleteCommand implements Command {
                     ? queryOptions.getQuery()
                     : deleteOptions.getQuery().orElseGet(Query::new);
 
-            return helper.setValidityFilter(query, deleteOptions.getValidityOptions().orElse(null));
+            return helper.setValidity(query, validityOptions);
         } catch (FilterParseException e) {
             throw new ExecutionException("Failed to parse the provided CQL2 filter expression.", e);
         }
@@ -232,10 +232,6 @@ public class DeleteCommand implements Command {
             if (metadataOptions.getReasonForUpdate() != null) {
                 deleteOptions.setReasonForUpdate(metadataOptions.getReasonForUpdate());
             }
-        }
-
-        if (validityOptions != null) {
-            deleteOptions.setValidityOptions(validityOptions.getExportValidityOptions());
         }
 
         return deleteOptions;

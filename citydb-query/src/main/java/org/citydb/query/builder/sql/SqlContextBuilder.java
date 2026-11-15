@@ -207,13 +207,17 @@ public class SqlContextBuilder {
                 }
 
                 if (target != FeatureType.UNDEFINED) {
-                    BooleanExpression expression = helper.getFeatureTypesBuilder().build(target, toTable);
-                    if (useLateral) {
-                        getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
-                    } else if (joinType.equals(Joins.LEFT_JOIN)) {
-                        join.condition(expression);
-                    } else {
-                        predicates.add(expression);
+                    List<BooleanExpression> expressions = new ArrayList<>();
+                    expressions.add(helper.getFeatureTypesBuilder().build(target, toTable));
+                    helper.getValidityBuilder().buildForJoinedFeature(target, toTable).ifPresent(expressions::add);
+                    for (BooleanExpression expression : expressions) {
+                        if (useLateral) {
+                            getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
+                        } else if (joinType.equals(Joins.LEFT_JOIN)) {
+                            join.condition(expression);
+                        } else {
+                            predicates.add(expression);
+                        }
                     }
                 } else {
                     throw new QueryBuildException("The schema path lacks a target feature for the " +

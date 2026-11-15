@@ -3,11 +3,10 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.database.schema;
+package org.citydb.model.feature;
 
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
-import org.citydb.model.feature.Feature;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;

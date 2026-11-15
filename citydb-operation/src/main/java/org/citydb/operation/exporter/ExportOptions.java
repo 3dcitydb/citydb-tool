@@ -14,6 +14,7 @@ import org.citydb.core.file.output.RegularOutputFile;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
+import org.citydb.model.feature.Validity;
 import org.citydb.operation.exporter.options.*;
 
 import java.io.IOException;
@@ -32,10 +33,11 @@ public class ExportOptions {
     private SrsReference targetSrs;
     @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
-    private ValidityOptions validityOptions;
     private LodOptions lodOptions;
     private AppearanceOptions appearanceOptions;
 
+    @JSONField(serialize = false, deserialize = false)
+    private Validity validity;
     @JSONField(serialize = false, deserialize = false)
     private OutputFile outputFile;
     @JSONField(serialize = false, deserialize = false)
@@ -79,12 +81,12 @@ public class ExportOptions {
         return this;
     }
 
-    public Optional<ValidityOptions> getValidityOptions() {
-        return Optional.ofNullable(validityOptions);
+    public Optional<Validity> getValidity() {
+        return Optional.ofNullable(validity);
     }
 
-    public ExportOptions setValidityOptions(ValidityOptions validityOptions) {
-        this.validityOptions = validityOptions;
+    public ExportOptions setValidity(Validity validity) {
+        this.validity = validity;
         return this;
     }
 

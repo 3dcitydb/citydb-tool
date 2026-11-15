@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.operation.exporter.options;
+package org.citydb.model.feature;
 
 public enum ValidityMode {
     VALID("valid"),
