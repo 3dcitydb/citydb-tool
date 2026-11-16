@@ -153,6 +153,7 @@ public class Launcher implements Command, CommandLine.IVersionProvider {
             CommandLine.ParseResult parseResult = cmd.setCaseInsensitiveEnumValuesAllowed(true)
                     .setAbbreviatedOptionsAllowed(true)
                     .setAbbreviatedSubcommandsAllowed(true)
+                    .setAllowSubcommandsAsOptionParameters(true)
                     .setExecutionStrategy(new CommandLine.RunAll())
                     .parseArgs(args);
 
