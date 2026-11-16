@@ -35,16 +35,16 @@ public class ValidityBuilder {
         return new ValidityBuilder(helper);
     }
 
-    Optional<BooleanExpression> buildForTopLevelFeature() throws QueryBuildException {
+    Optional<BooleanExpression> buildForRootFeature() throws QueryBuildException {
         Validity validity = helper.getValidity();
         return validity != null
-                ? build(validity, getTopLevelTable())
+                ? build(validity, getRootTable())
                 : Optional.empty();
     }
 
-    Optional<BooleanExpression> buildForJoinedFeature(Table table) throws QueryBuildException {
+    Optional<BooleanExpression> buildForJoinedFeature(FeatureType featureType, Table table) throws QueryBuildException {
         Validity validity = helper.getValidity();
-        if (validity == null) {
+        if (validity == null || featureType.getTable() != org.citydb.database.schema.Table.FEATURE) {
             return Optional.empty();
         }
 
@@ -60,11 +60,11 @@ public class ValidityBuilder {
         Column to = table.column(toColumn);
         return Operators.or(
                 Operators.isNull(to),
-                Operators.ge(to, getTopLevelTable().column(toColumn)));
+                Operators.ge(to, getRootTable().column(toColumn)));
     }
 
-    private Table getTopLevelTable() {
-        return helper.getTopLevelContext().getTable();
+    private Table getRootTable() {
+        return helper.getRootContext().getTable();
     }
 
     private Optional<BooleanExpression> build(Validity validity, Table table) throws QueryBuildException {

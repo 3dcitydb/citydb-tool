@@ -58,7 +58,7 @@ public class SqlQueryBuilder {
         helper.getFeatureTypesBuilder().build(featureTypes, select, context);
 
         helper.setValidity(query.getValidity().orElse(null), context);
-        helper.getValidityBuilder().buildForTopLevelFeature().ifPresent(select::where);
+        helper.getValidityBuilder().buildForRootFeature().ifPresent(select::where);
 
         Filter filter = query.getFilter().orElse(null);
         if (filter != null) {

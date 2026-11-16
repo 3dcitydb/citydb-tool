@@ -30,6 +30,8 @@
 
 ### Fixed
 - Fixed validity options not being applied to nested features in CQL2 filters. [#100](https://github.com/3dcitydb/citydb-tool/issues/100)
+- Fixed exporting and deleting feature types without lifespan properties, such as point clouds, failing unless
+  `--validity all` was used.
 - Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
   predicates combined with `AND` or `OR` now follow CQL2 semantics instead of matching unrelated values.
 - Fixed `--limit` and `--start-index` being applied to each tile separately in tiled exports. Pagination now applies
