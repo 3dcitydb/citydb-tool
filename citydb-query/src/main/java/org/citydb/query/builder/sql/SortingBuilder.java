@@ -15,6 +15,7 @@ import org.citydb.sqlbuilder.join.Joins;
 import org.citydb.sqlbuilder.query.OrderBy;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.query.Selection;
+import org.citydb.sqlbuilder.schema.Column;
 
 public class SortingBuilder {
     private final BuilderHelper helper;
@@ -48,12 +49,19 @@ public class SortingBuilder {
                 "' cannot be used as sort expression of a sortBy operation.");
 
         if (sortExpression.getExpression() instanceof Selection<?> selection) {
-            return OrderBy.of(selection, sortBy.getSortOrder() == SortOrder.DESC
-                            ? OrderBy.DESCENDING
-                            : OrderBy.ASCENDING)
-                    .nullsLast();
+            OrderBy orderBy = OrderBy.of(selection, sortBy.getSortOrder() == SortOrder.DESC
+                    ? OrderBy.DESCENDING
+                    : OrderBy.ASCENDING);
+
+            return isRootId(selection, context) ? orderBy : orderBy.nullsLast();
         } else {
             throw new QueryBuildException("Failed to build sortBy operation.");
         }
+    }
+
+    private boolean isRootId(Selection<?> selection, SqlContext context) {
+        return selection instanceof Column column
+                && column.getTable() == context.getTable()
+                && column.getName().equalsIgnoreCase("id");
     }
 }

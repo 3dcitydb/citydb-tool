@@ -24,6 +24,7 @@
   of their parent.
 - Exporting with `--validity invalid` exports features with the subfeatures they had at termination. Previously, it
   exported all terminated subfeatures, including ones terminated earlier, and skipped still valid ones.
+- Descending sorts by the feature ID use the primary key index.
 - The start scripts no longer set the `APP_HOME` and `WORKING_DIR` environment variables.
 - The start scripts make all default JDK modules available, so that plugins can use JDK modules not required by
   citydb-tool itself.
