@@ -15,16 +15,23 @@
   every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
   `terminateWithSubFeatures` setting of the JSON configuration were removed.
 - **Breaking**: Moved `SequentialWriter` from `citydb-cli` to `citydb-io` so that it can be reused outside the CLI.
+- **Breaking**: Validity settings are now part of the query. In the JSON configuration, `validityOptions` moved to
+  `query.validity`.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
   is only kept if it is earlier.
 - When exporting, the creation and termination dates of contained features are written if they differ from the dates
   of their parent.
+- Exporting with `--validity invalid` exports features with the subfeatures they had at termination. Previously, it
+  exported all terminated subfeatures, including ones terminated earlier, and skipped still valid ones.
 - The start scripts no longer set the `APP_HOME` and `WORKING_DIR` environment variables.
 - The start scripts make all default JDK modules available, so that plugins can use JDK modules not required by
   citydb-tool itself.
 
 ### Fixed
+- Fixed validity options not being applied to nested features in CQL2 filters. [#100](https://github.com/3dcitydb/citydb-tool/issues/100)
+- Fixed exporting and deleting feature types without lifespan properties, such as point clouds, failing unless
+  `--validity all` was used.
 - Fixed CQL2 filters on multi-valued properties by evaluating predicates per value, so `NOT`, `<>`, `IS NULL`, and
   predicates combined with `AND` or `OR` now follow CQL2 semantics instead of matching unrelated values.
 - Fixed `--limit` and `--start-index` being applied to each tile separately in tiled exports. Pagination now applies

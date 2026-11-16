@@ -6,8 +6,9 @@
 package org.citydb.cli.common;
 
 import org.citydb.core.time.TimeHelper;
-import org.citydb.database.schema.ValidityReference;
-import org.citydb.operation.exporter.options.ValidityMode;
+import org.citydb.model.feature.Validity;
+import org.citydb.model.feature.ValidityMode;
+import org.citydb.model.feature.ValidityReference;
 import picocli.CommandLine;
 
 import java.time.OffsetDateTime;
@@ -36,8 +37,8 @@ public class ValidityOptions implements Option {
 
     private OffsetDateTime at;
 
-    public org.citydb.operation.exporter.options.ValidityOptions getExportValidityOptions() {
-        return new org.citydb.operation.exporter.options.ValidityOptions()
+    public Validity getValidity() {
+        return Validity.newInstance()
                 .setMode(switch (mode) {
                     case valid -> ValidityMode.VALID;
                     case invalid -> ValidityMode.INVALID;

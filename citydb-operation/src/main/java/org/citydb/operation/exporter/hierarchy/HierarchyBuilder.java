@@ -104,12 +104,14 @@ public class HierarchyBuilder {
 
         if (!featureIds.isEmpty()) {
             Set<Long> removedFeatureIds = new HashSet<>();
-            for (Map.Entry<Long, Feature> entry : tableHelper.getOrCreateExporter(FeatureExporter.class)
-                    .doExport(featureIds).entrySet()) {
+            Map<Long, Feature> features = tableHelper.getOrCreateExporter(FeatureExporter.class).doExport(featureIds);
+            Feature root = features.get(rootId);
+
+            for (Map.Entry<Long, Feature> entry : features.entrySet()) {
                 long featureId = entry.getKey();
                 Feature feature = entry.getValue();
                 if (!removedFeatureIds.contains(featureId)) {
-                    if (featureId != rootId && !validityFilter.filter(feature)) {
+                    if (featureId != rootId && !validityFilter.filter(feature, root)) {
                         removeFeature(featureId, removedFeatureIds, referees);
                     } else {
                         hierarchy.addFeature(featureId, feature);

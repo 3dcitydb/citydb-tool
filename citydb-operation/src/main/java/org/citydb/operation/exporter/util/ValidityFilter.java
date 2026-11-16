@@ -5,12 +5,11 @@
 
 package org.citydb.operation.exporter.util;
 
-import org.citydb.database.schema.ValidityReference;
 import org.citydb.model.feature.Feature;
-import org.citydb.operation.exporter.options.ValidityOptions;
+import org.citydb.model.feature.Validity;
+import org.citydb.model.feature.ValidityReference;
 
 import java.time.OffsetDateTime;
-import java.util.Objects;
 
 public class ValidityFilter {
     private final Mode mode;
@@ -26,8 +25,8 @@ public class ValidityFilter {
         ALL
     }
 
-    public ValidityFilter(ValidityOptions options) {
-        Objects.requireNonNull(options, "The validity filter options must not be null.");
+    public ValidityFilter(Validity validity) {
+        Validity options = validity != null ? validity : Validity.valid();
         reference = options.getReference();
         timestamp = options.getAt().orElse(null);
         lenient = options.isLenient();
@@ -38,16 +37,22 @@ public class ValidityFilter {
         };
     }
 
-    public boolean filter(Feature feature) {
+    public boolean filter(Feature feature, Feature root) {
         return switch (mode) {
             case VALID -> reference.to(feature).isEmpty();
             case VALID_AT -> ((lenient && reference.from(feature).isEmpty())
                     || reference.from(feature).map(from -> !from.isAfter(timestamp)).orElse(false))
                     && (reference.to(feature).isEmpty()
                     || reference.to(feature).map(to -> to.isAfter(timestamp)).orElse(false));
-            case INVALID -> reference.to(feature).isPresent();
-            case INVALID_AT -> reference.to(feature).map(to -> !to.isAfter(timestamp)).orElse(false);
+            case INVALID, INVALID_AT -> isValidAtTermination(feature, root);
             case ALL -> true;
         };
+    }
+
+    private boolean isValidAtTermination(Feature feature, Feature root) {
+        OffsetDateTime termination = root != null ? reference.to(root).orElse(null) : null;
+        return termination != null
+                ? reference.to(feature).map(to -> !to.isBefore(termination)).orElse(true)
+                : reference.to(feature).isEmpty();
     }
 }

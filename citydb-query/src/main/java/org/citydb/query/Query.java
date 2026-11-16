@@ -15,6 +15,7 @@ import org.citydb.model.common.PrefixedName;
 import org.citydb.model.encoding.PrefixedNamesReader;
 import org.citydb.model.encoding.PrefixedNamesWriter;
 import org.citydb.model.feature.FeatureTypeProvider;
+import org.citydb.model.feature.Validity;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.encoding.FilterConfigReader;
 import org.citydb.query.filter.encoding.FilterConfigWriter;
@@ -33,6 +34,7 @@ public class Query {
     @JSONField(serializeUsing = FilterConfigWriter.class, deserializeUsing = FilterConfigReader.class)
     private Filter filter;
     private SrsReference filterSrs;
+    private Validity validity;
     private LodFilter lodFilter;
     private Sorting sorting;
     private CountLimit countLimit;
@@ -48,6 +50,7 @@ public class Query {
                 .setFeatureTypes(other.featureTypes != null ? new ArrayList<>(other.featureTypes) : null)
                 .setFilter(other.filter)
                 .setFilterSrs(other.filterSrs)
+                .setValidity(other.validity)
                 .setLodFilter(other.lodFilter)
                 .setSorting(other.sorting)
                 .setCountLimit(other.countLimit)
@@ -114,6 +117,15 @@ public class Query {
 
     public Query setFilterSrs(SrsReference filterSrs) {
         this.filterSrs = filterSrs;
+        return this;
+    }
+
+    public Optional<Validity> getValidity() {
+        return Optional.ofNullable(validity);
+    }
+
+    public Query setValidity(Validity validity) {
+        this.validity = validity;
         return this;
     }
 

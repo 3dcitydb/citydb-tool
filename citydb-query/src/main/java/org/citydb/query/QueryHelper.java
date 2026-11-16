@@ -5,8 +5,8 @@
 
 package org.citydb.query;
 
-import org.citydb.database.schema.ValidityReference;
-import org.citydb.query.filter.Filter;
+import org.citydb.model.feature.Validity;
+import org.citydb.model.feature.ValidityReference;
 import org.citydb.query.filter.literal.PropertyRef;
 import org.citydb.query.filter.literal.TimestampLiteral;
 import org.citydb.query.filter.operation.BooleanExpression;
@@ -21,7 +21,7 @@ public class QueryHelper {
     }
 
     public static Query getValidTopLevelFeatures(ValidityReference reference) {
-        return new Query().setFilter(Filter.of(isValid(reference)));
+        return new Query().setValidity(Validity.valid().setReference(reference));
     }
 
     public static BooleanExpression isValid(ValidityReference reference) {
