@@ -38,6 +38,7 @@ public class BuilderHelper {
     private final SqlContextBuilder contextBuilder;
     private final ValidityBuilder validityBuilder;
     private Validity validity;
+    private SqlContext topLevelContext;
 
     private BuilderHelper(DatabaseAdapter adapter) {
         this.adapter = Objects.requireNonNull(adapter, "The database adapter must not be null.");
@@ -80,8 +81,13 @@ public class BuilderHelper {
         return validity;
     }
 
-    void setValidity(Validity validity) {
+    SqlContext getTopLevelContext() {
+        return topLevelContext;
+    }
+
+    void setValidity(Validity validity, SqlContext topLevelContext) {
         this.validity = validity;
+        this.topLevelContext = topLevelContext;
     }
 
     OperationHelper getOperationHelper() {

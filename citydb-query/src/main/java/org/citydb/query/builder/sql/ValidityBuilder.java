@@ -5,15 +5,17 @@
 
 package org.citydb.query.builder.sql;
 
-import org.citydb.database.schema.*;
+import org.citydb.database.schema.FeatureType;
+import org.citydb.database.schema.Property;
+import org.citydb.database.schema.Value;
 import org.citydb.model.common.Name;
 import org.citydb.model.feature.Validity;
-import org.citydb.model.feature.ValidityMode;
 import org.citydb.model.feature.ValidityReference;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.Operators;
+import org.citydb.sqlbuilder.schema.Column;
 import org.citydb.sqlbuilder.schema.Table;
 
 import java.sql.Timestamp;
@@ -31,18 +33,43 @@ public class ValidityBuilder {
         return new ValidityBuilder(helper);
     }
 
-    Optional<BooleanExpression> buildForTopLevelFeature(FeatureType featureType, Table table) throws QueryBuildException {
+    Optional<BooleanExpression> buildForTopLevelFeature() throws QueryBuildException {
         Validity validity = helper.getValidity();
         return validity != null
-                ? build(validity, featureType, table)
+                ? build(validity, getTopLevelType(), getTopLevelTable())
                 : Optional.empty();
     }
 
     Optional<BooleanExpression> buildForJoinedFeature(FeatureType featureType, Table table) throws QueryBuildException {
         Validity validity = helper.getValidity();
-        return validity != null && validity.getMode() == ValidityMode.VALID
-                ? build(validity, featureType, table)
-                : Optional.empty();
+        if (validity == null) {
+            return Optional.empty();
+        }
+
+        return switch (validity.getMode()) {
+            case VALID -> build(validity, featureType, table);
+            case INVALID -> Optional.of(validAtTermination(featureType, table, validity.getReference()));
+            case ALL -> Optional.empty();
+        };
+    }
+
+    private BooleanExpression validAtTermination(FeatureType featureType, Table table, ValidityReference reference) throws QueryBuildException {
+        Column to = table.column(getColumn(featureType, reference.to()));
+        return Operators.or(
+                Operators.isNull(to),
+                Operators.ge(to, getTopLevelTable().column(getColumn(getTopLevelType(), reference.to()))));
+    }
+
+    private FeatureType getTopLevelType() throws QueryBuildException {
+        if (helper.getTopLevelContext().getSchemaObject() instanceof FeatureType featureType) {
+            return featureType;
+        } else {
+            throw new QueryBuildException("The top-level context of the query lacks a feature type.");
+        }
+    }
+
+    private Table getTopLevelTable() {
+        return helper.getTopLevelContext().getTable();
     }
 
     private Optional<BooleanExpression> build(Validity validity, FeatureType featureType, Table table) throws QueryBuildException {
@@ -83,7 +110,7 @@ public class ValidityBuilder {
         return Optional.ofNullable(featureType.getProperties().get(name))
                 .flatMap(Property::getValue)
                 .flatMap(Value::getColumn)
-                .map(Column::getName)
+                .map(org.citydb.database.schema.Column::getName)
                 .orElseThrow(() -> new QueryBuildException("Failed to resolve the validity property " + name +
                         " of the feature type " + featureType.getName() + "."));
     }
