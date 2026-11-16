@@ -9,6 +9,7 @@ import org.citydb.database.schema.FeatureType;
 import org.citydb.database.schema.Property;
 import org.citydb.database.schema.Value;
 import org.citydb.model.common.Name;
+import org.citydb.model.common.Namespaces;
 import org.citydb.model.feature.Validity;
 import org.citydb.model.feature.ValidityReference;
 import org.citydb.query.builder.QueryBuildException;
@@ -23,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 
 public class ValidityBuilder {
+    private static final Name LIFESPAN_TYPE = Name.of("AbstractFeatureWithLifespan", Namespaces.CORE);
     private final BuilderHelper helper;
 
     private ValidityBuilder(BuilderHelper helper) {
@@ -36,60 +38,53 @@ public class ValidityBuilder {
     Optional<BooleanExpression> buildForTopLevelFeature() throws QueryBuildException {
         Validity validity = helper.getValidity();
         return validity != null
-                ? build(validity, getTopLevelType(), getTopLevelTable())
+                ? build(validity, getTopLevelTable())
                 : Optional.empty();
     }
 
-    Optional<BooleanExpression> buildForJoinedFeature(FeatureType featureType, Table table) throws QueryBuildException {
+    Optional<BooleanExpression> buildForJoinedFeature(Table table) throws QueryBuildException {
         Validity validity = helper.getValidity();
         if (validity == null) {
             return Optional.empty();
         }
 
         return switch (validity.getMode()) {
-            case VALID -> build(validity, featureType, table);
-            case INVALID -> Optional.of(validAtTermination(featureType, table, validity.getReference()));
+            case VALID -> build(validity, table);
+            case INVALID -> Optional.of(validAtTermination(table, validity.getReference()));
             case ALL -> Optional.empty();
         };
     }
 
-    private BooleanExpression validAtTermination(FeatureType featureType, Table table, ValidityReference reference) throws QueryBuildException {
-        Column to = table.column(getColumn(featureType, reference.to()));
+    private BooleanExpression validAtTermination(Table table, ValidityReference reference) throws QueryBuildException {
+        String toColumn = getColumn(reference.to());
+        Column to = table.column(toColumn);
         return Operators.or(
                 Operators.isNull(to),
-                Operators.ge(to, getTopLevelTable().column(getColumn(getTopLevelType(), reference.to()))));
-    }
-
-    private FeatureType getTopLevelType() throws QueryBuildException {
-        if (helper.getTopLevelContext().getSchemaObject() instanceof FeatureType featureType) {
-            return featureType;
-        } else {
-            throw new QueryBuildException("The top-level context of the query lacks a feature type.");
-        }
+                Operators.ge(to, getTopLevelTable().column(toColumn)));
     }
 
     private Table getTopLevelTable() {
         return helper.getTopLevelContext().getTable();
     }
 
-    private Optional<BooleanExpression> build(Validity validity, FeatureType featureType, Table table) throws QueryBuildException {
+    private Optional<BooleanExpression> build(Validity validity, Table table) throws QueryBuildException {
         ValidityReference reference = validity.getReference();
         OffsetDateTime at = validity.getAt().orElse(null);
         return switch (validity.getMode()) {
             case VALID -> Optional.of(at != null
-                    ? validAt(featureType, table, reference, at, validity.isLenient())
-                    : Operators.isNull(table.column(getColumn(featureType, reference.to()))));
+                    ? validAt(table, reference, at, validity.isLenient())
+                    : Operators.isNull(table.column(getColumn(reference.to()))));
             case INVALID -> Optional.of(at != null
-                    ? Operators.le(table.column(getColumn(featureType, reference.to())), timestamp(at))
-                    : Operators.isNull(table.column(getColumn(featureType, reference.to())), true));
+                    ? Operators.le(table.column(getColumn(reference.to())), timestamp(at))
+                    : Operators.isNull(table.column(getColumn(reference.to())), true));
             case ALL -> Optional.empty();
         };
     }
 
-    private BooleanExpression validAt(FeatureType featureType, Table table, ValidityReference reference,
-                                      OffsetDateTime at, boolean lenient) throws QueryBuildException {
-        String fromColumn = getColumn(featureType, reference.from());
-        String toColumn = getColumn(featureType, reference.to());
+    private BooleanExpression validAt(Table table, ValidityReference reference, OffsetDateTime at,
+                                      boolean lenient) throws QueryBuildException {
+        String fromColumn = getColumn(reference.from());
+        String toColumn = getColumn(reference.to());
         Placeholder timestamp = timestamp(at);
 
         BooleanExpression from = Operators.le(table.column(fromColumn), timestamp);
@@ -106,12 +101,13 @@ public class ValidityBuilder {
         return Placeholder.of(Timestamp.from(at.toInstant()));
     }
 
-    private String getColumn(FeatureType featureType, Name name) throws QueryBuildException {
+    private String getColumn(Name name) throws QueryBuildException {
+        FeatureType featureType = helper.getSchemaMapping().getFeatureType(LIFESPAN_TYPE);
         return Optional.ofNullable(featureType.getProperties().get(name))
                 .flatMap(Property::getValue)
                 .flatMap(Value::getColumn)
                 .map(org.citydb.database.schema.Column::getName)
                 .orElseThrow(() -> new QueryBuildException("Failed to resolve the validity property " + name +
-                        " of the feature type " + featureType.getName() + "."));
+                        " of the feature type " + LIFESPAN_TYPE + "."));
     }
 }

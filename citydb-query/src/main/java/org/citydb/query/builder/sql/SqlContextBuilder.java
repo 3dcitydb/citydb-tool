@@ -209,7 +209,7 @@ public class SqlContextBuilder {
                 if (target != FeatureType.UNDEFINED) {
                     List<BooleanExpression> expressions = new ArrayList<>();
                     expressions.add(helper.getFeatureTypesBuilder().build(target, toTable));
-                    helper.getValidityBuilder().buildForJoinedFeature(target, toTable).ifPresent(expressions::add);
+                    helper.getValidityBuilder().buildForJoinedFeature(toTable).ifPresent(expressions::add);
                     for (BooleanExpression expression : expressions) {
                         if (useLateral) {
                             getLateralQuery(joinTable).ifPresent(lateral -> lateral.where(expression));
