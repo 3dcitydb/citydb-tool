@@ -92,6 +92,7 @@ The environment variables listed below can be used to specify a 3DCityDB v5 conn
 container, mount a host folder to `/data` inside the container.
 
     docker run --rm --name citydb-tool [-i -t] \
+        [-e CITYDB_TYPE=theDBType] \
         [-e CITYDB_HOST=the.host.de] \
         [-e CITYDB_PORT=5432] \
         [-e CITYDB_NAME=theDBName] \
