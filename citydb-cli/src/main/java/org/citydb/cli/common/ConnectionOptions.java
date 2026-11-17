@@ -44,6 +44,10 @@ public class ConnectionOptions implements Option {
             description = "Database-specific connection properties.")
     private Map<String, String> properties;
 
+    @CommandLine.Option(names = "--db-type", paramLabel = "<type>",
+            description = "Database system of the 3DCityDB (default: PostgreSQL).")
+    private String databaseType;
+
     public String getHost() {
         return host;
     }
@@ -72,8 +76,13 @@ public class ConnectionOptions implements Option {
         return properties != null ? properties : Collections.emptyMap();
     }
 
+    public String getDatabaseType() {
+        return databaseType;
+    }
+
     public ConnectionDetails toConnectionDetails() {
         return new ConnectionDetails()
+                .setDatabaseName(databaseType)
                 .setHost(host)
                 .setPort(port)
                 .setDatabase(database)

@@ -9,6 +9,8 @@
 - Added API support for restricting database queries to features stored in a temporary table.
 - Added API support for referencing texture images and library objects by URI instead of writing them to files when
   exporting.
+- Added the `--db-type` option and the `CITYDB_TYPE` environment variable for selecting the database system to
+  connect to.
 
 ### Changed
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so

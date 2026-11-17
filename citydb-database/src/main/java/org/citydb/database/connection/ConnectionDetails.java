@@ -255,7 +255,8 @@ public class ConnectionDetails {
     }
 
     public ConnectionDetails fillAbsentValuesFromEnv() {
-        return setUserIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))
+        return setDatabaseNameIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_TYPE))
+                .setUserIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))
                 .setPasswordIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD))
                 .setHostIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_HOST))
                 .setPortIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_PORT))
