@@ -38,12 +38,12 @@ public class DatabaseManager {
     public void connect(ConnectionDetails connectionDetails, DatabaseAdapterManager manager) throws DatabaseException, SQLException {
         Objects.requireNonNull(connectionDetails, "The connection details must not be null.");
         connectionDetails.fillAbsentValuesFromEnv()
-                .setDatabaseNameIfAbsent("PostgreSQL");
+                .setDatabaseTypeIfAbsent("PostgreSQL");
 
-        adapter = manager.getAdapterForDatabase(connectionDetails.getDatabaseName());
+        adapter = manager.getAdapterForDatabase(connectionDetails.getDatabaseType());
         if (adapter == null) {
             throw new DatabaseException("No database adapter available for the database '" +
-                    connectionDetails.getDatabaseName() + "'.");
+                    connectionDetails.getDatabaseType() + "'.");
         } else if (connectionDetails.getHost() == null) {
             throw new DatabaseException("Missing host name for database connection.");
         } else if (connectionDetails.getDatabase() == null) {

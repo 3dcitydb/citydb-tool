@@ -82,7 +82,7 @@ public class ConnectionOptions implements Option {
 
     public ConnectionDetails toConnectionDetails() {
         return new ConnectionDetails()
-                .setDatabaseName(databaseType)
+                .setDatabaseType(databaseType)
                 .setHost(host)
                 .setPort(port)
                 .setDatabase(database)

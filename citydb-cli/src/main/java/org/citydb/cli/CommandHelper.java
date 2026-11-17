@@ -133,7 +133,7 @@ public class CommandHelper {
         }
 
         return connectionDetails.fillAbsentValuesFromEnv()
-                .setDatabaseNameIfAbsent(PostgresqlAdapter.DATABASE_NAME);
+                .setDatabaseTypeIfAbsent(PostgresqlAdapter.DATABASE_NAME);
     }
 
     public IOAdapterManager getIOAdapterManager() throws ExecutionException {
