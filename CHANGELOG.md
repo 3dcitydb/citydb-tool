@@ -19,6 +19,8 @@
 - **Breaking**: Moved `SequentialWriter` from `citydb-cli` to `citydb-io` so that it can be reused outside the CLI.
 - **Breaking**: Validity settings are now part of the query. In the JSON configuration, `validityOptions` moved to
   `query.validity`.
+- **Breaking**: Renamed the `databaseName` property of database connections to `databaseType`, both in the JSON
+  configuration and in the `ConnectionDetails` API.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
   is only kept if it is earlier.

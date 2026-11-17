@@ -13,7 +13,7 @@ import java.util.Optional;
 
 public class ConnectionDetails {
     private String description;
-    private String databaseName;
+    private String databaseType;
     private String user;
     private String password;
     private String host;
@@ -27,7 +27,7 @@ public class ConnectionDetails {
     public static ConnectionDetails of(ConnectionDetails other) {
         return new ConnectionDetails()
                 .setDescription(other.description)
-                .setDatabaseName(other.databaseName)
+                .setDatabaseType(other.databaseType)
                 .setUser(other.user)
                 .setPassword(other.password)
                 .setHost(other.host)
@@ -52,17 +52,17 @@ public class ConnectionDetails {
         return this.description == null ? setDescription(description) : this;
     }
 
-    public String getDatabaseName() {
-        return databaseName;
+    public String getDatabaseType() {
+        return databaseType;
     }
 
-    public ConnectionDetails setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
+    public ConnectionDetails setDatabaseType(String databaseType) {
+        this.databaseType = databaseType;
         return this;
     }
 
-    public ConnectionDetails setDatabaseNameIfAbsent(String databaseName) {
-        return this.databaseName == null ? setDatabaseName(databaseName) : this;
+    public ConnectionDetails setDatabaseTypeIfAbsent(String databaseType) {
+        return this.databaseType == null ? setDatabaseType(databaseType) : this;
     }
 
     public String getUser() {
@@ -241,7 +241,7 @@ public class ConnectionDetails {
     public ConnectionDetails fillAbsentValuesFrom(ConnectionDetails other) {
         return other != null
                 ? setDescriptionIfAbsent(other.description)
-                .setDatabaseNameIfAbsent(other.databaseName)
+                .setDatabaseTypeIfAbsent(other.databaseType)
                 .setUserIfAbsent(other.user)
                 .setPasswordIfAbsent(other.password)
                 .setHostIfAbsent(other.host)
@@ -255,7 +255,7 @@ public class ConnectionDetails {
     }
 
     public ConnectionDetails fillAbsentValuesFromEnv() {
-        return setDatabaseNameIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_TYPE))
+        return setDatabaseTypeIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_TYPE))
                 .setUserIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_USERNAME))
                 .setPasswordIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_PASSWORD))
                 .setHostIfAbsent(System.getenv(DatabaseConstants.ENV_CITYDB_HOST))
