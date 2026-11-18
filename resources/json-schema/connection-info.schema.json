@@ -14,6 +14,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "databaseType",
         "host",
         "port",
         "database",
@@ -21,6 +22,12 @@
         "user"
       ],
       "properties": {
+        "databaseType": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "host": {
           "type": [
             "string",

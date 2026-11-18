@@ -14,6 +14,7 @@ import java.util.Properties;
 public class DatabaseConstants {
     public static final String CITYDB_NAME;
     public static final String CITYDB_SHORT_NAME;
+    public static final String DEFAULT_DATABASE_TYPE = "PostgreSQL";
 
     public static final String ENV_CITYDB_TYPE = "CITYDB_TYPE";
     public static final String ENV_CITYDB_HOST = "CITYDB_HOST";

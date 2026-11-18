@@ -11,6 +11,8 @@
   exporting.
 - Added the `--db-type` option and the `CITYDB_TYPE` environment variable for selecting the database system to
   connect to.
+- Added the `databaseType` property to the connection details in the JSON output of the `connect` and `info`
+  commands.
 
 ### Changed
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so

@@ -38,7 +38,7 @@ public class DatabaseManager {
     public void connect(ConnectionDetails connectionDetails, DatabaseAdapterManager manager) throws DatabaseException, SQLException {
         Objects.requireNonNull(connectionDetails, "The connection details must not be null.");
         connectionDetails.fillAbsentValuesFromEnv()
-                .setDatabaseTypeIfAbsent("PostgreSQL");
+                .setDatabaseTypeIfAbsent(DatabaseConstants.DEFAULT_DATABASE_TYPE);
 
         adapter = manager.getAdapterForDatabase(connectionDetails.getDatabaseType());
         if (adapter == null) {
@@ -53,6 +53,8 @@ public class DatabaseManager {
         } else if (connectionDetails.getPort() == null) {
             connectionDetails.setPort(adapter.getDefaultPort());
         }
+
+        connectionDetails.setDatabaseType(adapter.getDatabaseType());
 
         String url = adapter.getConnectionString(connectionDetails.getHost(),
                 connectionDetails.getPort(),
