@@ -18,16 +18,17 @@ import org.citydb.query.filter.operation.*;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class FilterTextBuilder {
     private final WKTParser wktParser = new WKTParser();
+    private final PropertyResolver propertyResolver;
+    private final Deque<PropertyRef> steps = new ArrayDeque<>();
 
-    FilterTextBuilder() {
+    FilterTextBuilder(PropertyResolver propertyResolver) {
+        this.propertyResolver = propertyResolver;
     }
 
     Expression build(Node node) throws FilterParseException {
@@ -51,7 +52,7 @@ public class FilterTextBuilder {
             case TIME_INTERVAL -> buildTimeInterval(node);
             case GEOMETRY_LITERAL -> buildGeometryLiteral(node);
             case IDENTIFIER -> buildIdentifier(node);
-            case PROPERTY_REF -> buildPropertyRef(node);
+            case PROPERTY_REF -> buildProperty(node);
             case SYNTAX -> throw new FilterParseException("Unsupported node type '" + node.getType() + "'.");
             default -> null;
         };
@@ -364,8 +365,25 @@ public class FilterTextBuilder {
         try {
             return buildNumericLiteral(node);
         } catch (FilterParseException e) {
-            return buildPropertyRef(node);
+            return buildProperty(node);
         }
+    }
+
+    private Expression buildProperty(Node node) throws FilterParseException {
+        PropertyRef propertyRef = buildPropertyRef(node);
+        Expression expression = propertyResolver != null
+                ? propertyResolver.resolve(propertyRef, steps.peek()).orElse(propertyRef)
+                : propertyRef;
+
+        if (node.getSign().isPresent()) {
+            if (expression instanceof NumericExpression numericExpression) {
+                numericExpression.negate();
+            } else {
+                throw new FilterParseException("Failed to apply sign to property '" + node.getToken() + "'.");
+            }
+        }
+
+        return expression;
     }
 
     private PropertyRef buildPropertyRef(Node node) throws FilterParseException {
@@ -378,7 +396,14 @@ public class FilterTextBuilder {
             }
 
             if (node.hasChildren()) {
-                Expression filter = buildExpression(node.getChildren().get(0));
+                Expression filter;
+                steps.push(child);
+                try {
+                    filter = buildExpression(node.getChildren().get(0));
+                } finally {
+                    steps.pop();
+                }
+
                 if (filter instanceof NumericLiteral index
                         && index.isInteger()
                         && index.intValue() >= 0) {
@@ -396,7 +421,7 @@ public class FilterTextBuilder {
                 }
             }
 
-            return buildSign(propertyRef, node);
+            return propertyRef;
         } else {
             throw new FilterParseException("Invalid property name '" + node.getToken() + "'.");
         }

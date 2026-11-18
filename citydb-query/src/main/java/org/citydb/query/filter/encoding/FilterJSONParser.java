@@ -29,12 +29,18 @@ import java.util.regex.Pattern;
 public class FilterJSONParser {
     private final FilterTextParser textParser = FilterTextParser.newInstance();
     private final GeoJSONParser geometryParser = new GeoJSONParser();
+    private PropertyResolver propertyResolver;
 
     private FilterJSONParser() {
     }
 
     public static FilterJSONParser newInstance() {
         return new FilterJSONParser();
+    }
+
+    public FilterJSONParser withPropertyResolver(PropertyResolver propertyResolver) {
+        this.propertyResolver = propertyResolver;
+        return this;
     }
 
     public Expression parse(Object json) throws FilterParseException {
@@ -368,12 +374,15 @@ public class FilterJSONParser {
         return Literal.ofScalar(object);
     }
 
-    private PropertyRef readPropertyRef(String property) throws FilterParseException {
-        PropertyRef propertyRef = textParser.parse(property, PropertyRef.class);
-        if (propertyRef != null) {
-            return propertyRef;
-        } else {
-            throw new FilterParseException("Failed to parse '" + property + "' as property.");
+    private Expression readPropertyRef(String property) throws FilterParseException {
+        Node node = textParser.parseRaw(property);
+        if (node.getType() == NodeType.PROPERTY_REF || node.getType() == NodeType.IDENTIFIER) {
+            Expression expression = new FilterTextBuilder(propertyResolver).build(node);
+            if (expression != null && !(expression instanceof NumericLiteral)) {
+                return expression;
+            }
         }
+
+        throw new FilterParseException("Failed to parse '" + property + "' as property.");
     }
 }

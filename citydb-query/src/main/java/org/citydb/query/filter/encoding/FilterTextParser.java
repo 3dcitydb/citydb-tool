@@ -8,6 +8,7 @@ package org.citydb.query.filter.encoding;
 import org.citydb.query.filter.common.Expression;
 
 public class FilterTextParser {
+    private PropertyResolver propertyResolver;
 
     private FilterTextParser() {
     }
@@ -16,8 +17,13 @@ public class FilterTextParser {
         return new FilterTextParser();
     }
 
+    public FilterTextParser withPropertyResolver(PropertyResolver propertyResolver) {
+        this.propertyResolver = propertyResolver;
+        return this;
+    }
+
     public Expression parse(String text) throws FilterParseException {
-        return new FilterTextBuilder().build(parseRaw(text));
+        return new FilterTextBuilder(propertyResolver).build(parseRaw(text));
     }
 
     public <T extends Expression> T parse(String text, Class<T> type) throws FilterParseException {

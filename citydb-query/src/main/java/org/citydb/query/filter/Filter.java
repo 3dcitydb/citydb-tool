@@ -8,6 +8,7 @@ package org.citydb.query.filter;
 import org.citydb.query.filter.encoding.FilterJSONParser;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.filter.encoding.FilterTextParser;
+import org.citydb.query.filter.encoding.PropertyResolver;
 import org.citydb.query.filter.operation.BooleanExpression;
 
 import java.util.Objects;
@@ -27,8 +28,20 @@ public class Filter {
         return ofParsed(FilterTextParser.newInstance().parse(text, BooleanExpression.class));
     }
 
+    public static Filter ofText(String text, PropertyResolver resolver) throws FilterParseException {
+        return ofParsed(FilterTextParser.newInstance()
+                .withPropertyResolver(resolver)
+                .parse(text, BooleanExpression.class));
+    }
+
     public static Filter ofJSON(Object json) throws FilterParseException {
         return ofParsed(FilterJSONParser.newInstance().parse(json, BooleanExpression.class));
+    }
+
+    public static Filter ofJSON(Object json, PropertyResolver resolver) throws FilterParseException {
+        return ofParsed(FilterJSONParser.newInstance()
+                .withPropertyResolver(resolver)
+                .parse(json, BooleanExpression.class));
     }
 
     private static Filter ofParsed(BooleanExpression expression) throws FilterParseException {
