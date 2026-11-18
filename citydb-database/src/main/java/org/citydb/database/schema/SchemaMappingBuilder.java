@@ -243,6 +243,8 @@ public class SchemaMappingBuilder {
         String description = object.getString("description");
         String namespace = object.getString("namespace");
         Integer parentIndex = object.getInteger("parent");
+        Integer minOccurs = object.getInteger("minOccurs");
+        Integer maxOccurs = object.getInteger("maxOccurs");
         JSONObject valueObject = object.getJSONObject("value");
         String typeIdentifier = object.getString("type");
         String targetIdentifier = object.getString("target");
@@ -276,7 +278,7 @@ public class SchemaMappingBuilder {
                 ? getRelationType(propertyName, namespace, relationTypeName, adapter)
                 : null;
 
-        return new Property(Name.of(propertyName, namespace), description, parentIndex,
+        return new Property(Name.of(propertyName, namespace), description, parentIndex, minOccurs, maxOccurs,
                 valueObject != null ? buildValue(valueObject) : null,
                 typeIdentifier, targetIdentifier, relationType,
                 joinObject != null ? buildJoin(joinObject) : null,

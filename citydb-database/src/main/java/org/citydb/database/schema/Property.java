@@ -17,6 +17,8 @@ public class Property implements ValueObject, Typeable, Joinable {
     private final Name name;
     private final String description;
     private final Integer parentIndex;
+    private final Integer minOccurs;
+    private final Integer maxOccurs;
     private final Value value;
     private final String typeIdentifier;
     private final String targetIdentifier;
@@ -28,11 +30,13 @@ public class Property implements ValueObject, Typeable, Joinable {
     private Map<Name, Property> properties;
     private Join join;
 
-    Property(Name name, String description, Integer parentIndex, Value value, String typeIdentifier,
-             String targetIdentifier, RelationType relationType, Join join, JoinTable joinTable) {
+    Property(Name name, String description, Integer parentIndex, Integer minOccurs, Integer maxOccurs, Value value,
+             String typeIdentifier, String targetIdentifier, RelationType relationType, Join join, JoinTable joinTable) {
         this.name = name;
         this.description = description;
         this.parentIndex = parentIndex;
+        this.minOccurs = minOccurs;
+        this.maxOccurs = maxOccurs;
         this.value = value;
         this.typeIdentifier = typeIdentifier;
         this.targetIdentifier = targetIdentifier;
@@ -52,6 +56,14 @@ public class Property implements ValueObject, Typeable, Joinable {
 
     Integer getParentIndex() {
         return parentIndex;
+    }
+
+    public Optional<Integer> getMinOccurs() {
+        return Optional.ofNullable(minOccurs);
+    }
+
+    public Optional<Integer> getMaxOccurs() {
+        return Optional.ofNullable(maxOccurs);
     }
 
     @Override
