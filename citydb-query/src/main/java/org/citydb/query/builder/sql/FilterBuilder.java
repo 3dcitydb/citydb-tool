@@ -6,6 +6,7 @@
 package org.citydb.query.builder.sql;
 
 import org.citydb.database.srs.SpatialReference;
+import org.citydb.model.geometry.GeometryCollection;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.common.Type;
 import org.citydb.query.filter.Filter;
@@ -127,10 +128,18 @@ public class FilterBuilder {
             return BuildResult.of(Placeholder.of(bboxLiteral.getValue()), Type.ENVELOPE);
         } else if (literal instanceof GeometryLiteral geometryLiteral) {
             return BuildResult.of(Placeholder.of(geometryLiteral.getValue()), Type.GEOMETRY);
+        } else if (literal instanceof GeometryCollectionLiteral collectionLiteral) {
+            return build(collectionLiteral);
         } else {
             throw new QueryBuildException("Unsupported literal value '" +
                     literal.getValue().getClass().getSimpleName() + "'.");
         }
+    }
+
+    private BuildResult build(GeometryCollectionLiteral literal) {
+        return BuildResult.of(Placeholder.of(GeometryCollection.of(literal.getValue().stream()
+                .map(GeometryLiteral::getValue)
+                .toList())), Type.GEOMETRY);
     }
 
     private void applySign(Expression expression, BuildResult result) {

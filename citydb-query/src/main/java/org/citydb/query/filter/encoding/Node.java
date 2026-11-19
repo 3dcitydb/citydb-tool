@@ -40,7 +40,7 @@ public class Node {
         } else if (token.getType() == TextToken.TRUE
                 || token.getType() == TextToken.FALSE) {
             return new Node(NodeType.BOOLEAN_LITERAL, token);
-        } else if (TextToken.GEOMETRIES.contains(token.getType())) {
+        } else if (TextToken.GEOMETRY_TYPES.contains(token.getType())) {
             return new Node(NodeType.GEOMETRY_LITERAL, token);
         } else if (TextToken.ARITHMETIC_OPERATORS.contains(token.getType())) {
             return new Node(NodeType.ARITHMETIC_EXPRESSION, token);

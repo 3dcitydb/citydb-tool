@@ -32,6 +32,8 @@ public interface FilterVisitor {
 
     void visit(GeometryLiteral literal);
 
+    void visit(GeometryCollectionLiteral literal);
+
     void visit(In in);
 
     void visit(IsNull isNull);

@@ -10,6 +10,7 @@ import org.citydb.database.geometry.WKTParser;
 import org.citydb.database.srs.SrsUnit;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
+import org.citydb.model.geometry.Geometry;
 import org.citydb.query.filter.common.*;
 import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.function.FunctionName;
@@ -325,7 +326,12 @@ public class FilterTextBuilder {
     private GeometryExpression buildGeometryLiteral(Node node) throws FilterParseException {
         try {
             if (node.getToken().getType() == TextToken.GEOMETRYCOLLECTION) {
-                throw new FilterParseException("Geometry collections are not supported as literals.");
+                List<Geometry<?>> members = new ArrayList<>(node.getChildren().size());
+                for (Node member : node.getChildren()) {
+                    members.add(wktParser.parse(member.getToken().getValue()));
+                }
+
+                return GeometryCollectionLiteral.of(members);
             } else if (node.getToken().getType() == TextToken.BBOX) {
                 return buildBBoxLiteral(node);
             } else {

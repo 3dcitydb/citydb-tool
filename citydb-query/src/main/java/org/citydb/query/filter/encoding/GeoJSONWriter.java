@@ -31,6 +31,21 @@ public class GeoJSONWriter {
         }
     }
 
+    void writeCollection(List<? extends Geometry<?>> members) {
+        startGeometry(JSONToken.GEOMETRYCOLLECTION);
+        jsonWriter.writeName(JSONToken.GEOMETRIES.value());
+        jsonWriter.writeColon();
+        jsonWriter.startArray();
+        for (int i = 0; i < members.size(); i++) {
+            if (i != 0) {
+                jsonWriter.writeComma();
+            }
+            write(members.get(i));
+        }
+        jsonWriter.endArray();
+        endGeometry();
+    }
+
     private void writePoint(Point point) {
         startGeometry(JSONToken.POINT);
         jsonWriter.writeName(JSONToken.COORDINATES.value());

@@ -393,7 +393,9 @@ public class FilterTextParser {
     private Node readGeometryLiteral(Tokenizer tokenizer) throws FilterParseException {
         if (tokenizer.lookAhead().getType() == TextToken.BBOX) {
             return readBBoxLiteral(Node.of(tokenizer.nextToken()), tokenizer);
-        } else if (TextToken.GEOMETRIES.contains(tokenizer.lookAhead().getType())) {
+        } else if (tokenizer.lookAhead().getType() == TextToken.GEOMETRYCOLLECTION) {
+            return readGeometryCollectionLiteral(Node.of(tokenizer.nextToken()), tokenizer);
+        } else if (TextToken.GEOMETRY_TYPES.contains(tokenizer.lookAhead().getType())) {
             return Node.of(tokenizer.nextToken());
         } else {
             return Node.EMPTY;
@@ -408,6 +410,32 @@ public class FilterTextParser {
 
         require(tokenizer.currentToken(), TextToken.R_PAREN, "Failed to parse BBOX literal.");
         return bbox;
+    }
+
+    private Node readGeometryCollectionLiteral(Node collection, Tokenizer tokenizer) throws FilterParseException {
+        if (tokenizer.lookAhead().getValue().equalsIgnoreCase("Z")) {
+            tokenizer.nextToken();
+        }
+
+        if (tokenizer.lookAhead().getValue().equalsIgnoreCase("EMPTY")) {
+            throw new FilterParseException("Empty geometries are not supported as literals.");
+        }
+
+        require(tokenizer.nextToken(), TextToken.L_PAREN, "Failed to parse GEOMETRYCOLLECTION literal.");
+        do {
+            Token member = tokenizer.nextToken();
+            if (!TextToken.GEOMETRY_TYPES.contains(member.getType())
+                    || member.getType() == TextToken.BBOX
+                    || member.getType() == TextToken.GEOMETRYCOLLECTION) {
+                throw new FilterParseException("Failed to parse '" + member + "' as member of a " +
+                        "GEOMETRYCOLLECTION literal.");
+            }
+
+            collection.addChild(Node.of(member));
+        } while (tokenizer.nextToken().getType() == TextToken.COMMA);
+
+        require(tokenizer.currentToken(), TextToken.R_PAREN, "Failed to parse GEOMETRYCOLLECTION literal.");
+        return collection;
     }
 
     private Node readNumericLiteral(Tokenizer tokenizer) throws FilterParseException {

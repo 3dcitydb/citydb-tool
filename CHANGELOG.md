@@ -6,6 +6,7 @@
 - Added the `--lod` and `--lod-mode` options to the `import citygml` and `import cityjson` commands for filtering
   geometries by LoD.
 - Added support for defining a mapping of CityJSON LoDs in the `import cityjson` command.
+- Added support for `GEOMETRYCOLLECTION` geometry literals in CQL2 filter expressions.
 - Added API support for restricting database queries to features stored in a temporary table.
 - Added API support for referencing texture images and library objects by URI instead of writing them to files when
   exporting.

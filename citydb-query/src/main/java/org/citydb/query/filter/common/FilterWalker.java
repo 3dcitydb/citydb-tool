@@ -83,6 +83,12 @@ public abstract class FilterWalker implements FilterVisitor {
     }
 
     @Override
+    public void visit(GeometryCollectionLiteral literal) {
+        visit((Expression) literal);
+        literal.getValue().forEach(member -> member.accept(this));
+    }
+
+    @Override
     public void visit(In in) {
         visit((Expression) in);
         in.getOperand().accept(this);

@@ -40,6 +40,32 @@ public class GeoJSONParser {
         }
     }
 
+    List<Geometry<?>> parseCollection(JSONObject collection) throws FilterParseException {
+        try {
+            JSONArray geometries = collection.getJSONArray(JSONToken.GEOMETRIES.value());
+            if (geometries == null || geometries.isEmpty()) {
+                throw new FilterParseException("Found empty geometries array for geometry collection.");
+            }
+
+            List<Geometry<?>> members = new ArrayList<>(geometries.size());
+            for (Object element : geometries) {
+                if (element instanceof JSONObject geometry) {
+                    if (JSONToken.of(geometry.getString(JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION) {
+                        throw new FilterParseException("Nested geometry collections are not supported.");
+                    }
+
+                    members.add(parse(geometry));
+                } else {
+                    throw new FilterParseException("Found invalid geometry '" + element + "'.");
+                }
+            }
+
+            return members;
+        } catch (JSONException e) {
+            throw new FilterParseException("Failed to parse GeoJSON geometry collection.", e);
+        }
+    }
+
     private Point readPoint(JSONArray array) throws FilterParseException {
         return Point.of(readCoordinate(array));
     }

@@ -13,6 +13,7 @@ import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.database.util.SrsHelper;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.GeometryCollection;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 
@@ -36,7 +37,11 @@ public abstract class GeometryAdapter {
 
     public abstract Object getGeometry(Geometry<?> geometry, boolean force3D, Connection connection) throws GeometryException;
 
+    public abstract Object getGeometryCollection(GeometryCollection collection, Connection connection) throws GeometryException;
+
     public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
+
+    public abstract String getAsText(GeometryCollection collection) throws GeometryException;
 
     public abstract boolean hasImplicitGeometries(Connection connection) throws SQLException;
 

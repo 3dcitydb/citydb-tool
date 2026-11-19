@@ -112,8 +112,9 @@ public class Tokenizer {
             } else if (token.getType() == TextToken.DATE
                     || token.getType() == TextToken.TIMESTAMP) {
                 token = rewriteTimeInstant(token, tokenizer);
-            } else if (TextToken.GEOMETRIES.contains(token.getType())
-                    && token.getType() != TextToken.BBOX) {
+            } else if (TextToken.GEOMETRY_TYPES.contains(token.getType())
+                    && token.getType() != TextToken.BBOX
+                    && token.getType() != TextToken.GEOMETRYCOLLECTION) {
                 token = rewriteGeometry(token, tokenizer);
             } else if (token.getType() == TextToken.DOUBLE_QUOTE) {
                 token = rewriteTypeCast(token, tokenizer);

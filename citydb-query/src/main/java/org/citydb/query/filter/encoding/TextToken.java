@@ -106,7 +106,7 @@ public enum TextToken {
     static final EnumSet<TextToken> TEMPORAL_OPERATORS = EnumSet.of(T_AFTER, T_BEFORE, T_CONTAINS, T_DISJOINT,
             T_DURING, T_EQUALS, T_FINISHEDBY, T_FINISHES, T_INTERSECTS, T_MEETS, T_METBY, T_OVERLAPPEDBY, T_OVERLAPS,
             T_STARTEDBY, T_STARTS);
-    static final EnumSet<TextToken> GEOMETRIES = EnumSet.of(BBOX, POINT, LINESTRING, POLYGON, MULTIPOINT,
+    static final EnumSet<TextToken> GEOMETRY_TYPES = EnumSet.of(BBOX, POINT, LINESTRING, POLYGON, MULTIPOINT,
             MULTILINESTRING, MULTIPOLYGON, GEOMETRYCOLLECTION);
 
     private static final Map<String, TextToken> tokens = new HashMap<>();

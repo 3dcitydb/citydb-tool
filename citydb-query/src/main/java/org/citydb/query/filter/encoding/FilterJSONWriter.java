@@ -158,6 +158,13 @@ public class FilterJSONWriter {
         }
 
         @Override
+        public void visit(GeometryCollectionLiteral literal) {
+            geometryWriter.writeCollection(literal.getValue().stream()
+                    .map(GeometryLiteral::getValue)
+                    .toList());
+        }
+
+        @Override
         public void visit(In in) {
             if (in.getOperator() == ComparisonOperator.NOT_IN) {
                 negate(in);

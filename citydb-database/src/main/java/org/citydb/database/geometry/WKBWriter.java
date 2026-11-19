@@ -33,6 +33,16 @@ public class WKBWriter {
                 : null;
     }
 
+    public String write(GeometryCollection collection) {
+        return write(collection, false);
+    }
+
+    public String write(GeometryCollection collection, boolean force3D) {
+        return collection != null
+                ? write(collection, force3D, new StringBuffer()).build()
+                : null;
+    }
+
     public byte[] writeBinary(Geometry<?> geometry) {
         return writeBinary(geometry, false);
     }
@@ -43,11 +53,44 @@ public class WKBWriter {
                 : null;
     }
 
+    public byte[] writeBinary(GeometryCollection collection) {
+        return writeBinary(collection, false);
+    }
+
+    public byte[] writeBinary(GeometryCollection collection, boolean force3D) {
+        return collection != null
+                ? write(collection, force3D, new ArrayBuffer()).build()
+                : null;
+    }
+
+    private <T extends ByteBuffer> T write(GeometryCollection collection, boolean force3D, T buffer) {
+        int srid = includeSRID ? collection.getSRID().orElse(0) : 0;
+        int dimension = force3D ? 3 : collection.getVertexDimension();
+        int numberOfBytes = 4 + getHeaderBytes(srid);
+        for (Geometry<?> geometry : collection.getGeometries()) {
+            numberOfBytes += calculateBytes(geometry, dimension, srid);
+        }
+
+        buffer.allocate(numberOfBytes);
+        buffer.putByteOrder();
+        putGeometryType(buffer, WKBConstants.GEOMETRYCOLLECTION, dimension, srid);
+        buffer.putInt(collection.getGeometries().size());
+        for (Geometry<?> geometry : collection.getGeometries()) {
+            write(geometry, dimension, srid, buffer);
+        }
+
+        return buffer;
+    }
+
     private <T extends ByteBuffer> T write(Geometry<?> geometry, boolean force3D, T buffer) {
         int srid = includeSRID ? geometry.getSRID().orElse(0) : 0;
         int dimension = force3D ? 3 : geometry.getVertexDimension();
         buffer.allocate(calculateBytes(geometry, dimension, srid));
+        write(geometry, dimension, srid, buffer);
+        return buffer;
+    }
 
+    private void write(Geometry<?> geometry, int dimension, int srid, ByteBuffer buffer) {
         switch (geometry.getGeometryType()) {
             case POINT -> write((Point) geometry, dimension, srid, buffer);
             case MULTI_POINT -> write((MultiPoint) geometry, dimension, srid, buffer);
@@ -59,8 +102,6 @@ public class WKBWriter {
             case SOLID -> write((Solid) geometry, dimension, srid, buffer);
             case COMPOSITE_SOLID, MULTI_SOLID -> write((SolidCollection<?>) geometry, dimension, srid, buffer);
         }
-
-        return buffer;
     }
 
     private void write(Point point, int dimension, int srid, ByteBuffer buffer) {

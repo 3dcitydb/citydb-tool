@@ -176,6 +176,15 @@ public class FilterTextWriter {
         }
 
         @Override
+        public void visit(GeometryCollectionLiteral literal) {
+            builder.append("GEOMETRYCOLLECTION(")
+                    .append(literal.getValue().stream()
+                            .map(member -> FilterTextWriter.this.write(member, false))
+                            .collect(Collectors.joining(", ")))
+                    .append(")");
+        }
+
+        @Override
         public void visit(In in) {
             in.getOperand().accept(this);
             builder.append(" ")

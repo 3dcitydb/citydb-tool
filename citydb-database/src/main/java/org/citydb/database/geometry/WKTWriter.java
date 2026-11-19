@@ -25,48 +25,83 @@ public class WKTWriter {
     public String write(Geometry<?> geometry, boolean force3D) throws GeometryException {
         if (geometry != null) {
             StringBuilder wkt = new StringBuilder();
-
-            GeometryType geometryType = geometry.getGeometryType();
-            int dimension = force3D ? 3 : geometry.getVertexDimension();
             if (includeSRID) {
                 writeSRID(wkt, geometry);
             }
 
-            switch (geometryType) {
-                case POINT:
-                    write(wkt, (Point) geometry, dimension);
-                    break;
-                case MULTI_POINT:
-                    write(wkt, (MultiPoint) geometry, dimension);
-                    break;
-                case LINE_STRING:
-                    write(wkt, (LineString) geometry, dimension);
-                    break;
-                case MULTI_LINE_STRING:
-                    write(wkt, (MultiLineString) geometry, dimension);
-                    break;
-                case POLYGON:
-                    write(wkt, (Polygon) geometry, dimension);
-                    break;
-                case MULTI_SURFACE:
-                case COMPOSITE_SURFACE:
-                case TRIANGULATED_SURFACE:
-                    write(wkt, (SurfaceCollection<?>) geometry, dimension);
-                    break;
-                case SOLID:
-                    write(wkt, (Solid) geometry, dimension);
-                    break;
-                case COMPOSITE_SOLID:
-                case MULTI_SOLID:
-                    write(wkt, (SolidCollection<?>) geometry, dimension);
-                    break;
-                default:
-                    throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
-            }
-
+            write(wkt, geometry, force3D ? 3 : geometry.getVertexDimension());
             return wkt.toString();
         } else {
             return null;
+        }
+    }
+
+    public String write(GeometryCollection collection) throws GeometryException {
+        return write(collection, false);
+    }
+
+    public String write(GeometryCollection collection, boolean force3D) throws GeometryException {
+        if (collection != null) {
+            StringBuilder wkt = new StringBuilder();
+            if (includeSRID) {
+                writeSRID(wkt, collection);
+            }
+
+            int dimension = force3D ? 3 : collection.getVertexDimension();
+            wkt.append(WKTConstants.GEOMETRYCOLLECTION);
+            List<Geometry<?>> geometries = collection.getGeometries();
+            if (geometries.isEmpty()) {
+                return wkt.append(" ").append(WKTConstants.EMPTY).toString();
+            }
+
+            addCoordinateFlag(wkt, dimension);
+            wkt.append("(");
+            for (int i = 0; i < geometries.size(); i++) {
+                write(wkt, geometries.get(i), dimension);
+                if (i < geometries.size() - 1) {
+                    wkt.append(", ");
+                }
+            }
+
+            wkt.append(")");
+            return wkt.toString();
+        } else {
+            return null;
+        }
+    }
+
+    private void write(StringBuilder wkt, Geometry<?> geometry, int dimension) throws GeometryException {
+        GeometryType geometryType = geometry.getGeometryType();
+        switch (geometryType) {
+            case POINT:
+                write(wkt, (Point) geometry, dimension);
+                break;
+            case MULTI_POINT:
+                write(wkt, (MultiPoint) geometry, dimension);
+                break;
+            case LINE_STRING:
+                write(wkt, (LineString) geometry, dimension);
+                break;
+            case MULTI_LINE_STRING:
+                write(wkt, (MultiLineString) geometry, dimension);
+                break;
+            case POLYGON:
+                write(wkt, (Polygon) geometry, dimension);
+                break;
+            case MULTI_SURFACE:
+            case COMPOSITE_SURFACE:
+            case TRIANGULATED_SURFACE:
+                write(wkt, (SurfaceCollection<?>) geometry, dimension);
+                break;
+            case SOLID:
+                write(wkt, (Solid) geometry, dimension);
+                break;
+            case COMPOSITE_SOLID:
+            case MULTI_SOLID:
+                write(wkt, (SolidCollection<?>) geometry, dimension);
+                break;
+            default:
+                throw new GeometryException("Unsupported geometry type '" + geometryType + "'.");
         }
     }
 
@@ -167,8 +202,8 @@ public class WKTWriter {
         }
     }
 
-    private void writeSRID(StringBuilder wkt, Geometry<?> geometry) {
-        int srid = geometry.getSRID().orElse(0);
+    private void writeSRID(StringBuilder wkt, SpatialObject object) {
+        int srid = object.getSRID().orElse(0);
         if (srid > 0) {
             wkt.append(WKTConstants.SRID).append("=").append(srid).append(";");
         }

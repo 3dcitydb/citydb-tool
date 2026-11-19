@@ -9,6 +9,7 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.GeometryCollection;
 import org.citydb.sqlbuilder.SqlBuildOptions;
 import org.citydb.sqlbuilder.SqlBuilder;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -69,6 +70,8 @@ public abstract class SqlHelper {
                 prepareStatement(index, geometry, stmt);
             } else if (value instanceof Envelope envelope) {
                 prepareStatement(index, envelope.convertToPolygon(), stmt);
+            } else if (value instanceof GeometryCollection collection) {
+                prepareStatement(index, collection, stmt);
             } else {
                 throw new SQLException("A placeholder value of type " + value.getClass().getName() +
                         " is not supported.");
@@ -84,6 +87,15 @@ public abstract class SqlHelper {
                     .getGeometry(geometry, false, stmt.getConnection()));
         } catch (Exception e) {
             throw new SQLException("Failed to convert geometry to database representation.", e);
+        }
+    }
+
+    private void prepareStatement(int index, GeometryCollection collection, PreparedStatement stmt) throws SQLException {
+        try {
+            setGeometryOrNull(stmt, index, adapter.getGeometryAdapter()
+                    .getGeometryCollection(collection, stmt.getConnection()));
+        } catch (Exception e) {
+            throw new SQLException("Failed to convert geometry collection to database representation.", e);
         }
     }
 
@@ -124,6 +136,12 @@ public abstract class SqlHelper {
                 return toSql(geometry);
             } else if (value instanceof Envelope envelope) {
                 return toSql(envelope.convertToPolygon());
+            } else if (value instanceof GeometryCollection collection) {
+                try {
+                    return adapter.getGeometryAdapter().getAsText(collection);
+                } catch (GeometryException e) {
+                    return null;
+                }
             } else {
                 return String.valueOf(value);
             }

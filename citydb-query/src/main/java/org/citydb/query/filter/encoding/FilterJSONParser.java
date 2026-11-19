@@ -108,7 +108,7 @@ public class FilterJSONParser {
                 return readTimeInterval(array);
             } else if (bbox instanceof JSONArray array) {
                 return readBBoxLiteral(array);
-            } else if (JSONToken.GEOMETRIES.contains(type)) {
+            } else if (JSONToken.GEOMETRY_TYPES.contains(type)) {
                 return readGeometryLiteral(object);
             } else if (property != null) {
                 return readPropertyRef(property);
@@ -346,8 +346,10 @@ public class FilterJSONParser {
         throw new FilterParseException("Time interval literals are not supported.");
     }
 
-    private GeometryLiteral readGeometryLiteral(JSONObject geometry) throws FilterParseException {
-        return GeometryLiteral.of(geometryParser.parse(geometry));
+    private GeometryExpression readGeometryLiteral(JSONObject geometry) throws FilterParseException {
+        return JSONToken.of(geometry.getString(JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION
+                ? GeometryCollectionLiteral.of(geometryParser.parseCollection(geometry))
+                : GeometryLiteral.of(geometryParser.parse(geometry));
     }
 
     private BBoxLiteral readBBoxLiteral(JSONArray bbox) throws FilterParseException {
