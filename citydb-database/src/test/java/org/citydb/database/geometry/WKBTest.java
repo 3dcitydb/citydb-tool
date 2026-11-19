@@ -72,4 +72,10 @@ class WKBTest {
 
         assertEquals(writer.write(collection), HexFormat.of().withUpperCase().formatHex(writer.writeBinary(collection)));
     }
+
+    @Test
+    void writesEnvelopeAsPolygon() {
+        Envelope envelope = Envelope.of(Coordinate.of(0, 0, 0), Coordinate.of(1, 1, 1));
+        assertEquals(writer.write(envelope.convertToPolygon()), writer.write(envelope));
+    }
 }

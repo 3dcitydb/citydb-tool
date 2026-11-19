@@ -6,11 +6,14 @@
 package org.citydb.database.postgres;
 
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.geometry.*;
+import org.citydb.database.geometry.GeometryException;
+import org.citydb.database.geometry.WKBParser;
+import org.citydb.database.geometry.WKBWriter;
+import org.citydb.database.geometry.WKTWriter;
 import org.citydb.database.schema.Table;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.GeometryCollection;
+import org.citydb.model.geometry.SpatialObject;
 import org.postgresql.util.PGobject;
 
 import java.sql.Connection;
@@ -48,23 +51,13 @@ public class GeometryAdapter extends org.citydb.database.adapter.GeometryAdapter
     }
 
     @Override
-    public Object getGeometry(Geometry<?> geometry, boolean force3D, Connection connection) {
-        return writer.write(geometry, force3D);
+    public Object getGeometry(SpatialObject object, boolean force3D, Connection connection) {
+        return writer.write(object, force3D);
     }
 
     @Override
-    public Object getGeometryCollection(GeometryCollection collection, Connection connection) {
-        return writer.write(collection);
-    }
-
-    @Override
-    public String getAsText(Geometry<?> geometry) throws GeometryException {
-        return "'" + textWriter.write(geometry) + "'";
-    }
-
-    @Override
-    public String getAsText(GeometryCollection collection) throws GeometryException {
-        return "'" + textWriter.write(collection) + "'";
+    public String getAsText(SpatialObject object) throws GeometryException {
+        return "'" + textWriter.write(object) + "'";
     }
 
     @Override

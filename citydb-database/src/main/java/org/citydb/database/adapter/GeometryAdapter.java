@@ -13,7 +13,7 @@ import org.citydb.database.util.SpatialOperationHelper;
 import org.citydb.database.util.SrsHelper;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.GeometryCollection;
+import org.citydb.model.geometry.SpatialObject;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 
@@ -35,13 +35,9 @@ public abstract class GeometryAdapter {
 
     public abstract Envelope getEnvelope(Object geometryObject) throws GeometryException;
 
-    public abstract Object getGeometry(Geometry<?> geometry, boolean force3D, Connection connection) throws GeometryException;
+    public abstract Object getGeometry(SpatialObject object, boolean force3D, Connection connection) throws GeometryException;
 
-    public abstract Object getGeometryCollection(GeometryCollection collection, Connection connection) throws GeometryException;
-
-    public abstract String getAsText(Geometry<?> geometry) throws GeometryException;
-
-    public abstract String getAsText(GeometryCollection collection) throws GeometryException;
+    public abstract String getAsText(SpatialObject object) throws GeometryException;
 
     public abstract boolean hasImplicitGeometries(Connection connection) throws SQLException;
 
@@ -49,8 +45,8 @@ public abstract class GeometryAdapter {
 
     public abstract SrsHelper getSrsHelper();
 
-    public Object getGeometry(Geometry<?> geometry, Connection connection) throws GeometryException {
-        return getGeometry(geometry, true, connection);
+    public Object getGeometry(SpatialObject object, Connection connection) throws GeometryException {
+        return getGeometry(object, true, connection);
     }
 
     public Geometry<?> buildGeometry(Object geometryObject, JSONObject properties) throws GeometryException {

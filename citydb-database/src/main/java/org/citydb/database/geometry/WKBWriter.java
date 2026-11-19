@@ -23,44 +23,37 @@ public class WKBWriter {
         return this;
     }
 
-    public String write(Geometry<?> geometry) {
-        return write(geometry, false);
+    public String write(SpatialObject object) {
+        return write(object, false);
     }
 
-    public String write(Geometry<?> geometry, boolean force3D) {
-        return geometry != null
-                ? write(geometry, force3D, new StringBuffer()).build()
+    public String write(SpatialObject object, boolean force3D) {
+        return object != null
+                ? write(object, force3D, new StringBuffer()).build()
                 : null;
     }
 
-    public String write(GeometryCollection collection) {
-        return write(collection, false);
+    public byte[] writeBinary(SpatialObject object) {
+        return writeBinary(object, false);
     }
 
-    public String write(GeometryCollection collection, boolean force3D) {
-        return collection != null
-                ? write(collection, force3D, new StringBuffer()).build()
+    public byte[] writeBinary(SpatialObject object, boolean force3D) {
+        return object != null
+                ? write(object, force3D, new ArrayBuffer()).build()
                 : null;
     }
 
-    public byte[] writeBinary(Geometry<?> geometry) {
-        return writeBinary(geometry, false);
-    }
-
-    public byte[] writeBinary(Geometry<?> geometry, boolean force3D) {
-        return geometry != null
-                ? write(geometry, force3D, new ArrayBuffer()).build()
-                : null;
-    }
-
-    public byte[] writeBinary(GeometryCollection collection) {
-        return writeBinary(collection, false);
-    }
-
-    public byte[] writeBinary(GeometryCollection collection, boolean force3D) {
-        return collection != null
-                ? write(collection, force3D, new ArrayBuffer()).build()
-                : null;
+    private <T extends ByteBuffer> T write(SpatialObject object, boolean force3D, T buffer) {
+        if (object instanceof Geometry<?> geometry) {
+            return write(geometry, force3D, buffer);
+        } else if (object instanceof Envelope envelope) {
+            return write(envelope.convertToPolygon(), force3D, buffer);
+        } else if (object instanceof GeometryCollection collection) {
+            return write(collection, force3D, buffer);
+        } else {
+            throw new IllegalArgumentException("Unsupported spatial object type " +
+                    object.getClass().getName() + ".");
+        }
     }
 
     private <T extends ByteBuffer> T write(GeometryCollection collection, boolean force3D, T buffer) {

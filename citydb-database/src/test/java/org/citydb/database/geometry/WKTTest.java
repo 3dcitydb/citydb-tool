@@ -75,4 +75,10 @@ class WKTTest {
         GeometryCollection collection = GeometryCollection.of(List.of(Point.of(Coordinate.of(1, 2))));
         assertEquals("GEOMETRYCOLLECTION Z (POINT Z (1.0 2.0 0.0))", writer.write(collection, true));
     }
+
+    @Test
+    void writesEnvelopeAsPolygon() throws GeometryException {
+        Envelope envelope = Envelope.of(Coordinate.of(0, 0, 0), Coordinate.of(1, 1, 1));
+        assertEquals(writer.write(envelope.convertToPolygon()), writer.write(envelope));
+    }
 }

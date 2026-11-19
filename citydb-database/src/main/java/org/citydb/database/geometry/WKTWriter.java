@@ -18,42 +18,41 @@ public class WKTWriter {
         return this;
     }
 
-    public String write(Geometry<?> geometry) throws GeometryException {
-        return write(geometry, false);
+    public String write(SpatialObject object) throws GeometryException {
+        return write(object, false);
     }
 
-    public String write(Geometry<?> geometry, boolean force3D) throws GeometryException {
-        if (geometry != null) {
-            StringBuilder wkt = new StringBuilder();
-            if (includeSRID) {
-                writeSRID(wkt, geometry);
-            }
-
-            write(wkt, geometry, force3D ? 3 : geometry.getVertexDimension());
-            return wkt.toString();
-        } else {
+    public String write(SpatialObject object, boolean force3D) throws GeometryException {
+        if (object == null) {
             return null;
         }
+
+        StringBuilder wkt = new StringBuilder();
+        if (includeSRID) {
+            writeSRID(wkt, object);
+        }
+
+        if (object instanceof Geometry<?> geometry) {
+            write(wkt, geometry, force3D ? 3 : geometry.getVertexDimension());
+        } else if (object instanceof Envelope envelope) {
+            Polygon polygon = envelope.convertToPolygon();
+            write(wkt, polygon, force3D ? 3 : polygon.getVertexDimension());
+        } else if (object instanceof GeometryCollection collection) {
+            write(wkt, collection, force3D ? 3 : collection.getVertexDimension());
+        } else {
+            throw new IllegalArgumentException("Unsupported spatial object type " +
+                    object.getClass().getName() + ".");
+        }
+
+        return wkt.toString();
     }
 
-    public String write(GeometryCollection collection) throws GeometryException {
-        return write(collection, false);
-    }
-
-    public String write(GeometryCollection collection, boolean force3D) throws GeometryException {
-        if (collection != null) {
-            StringBuilder wkt = new StringBuilder();
-            if (includeSRID) {
-                writeSRID(wkt, collection);
-            }
-
-            int dimension = force3D ? 3 : collection.getVertexDimension();
-            wkt.append(WKTConstants.GEOMETRYCOLLECTION);
-            List<Geometry<?>> geometries = collection.getGeometries();
-            if (geometries.isEmpty()) {
-                return wkt.append(" ").append(WKTConstants.EMPTY).toString();
-            }
-
+    private void write(StringBuilder wkt, GeometryCollection collection, int dimension) throws GeometryException {
+        wkt.append(WKTConstants.GEOMETRYCOLLECTION);
+        List<Geometry<?>> geometries = collection.getGeometries();
+        if (geometries.isEmpty()) {
+            wkt.append(" ").append(WKTConstants.EMPTY);
+        } else {
             addCoordinateFlag(wkt, dimension);
             wkt.append("(");
             for (int i = 0; i < geometries.size(); i++) {
@@ -64,9 +63,6 @@ public class WKTWriter {
             }
 
             wkt.append(")");
-            return wkt.toString();
-        } else {
-            return null;
         }
     }
 

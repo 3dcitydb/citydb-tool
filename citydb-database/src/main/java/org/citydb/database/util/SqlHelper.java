@@ -7,9 +7,7 @@ package org.citydb.database.util;
 
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
-import org.citydb.model.geometry.Envelope;
-import org.citydb.model.geometry.Geometry;
-import org.citydb.model.geometry.GeometryCollection;
+import org.citydb.model.geometry.SpatialObject;
 import org.citydb.sqlbuilder.SqlBuildOptions;
 import org.citydb.sqlbuilder.SqlBuilder;
 import org.citydb.sqlbuilder.common.SqlObject;
@@ -66,12 +64,8 @@ public abstract class SqlHelper {
                 stmt.setDate(index, date);
             } else if (value instanceof Timestamp timestamp) {
                 stmt.setTimestamp(index, timestamp);
-            } else if (value instanceof Geometry<?> geometry) {
-                prepareStatement(index, geometry, stmt);
-            } else if (value instanceof Envelope envelope) {
-                prepareStatement(index, envelope.convertToPolygon(), stmt);
-            } else if (value instanceof GeometryCollection collection) {
-                prepareStatement(index, collection, stmt);
+            } else if (value instanceof SpatialObject object) {
+                prepareStatement(index, object, stmt);
             } else {
                 throw new SQLException("A placeholder value of type " + value.getClass().getName() +
                         " is not supported.");
@@ -81,21 +75,12 @@ public abstract class SqlHelper {
         return stmt;
     }
 
-    private void prepareStatement(int index, Geometry<?> geometry, PreparedStatement stmt) throws SQLException {
+    private void prepareStatement(int index, SpatialObject object, PreparedStatement stmt) throws SQLException {
         try {
             setGeometryOrNull(stmt, index, adapter.getGeometryAdapter()
-                    .getGeometry(geometry, false, stmt.getConnection()));
+                    .getGeometry(object, false, stmt.getConnection()));
         } catch (Exception e) {
-            throw new SQLException("Failed to convert geometry to database representation.", e);
-        }
-    }
-
-    private void prepareStatement(int index, GeometryCollection collection, PreparedStatement stmt) throws SQLException {
-        try {
-            setGeometryOrNull(stmt, index, adapter.getGeometryAdapter()
-                    .getGeometryCollection(collection, stmt.getConnection()));
-        } catch (Exception e) {
-            throw new SQLException("Failed to convert geometry collection to database representation.", e);
+            throw new SQLException("Failed to convert spatial object to database representation.", e);
         }
     }
 
@@ -132,16 +117,8 @@ public abstract class SqlHelper {
                 return "'" + timestamp.toInstant()
                         .atOffset(ZoneOffset.UTC)
                         .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "'";
-            } else if (value instanceof Geometry<?> geometry) {
-                return toSql(geometry);
-            } else if (value instanceof Envelope envelope) {
-                return toSql(envelope.convertToPolygon());
-            } else if (value instanceof GeometryCollection collection) {
-                try {
-                    return adapter.getGeometryAdapter().getAsText(collection);
-                } catch (GeometryException e) {
-                    return null;
-                }
+            } else if (value instanceof SpatialObject spatialObject) {
+                return toSql(spatialObject);
             } else {
                 return String.valueOf(value);
             }
@@ -150,9 +127,9 @@ public abstract class SqlHelper {
         return SqlBuilder.newInstance().build(object, options);
     }
 
-    private String toSql(Geometry<?> geometry) {
+    private String toSql(SpatialObject object) {
         try {
-            return adapter.getGeometryAdapter().getAsText(geometry);
+            return adapter.getGeometryAdapter().getAsText(object);
         } catch (GeometryException e) {
             return null;
         }
