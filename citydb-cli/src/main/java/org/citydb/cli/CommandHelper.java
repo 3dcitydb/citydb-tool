@@ -14,6 +14,7 @@ import org.citydb.config.Config;
 import org.citydb.config.ConfigException;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.file.InputFile;
+import org.citydb.database.DatabaseConstants;
 import org.citydb.database.DatabaseException;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.DatabaseOptions;
@@ -21,7 +22,6 @@ import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.adapter.DatabaseAdapterException;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
-import org.citydb.database.postgres.PostgresqlAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.io.IOAdapter;
@@ -133,7 +133,7 @@ public class CommandHelper {
         }
 
         return connectionDetails.fillAbsentValuesFromEnv()
-                .setDatabaseNameIfAbsent(PostgresqlAdapter.DATABASE_NAME);
+                .setDatabaseTypeIfAbsent(DatabaseConstants.DEFAULT_DATABASE_TYPE);
     }
 
     public IOAdapterManager getIOAdapterManager() throws ExecutionException {

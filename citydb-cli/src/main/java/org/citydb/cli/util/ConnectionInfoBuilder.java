@@ -21,7 +21,8 @@ public class ConnectionInfoBuilder {
     }
 
     private static JSONObject buildDatabaseConnection(ConnectionDetails connectionDetails) {
-        JSONObject connection = new JSONObject().fluentPut("host", connectionDetails.getHost())
+        JSONObject connection = new JSONObject().fluentPut("databaseType", connectionDetails.getDatabaseType())
+                .fluentPut("host", connectionDetails.getHost())
                 .fluentPut("port", connectionDetails.getPort())
                 .fluentPut("database", connectionDetails.getDatabase())
                 .fluentPut("schema", connectionDetails.getSchema())

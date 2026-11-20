@@ -173,6 +173,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "databaseType",
             "host",
             "port",
             "database",
@@ -180,6 +181,9 @@
             "user"
           ],
           "properties": {
+            "databaseType": {
+              "type": "string"
+            },
             "host": {
               "type": "string"
             },

@@ -10,6 +10,10 @@
 - Added API support for restricting database queries to features stored in a temporary table.
 - Added API support for referencing texture images and library objects by URI instead of writing them to files when
   exporting.
+- Added the `--db-type` option and the `CITYDB_TYPE` environment variable for selecting the database system to
+  connect to.
+- Added the `databaseType` property to the connection details in the JSON output of the `connect` and `info`
+  commands.
 
 ### Changed
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
@@ -18,6 +22,8 @@
 - **Breaking**: Moved `SequentialWriter` from `citydb-cli` to `citydb-io` so that it can be reused outside the CLI.
 - **Breaking**: Validity settings are now part of the query. In the JSON configuration, `validityOptions` moved to
   `query.validity`.
+- **Breaking**: Renamed the `databaseName` property of database connections to `databaseType`, both in the JSON
+  configuration and in the `ConnectionDetails` API.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
   is only kept if it is earlier.
