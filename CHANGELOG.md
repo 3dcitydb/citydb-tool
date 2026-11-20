@@ -7,6 +7,8 @@
   geometries by LoD.
 - Added support for defining a mapping of CityJSON LoDs in the `import cityjson` command.
 - Added support for `GEOMETRYCOLLECTION` geometry literals in CQL2 filter expressions.
+- Added API support for choosing how the LoD filter searches matching features. By default, the decision is based on
+  the planner statistics of the database.
 - Added API support for restricting database queries to features stored in a temporary table.
 - Added API support for referencing texture images and library objects by URI instead of writing them to files when
   exporting.
@@ -15,12 +17,15 @@
 - **Breaking**: The LoD filter of the `export` commands always searches the entire feature including all its contained
   features for matching LoDs. The `--lod-search-depth` option and the `searchDepth` setting of the JSON configuration
   were removed.
+- **Breaking**: The `SchemaAdapter` methods for the LoD filter changed: `getRecursiveLodQuery` was replaced by
+  `getLodHelper` with a new `LodHelper`.
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
   every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
   `terminateWithSubFeatures` setting of the JSON configuration were removed.
 - **Breaking**: Moved `SequentialWriter` from `citydb-cli` to `citydb-io` so that it can be reused outside the CLI.
 - **Breaking**: Validity settings are now part of the query. In the JSON configuration, `validityOptions` moved to
   `query.validity`.
+- Improved the performance of the LoD filter for LoDs that only few features in the database have.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
   is only kept if it is earlier.

@@ -15,6 +15,8 @@ import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
+import org.citydb.query.lod.LodFilter;
+import org.citydb.query.lod.LodPlan;
 import org.citydb.sqlbuilder.insert.Insert;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
@@ -149,6 +151,7 @@ public class QueryExecutor {
         private final SqlQueryBuilder builder;
         private Path tempDirectory;
         private Connection connection;
+        private LodPlanner lodPlanner = LodPlanner.defaults();
 
         private Builder(DatabaseAdapter adapter) {
             this.adapter = Objects.requireNonNull(adapter, "The database adapter must not be null.");
@@ -165,11 +168,20 @@ public class QueryExecutor {
             return this;
         }
 
+        public Builder lodPlanner(LodPlanner lodPlanner) {
+            this.lodPlanner = lodPlanner != null ? lodPlanner : LodPlanner.defaults();
+            return this;
+        }
+
         public QueryExecutor build(Query query) throws QueryBuildException {
             return build(query, SqlBuildOptions.defaults());
         }
 
         public QueryExecutor build(Query query, SqlBuildOptions options) throws QueryBuildException {
+            LodPlan lodPlan = options.getLodPlan().isPresent()
+                    ? options.getLodPlan().get()
+                    : planLodFilter(query);
+            options = SqlBuildOptions.of(options).lodPlan(lodPlan);
             SqlBuildOptions selectOptions = SqlBuildOptions.of(options)
                     .omitDistinct(options.isOmitDistinct() && !isPaginated(query));
 
@@ -177,7 +189,7 @@ public class QueryExecutor {
             Select count = builder.build(Query.of(query)
                             .setSorting(null)
                             .setCountLimit(null),
-                    SqlBuildOptions.defaults());
+                    SqlBuildOptions.defaults().lodPlan(lodPlan));
             Select extent = buildExtentQuery(query, options);
 
             boolean deduplicateIds = selectOptions.isOmitDistinct()
@@ -185,6 +197,26 @@ public class QueryExecutor {
                     SqlBuildOptions.of(selectOptions).omitDistinct(false)).toSql());
 
             return new QueryExecutor(select, count, extent, deduplicateIds, tempDirectory, connection, adapter);
+        }
+
+        private LodPlan planLodFilter(Query query) throws QueryBuildException {
+            LodFilter lodFilter = query.getLodFilter().orElse(null);
+            if (lodFilter == null) {
+                return LodPlan.empty();
+            }
+
+            try {
+                // without a decision, all LoD groups are searched top-down
+                if (connection != null) {
+                    return lodPlanner.plan(lodFilter, adapter, connection).orElse(LodPlan.empty());
+                } else {
+                    try (Connection connection = adapter.getPool().getConnection()) {
+                        return lodPlanner.plan(lodFilter, adapter, connection).orElse(LodPlan.empty());
+                    }
+                }
+            } catch (SQLException e) {
+                throw new QueryBuildException("Failed to plan the LoD filter.", e);
+            }
         }
 
         private Select buildExtentQuery(Query query, SqlBuildOptions options) throws QueryBuildException {

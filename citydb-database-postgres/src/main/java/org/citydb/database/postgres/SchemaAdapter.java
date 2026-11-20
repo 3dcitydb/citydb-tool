@@ -9,12 +9,8 @@ import org.citydb.core.concurrent.LazyCheckedInitializer;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseProperty;
-import org.citydb.model.property.RelationType;
 import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.function.Function;
-import org.citydb.sqlbuilder.literal.IntegerLiteral;
-import org.citydb.sqlbuilder.literal.StringLiteral;
-import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
 import org.citydb.sqlbuilder.util.PlainSql;
@@ -26,7 +22,6 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
@@ -35,6 +30,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     private final SqlHelper sqlHelper;
     private final OperationHelper operationHelper;
     private final IndexHelper indexHelper;
+    private final LodHelper lodHelper;
     private final StatisticsHelper statisticsHelper;
     private final TempTableHelper tempTableHelper;
     private final ChangelogHelper changelogHelper;
@@ -46,6 +42,7 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
         sqlHelper = new SqlHelper(adapter);
         operationHelper = new OperationHelper(this);
         indexHelper = new IndexHelper(adapter);
+        lodHelper = new LodHelper(adapter);
         statisticsHelper = new StatisticsHelper(adapter);
         tempTableHelper = new TempTableHelper(adapter);
         changelogHelper = new ChangelogHelper(adapter);
@@ -94,47 +91,6 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, Table table) {
-        Table hierarchy = Table.of("hierarchy");
-        Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
-                adapter.getConnectionDetails().getSchema());
-
-        Select featureQuery = Select.newInstance()
-                .select(table.column("id").as("val_feature_id"));
-        Select propertyQuery = Select.newInstance()
-                .select(property.column("val_feature_id"))
-                .from(property)
-                .join(hierarchy).on(hierarchy.column("val_feature_id").eq(property.column("feature_id")))
-                .where(property.column("val_feature_id").isNotNull(),
-                        property.column("val_relation_type").eq(RelationType.CONTAINS.getDatabaseValue()));
-
-        CommonTableExpression cte = CommonTableExpression.of(hierarchy.getName(),
-                featureQuery.union(propertyQuery));
-        Select select = Select.newInstance()
-                .withRecursive(cte)
-                .select(IntegerLiteral.of(1))
-                .from(property)
-                .join(cte.asTable()).on(cte.asTable().column("val_feature_id").eq(property.column("feature_id")))
-                .fetch(1);
-
-        select.where(property.column("val_geometry_id").isNotNull()
-                .or(property.column("val_implicitgeom_id").isNotNull()));
-
-        if (!lods.isEmpty()) {
-            select.where(adapter.getSchemaAdapter().getOperationHelper()
-                    .in(property.column("val_lod"), lods.stream().map(StringLiteral::of).toList()));
-            if (requireAll && lods.size() > 1) {
-                select.having(Function.of("count", property.column("val_lod")).qualifier("distinct")
-                        .eq(lods.size()));
-            }
-        } else {
-            select.where(property.column("val_lod").isNotNull());
-        }
-
-        return select;
-    }
-
-    @Override
     public SqlHelper getSqlHelper() {
         return sqlHelper;
     }
@@ -147,6 +103,11 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     @Override
     public IndexHelper getIndexHelper() {
         return indexHelper;
+    }
+
+    @Override
+    public LodHelper getLodHelper() {
+        return lodHelper;
     }
 
     @Override

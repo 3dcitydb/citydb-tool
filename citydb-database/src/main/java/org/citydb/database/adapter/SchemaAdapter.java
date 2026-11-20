@@ -21,7 +21,6 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public abstract class SchemaAdapter {
@@ -44,13 +43,13 @@ public abstract class SchemaAdapter {
 
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
 
-    public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, Table table);
-
     public abstract SqlHelper getSqlHelper();
 
     public abstract OperationHelper getOperationHelper();
 
     public abstract IndexHelper getIndexHelper();
+
+    public abstract LodHelper getLodHelper();
 
     public abstract SequenceHelper getSequenceHelper(Connection connection) throws SQLException;
 

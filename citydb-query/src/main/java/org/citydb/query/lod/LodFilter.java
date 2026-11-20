@@ -9,6 +9,7 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 public class LodFilter {
@@ -48,5 +49,13 @@ public class LodFilter {
     public LodFilter setMode(LodFilterMode mode) {
         this.mode = mode != null ? mode : LodFilterMode.OR;
         return this;
+    }
+
+    @JSONField(serialize = false)
+    public List<Set<String>> getGroups() {
+        Set<String> lods = getLods();
+        return mode == LodFilterMode.AND && lods.size() > 1
+                ? lods.stream().map(Set::of).toList()
+                : List.of(Set.copyOf(lods));
     }
 }

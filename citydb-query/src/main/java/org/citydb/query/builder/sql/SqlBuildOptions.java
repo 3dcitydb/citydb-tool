@@ -5,14 +5,18 @@
 
 package org.citydb.query.builder.sql;
 
+import org.citydb.query.lod.LodPlan;
+
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 public class SqlBuildOptions {
     private boolean omitDistinct;
     private Set<String> columns = new LinkedHashSet<>();
+    private LodPlan lodPlan;
 
     private SqlBuildOptions() {
     }
@@ -20,6 +24,7 @@ public class SqlBuildOptions {
     private SqlBuildOptions(SqlBuildOptions options) {
         omitDistinct = options.omitDistinct;
         columns = new LinkedHashSet<>(options.columns);
+        lodPlan = options.lodPlan;
     }
 
     public static SqlBuildOptions defaults() {
@@ -56,6 +61,15 @@ public class SqlBuildOptions {
             Arrays.stream(columns).forEach(this::withColumn);
         }
 
+        return this;
+    }
+
+    public Optional<LodPlan> getLodPlan() {
+        return Optional.ofNullable(lodPlan);
+    }
+
+    public SqlBuildOptions lodPlan(LodPlan lodPlan) {
+        this.lodPlan = lodPlan;
         return this;
     }
 }

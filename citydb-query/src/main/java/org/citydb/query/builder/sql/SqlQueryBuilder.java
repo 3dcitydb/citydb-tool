@@ -14,6 +14,7 @@ import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.lod.LodFilter;
+import org.citydb.query.lod.LodPlan;
 import org.citydb.query.sorting.Sorting;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.function.WindowFunction;
@@ -76,7 +77,8 @@ public class SqlQueryBuilder {
 
         LodFilter lodFilter = query.getLodFilter().orElse(null);
         if (lodFilter != null) {
-            LodFilterBuilder.of(helper).build(lodFilter, select, context);
+            LodFilterBuilder.of(helper).build(lodFilter,
+                    options.getLodPlan().orElse(LodPlan.empty()), select, context);
         }
 
         Sorting sorting = query.getSorting().orElse(null);
