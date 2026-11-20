@@ -14,12 +14,15 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.query.Query;
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.builder.sql.SqlBuildOptions;
+import org.citydb.query.executor.LodPlanner;
 import org.citydb.query.executor.QueryExecutor;
 import org.citydb.query.filter.Filter;
 import org.citydb.query.filter.common.Predicate;
 import org.citydb.query.filter.literal.BBoxLiteral;
 import org.citydb.query.filter.literal.PropertyRef;
 import org.citydb.query.filter.operation.Operators;
+import org.citydb.query.lod.LodFilter;
+import org.citydb.query.lod.LodPlan;
 import org.citydb.query.temptable.TempTableFilter;
 import org.citydb.util.tiling.Tile;
 import org.citydb.util.tiling.TileMatrix;
@@ -41,6 +44,7 @@ public class ExportQueryHelper implements AutoCloseable {
     private final DatabaseAdapter adapter;
     private final boolean useTiling;
     private Connection connection;
+    private LodPlan lodPlan;
     private TileMatrix tileMatrix;
     private Envelope queryExtent;
     private TempTable pageTable;
@@ -57,6 +61,7 @@ public class ExportQueryHelper implements AutoCloseable {
         ExportQueryHelper queryHelper = new ExportQueryHelper(tiling, query, adapter);
         try {
             return queryHelper.createConnection()
+                    .planLodFilter()
                     .createPageTable()
                     .buildTileMatrix();
         } catch (Throwable e) {
@@ -86,7 +91,7 @@ public class ExportQueryHelper implements AutoCloseable {
             QueryExecutor executor = QueryExecutor.builder(adapter)
                     .tempDirectory(tempDirectory)
                     .connection(connection)
-                    .build(getTileQuery(tile), options);
+                    .build(getTileQuery(tile), SqlBuildOptions.of(options).lodPlan(lodPlan));
             return new QueryContext(tile, executor, connection);
         } catch (QueryBuildException e) {
             throw new ExecutionException("Failed to build database query.", e);
@@ -102,6 +107,22 @@ public class ExportQueryHelper implements AutoCloseable {
         }
     }
 
+    private ExportQueryHelper planLodFilter() throws ExecutionException {
+        LodFilter lodFilter = query.getLodFilter().orElse(null);
+        if (lodFilter != null) {
+            try {
+                lodPlan = LodPlanner.defaults()
+                        .plan(lodFilter, adapter, connection)
+                        .orElse(LodPlan.empty());
+                logger.debug("Searching features with matching LoDs: {}.", lodPlan);
+            } catch (SQLException e) {
+                throw new ExecutionException("Failed to plan the LoD filter.", e);
+            }
+        }
+
+        return this;
+    }
+
     private ExportQueryHelper createPageTable() throws ExecutionException {
         if (useTiling && isPaginated()) {
             logger.info("Querying features of the requested page...");
@@ -112,7 +133,7 @@ public class ExportQueryHelper implements AutoCloseable {
                         .create(connection);
 
                 long features = QueryExecutor.builder(adapter)
-                        .build(query, SqlBuildOptions.defaults())
+                        .build(query, SqlBuildOptions.defaults().lodPlan(lodPlan))
                         .insertIdsInto(pageTable, "id");
                 logger.debug("Stored {} feature(s) of the requested page in temporary table {}.", features,
                         pageTable.getQualifiedName());
@@ -134,7 +155,7 @@ public class ExportQueryHelper implements AutoCloseable {
 
                 queryExtent = QueryExecutor.builder(adapter)
                         .connection(connection)
-                        .build(extentQuery, SqlBuildOptions.defaults().omitDistinct(true))
+                        .build(extentQuery, SqlBuildOptions.defaults().omitDistinct(true).lodPlan(lodPlan))
                         .computeExtent();
                 tiling.setExtent(queryExtent);
             } catch (Exception e) {

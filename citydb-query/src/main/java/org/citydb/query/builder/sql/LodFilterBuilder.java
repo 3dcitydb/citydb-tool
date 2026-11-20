@@ -5,11 +5,17 @@
 
 package org.citydb.query.builder.sql;
 
-import org.citydb.query.builder.QueryBuildException;
+import org.citydb.database.adapter.SchemaAdapter;
 import org.citydb.query.lod.LodFilter;
-import org.citydb.query.lod.LodFilterMode;
+import org.citydb.query.lod.LodPlan;
+import org.citydb.query.lod.LodSearch;
+import org.citydb.sqlbuilder.operation.BooleanExpression;
 import org.citydb.sqlbuilder.operation.Exists;
 import org.citydb.sqlbuilder.query.Select;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 public class LodFilterBuilder {
     private final BuilderHelper helper;
@@ -22,12 +28,20 @@ public class LodFilterBuilder {
         return new LodFilterBuilder(helper);
     }
 
-    void build(LodFilter lodFilter, Select select, SqlContext context) throws QueryBuildException {
-        select.where(Exists.of(
-                helper.getDatabaseAdapter().getSchemaAdapter().getRecursiveLodQuery(
-                        lodFilter.getLods(),
-                        lodFilter.getMode() == LodFilterMode.AND,
-                        lodFilter.getSearchDepth().orElse(Integer.MAX_VALUE),
-                        context.getTable())));
+    void build(LodFilter lodFilter, LodPlan plan, Select select, SqlContext context) {
+        SchemaAdapter schemaAdapter = helper.getDatabaseAdapter().getSchemaAdapter();
+        List<BooleanExpression> topDown = new ArrayList<>();
+        for (Set<String> group : lodFilter.getGroups()) {
+            if (plan.get(group) == LodSearch.BOTTOM_UP) {
+                select.where(context.getTable()
+                        .column("id")
+                        .in(schemaAdapter.getLodHelper().getBottomUpQuery(group)));
+            } else {
+                topDown.add(Exists.of(schemaAdapter.getLodHelper().getTopDownQuery(group, context.getTable())));
+            }
+        }
+
+        // add the top-down conditions last, so that the cheaper bottom-up conditions are evaluated first
+        topDown.forEach(select::where);
     }
 }
