@@ -12,6 +12,9 @@
   exporting.
 
 ### Changed
+- **Breaking**: The LoD filter of the `export` commands always searches the entire feature including all its contained
+  features for matching LoDs. The `--lod-search-depth` option and the `searchDepth` setting of the JSON configuration
+  were removed.
 - **Breaking**: The `delete` command always terminates contained features together with the terminated features, so
   every feature below a terminated feature is terminated itself. The `--no-terminate-all` option and the
   `terminateWithSubFeatures` setting of the JSON configuration were removed.

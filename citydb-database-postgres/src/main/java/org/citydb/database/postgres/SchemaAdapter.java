@@ -14,7 +14,6 @@ import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.IntegerLiteral;
 import org.citydb.sqlbuilder.literal.StringLiteral;
-import org.citydb.sqlbuilder.operation.Case;
 import org.citydb.sqlbuilder.query.CommonTableExpression;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
@@ -95,11 +94,10 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
     }
 
     @Override
-    public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table) {
+    public Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, Table table) {
         Table hierarchy = Table.of("hierarchy");
         Table property = Table.of(org.citydb.database.schema.Table.PROPERTY.getName(),
                 adapter.getConnectionDetails().getSchema());
-        boolean hasSearchDepth = searchDepth >= 0 && searchDepth != Integer.MAX_VALUE;
 
         Select featureQuery = Select.newInstance()
                 .select(table.column("id").as("val_feature_id"));
@@ -110,25 +108,14 @@ public class SchemaAdapter extends org.citydb.database.adapter.SchemaAdapter {
                 .where(property.column("val_feature_id").isNotNull(),
                         property.column("val_relation_type").eq(RelationType.CONTAINS.getDatabaseValue()));
 
-        CommonTableExpression cte = CommonTableExpression.of(hierarchy.getName(), hasSearchDepth
-                ? featureQuery.unionAll(propertyQuery)
-                : featureQuery.union(propertyQuery));
+        CommonTableExpression cte = CommonTableExpression.of(hierarchy.getName(),
+                featureQuery.union(propertyQuery));
         Select select = Select.newInstance()
                 .withRecursive(cte)
                 .select(IntegerLiteral.of(1))
                 .from(property)
                 .join(cte.asTable()).on(cte.asTable().column("val_feature_id").eq(property.column("feature_id")))
                 .fetch(1);
-
-        if (hasSearchDepth) {
-            featureQuery.select(IntegerLiteral.of(0).as("depth"));
-            propertyQuery.select(Case.newInstance()
-                    .when(property.column("namespace_id").eq(1).and(property.column("name").eq("boundary")))
-                    .then(PlainSql.of("depth"))
-                    .orElse(PlainSql.of("depth").plus(1)));
-            propertyQuery.where(hierarchy.column("depth").lt(IntegerLiteral.of(searchDepth + 1)));
-            select.where(cte.asTable().column("depth").lt(IntegerLiteral.of(searchDepth + 1)));
-        }
 
         select.where(property.column("val_geometry_id").isNotNull()
                 .or(property.column("val_implicitgeom_id").isNotNull()));

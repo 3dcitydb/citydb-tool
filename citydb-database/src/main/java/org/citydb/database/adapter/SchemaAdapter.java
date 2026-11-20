@@ -44,7 +44,7 @@ public abstract class SchemaAdapter {
 
     public abstract SqlObject getRecursiveImplicitGeometryQuery(Select featureQuery);
 
-    public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, int searchDepth, Table table);
+    public abstract Select getRecursiveLodQuery(Set<String> lods, boolean requireAll, Table table);
 
     public abstract SqlHelper getSqlHelper();
 

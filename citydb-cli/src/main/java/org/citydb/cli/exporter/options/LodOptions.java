@@ -25,16 +25,9 @@ public class LodOptions implements Option {
             description = "LoD filter mode: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE}).")
     private Mode mode;
 
-    @CommandLine.Option(names = "--lod-search-depth", paramLabel = "<0..n|all>", defaultValue = "0",
-            description = "Levels of sub-features to search for matching LoDs (default: ${DEFAULT-VALUE}).")
-    private String depth;
-
-    private Integer searchDepth;
-
     public LodFilter getLodFilter() {
         return new LodFilter()
                 .setLods(lods != null ? new LinkedHashSet<>(Arrays.asList(lods)) : null)
-                .setSearchDepth(searchDepth)
                 .setMode(mode == Mode.and ? LodFilterMode.AND : LodFilterMode.OR);
     }
 
@@ -53,19 +46,6 @@ public class LodOptions implements Option {
         if (lods == null && (mode == Mode.or || mode == Mode.and)) {
             throw new CommandLine.ParameterException(commandLine,
                     "Error: Missing required option --lod for LoD filter mode '" + mode + "'.");
-        }
-
-        if (depth != null && !depth.equalsIgnoreCase("all")) {
-            try {
-                searchDepth = Integer.parseInt(depth);
-                if (searchDepth < 0) {
-                    throw new CommandLine.ParameterException(commandLine,
-                            "Error: The LoD search depth must be a non-negative integer but was '" + searchDepth + "'");
-                }
-            } catch (NumberFormatException e) {
-                throw new CommandLine.ParameterException(commandLine,
-                        "Error: The LoD search depth must be an integer or 'all' but was '" + searchDepth + "'");
-            }
         }
     }
 }

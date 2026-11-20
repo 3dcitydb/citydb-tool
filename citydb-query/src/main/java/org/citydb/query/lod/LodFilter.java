@@ -9,14 +9,12 @@ import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.annotation.JSONField;
 
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 
 public class LodFilter {
     private Set<String> lods;
     @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private LodFilterMode mode;
-    private Integer searchDepth;
 
     public Set<String> getLods() {
         if (lods == null) {
@@ -49,17 +47,6 @@ public class LodFilter {
 
     public LodFilter setMode(LodFilterMode mode) {
         this.mode = mode != null ? mode : LodFilterMode.OR;
-        return this;
-    }
-
-    public Optional<Integer> getSearchDepth() {
-        return searchDepth != null && searchDepth >= 0
-                ? Optional.of(searchDepth)
-                : Optional.empty();
-    }
-
-    public LodFilter setSearchDepth(Integer searchDepth) {
-        this.searchDepth = searchDepth;
         return this;
     }
 }

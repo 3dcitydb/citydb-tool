@@ -27,7 +27,6 @@ public class LodFilterBuilder {
                 helper.getDatabaseAdapter().getSchemaAdapter().getRecursiveLodQuery(
                         lodFilter.getLods(),
                         lodFilter.getMode() == LodFilterMode.AND,
-                        lodFilter.getSearchDepth().orElse(Integer.MAX_VALUE),
                         context.getTable())));
     }
 }
