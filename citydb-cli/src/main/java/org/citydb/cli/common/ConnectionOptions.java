@@ -16,12 +16,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ConnectionOptions implements Option {
+    @CommandLine.Option(names = "--db-type", paramLabel = "<type>",
+            description = "Database system of the 3DCityDB (default: PostgreSQL).")
+    private String databaseType;
+
     @CommandLine.Option(names = {"-H", "--db-host"},
             description = "Name of the host on which the 3DCityDB is running.")
     private String host;
 
     @CommandLine.Option(names = {"-P", "--db-port"},
-            description = "Port of the 3DCityDB server (default: 5432).")
+            description = "Port of the 3DCityDB server (database default).")
     private Integer port;
 
     @CommandLine.Option(names = {"-d", "--db-name"},
@@ -43,6 +47,10 @@ public class ConnectionOptions implements Option {
     @CommandLine.Option(names = "--db-property", split = ",", paramLabel = "<property=value>",
             description = "Database-specific connection properties.")
     private Map<String, String> properties;
+
+    public String getDatabaseType() {
+        return databaseType;
+    }
 
     public String getHost() {
         return host;
@@ -74,6 +82,7 @@ public class ConnectionOptions implements Option {
 
     public ConnectionDetails toConnectionDetails() {
         return new ConnectionDetails()
+                .setDatabaseType(databaseType)
                 .setHost(host)
                 .setPort(port)
                 .setDatabase(database)

@@ -215,7 +215,8 @@ public class ReportJsonBuilder {
     }
 
     private JSONObject buildDatabaseConnection(DatabaseAdapter adapter) {
-        JSONObject connection = new JSONObject().fluentPut("host", adapter.getConnectionDetails().getHost())
+        JSONObject connection = new JSONObject().fluentPut("databaseType", adapter.getConnectionDetails().getDatabaseType())
+                .fluentPut("host", adapter.getConnectionDetails().getHost())
                 .fluentPut("port", adapter.getConnectionDetails().getPort())
                 .fluentPut("database", adapter.getConnectionDetails().getDatabase())
                 .fluentPut("schema", adapter.getConnectionDetails().getSchema())
