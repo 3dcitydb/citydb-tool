@@ -5,14 +5,15 @@
 
 package org.citydb.database.schema;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.util.Json;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.PrefixedName;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -85,7 +86,7 @@ public class SchemaMappingBuilder {
 
                     String schema = rs.getString("schema");
                     if (schema != null) {
-                        JSONObject object = JSON.parseObject(schema);
+                        ObjectNode object = Json.readObject(schema);
                         if (object != null) {
                             schemaMapping.addDataType(buildDataType(id,
                                     Name.of(typeName, namespace.getURI()),
@@ -129,7 +130,7 @@ public class SchemaMappingBuilder {
 
                     String schema = rs.getString("schema");
                     if (schema != null) {
-                        JSONObject object = JSON.parseObject(schema);
+                        ObjectNode object = Json.readObject(schema);
                         if (object != null) {
                             schemaMapping.addFeatureType(buildFeatureType(id,
                                     Name.of(className, namespace.getURI()),
@@ -149,15 +150,15 @@ public class SchemaMappingBuilder {
         }
     }
 
-    private DataType buildDataType(int id, Name name, boolean isAbstract, Integer superTypeId, JSONObject object,
+    private DataType buildDataType(int id, Name name, boolean isAbstract, Integer superTypeId, ObjectNode object,
                                    DatabaseAdapter adapter) throws SchemaException {
-        String identifier = object.getString("identifier");
-        String tableName = object.getString("table");
-        String description = object.getString("description");
-        JSONArray propertiesArray = object.getJSONArray("properties");
-        JSONObject valueObject = object.getJSONObject("value");
-        JSONObject joinObject = object.getJSONObject("join");
-        JSONObject joinTableObject = object.getJSONObject("joinTable");
+        String identifier = Json.getString(object, "identifier");
+        String tableName = Json.getString(object, "table");
+        String description = Json.getString(object, "description");
+        ArrayNode propertiesArray = Json.getArray(object, "properties");
+        ObjectNode valueObject = Json.getObject(object, "value");
+        ObjectNode joinObject = Json.getObject(object, "join");
+        ObjectNode joinTableObject = Json.getObject(object, "joinTable");
 
         if (identifier == null) {
             throw new SchemaException("No identifier defined for data type (ID " + id + ").");
@@ -186,13 +187,13 @@ public class SchemaMappingBuilder {
     }
 
     private FeatureType buildFeatureType(int id, Name name, boolean isAbstract, boolean isTopLevel, Integer superTypeId,
-                                         JSONObject object, DatabaseAdapter adapter) throws SchemaException {
-        String identifier = object.getString("identifier");
-        String tableName = object.getString("table");
-        String description = object.getString("description");
-        JSONArray propertiesArray = object.getJSONArray("properties");
-        JSONObject joinObject = object.getJSONObject("join");
-        JSONObject joinTableObject = object.getJSONObject("joinTable");
+                                         ObjectNode object, DatabaseAdapter adapter) throws SchemaException {
+        String identifier = Json.getString(object, "identifier");
+        String tableName = Json.getString(object, "table");
+        String description = Json.getString(object, "description");
+        ArrayNode propertiesArray = Json.getArray(object, "properties");
+        ObjectNode joinObject = Json.getObject(object, "join");
+        ObjectNode joinTableObject = Json.getObject(object, "joinTable");
 
         if (identifier == null) {
             throw new SchemaException("No identifier defined for feature type (ID " + id + ").");
@@ -219,12 +220,12 @@ public class SchemaMappingBuilder {
         }
     }
 
-    private Map<Name, Property> buildProperties(JSONArray propertiesArray, DatabaseAdapter adapter) throws SchemaException {
+    private Map<Name, Property> buildProperties(ArrayNode propertiesArray, DatabaseAdapter adapter) throws SchemaException {
         Map<Name, Property> properties = null;
         if (!propertiesArray.isEmpty()) {
             properties = new LinkedHashMap<>();
-            for (Object item : propertiesArray) {
-                if (item instanceof JSONObject propertyObject) {
+            for (JsonNode item : propertiesArray) {
+                if (item instanceof ObjectNode propertyObject) {
                     Property property = buildProperty(propertyObject, adapter);
                     properties.put(property.getName(), property);
                 }
@@ -238,19 +239,19 @@ public class SchemaMappingBuilder {
         return properties;
     }
 
-    private Property buildProperty(JSONObject object, DatabaseAdapter adapter) throws SchemaException {
-        String propertyName = object.getString("name");
-        String description = object.getString("description");
-        String namespace = object.getString("namespace");
-        Integer parentIndex = object.getInteger("parent");
-        Integer minOccurs = object.getInteger("minOccurs");
-        Integer maxOccurs = object.getInteger("maxOccurs");
-        JSONObject valueObject = object.getJSONObject("value");
-        String typeIdentifier = object.getString("type");
-        String targetIdentifier = object.getString("target");
-        String relationTypeName = object.getString("relationType");
-        JSONObject joinObject = object.getJSONObject("join");
-        JSONObject joinTableObject = object.getJSONObject("joinTable");
+    private Property buildProperty(ObjectNode object, DatabaseAdapter adapter) throws SchemaException {
+        String propertyName = Json.getString(object, "name");
+        String description = Json.getString(object, "description");
+        String namespace = Json.getString(object, "namespace");
+        Integer parentIndex = Json.getInteger(object, "parent");
+        Integer minOccurs = Json.getInteger(object, "minOccurs");
+        Integer maxOccurs = Json.getInteger(object, "maxOccurs");
+        ObjectNode valueObject = Json.getObject(object, "value");
+        String typeIdentifier = Json.getString(object, "type");
+        String targetIdentifier = Json.getString(object, "target");
+        String relationTypeName = Json.getString(object, "relationType");
+        ObjectNode joinObject = Json.getObject(object, "join");
+        ObjectNode joinTableObject = Json.getObject(object, "joinTable");
 
         if (propertyName == null) {
             throw new SchemaException("No name defined for the property.");
@@ -285,10 +286,10 @@ public class SchemaMappingBuilder {
                 joinTableObject != null ? buildJoinTable(joinTableObject) : null);
     }
 
-    private Value buildValue(JSONObject object) throws SchemaException {
-        String columnName = object.getString("column");
-        String typeName = object.getString("type");
-        Integer propertyIndex = object.getInteger("property");
+    private Value buildValue(ObjectNode object) throws SchemaException {
+        String columnName = Json.getString(object, "column");
+        String typeName = Json.getString(object, "type");
+        Integer propertyIndex = Json.getInteger(object, "property");
 
         if (columnName == null && typeName == null && propertyIndex == null) {
             throw new SchemaException("A value must define either a column and type or a property index.");
@@ -308,11 +309,11 @@ public class SchemaMappingBuilder {
         }
     }
 
-    private Join buildJoin(JSONObject object) throws SchemaException {
-        String tableName = object.getString("table");
-        String fromColumn = object.getString("fromColumn");
-        String toColumn = object.getString("toColumn");
-        JSONArray conditionsArray = object.getJSONArray("conditions");
+    private Join buildJoin(ObjectNode object) throws SchemaException {
+        String tableName = Json.getString(object, "table");
+        String fromColumn = Json.getString(object, "fromColumn");
+        String toColumn = Json.getString(object, "toColumn");
+        ArrayNode conditionsArray = Json.getArray(object, "conditions");
 
         if (tableName == null) {
             throw new SchemaException("No table defined for the join.");
@@ -330,8 +331,8 @@ public class SchemaMappingBuilder {
         Map<String, Condition> conditions = null;
         if (conditionsArray != null && !conditionsArray.isEmpty()) {
             conditions = new LinkedHashMap<>();
-            for (Object item : conditionsArray) {
-                if (item instanceof JSONObject conditionObject) {
+            for (JsonNode item : conditionsArray) {
+                if (item instanceof ObjectNode conditionObject) {
                     Condition condition = buildCondition(conditionObject);
                     conditions.put(condition.getColumn().getName(), condition);
                 }
@@ -345,10 +346,10 @@ public class SchemaMappingBuilder {
         return new Join(table, fromColumn, toColumn, conditions);
     }
 
-    private JoinTable buildJoinTable(JSONObject object) throws SchemaException {
-        String tableName = object.getString("table");
-        JSONObject sourceJoin = object.getJSONObject("sourceJoin");
-        JSONObject targetJoin = object.getJSONObject("targetJoin");
+    private JoinTable buildJoinTable(ObjectNode object) throws SchemaException {
+        String tableName = Json.getString(object, "table");
+        ObjectNode sourceJoin = Json.getObject(object, "sourceJoin");
+        ObjectNode targetJoin = Json.getObject(object, "targetJoin");
 
         if (tableName == null) {
             throw new SchemaException("No table defined for the join table.");
@@ -366,10 +367,10 @@ public class SchemaMappingBuilder {
         return new JoinTable(table, buildJoin(sourceJoin), buildJoin(targetJoin));
     }
 
-    private Condition buildCondition(JSONObject object) throws SchemaException {
-        String columnName = object.getString("column");
-        String value = object.getString("value");
-        String typeName = object.getString("type");
+    private Condition buildCondition(ObjectNode object) throws SchemaException {
+        String columnName = Json.getString(object, "column");
+        String value = Json.getString(object, "value");
+        String typeName = Json.getString(object, "type");
 
         if (columnName == null) {
             throw new SchemaException("No column defined for the join condition.");

@@ -5,11 +5,11 @@
 
 package org.citydb.operation.exporter.appearance;
 
-import com.alibaba.fastjson2.JSONArray;
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.geometry.Point;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -24,10 +24,10 @@ public class GeoreferencedTextureExporter extends TextureExporter {
     protected GeoreferencedTexture doExport(ResultSet rs) throws ExportException, SQLException {
         GeoreferencedTexture texture = GeoreferencedTexture.newInstance();
 
-        JSONArray orientation = getJSONArray(rs.getString("gt_orientation"));
+        ArrayNode orientation = getJsonArray(rs.getString("gt_orientation"));
         if (orientation != null) {
             texture.setOrientation(IntStream.range(0, orientation.size())
-                    .mapToObj(orientation::getDouble)
+                    .mapToObj(i -> orientation.get(i).isNumber() ? orientation.get(i).doubleValue() : null)
                     .toList());
         }
 

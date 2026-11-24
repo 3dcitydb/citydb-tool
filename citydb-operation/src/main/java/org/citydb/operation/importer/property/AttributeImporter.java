@@ -5,11 +5,12 @@
 
 package org.citydb.operation.importer.property;
 
-import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
+import org.citydb.database.util.Json;
 import org.citydb.model.property.*;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -47,8 +48,8 @@ public class AttributeImporter extends PropertyImporter {
         setStringOrNull(12, attribute.getCodeSpace().orElse(null));
         setStringOrNull(13, attribute.getUom().orElse(null));
 
-        JSONArray arrayValue = attribute.getArrayValue()
-                .map(array -> new JSONArray(array.getValues().stream()
+        ArrayNode arrayValue = attribute.getArrayValue()
+                .map(array -> Json.arrayOf(array.getValues().stream()
                         .map(Value::rawValue)
                         .toList()))
                 .orElse(null);

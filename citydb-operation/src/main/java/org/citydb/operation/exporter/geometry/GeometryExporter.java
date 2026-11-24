@@ -5,7 +5,6 @@
 
 package org.citydb.operation.exporter.geometry;
 
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.GeometryDescriptor;
@@ -15,6 +14,7 @@ import org.citydb.operation.exporter.common.DatabaseExporter;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -80,7 +80,7 @@ public class GeometryExporter extends DatabaseExporter {
         Object geometryObject = isImplicit
                 ? rs.getObject("implicit_geometry")
                 : rs.getObject("geometry");
-        JSONObject properties = getJSONObject(rs.getString("geometry_properties"));
+        ObjectNode properties = getJsonObject(rs.getString("geometry_properties"));
         if (geometryObject != null && properties != null) {
             try {
                 Geometry<?> geometry = adapter.getGeometryAdapter().buildGeometry(geometryObject, properties);

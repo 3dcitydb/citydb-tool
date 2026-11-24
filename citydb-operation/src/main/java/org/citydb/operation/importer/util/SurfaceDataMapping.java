@@ -5,17 +5,18 @@
 
 package org.citydb.operation.importer.util;
 
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.database.util.Json;
+import tools.jackson.databind.node.ObjectNode;
 
 public class SurfaceDataMapping {
-    private JSONObject textureMapping;
-    private JSONObject materialMapping;
-    private JSONObject worldToTextureMapping;
-    private JSONObject georeferencedTextureMapping;
+    private ObjectNode textureMapping;
+    private ObjectNode materialMapping;
+    private ObjectNode worldToTextureMapping;
+    private ObjectNode georeferencedTextureMapping;
 
-    JSONObject getOrCreateTextureMapping() {
+    ObjectNode getOrCreateTextureMapping() {
         if (textureMapping == null) {
-            textureMapping = new JSONObject();
+            textureMapping = Json.objectNode();
         }
 
         return textureMapping;
@@ -25,13 +26,13 @@ public class SurfaceDataMapping {
         return textureMapping != null && !textureMapping.isEmpty();
     }
 
-    public JSONObject getTextureMapping() {
+    public ObjectNode getTextureMapping() {
         return textureMapping;
     }
 
-    JSONObject getOrCreateMaterialMapping() {
+    ObjectNode getOrCreateMaterialMapping() {
         if (materialMapping == null) {
-            materialMapping = new JSONObject();
+            materialMapping = Json.objectNode();
         }
 
         return materialMapping;
@@ -41,13 +42,13 @@ public class SurfaceDataMapping {
         return materialMapping != null && !materialMapping.isEmpty();
     }
 
-    public JSONObject getMaterialMapping() {
+    public ObjectNode getMaterialMapping() {
         return materialMapping;
     }
 
-    JSONObject getOrCreateWorldToTextureMapping() {
+    ObjectNode getOrCreateWorldToTextureMapping() {
         if (worldToTextureMapping == null) {
-            worldToTextureMapping = new JSONObject();
+            worldToTextureMapping = Json.objectNode();
         }
 
         return worldToTextureMapping;
@@ -57,13 +58,13 @@ public class SurfaceDataMapping {
         return worldToTextureMapping != null && !worldToTextureMapping.isEmpty();
     }
 
-    public JSONObject getWorldToTextureMapping() {
+    public ObjectNode getWorldToTextureMapping() {
         return worldToTextureMapping;
     }
 
-    JSONObject getOrCreateGeoreferencedTextureMapping() {
+    ObjectNode getOrCreateGeoreferencedTextureMapping() {
         if (georeferencedTextureMapping == null) {
-            georeferencedTextureMapping = new JSONObject();
+            georeferencedTextureMapping = Json.objectNode();
         }
 
         return georeferencedTextureMapping;
@@ -73,7 +74,7 @@ public class SurfaceDataMapping {
         return georeferencedTextureMapping != null && !georeferencedTextureMapping.isEmpty();
     }
 
-    public JSONObject getGeoreferencedTextureMapping() {
+    public ObjectNode getGeoreferencedTextureMapping() {
         return georeferencedTextureMapping;
     }
 }

@@ -5,8 +5,8 @@
 
 package org.citydb.operation.importer.property;
 
-import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
+import org.citydb.database.util.Json;
 import org.citydb.model.geometry.ImplicitGeometry;
 import org.citydb.model.property.ImplicitGeometryProperty;
 import org.citydb.model.property.ImplicitGeometryReference;
@@ -16,6 +16,7 @@ import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.geometry.ImplicitGeometryImporter;
 import org.citydb.operation.importer.reference.CacheType;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.sql.SQLException;
 import java.sql.Types;
@@ -62,9 +63,9 @@ public class ImplicitGeometryPropertyImporter extends PropertyImporter {
 
         setGeometryOrNull(9, getGeometry(property.getReferencePoint().orElse(null), true));
 
-        JSONArray transformationMatrix = property.getTransformationMatrix()
+        ArrayNode transformationMatrix = property.getTransformationMatrix()
                 .map(Matrix::toRowMajor)
-                .map(JSONArray::new)
+                .map(Json::arrayOf)
                 .orElse(null);
 
         setJsonOrNull(10, getJson(transformationMatrix));

@@ -5,6 +5,7 @@ module org.citydb.core {
     requires org.apache.commons.io;
     requires com.h2database.mvstore;
     requires transitive com.alibaba.fastjson2;
+    requires transitive tools.jackson.databind;
     requires transitive org.slf4j;
     requires transitive org.apache.tika.core;
 

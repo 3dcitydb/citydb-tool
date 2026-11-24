@@ -5,9 +5,9 @@
 
 package org.citydb.operation.importer.address;
 
-import com.alibaba.fastjson2.JSONArray;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
+import org.citydb.database.util.Json;
 import org.citydb.model.address.Address;
 import org.citydb.model.address.AddressDescriptor;
 import org.citydb.model.property.Value;
@@ -15,6 +15,7 @@ import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
 import org.citydb.operation.importer.common.DatabaseImporter;
 import org.citydb.operation.importer.reference.CacheType;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -49,8 +50,8 @@ public class AddressImporter extends DatabaseImporter {
         setStringOrNull(10, address.getState().orElse(null));
         setStringOrNull(11, address.getCountry().orElse(null));
 
-        JSONArray arrayValue = address.getFreeText()
-                .map(array -> new JSONArray(array.getValues().stream()
+        ArrayNode arrayValue = address.getFreeText()
+                .map(array -> Json.arrayOf(array.getValues().stream()
                         .map(Value::rawValue)
                         .toList()))
                 .orElse(null);

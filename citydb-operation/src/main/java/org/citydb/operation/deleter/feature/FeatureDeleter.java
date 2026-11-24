@@ -5,19 +5,21 @@
 
 package org.citydb.operation.deleter.feature;
 
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.database.util.Json;
 import org.citydb.operation.deleter.DeleteException;
 import org.citydb.operation.deleter.DeleteHelper;
 import org.citydb.operation.deleter.common.DatabaseDeleter;
 import org.citydb.operation.deleter.options.DeleteMode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Set;
 
 public class FeatureDeleter extends DatabaseDeleter {
     private final org.citydb.database.util.DeleteHelper deleteHelper;
-    private final JSONObject metadata = new JSONObject();
+    private final ObjectNode metadata = Json.objectNode();
 
     public FeatureDeleter(DeleteHelper helper) throws SQLException {
         super(helper);
@@ -38,7 +40,8 @@ public class FeatureDeleter extends DatabaseDeleter {
     protected void executeBatch(Set<Long> ids) throws SQLException {
         if (helper.getOptions().getMode() == DeleteMode.TERMINATE) {
             metadata.put("termination_date", helper.getOptions().getTerminationDate()
-                    .orElseGet(() -> OffsetDateTime.now().withNano(0)));
+                    .orElseGet(() -> OffsetDateTime.now().withNano(0))
+                    .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
             deleteHelper.terminateFeatures(ids, metadata);
         } else {
             deleteHelper.deleteFeatures(ids);

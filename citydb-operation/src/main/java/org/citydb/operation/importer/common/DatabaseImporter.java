@@ -5,15 +5,13 @@
 
 package org.citydb.operation.importer.common;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.core.file.FileLocator;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
+import org.citydb.database.util.Json;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;
@@ -28,6 +26,7 @@ import org.citydb.operation.importer.reference.CacheType;
 import org.citydb.operation.importer.util.Lifespan;
 import org.citydb.operation.importer.util.TableHelper;
 import org.slf4j.event.Level;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -202,24 +201,8 @@ public abstract class DatabaseImporter {
         }
     }
 
-    protected String getJson(JSONArray jsonArray, JSONWriter.Feature... features) {
-        if (jsonArray != null) {
-            return features == null || features.length == 0
-                    ? jsonArray.toString()
-                    : jsonArray.toString(features);
-        } else {
-            return null;
-        }
-    }
-
-    protected String getJson(JSONObject jsonObject, JSONWriter.Feature... features) {
-        if (jsonObject != null) {
-            return features == null || features.length == 0
-                    ? jsonObject.toString()
-                    : jsonObject.toString(features);
-        } else {
-            return null;
-        }
+    protected String getJson(JsonNode json) {
+        return Json.write(json);
     }
 
     protected Object getGeometry(Geometry<?> geometry, boolean force3D) throws ImportException {
