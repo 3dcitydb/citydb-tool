@@ -62,6 +62,10 @@ public abstract class ExportController implements Command {
             description = "Store temporary files in this directory.")
     protected Path tempDirectory;
 
+    @CommandLine.Option(names = "--texture-buckets", paramLabel = "<number>",
+            description = "Distribute texture files over this number of subfolders (default: 0).")
+    protected Integer numberOfTextureBuckets;
+
     @CommandLine.ArgGroup(exclusive = false)
     protected ThreadsOptions threadsOptions;
 
@@ -312,6 +316,10 @@ public abstract class ExportController implements Command {
                         .setExportAppearances(queryOptions.getAppearanceOptions().isProcessAppearances())
                         .setThemes(queryOptions.getAppearanceOptions().getThemes());
             }
+        }
+
+        if (numberOfTextureBuckets != null) {
+            getAppearanceOptions(exportOptions).setNumberOfTextureBuckets(numberOfTextureBuckets);
         }
 
         return exportOptions;

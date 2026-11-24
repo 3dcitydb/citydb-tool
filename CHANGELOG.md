@@ -16,6 +16,7 @@
   connect to.
 - Added the `databaseType` property to the connection details in the JSON output of the `connect` and `info`
   commands.
+- Added the `--texture-buckets` option to the `export` commands for distributing texture files over subfolders.
 
 ### Changed
 - **Breaking**: The LoD filter of the `export` commands always searches the entire feature including all its contained
