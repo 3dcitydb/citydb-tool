@@ -60,7 +60,7 @@ public class ArithmeticExpressionBuilder {
                         rightExpression);
                 case INT_DIVIDE -> helper.getOperationHelper().intDivision(leftExpression, rightExpression);
                 case POWER -> helper.getOperationHelper().power(leftExpression, rightExpression);
-                case MODULO -> Operators.modulo(leftExpression, rightExpression);
+                case MODULO -> helper.getOperationHelper().modulo(leftExpression, rightExpression);
             }, leftOperand.getType(), leftOperand, rightOperand);
         } else {
             throw new QueryBuildException("Failed to build arithmetic expression.");

@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class BuilderHelper {
+    static final String ROW_NUMBER_ALIAS = "rn";
     private final DatabaseAdapter adapter;
     private final SchemaPathBuilder schemaPathBuilder;
     private final FeatureTypesBuilder featureTypesBuilder;

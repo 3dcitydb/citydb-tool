@@ -66,7 +66,7 @@ public class FunctionBuilder {
     private BuildResult index(Function function, SqlContext context) throws QueryBuildException {
         requireArguments(0, function);
         if (context.getTable().isLateral()) {
-            return BuildResult.of(context.getTable().column("index"), Type.INTEGER);
+            return BuildResult.of(context.getTable().column(BuilderHelper.ROW_NUMBER_ALIAS), Type.INTEGER);
         } else {
             throw new QueryBuildException("Failed to build index function because of missing lateral join.");
         }
