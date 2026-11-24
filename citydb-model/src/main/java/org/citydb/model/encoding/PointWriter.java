@@ -5,35 +5,29 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.config.common.SrsReference;
 import org.citydb.model.geometry.Point;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.lang.reflect.Type;
-import java.util.List;
-
-public class PointWriter implements ObjectWriter<Point> {
+public class PointWriter extends ValueSerializer<Point> {
     @Override
-    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
-        if (o instanceof Point point) {
-            jsonWriter.startObject();
-            jsonWriter.writeName("coordinates");
-            jsonWriter.writeColon();
-            jsonWriter.write(List.of(point.getCoordinate().getX(), point.getCoordinate().getY()));
+    public void serialize(Point point, JsonGenerator generator, SerializationContext context) {
+        generator.writeStartObject();
+        generator.writeName("coordinates");
+        generator.writeStartArray();
+        generator.writeNumber(point.getCoordinate().getX());
+        generator.writeNumber(point.getCoordinate().getY());
+        generator.writeEndArray();
 
-            if (point.getSRID().isPresent() || point.getSrsIdentifier().isPresent()) {
-                jsonWriter.writeName("srs");
-                jsonWriter.writeColon();
-                jsonWriter.writeAs(new SrsReference()
-                                .setSRID(point.getSRID().orElse(null))
-                                .setIdentifier(point.getSrsIdentifier().orElse(null)),
-                        SrsReference.class);
-            }
-
-            jsonWriter.endObject();
-        } else {
-            jsonWriter.writeNull();
+        if (point.getSRID().isPresent() || point.getSrsIdentifier().isPresent()) {
+            generator.writeName("srs");
+            context.writeValue(generator, new SrsReference()
+                    .setSRID(point.getSRID().orElse(null))
+                    .setIdentifier(point.getSrsIdentifier().orElse(null)));
         }
+
+        generator.writeEndObject();
     }
 }

@@ -5,10 +5,7 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONException;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.database.srs.SrsUnit;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
@@ -17,6 +14,11 @@ import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.function.FunctionName;
 import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -45,9 +47,14 @@ public class FilterJSONParser {
 
     public Expression parse(Object json) throws FilterParseException {
         if (json != null) {
-            return json instanceof String text && JSON.isValid(text)
-                    ? readExpression(JSON.parse(text))
-                    : readExpression(json);
+            if (json instanceof JsonNode node) {
+                return readExpression(node);
+            } else if (json instanceof String text) {
+                JsonNode node = readTree(text);
+                return node != null ? readExpression(node) : readLiteral(text);
+            } else {
+                return readLiteral(json);
+            }
         } else {
             return null;
         }
@@ -60,17 +67,25 @@ public class FilterJSONParser {
                 : null;
     }
 
-    private Expression readExpression(Object json) throws FilterParseException {
-        if (json instanceof JSONObject object) {
+    private JsonNode readTree(String text) {
+        try {
+            return JsonMapping.mapper().readTree(text);
+        } catch (JacksonException e) {
+            return null;
+        }
+    }
+
+    private Expression readExpression(JsonNode json) throws FilterParseException {
+        if (json instanceof ObjectNode object) {
             return readObject(object);
-        } else if (json instanceof JSONArray array) {
+        } else if (json instanceof ArrayNode array) {
             return readArray(array);
         } else {
             return readLiteral(json);
         }
     }
 
-    private <T extends Expression> T readExpression(Object json, Class<T> type) throws FilterParseException {
+    private <T extends Expression> T readExpression(JsonNode json, Class<T> type) throws FilterParseException {
         Expression expression = readExpression(json);
         if (type.isInstance(expression)) {
             return type.cast(expression);
@@ -81,32 +96,32 @@ public class FilterJSONParser {
                 words.add(matcher.group(0).toLowerCase(Locale.ROOT));
             }
 
-            throw new FilterParseException("Failed to parse '" + json + "' as " + String.join(" ", words) + ".");
+            throw new FilterParseException("Failed to parse '" + toString(json) + "' as " + String.join(" ", words) + ".");
         }
     }
 
-    private Expression readObject(JSONObject object) throws FilterParseException {
+    private Expression readObject(ObjectNode object) throws FilterParseException {
         try {
-            String op = object.getString(JSONToken.OP.value());
-            Object args = object.get(JSONToken.ARGS.value());
-            String date = object.getString(JSONToken.DATE.value());
-            String timestamp = object.getString(JSONToken.TIMESTAMP.value());
-            Object interval = object.get(JSONToken.INTERVAL.value());
-            Object bbox = object.get(JSONToken.BBOX.value());
-            JSONToken type = JSONToken.of(object.getString(JSONToken.TYPE.value()));
-            String property = object.getString(JSONToken.PROPERTY.value());
+            String op = getString(object, JSONToken.OP.value());
+            JsonNode args = object.get(JSONToken.ARGS.value());
+            String date = getString(object, JSONToken.DATE.value());
+            String timestamp = getString(object, JSONToken.TIMESTAMP.value());
+            JsonNode interval = object.get(JSONToken.INTERVAL.value());
+            JsonNode bbox = object.get(JSONToken.BBOX.value());
+            JSONToken type = JSONToken.of(getString(object, JSONToken.TYPE.value()));
+            String property = getString(object, JSONToken.PROPERTY.value());
 
             if (op != null) {
-                return readOperation(op, args instanceof JSONArray array
+                return readOperation(op, args instanceof ArrayNode array
                         ? array
-                        : new JSONArray());
+                        : JsonNodeFactory.instance.arrayNode());
             } else if (date != null) {
                 return readDateLiteral(date);
             } else if (timestamp != null) {
                 return readTimestampLiteral(timestamp);
-            } else if (interval instanceof JSONArray array) {
+            } else if (interval instanceof ArrayNode array) {
                 return readTimeInterval(array);
-            } else if (bbox instanceof JSONArray array) {
+            } else if (bbox instanceof ArrayNode array) {
                 return readBBoxLiteral(array);
             } else if (JSONToken.GEOMETRY_TYPES.contains(type)) {
                 return readGeometryLiteral(object);
@@ -115,12 +130,12 @@ public class FilterJSONParser {
             } else {
                 return null;
             }
-        } catch (JSONException e) {
+        } catch (JacksonException e) {
             throw new FilterParseException("Failed to parse JSON input.", e);
         }
     }
 
-    private Expression readOperation(String op, JSONArray args) throws FilterParseException {
+    private Expression readOperation(String op, ArrayNode args) throws FilterParseException {
         JSONToken token = JSONToken.of(op);
         if (JSONToken.BINARY_BOOLEAN_OPERATORS.contains(token)) {
             return readBinaryBooleanPredicate(token, args);
@@ -155,12 +170,12 @@ public class FilterJSONParser {
         }
     }
 
-    private BinaryBooleanPredicate readBinaryBooleanPredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private BinaryBooleanPredicate readBinaryBooleanPredicate(JSONToken op, ArrayNode args) throws FilterParseException {
         if (args.size() > 1) {
             BooleanOperator operator = BooleanOperator.of(op);
             if (BooleanOperator.BINARY_OPERATORS.contains(operator)) {
                 List<BooleanExpression> operands = new ArrayList<>();
-                for (Object arg : args) {
+                for (JsonNode arg : args) {
                     operands.add(readExpression(arg, BooleanExpression.class));
                 }
 
@@ -173,7 +188,7 @@ public class FilterJSONParser {
         }
     }
 
-    private BooleanExpression readNotPredicate(JSONArray args) throws FilterParseException {
+    private BooleanExpression readNotPredicate(ArrayNode args) throws FilterParseException {
         if (args.size() == 1) {
             return Not.of(readExpression(args.get(0), BooleanExpression.class));
         } else {
@@ -181,7 +196,7 @@ public class FilterJSONParser {
         }
     }
 
-    private BinarySpatialPredicate readBinarySpatialPredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private BinarySpatialPredicate readBinarySpatialPredicate(JSONToken op, ArrayNode args) throws FilterParseException {
         if (args.size() == 2) {
             SpatialOperator operator = SpatialOperator.of(op);
             if (operator != null) {
@@ -197,7 +212,7 @@ public class FilterJSONParser {
         }
     }
 
-    private DWithin readSpatialDistancePredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private DWithin readSpatialDistancePredicate(JSONToken op, ArrayNode args) throws FilterParseException {
         if (args.size() == 3 || args.size() == 4) {
             Distance distance = Distance.of(readExpression(args.get(2), NumericLiteral.class).doubleValue());
             if (args.size() == 4) {
@@ -220,15 +235,15 @@ public class FilterJSONParser {
         }
     }
 
-    private Expression readTemporalPredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private Expression readTemporalPredicate(JSONToken op, ArrayNode args) throws FilterParseException {
         throw new FilterParseException("Temporal predicates are not supported.");
     }
 
-    private Expression readArrayPredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private Expression readArrayPredicate(JSONToken op, ArrayNode args) throws FilterParseException {
         throw new FilterParseException("Array predicates are not supported.");
     }
 
-    private SqlExpression readSqlPredicate(JSONArray args) throws FilterParseException {
+    private SqlExpression readSqlPredicate(ArrayNode args) throws FilterParseException {
         if (args.size() == 1) {
             return SqlExpression.of(readExpression(args.get(0), StringLiteral.class));
         } else {
@@ -236,7 +251,7 @@ public class FilterJSONParser {
         }
     }
 
-    private BinaryComparisonPredicate readBinaryComparisonPredicate(JSONToken op, JSONArray args) throws FilterParseException {
+    private BinaryComparisonPredicate readBinaryComparisonPredicate(JSONToken op, ArrayNode args) throws FilterParseException {
         if (args.size() == 2) {
             ComparisonOperator operator = ComparisonOperator.of(op);
             if (ComparisonOperator.BINARY_OPERATORS.contains(operator)) {
@@ -252,7 +267,7 @@ public class FilterJSONParser {
         }
     }
 
-    private Like readLikePredicate(JSONArray args) throws FilterParseException {
+    private Like readLikePredicate(ArrayNode args) throws FilterParseException {
         if (args.size() == 2) {
             return Like.of(readExpression(args.get(0), CharacterExpression.class),
                     readExpression(args.get(1), PatternExpression.class));
@@ -261,7 +276,7 @@ public class FilterJSONParser {
         }
     }
 
-    private Between readBetweenPredicate(JSONArray args) throws FilterParseException {
+    private Between readBetweenPredicate(ArrayNode args) throws FilterParseException {
         if (args.size() == 3) {
             return Between.of(
                     readExpression(args.get(0), NumericExpression.class),
@@ -272,11 +287,11 @@ public class FilterJSONParser {
         }
     }
 
-    private In readInPredicate(JSONArray args) throws FilterParseException {
+    private In readInPredicate(ArrayNode args) throws FilterParseException {
         if (args.size() == 2
-                && args.get(1) instanceof JSONArray operands) {
+                && args.get(1) instanceof ArrayNode operands) {
             List<ScalarExpression> values = new ArrayList<>();
-            for (Object operand : operands) {
+            for (JsonNode operand : operands) {
                 values.add(readExpression(operand, ScalarExpression.class));
             }
 
@@ -288,7 +303,7 @@ public class FilterJSONParser {
         }
     }
 
-    private IsNull readIsNullPredicate(JSONArray args) throws FilterParseException {
+    private IsNull readIsNullPredicate(ArrayNode args) throws FilterParseException {
         if (args.size() == 1) {
             return IsNull.of(readExpression(args.get(0)));
         } else {
@@ -296,7 +311,7 @@ public class FilterJSONParser {
         }
     }
 
-    private ArithmeticExpression readArithmeticExpression(JSONToken op, JSONArray args) throws FilterParseException {
+    private ArithmeticExpression readArithmeticExpression(JSONToken op, ArrayNode args) throws FilterParseException {
         if (args.size() == 2) {
             ArithmeticOperator operator = ArithmeticOperator.of(op);
             if (operator != null) {
@@ -312,19 +327,19 @@ public class FilterJSONParser {
         }
     }
 
-    private Function readFunction(String op, JSONArray args) throws FilterParseException {
+    private Function readFunction(String op, ArrayNode args) throws FilterParseException {
         FunctionName name = FunctionName.of(op)
                 .orElseThrow(() -> new FilterParseException("Unsupported function '" + op + "'."));
 
         Function function = Function.of(name);
-        for (Object argument : args) {
+        for (JsonNode argument : args) {
             function.add(readExpression(argument, Argument.class));
         }
 
         return function;
     }
 
-    private Expression readArray(JSONArray array) throws FilterParseException {
+    private Expression readArray(ArrayNode array) throws FilterParseException {
         throw new FilterParseException("Arrays are not supported.");
     }
 
@@ -342,21 +357,20 @@ public class FilterJSONParser {
                         timestampString + "' as timestamp literal."));
     }
 
-    private Expression readTimeInterval(JSONArray array) throws FilterParseException {
+    private Expression readTimeInterval(ArrayNode array) throws FilterParseException {
         throw new FilterParseException("Time interval literals are not supported.");
     }
 
-    private GeometryExpression readGeometryLiteral(JSONObject geometry) throws FilterParseException {
-        return JSONToken.of(geometry.getString(JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION
+    private GeometryExpression readGeometryLiteral(ObjectNode geometry) throws FilterParseException {
+        return JSONToken.of(getString(geometry, JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION
                 ? GeometryCollectionLiteral.of(geometryParser.parseCollection(geometry))
                 : GeometryLiteral.of(geometryParser.parse(geometry));
     }
 
-    private BBoxLiteral readBBoxLiteral(JSONArray bbox) throws FilterParseException {
-        double[] coordinates = bbox.stream()
-                .filter(Number.class::isInstance)
-                .map(Number.class::cast)
-                .mapToDouble(Number::doubleValue)
+    private BBoxLiteral readBBoxLiteral(ArrayNode bbox) throws FilterParseException {
+        double[] coordinates = bbox.valueStream()
+                .filter(JsonNode::isNumber)
+                .mapToDouble(JsonNode::doubleValue)
                 .toArray();
 
         if (coordinates.length == 4) {
@@ -374,6 +388,35 @@ public class FilterJSONParser {
 
     private ScalarExpression readLiteral(Object object) {
         return Literal.ofScalar(object);
+    }
+
+    private ScalarExpression readLiteral(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return readLiteral((Object) null);
+        } else if (node.isString()) {
+            return readLiteral(node.stringValue());
+        } else if (node.isNumber()) {
+            return readLiteral(node.numberValue());
+        } else if (node.isBoolean()) {
+            return readLiteral(node.booleanValue());
+        } else {
+            return readLiteral(node.toString());
+        }
+    }
+
+    static String getString(JsonNode object, String name) {
+        JsonNode value = object.get(name);
+        if (value == null || value.isNull()) {
+            return null;
+        } else if (value.isValueNode()) {
+            return value.asString();
+        } else {
+            return value.toString();
+        }
+    }
+
+    static String toString(JsonNode node) {
+        return node != null && node.isString() ? node.stringValue() : String.valueOf(node);
     }
 
     private Expression readPropertyRef(String property) throws FilterParseException {

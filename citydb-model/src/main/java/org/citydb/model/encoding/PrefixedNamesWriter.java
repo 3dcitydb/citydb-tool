@@ -5,38 +5,30 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.PrefixedName;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.List;
 
-public class PrefixedNamesWriter implements ObjectWriter<List<PrefixedName>> {
+public class PrefixedNamesWriter extends ValueSerializer<List<PrefixedName>> {
     @Override
-    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
-        if (o instanceof List<?> list) {
-            List<JSONObject> names = new ArrayList<>();
-            for (Object item : list) {
-                if (item instanceof PrefixedName name) {
-                    JSONObject object = new JSONObject();
-                    object.put("name", name.getPrefix()
-                            .map(prefix -> prefix + ":" + name.getLocalName())
-                            .orElse(name.getLocalName()));
-                    if (!name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
-                        object.put("namespace", name.getNamespace());
-                    }
-
-                    names.add(object);
-                }
+    public void serialize(List<PrefixedName> names, JsonGenerator generator, SerializationContext context) {
+        generator.writeStartArray();
+        for (PrefixedName name : names) {
+            generator.writeStartObject();
+            generator.writeStringProperty("name", name.getPrefix()
+                    .map(prefix -> prefix + ":" + name.getLocalName())
+                    .orElse(name.getLocalName()));
+            if (!name.getNamespace().equals(Namespaces.EMPTY_NAMESPACE)) {
+                generator.writeStringProperty("namespace", name.getNamespace());
             }
 
-            jsonWriter.write(names);
-        } else {
-            jsonWriter.writeArrayNull();
+            generator.writeEndObject();
         }
+
+        generator.writeEndArray();
     }
 }

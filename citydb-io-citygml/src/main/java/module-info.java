@@ -36,6 +36,10 @@ module org.citydb.io.citygml {
     exports org.citydb.io.citygml.writer.preprocess;
     exports org.citydb.io.citygml.writer.util;
 
+    opens org.citydb.io.citygml.reader to tools.jackson.databind;
+    opens org.citydb.io.citygml.reader.options to tools.jackson.databind;
+    opens org.citydb.io.citygml.writer to tools.jackson.databind;
+
     provides org.citydb.io.IOAdapter with org.citydb.io.citygml.CityGMLAdapter,
             org.citydb.io.citygml.CityJSONAdapter;
 }

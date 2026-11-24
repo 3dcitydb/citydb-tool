@@ -152,7 +152,7 @@
         ]
       },
       "validity":{
-        "at":"2023-06-01T12:00:00.500-05:00",
+        "at":"2023-06-01T12:00:00.5-05:00",
         "lenient":true,
         "mode":"invalid",
         "reference":"realWorld"
@@ -252,7 +252,7 @@
                 "property":"creationDate"
               },
               {
-                "timestamp":"2020-01-01T08:30:00.250+03:00"
+                "timestamp":"2020-01-01T08:30:00.25+03:00"
               }
             ]
           },

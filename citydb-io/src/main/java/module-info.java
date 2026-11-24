@@ -17,5 +17,10 @@ module org.citydb.io {
     exports org.citydb.io.writer.options;
     exports org.citydb.io.writer.util;
 
+    opens org.citydb.io.reader to tools.jackson.databind;
+    opens org.citydb.io.reader.options to tools.jackson.databind;
+    opens org.citydb.io.writer to tools.jackson.databind;
+    opens org.citydb.io.writer.options to tools.jackson.databind;
+
     uses org.citydb.io.IOAdapter;
 }

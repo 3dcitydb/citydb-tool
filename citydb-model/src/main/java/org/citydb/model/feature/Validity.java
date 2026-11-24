@@ -5,19 +5,16 @@
 
 package org.citydb.model.feature;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.encoding.ValidityTimeReader;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
 public class Validity {
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private ValidityMode mode;
-    @JSONField(deserializeUsing = ValidityTimeReader.class)
+    @JsonDeserialize(using = ValidityTimeReader.class)
     private OffsetDateTime at;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private ValidityReference reference;
     private boolean lenient;
 

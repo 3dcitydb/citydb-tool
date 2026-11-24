@@ -5,15 +5,15 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.model.geometry.*;
+import tools.jackson.core.JsonGenerator;
 
 import java.util.List;
 
 public class GeoJSONWriter {
-    private final JSONWriter jsonWriter;
+    private final JsonGenerator jsonWriter;
 
-    GeoJSONWriter(JSONWriter jsonWriter) {
+    GeoJSONWriter(JsonGenerator jsonWriter) {
         this.jsonWriter = jsonWriter;
     }
 
@@ -34,22 +34,17 @@ public class GeoJSONWriter {
     void writeCollection(List<? extends Geometry<?>> members) {
         startGeometry(JSONToken.GEOMETRYCOLLECTION);
         jsonWriter.writeName(JSONToken.GEOMETRIES.value());
-        jsonWriter.writeColon();
-        jsonWriter.startArray();
+        jsonWriter.writeStartArray();
         for (int i = 0; i < members.size(); i++) {
-            if (i != 0) {
-                jsonWriter.writeComma();
-            }
             write(members.get(i));
         }
-        jsonWriter.endArray();
+        jsonWriter.writeEndArray();
         endGeometry();
     }
 
     private void writePoint(Point point) {
         startGeometry(JSONToken.POINT);
         jsonWriter.writeName(JSONToken.COORDINATES.value());
-        jsonWriter.writeColon();
         writeCoordinate(point.getCoordinate());
         endGeometry();
     }
@@ -76,9 +71,6 @@ public class GeoJSONWriter {
 
         if (!multiPoint.getPoints().isEmpty()) {
             for (int i = 0; i < multiPoint.getPoints().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
                 writeCoordinate(multiPoint.getPoints().get(i).getCoordinate());
             }
         }
@@ -92,14 +84,11 @@ public class GeoJSONWriter {
         startCoordinates();
 
         if (!multiLineString.getLineStrings().isEmpty()) {
-            jsonWriter.startArray();
+            jsonWriter.writeStartArray();
             for (int i = 0; i < multiLineString.getLineStrings().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
                 writeCoordinates(multiLineString.getLineStrings().get(i));
             }
-            jsonWriter.endArray();
+            jsonWriter.writeEndArray();
         }
 
         endCoordinates();
@@ -111,14 +100,11 @@ public class GeoJSONWriter {
         startCoordinates();
 
         if (!surfaceCollection.getPolygons().isEmpty()) {
-            jsonWriter.startArray();
+            jsonWriter.writeStartArray();
             for (int i = 0; i < surfaceCollection.getPolygons().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
                 writeCoordinates(surfaceCollection.getPolygons().get(i));
             }
-            jsonWriter.endArray();
+            jsonWriter.writeEndArray();
         }
 
         endCoordinates();
@@ -126,7 +112,7 @@ public class GeoJSONWriter {
     }
 
     private void writeCoordinate(Coordinate coordinate) {
-        jsonWriter.write(coordinate.getDimension() == 2
+        writeDoubles(jsonWriter, coordinate.getDimension() == 2
                 ? List.of(coordinate.getX(), coordinate.getY())
                 : List.of(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
     }
@@ -134,58 +120,54 @@ public class GeoJSONWriter {
 
     private void writeCoordinates(LineString lineString) {
         for (int i = 0; i < lineString.getPoints().size(); i++) {
-            if (i != 0) {
-                jsonWriter.writeComma();
-            }
             writeCoordinate(lineString.getPoints().get(i));
         }
     }
 
     private void writeCoordinates(LinearRing linearRing) {
         for (int i = 0; i < linearRing.getPoints().size(); i++) {
-            if (i != 0) {
-                jsonWriter.writeComma();
-            }
             writeCoordinate(linearRing.getPoints().get(i));
         }
     }
 
     private void writeCoordinates(Polygon polygon) {
-        jsonWriter.startArray();
+        jsonWriter.writeStartArray();
         writeCoordinates(polygon.getExteriorRing());
-        jsonWriter.endArray();
+        jsonWriter.writeEndArray();
 
         if (polygon.hasInteriorRings()) {
-            jsonWriter.writeComma();
             for (int i = 0; i < polygon.getInteriorRings().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
-                jsonWriter.startArray();
+                jsonWriter.writeStartArray();
                 writeCoordinates(polygon.getInteriorRings().get(i));
-                jsonWriter.endArray();
+                jsonWriter.writeEndArray();
             }
         }
     }
 
     private void startGeometry(JSONToken type) {
-        jsonWriter.startObject();
+        jsonWriter.writeStartObject();
         jsonWriter.writeName(JSONToken.TYPE.value());
-        jsonWriter.writeColon();
         jsonWriter.writeString(type.value());
     }
 
     private void endGeometry() {
-        jsonWriter.endObject();
+        jsonWriter.writeEndObject();
     }
 
     private void startCoordinates() {
         jsonWriter.writeName(JSONToken.COORDINATES.value());
-        jsonWriter.writeColon();
-        jsonWriter.startArray();
+        jsonWriter.writeStartArray();
     }
 
     private void endCoordinates() {
-        jsonWriter.endArray();
+        jsonWriter.writeEndArray();
+    }
+
+    static void writeDoubles(JsonGenerator jsonWriter, List<Double> values) {
+        jsonWriter.writeStartArray();
+        for (double value : values) {
+            jsonWriter.writeNumber(value);
+        }
+        jsonWriter.writeEndArray();
     }
 }

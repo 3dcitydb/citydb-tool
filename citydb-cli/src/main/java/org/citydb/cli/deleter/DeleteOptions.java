@@ -5,8 +5,6 @@
 
 package org.citydb.cli.deleter;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.cli.common.IndexMode;
 import org.citydb.config.SerializableConfig;
 import org.citydb.query.Query;
@@ -15,7 +13,6 @@ import java.util.Optional;
 
 @SerializableConfig(name = "deleteOptions")
 public class DeleteOptions extends org.citydb.operation.deleter.DeleteOptions {
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private IndexMode indexMode = IndexMode.KEEP;
     private Query query;
 

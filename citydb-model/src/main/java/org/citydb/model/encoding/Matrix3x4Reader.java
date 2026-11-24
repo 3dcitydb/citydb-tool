@@ -5,30 +5,37 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.model.common.Matrix3x4;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Matrix3x4Reader implements ObjectReader<Matrix3x4> {
+public class Matrix3x4Reader extends ValueDeserializer<Matrix3x4> {
     @Override
-    public Matrix3x4 readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        if (jsonReader.isArray()) {
-            List<Double> values = new ArrayList<>();
-            for (Object value : jsonReader.readArray()) {
-                if (value instanceof Number number) {
-                    values.add(number.doubleValue());
-                }
-            }
-
-            if (values.size() > 11) {
-                return Matrix3x4.ofRowMajor(values);
-            }
+    public Matrix3x4 deserialize(JsonParser parser, DeserializationContext context) {
+        JsonNode array = context.readTree(parser);
+        if (!array.isArray()) {
+            return context.reportInputMismatch(this, "Expected an array of 12 numbers for a 3x4 matrix.");
         }
 
-        return null;
+        List<Double> values = new ArrayList<>(array.size());
+        for (JsonNode value : array) {
+            if (!value.isNumber()) {
+                return context.reportInputMismatch(this, "Matrix values must be numbers.");
+            }
+
+            values.add(value.doubleValue());
+        }
+
+        if (values.size() < 12) {
+            return context.reportInputMismatch(this,
+                    "A 3x4 matrix requires at least 12 numbers, but found %d.", values.size());
+        }
+
+        return Matrix3x4.ofRowMajor(values);
     }
 }

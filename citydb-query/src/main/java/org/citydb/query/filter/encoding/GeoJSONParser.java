@@ -5,10 +5,12 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONException;
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.geometry.*;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +20,12 @@ public class GeoJSONParser {
     GeoJSONParser() {
     }
 
-    Geometry<?> parse(JSONObject geometry) throws FilterParseException {
+    Geometry<?> parse(ObjectNode geometry) throws FilterParseException {
         try {
-            String type = geometry.getString(JSONToken.TYPE.value());
-            JSONArray coordinates = geometry.getJSONArray("coordinates");
+            String type = FilterJSONParser.getString(geometry, JSONToken.TYPE.value());
+            ArrayNode coordinates = getArray(geometry, JSONToken.COORDINATES.value());
             if (coordinates == null) {
-                coordinates = new JSONArray();
+                coordinates = JsonNodeFactory.instance.arrayNode();
             }
 
             return switch (JSONToken.of(type)) {
@@ -35,22 +37,22 @@ public class GeoJSONParser {
                 case MULTIPOLYGON -> readMultiSurface(coordinates);
                 default -> throw new FilterParseException("Unsupported geometry type '" + type + "'.");
             };
-        } catch (JSONException e) {
+        } catch (JacksonException e) {
             throw new FilterParseException("Failed to parse GeoJSON geometry.", e);
         }
     }
 
-    List<Geometry<?>> parseCollection(JSONObject collection) throws FilterParseException {
+    List<Geometry<?>> parseCollection(ObjectNode collection) throws FilterParseException {
         try {
-            JSONArray geometries = collection.getJSONArray(JSONToken.GEOMETRIES.value());
+            ArrayNode geometries = getArray(collection, JSONToken.GEOMETRIES.value());
             if (geometries == null || geometries.isEmpty()) {
                 throw new FilterParseException("Found empty geometries array for geometry collection.");
             }
 
             List<Geometry<?>> members = new ArrayList<>(geometries.size());
-            for (Object element : geometries) {
-                if (element instanceof JSONObject geometry) {
-                    if (JSONToken.of(geometry.getString(JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION) {
+            for (JsonNode element : geometries) {
+                if (element instanceof ObjectNode geometry) {
+                    if (JSONToken.of(FilterJSONParser.getString(geometry, JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION) {
                         throw new FilterParseException("Nested geometry collections are not supported.");
                     }
 
@@ -61,23 +63,23 @@ public class GeoJSONParser {
             }
 
             return members;
-        } catch (JSONException e) {
+        } catch (JacksonException e) {
             throw new FilterParseException("Failed to parse GeoJSON geometry collection.", e);
         }
     }
 
-    private Point readPoint(JSONArray array) throws FilterParseException {
+    private Point readPoint(ArrayNode array) throws FilterParseException {
         return Point.of(readCoordinate(array));
     }
 
-    private LineString readLineString(JSONArray array) throws FilterParseException {
+    private LineString readLineString(ArrayNode array) throws FilterParseException {
         return LineString.of(readCoordinates(array));
     }
 
-    private Polygon readPolygon(JSONArray array) throws FilterParseException {
+    private Polygon readPolygon(ArrayNode array) throws FilterParseException {
         List<LinearRing> rings = new ArrayList<>(array.size());
-        for (Object element : array) {
-            if (element instanceof JSONArray ring) {
+        for (JsonNode element : array) {
+            if (element instanceof ArrayNode ring) {
                 rings.add(LinearRing.of(readCoordinates(ring)));
             } else {
                 throw new FilterParseException("Found invalid linear ring '" + element + "'.");
@@ -93,10 +95,10 @@ public class GeoJSONParser {
         }
     }
 
-    private MultiPoint readMultiPoint(JSONArray array) throws FilterParseException {
+    private MultiPoint readMultiPoint(ArrayNode array) throws FilterParseException {
         List<Point> points = new ArrayList<>(array.size());
-        for (Object element : array) {
-            if (element instanceof JSONArray point) {
+        for (JsonNode element : array) {
+            if (element instanceof ArrayNode point) {
                 points.add(readPoint(point));
             } else {
                 throw new FilterParseException("Found invalid point '" + element + "'.");
@@ -110,10 +112,10 @@ public class GeoJSONParser {
         }
     }
 
-    private MultiLineString readMultiLineString(JSONArray array) throws FilterParseException {
+    private MultiLineString readMultiLineString(ArrayNode array) throws FilterParseException {
         List<LineString> lineStrings = new ArrayList<>(array.size());
-        for (Object element : array) {
-            if (element instanceof JSONArray lineString) {
+        for (JsonNode element : array) {
+            if (element instanceof ArrayNode lineString) {
                 lineStrings.add(readLineString(lineString));
             } else {
                 throw new FilterParseException("Found invalid linestring '" + element + "'.");
@@ -127,10 +129,10 @@ public class GeoJSONParser {
         }
     }
 
-    private MultiSurface readMultiSurface(JSONArray array) throws FilterParseException {
+    private MultiSurface readMultiSurface(ArrayNode array) throws FilterParseException {
         List<Polygon> polygons = new ArrayList<>(array.size());
-        for (Object element : array) {
-            if (element instanceof JSONArray polygon) {
+        for (JsonNode element : array) {
+            if (element instanceof ArrayNode polygon) {
                 polygons.add(readPolygon(polygon));
             } else {
                 throw new FilterParseException("Found invalid polygon '" + element + "'.");
@@ -144,10 +146,10 @@ public class GeoJSONParser {
         }
     }
 
-    private List<Coordinate> readCoordinates(JSONArray array) throws FilterParseException {
+    private List<Coordinate> readCoordinates(ArrayNode array) throws FilterParseException {
         List<Coordinate> coordinates = new ArrayList<>(array.size());
-        for (Object element : array) {
-            if (element instanceof JSONArray coordinate) {
+        for (JsonNode element : array) {
+            if (element instanceof ArrayNode coordinate) {
                 coordinates.add(readCoordinate(coordinate));
             } else {
                 throw new FilterParseException("Found invalid coordinates array '" + element + "'.");
@@ -157,7 +159,7 @@ public class GeoJSONParser {
         return coordinates;
     }
 
-    private Coordinate readCoordinate(JSONArray array) throws FilterParseException {
+    private Coordinate readCoordinate(ArrayNode array) throws FilterParseException {
         if (array.size() > 1) {
             double x = readNumber(array.get(0));
             double y = readNumber(array.get(1));
@@ -169,11 +171,24 @@ public class GeoJSONParser {
         }
     }
 
-    private double readNumber(Object value) throws FilterParseException {
-        if (value instanceof Number number) {
-            return number.doubleValue();
+    private double readNumber(JsonNode value) throws FilterParseException {
+        if (value.isNumber()) {
+            return value.doubleValue();
         } else {
-            throw new FilterParseException("Failed to parse '" + value + "' as coordinate value.");
+            throw new FilterParseException("Failed to parse '" + FilterJSONParser.toString(value) +
+                    "' as coordinate value.");
+        }
+    }
+
+    private ArrayNode getArray(JsonNode object, String name) throws FilterParseException {
+        JsonNode value = object.get(name);
+        if (value == null || value.isNull()) {
+            return null;
+        } else if (value instanceof ArrayNode array) {
+            return array;
+        } else {
+            throw new FilterParseException("Failed to parse '" + FilterJSONParser.toString(value) +
+                    "' as JSON array.");
         }
     }
 }

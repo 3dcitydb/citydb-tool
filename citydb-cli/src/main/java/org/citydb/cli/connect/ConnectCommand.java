@@ -5,14 +5,13 @@
 
 package org.citydb.cli.connect;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
 import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.Inject;
 import org.citydb.cli.util.ConnectionInfoBuilder;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.database.DatabaseManager;
 import org.citydb.database.adapter.DatabaseAdapterManager;
 import org.citydb.database.connection.ConnectionDetails;
@@ -55,8 +54,8 @@ public class ConnectCommand implements Command {
         if (outputOptions.isOutputSpecified()) {
             logger.info("Writing connection info as JSON to {}.", outputOptions);
             try (OutputStream stream = outputOptions.openStream()) {
-                JSON.writeTo(stream, ConnectionInfoBuilder.build(databaseManager.getAdapter()),
-                        JSONWriter.Feature.PrettyFormatWith2Space);
+                JsonMapping.prettyMapper().writeValue(stream,
+                        ConnectionInfoBuilder.build(databaseManager.getAdapter()));
             } catch (Exception e) {
                 throw new ExecutionException("Failed to write connection info as JSON.", e);
             }

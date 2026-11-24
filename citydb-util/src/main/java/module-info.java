@@ -13,4 +13,10 @@ module org.citydb.util {
     exports org.citydb.util.report.options;
     exports org.citydb.util.tiling;
     exports org.citydb.util.tiling.options;
+
+    opens org.citydb.util.changelog.options to tools.jackson.databind;
+    opens org.citydb.util.changelog.query to tools.jackson.databind;
+    opens org.citydb.util.report to tools.jackson.databind;
+    opens org.citydb.util.tiling to tools.jackson.databind;
+    opens org.citydb.util.tiling.options to tools.jackson.databind;
 }

@@ -5,8 +5,7 @@
 
 package org.citydb.query.lod;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.Set;
 
 public class LodFilter {
     private Set<String> lods;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private LodFilterMode mode;
 
     public Set<String> getLods() {
@@ -51,7 +49,7 @@ public class LodFilter {
         return this;
     }
 
-    @JSONField(serialize = false)
+    @JsonIgnore
     public List<Set<String>> getGroups() {
         Set<String> lods = getLods();
         return mode == LodFilterMode.AND && lods.size() > 1

@@ -5,17 +5,21 @@
 
 package org.citydb.core.version.encoding;
 
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.core.version.Version;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.lang.reflect.Type;
-
-public class VersionReader implements ObjectReader<Version> {
+public class VersionReader extends ValueDeserializer<Version> {
     @Override
-    public Version readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        return jsonReader.isString()
-                ? Version.parse(jsonReader.readString()).orElse(null)
-                : null;
+    public Version deserialize(JsonParser parser, DeserializationContext context) {
+        if (parser.currentToken() != JsonToken.VALUE_STRING) {
+            return context.reportInputMismatch(this, "Expected a version string.");
+        }
+
+        String value = parser.getString();
+        return Version.parse(value).orElseGet(() ->
+                context.reportInputMismatch(this, "Invalid version string '%s'.", value));
     }
 }

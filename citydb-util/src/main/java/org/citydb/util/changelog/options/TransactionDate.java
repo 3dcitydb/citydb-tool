@@ -5,16 +5,16 @@
 
 package org.citydb.util.changelog.options;
 
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.encoding.DateTimeReader;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
 
 public class TransactionDate {
-    @JSONField(deserializeUsing = DateTimeReader.class)
+    @JsonDeserialize(using = DateTimeReader.class)
     private OffsetDateTime after;
-    @JSONField(deserializeUsing = DateTimeReader.class)
+    @JsonDeserialize(using = DateTimeReader.class)
     private OffsetDateTime until;
 
     public static TransactionDate after(OffsetDateTime after) {

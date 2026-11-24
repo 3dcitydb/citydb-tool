@@ -1,5 +1,4 @@
 dependencies {
-    api 'com.alibaba.fastjson2:fastjson2:2.0.66'
     api 'tools.jackson.core:jackson-databind:3.3.0'
     api 'org.slf4j:slf4j-api:2.0.20'
     api 'org.apache.tika:tika-core:4.2.0'

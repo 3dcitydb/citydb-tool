@@ -27,4 +27,9 @@ module org.citydb.operation {
     exports org.citydb.operation.importer.property;
     exports org.citydb.operation.importer.reference;
     exports org.citydb.operation.importer.util;
+
+    opens org.citydb.operation.deleter to tools.jackson.databind;
+    opens org.citydb.operation.exporter to tools.jackson.databind;
+    opens org.citydb.operation.exporter.options to tools.jackson.databind;
+    opens org.citydb.operation.importer to tools.jackson.databind;
 }

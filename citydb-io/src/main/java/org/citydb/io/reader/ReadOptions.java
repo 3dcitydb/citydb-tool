@@ -5,7 +5,7 @@
 
 package org.citydb.io.reader;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.ConfigObject;
 import org.citydb.io.reader.filter.Filter;
@@ -24,9 +24,9 @@ public class ReadOptions {
     private boolean computeEnvelopes;
     private ConfigObject<InputFormatOptions> formatOptions;
 
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private ImplicitGeometryScope implicitGeometryScope;
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private Filter filter;
 
     public boolean isFailFast() {

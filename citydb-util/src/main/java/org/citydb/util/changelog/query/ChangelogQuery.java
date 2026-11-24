@@ -5,8 +5,7 @@
 
 package org.citydb.util.changelog.query;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.SrsReference;
 import org.citydb.model.change.TransactionType;
@@ -22,28 +21,29 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.util.changelog.options.BboxMode;
 import org.citydb.util.changelog.options.SortOrder;
 import org.citydb.util.changelog.options.TransactionDate;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.time.OffsetDateTime;
 import java.util.*;
 
 @SerializableConfig(name = "changelogQuery")
 public class ChangelogQuery {
-    @JSONField(serializeUsing = PrefixedNamesWriter.class, deserializeUsing = PrefixedNamesReader.class)
+    @JsonSerialize(using = PrefixedNamesWriter.class)
+    @JsonDeserialize(using = PrefixedNamesReader.class)
     private List<PrefixedName> featureTypes;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private Set<TransactionType> transactionTypes;
     private TransactionDate transactionDate;
     private Set<String> ids;
-    @JSONField(serializeUsing = EnvelopeWriter.class, deserializeUsing = EnvelopeReader.class)
+    @JsonSerialize(using = EnvelopeWriter.class)
+    @JsonDeserialize(using = EnvelopeReader.class)
     private Envelope bbox;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private BboxMode bboxMode;
     private Set<String> databaseUsers;
     private Set<String> reasonsForUpdate;
-    @JSONField(name = "sql")
+    @JsonProperty("sql")
     private String sqlFilter;
     private SrsReference targetSrs;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private SortOrder sortOrder;
 
     public static ChangelogQuery newInstance() {

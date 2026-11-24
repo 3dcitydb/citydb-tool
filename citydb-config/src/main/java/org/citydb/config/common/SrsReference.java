@@ -5,7 +5,7 @@
 
 package org.citydb.config.common;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Optional;
 
@@ -21,7 +21,7 @@ public class SrsReference {
         return Optional.ofNullable(srid);
     }
 
-    @JSONField(name = "srid")
+    @JsonProperty("srid")
     public SrsReference setSRID(Integer srid) {
         this.srid = srid;
         return this;

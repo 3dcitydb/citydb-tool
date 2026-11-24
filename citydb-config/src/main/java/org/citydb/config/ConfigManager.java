@@ -5,14 +5,10 @@
 
 package org.citydb.config;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONException;
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.core.json.JsonMapping;
+import tools.jackson.core.JacksonException;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,10 +26,18 @@ public class ConfigManager {
 
     public <T> T read(Path inputFile, Class<T> type) throws ConfigException, IOException {
         Objects.requireNonNull(inputFile, "The input file must not be null.");
-        try (InputStream stream = new BufferedInputStream(Files.newInputStream(inputFile))) {
-            return JSON.parseObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8), type,
-                    JSONReader.Feature.UseDoubleForDecimals);
-        } catch (JSONException e) {
+        String content = new String(Files.readAllBytes(inputFile), StandardCharsets.UTF_8);
+        if (content.startsWith("﻿")) {
+            content = content.substring(1);
+        }
+
+        if (content.isBlank()) {
+            return null;
+        }
+
+        try {
+            return JsonMapping.mapper().readValue(content, type);
+        } catch (JacksonException e) {
             throw new ConfigException("Failed to parse config file " + inputFile + ".", e);
         }
     }
@@ -49,7 +53,6 @@ public class ConfigManager {
                 .toAbsolutePath()
                 .normalize();
 
-        Files.writeString(outputFile, JSON.toJSONString(config, JSONWriter.Feature.FieldBased,
-                JSONWriter.Feature.PrettyFormatWith2Space));
+        Files.writeString(outputFile, JsonMapping.prettyMapper().writeValueAsString(config));
     }
 }

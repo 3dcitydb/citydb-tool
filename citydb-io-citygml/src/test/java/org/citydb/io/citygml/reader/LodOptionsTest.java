@@ -5,8 +5,8 @@
 
 package org.citydb.io.citygml.reader;
 
-import com.alibaba.fastjson2.JSON;
 import org.citydb.core.file.input.RegularInputFile;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.io.IOAdapter;
 import org.citydb.io.citygml.CityGMLAdapter;
 import org.citydb.io.citygml.CityJSONAdapter;
@@ -255,7 +255,7 @@ public class LodOptionsTest {
 
     @Test
     void lodOptionsFromJson() {
-        CityGMLFormatOptions options = JSON.parseObject("""
+        CityGMLFormatOptions options = JsonMapping.mapper().readValue("""
                 {"lodOptions": {"lods": [2, 3], "mode": "maximum", "emptyFeatures": "keepTopLevel"}}""",
                 CityGMLFormatOptions.class);
         LodOptions lodOptions = options.getLodOptions().orElseThrow();
@@ -267,7 +267,7 @@ public class LodOptionsTest {
 
     @Test
     void lodMappingFromJson() {
-        CityJSONFormatOptions options = JSON.parseObject("""
+        CityJSONFormatOptions options = JsonMapping.mapper().readValue("""
                 {"lodMapping": {"strategy": "minimum", "mappings": {"2": "2.2"}}, "lodOptions": {"lods": [2]}}""",
                 CityJSONFormatOptions.class);
         LodMappingOptions lodMapping = options.getLodMapping().orElseThrow();
@@ -276,7 +276,8 @@ public class LodOptionsTest {
         assertEquals(Set.of(2), options.getLodOptions().orElseThrow().getLods());
         assertEquals(LodMappingStrategy.MAXIMUM, new LodMappingOptions().getStrategy());
 
-        LodMappingOptions roundTrip = JSON.parseObject(JSON.toJSONString(options), CityJSONFormatOptions.class)
+        LodMappingOptions roundTrip = JsonMapping.mapper()
+                .readValue(JsonMapping.mapper().writeValueAsString(options), CityJSONFormatOptions.class)
                 .getLodMapping().orElseThrow();
         assertEquals(LodMappingStrategy.MINIMUM, roundTrip.getStrategy());
         assertEquals(Map.of(2, "2.2"), roundTrip.getMappings());

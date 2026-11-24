@@ -5,42 +5,36 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.config.common.SrsReference;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Point;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.lang.reflect.Type;
-import java.util.List;
-
-public class PointReader implements ObjectReader<Point> {
+public class PointReader extends ValueDeserializer<Point> {
     @Override
-    public Point readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        if (jsonReader.isObject()) {
-            JSONObject extent = jsonReader.readJSONObject();
-            Object bounds = extent.get("coordinates");
-            if (bounds instanceof JSONArray value) {
-                List<Double> coordinates = value.stream()
-                        .filter(Number.class::isInstance)
-                        .map(Number.class::cast)
-                        .map(Number::doubleValue)
-                        .toList();
-                if (coordinates.size() > 1) {
-                    Point point = Point.of(Coordinate.of(coordinates.get(0), coordinates.get(1)));
-                    SrsReference srs = extent.getObject("srs", SrsReference.class);
-                    if (srs != null) {
-                        point.setSRID(srs.getSRID().orElse(null))
-                                .setSrsIdentifier(srs.getIdentifier().orElse(null));
-                    }
-
-                    return point;
-                }
-            }
+    public Point deserialize(JsonParser parser, DeserializationContext context) {
+        JsonNode object = context.readTree(parser);
+        if (!object.isObject()) {
+            return context.reportInputMismatch(this, "Expected a point object.");
         }
 
-        return null;
+        JsonNode coordinates = object.get("coordinates");
+        if (coordinates == null || !coordinates.isArray() || coordinates.size() < 2
+                || !coordinates.get(0).isNumber() || !coordinates.get(1).isNumber()) {
+            return context.reportInputMismatch(this, "A point requires at least 2 numeric coordinates.");
+        }
+
+        Point point = Point.of(Coordinate.of(coordinates.get(0).doubleValue(), coordinates.get(1).doubleValue()));
+        JsonNode srsNode = object.get("srs");
+        if (srsNode != null && !srsNode.isNull()) {
+            SrsReference srs = context.readTreeAsValue(srsNode, SrsReference.class);
+            point.setSRID(srs.getSRID().orElse(null))
+                    .setSrsIdentifier(srs.getIdentifier().orElse(null));
+        }
+
+        return point;
     }
 }

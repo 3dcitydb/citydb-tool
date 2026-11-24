@@ -5,9 +5,10 @@
 
 package org.citydb.plugin;
 
-import com.alibaba.fastjson2.JSON;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.plugin.metadata.PluginMetadata;
 
+import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -129,7 +130,14 @@ public class PluginManager {
     private PluginMetadata loadOrCreateMetadata(Plugin plugin) throws PluginException {
         Class<?> type = plugin.getClass();
         try {
-            PluginMetadata metadata = JSON.parseObject(type.getResource("plugin.json"), PluginMetadata.class);
+            URL resource = type.getResource("plugin.json");
+            PluginMetadata metadata = null;
+            if (resource != null) {
+                try (InputStream stream = resource.openStream()) {
+                    metadata = JsonMapping.mapper().readValue(stream, PluginMetadata.class);
+                }
+            }
+
             if (metadata == null) {
                 metadata = new PluginMetadata();
             }

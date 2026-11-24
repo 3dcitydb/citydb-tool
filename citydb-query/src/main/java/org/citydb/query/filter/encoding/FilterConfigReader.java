@@ -5,26 +5,28 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONException;
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.query.filter.Filter;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.lang.reflect.Type;
-
-public class FilterConfigReader implements ObjectReader<Filter> {
+public class FilterConfigReader extends ValueDeserializer<Filter> {
     @Override
-    public Filter readObject(JSONReader jsonReader, Type type, Object o, long l) {
+    public Filter deserialize(JsonParser parser, DeserializationContext context) {
+        JsonNode node = context.readTree(parser);
         try {
-            if (jsonReader.isObject()) {
-                return Filter.ofJSON(jsonReader.readAny());
-            } else if (jsonReader.isString()) {
-                return Filter.ofText(jsonReader.readString());
+            if (node.isObject()) {
+                return Filter.ofJSON(node);
+            } else if (node.isString()) {
+                return Filter.ofText(node.stringValue());
             } else {
-                return null;
+                return context.reportInputMismatch(this,
+                        "Expected a CQL2 text string or CQL2 JSON object as query filter but found '%s'.", node);
             }
         } catch (FilterParseException e) {
-            throw new JSONException("Failed to parse query filter expression.", e);
+            return context.reportInputMismatch(this,
+                    "Failed to parse query filter expression '%s': %s", node, e.getMessage());
         }
     }
 }

@@ -5,19 +5,14 @@
 
 package org.citydb.core.version.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.core.version.Version;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.lang.reflect.Type;
-
-public class VersionWriter implements ObjectWriter<Version> {
+public class VersionWriter extends ValueSerializer<Version> {
     @Override
-    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
-        if (o instanceof Version version) {
-            jsonWriter.writeString(version.toVersionString());
-        } else {
-            jsonWriter.writeNull();
-        }
+    public void serialize(Version version, JsonGenerator generator, SerializationContext context) {
+        generator.writeString(version.toVersionString());
     }
 }

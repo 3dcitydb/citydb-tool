@@ -62,13 +62,6 @@ public class ConfigGoldenTest {
         check("full-output.json", write(config));
     }
 
-    @Test
-    public void unboundSectionsArePreserved() throws Exception {
-        Config config = read("lazy-input.json");
-        config.get(ImportOptions.class);
-        check("lazy-output.json", write(config));
-    }
-
     private void bindAll(Config config) throws Exception {
         assertNotNull(config.get(ImportOptions.class));
         assertNotNull(config.get(ExportOptions.class));

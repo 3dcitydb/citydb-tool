@@ -12,4 +12,6 @@ module org.citydb.model {
     exports org.citydb.model.util;
     exports org.citydb.model.util.matrix;
     exports org.citydb.model.walker;
+
+    opens org.citydb.model.feature to tools.jackson.databind;
 }

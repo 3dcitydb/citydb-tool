@@ -5,24 +5,27 @@
 
 package org.citydb.config.encoding;
 
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.core.time.TimeHelper;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.JsonToken;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.lang.reflect.Type;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 
-public class ValidityTimeReader implements ObjectReader<OffsetDateTime> {
+public class ValidityTimeReader extends ValueDeserializer<OffsetDateTime> {
     @Override
-    public OffsetDateTime readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        if (jsonReader.isString()) {
-            try {
-                return OffsetDateTime.parse(jsonReader.readString(), TimeHelper.VALIDITY_TIME_FORMATTER);
-            } catch (Exception e) {
-                return null;
-            }
-        } else {
-            return null;
+    public OffsetDateTime deserialize(JsonParser parser, DeserializationContext context) {
+        if (parser.currentToken() != JsonToken.VALUE_STRING) {
+            return context.reportInputMismatch(this, "Expected a date or date-time string.");
+        }
+
+        String value = parser.getString();
+        try {
+            return OffsetDateTime.parse(value, TimeHelper.VALIDITY_TIME_FORMATTER);
+        } catch (DateTimeParseException e) {
+            return context.reportInputMismatch(this, "Invalid date or date-time '%s'.", value);
         }
     }
 }
