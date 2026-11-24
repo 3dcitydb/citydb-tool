@@ -70,7 +70,7 @@ the command you want to learn more about:
 
 ## System requirements
 
-* Java 17 or higher
+* Java 21 or higher
 
 The citydb-tool can be run on any platform providing appropriate Java support.
 
@@ -111,7 +111,7 @@ local machine and run the following command from the root of the repository.
     > gradlew installDist
 
 The script automatically downloads all required dependencies for building and running the citydb-tool. So make sure you
-are connected to the internet. The build process runs on all major operating systems and only requires a Java 11 JDK or
+are connected to the internet. The build process runs on all major operating systems and only requires a Java 21 JDK or
 higher to run.
 
 If the build was successful, you will find the citydb-tool package under `citydb-cli/build/install`.

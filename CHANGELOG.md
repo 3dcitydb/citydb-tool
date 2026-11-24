@@ -19,6 +19,7 @@
 - Added the `--texture-buckets` option to the `export` commands for distributing texture files over subfolders.
 
 ### Changed
+- **Breaking**: Java 21 is now the minimum required version for using citydb-tool.
 - **Breaking**: The LoD filter of the `export` commands always searches the entire feature including all its contained
   features for matching LoDs. The `--lod-search-depth` option and the `searchDepth` setting of the JSON configuration
   were removed.
