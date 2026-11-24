@@ -1,6 +1,7 @@
 @SuppressWarnings("requires-transitive-automatic")
 module org.citydb.core {
     requires org.apache.commons.compress;
+    requires org.apache.commons.xml.secure;
     requires org.apache.commons.io;
     requires com.h2database.mvstore;
     requires transitive com.alibaba.fastjson2;
