@@ -26,7 +26,6 @@ import org.citydb.sqlbuilder.operation.Operators;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.query.Window;
 import org.citydb.sqlbuilder.schema.Table;
-import org.citydb.sqlbuilder.schema.WildcardColumn;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -265,11 +264,11 @@ public class SqlContextBuilder {
 
     private Table buildLateralQuery(Table fromTable, String fromColumn, Table toTable, String toColumn) {
         Select select = Select.newInstance()
-                .select(WildcardColumn.newInstance())
+                .select(toTable.wildcard())
                 .select(WindowFunction.of(Function.of("row_number"), Window.empty()
                                 .partitionBy(toTable.column(toColumn))
                                 .orderBy(toTable.column("id")))
-                        .as("index"))
+                        .as(BuilderHelper.ROW_NUMBER_ALIAS))
                 .from(toTable)
                 .where(Operators.eq(
                         toTable.column(toColumn),

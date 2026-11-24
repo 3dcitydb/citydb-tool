@@ -11,6 +11,7 @@ import org.citydb.sqlbuilder.function.Function;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.literal.ScalarExpression;
 import org.citydb.sqlbuilder.operation.BooleanExpression;
+import org.citydb.sqlbuilder.operation.Operators;
 
 public class OperationHelper extends org.citydb.database.util.OperationHelper {
 
@@ -36,6 +37,11 @@ public class OperationHelper extends org.citydb.database.util.OperationHelper {
     @Override
     public Expression toDate(ScalarExpression expression) {
         return Function.of("date", expression);
+    }
+
+    @Override
+    public Expression modulo(ScalarExpression leftOperand, ScalarExpression rightOperand) {
+        return Operators.modulo(leftOperand, rightOperand);
     }
 
     @Override

@@ -117,8 +117,8 @@ public class SqlQueryBuilder {
             select.select(WindowFunction.of(Function.of("row_number"), Window.empty()
                             .partitionBy(context.getTable().column("id"))
                             .orderBy(select.getOrderBy().toArray(OrderBy[]::new)))
-                    .as("index"));
-            outerQuery.where(Operators.eq(table.column("index"), IntegerLiteral.of(1)));
+                    .as(BuilderHelper.ROW_NUMBER_ALIAS));
+            outerQuery.where(Operators.eq(table.column(BuilderHelper.ROW_NUMBER_ALIAS), IntegerLiteral.of(1)));
 
             for (int i = 0; i < select.getOrderBy().size(); i++) {
                 OrderBy orderBy = select.getOrderBy().get(i);

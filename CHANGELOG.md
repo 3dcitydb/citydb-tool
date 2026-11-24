@@ -33,6 +33,7 @@
   `query.validity`.
 - **Breaking**: Renamed the `databaseName` property of database connections to `databaseType`, both in the JSON
   configuration and in the `ConnectionDetails` API.
+- **Breaking**: Added the abstract `modulo` method to `OperationHelper`, which database adapters must implement.
 - Improved the performance of the LoD filter for LoDs that only few features in the database have.
 - When importing, a contained feature without creation date inherits the creation date of its parent, and a contained
   feature below a terminated feature is terminated with the termination date of its parent. Its own termination date
@@ -70,6 +71,7 @@
   but uses a driver instance provided by the database adapter.
 - Fixed log messages being lost when the JVM shuts down, for example on `Ctrl+C`, because log4j was stopped before
   running commands had finished logging.
+- Fixed non-portable SQL being generated for sorting, CQL2 index access, and the CQL2 modulo operator.
 
 ## [1.4.1] - 2026-10-26
 

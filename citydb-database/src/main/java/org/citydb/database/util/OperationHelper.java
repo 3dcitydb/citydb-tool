@@ -33,6 +33,8 @@ public abstract class OperationHelper {
 
     public abstract Expression toDate(ScalarExpression expression);
 
+    public abstract Expression modulo(ScalarExpression leftOperand, ScalarExpression rightOperand);
+
     public abstract Expression power(ScalarExpression leftOperand, ScalarExpression rightOperand);
 
     public abstract Expression unaccent(ScalarExpression expression);
