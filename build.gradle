@@ -35,10 +35,13 @@ subprojects {
         }
         compileJava {
             options.javaModuleVersion = provider { project.version }
-            options.encoding = 'UTF-8'
         }
         withJavadocJar()
         withSourcesJar()
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
     }
 
     repositories {
