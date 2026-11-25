@@ -17,6 +17,7 @@ import org.citydb.query.builder.sql.SqlBuildOptions;
 import org.citydb.query.builder.sql.SqlQueryBuilder;
 import org.citydb.query.lod.LodFilter;
 import org.citydb.query.lod.LodPlan;
+import org.citydb.sqlbuilder.common.SqlObject;
 import org.citydb.sqlbuilder.insert.Insert;
 import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.schema.Table;
@@ -35,17 +36,19 @@ public class QueryExecutor {
     private final boolean deduplicateIds;
     private final Path tempDirectory;
     private final Connection connection;
+    private final int queryTimeout;
     private final DatabaseAdapter adapter;
     private final SqlHelper helper;
 
     private QueryExecutor(Select select, Select count, Select extent, boolean deduplicateIds, Path tempDirectory,
-                          Connection connection, DatabaseAdapter adapter) {
+                          Connection connection, int queryTimeout, DatabaseAdapter adapter) {
         this.select = select;
         this.count = count;
         this.extent = extent;
         this.deduplicateIds = deduplicateIds;
         this.tempDirectory = tempDirectory;
         this.connection = connection;
+        this.queryTimeout = queryTimeout;
         this.adapter = adapter;
         helper = adapter.getSchemaAdapter().getSqlHelper();
     }
@@ -79,7 +82,7 @@ public class QueryExecutor {
     }
 
     public Envelope computeExtent(Connection connection) throws GeometryException, SQLException {
-        try (PreparedStatement stmt = helper.prepareStatement(extent, connection);
+        try (PreparedStatement stmt = prepareStatement(extent, connection);
              ResultSet rs = stmt.executeQuery()) {
             if (rs.next()) {
                 Envelope envelope = adapter.getGeometryAdapter().getEnvelope(rs.getObject("extent"));
@@ -118,7 +121,7 @@ public class QueryExecutor {
                         .select(table.column("id"))
                         .from(table));
 
-        try (PreparedStatement stmt = helper.prepareStatement(insert, tempTable.getConnection())) {
+        try (PreparedStatement stmt = prepareStatement(insert, tempTable.getConnection())) {
             return stmt.executeUpdate();
         }
     }
@@ -136,7 +139,7 @@ public class QueryExecutor {
     private QueryResult executeQuery(Connection connection, boolean ownsConnection) throws SQLException {
         PreparedStatement stmt = null;
         try {
-            stmt = helper.prepareStatement(select, connection);
+            stmt = prepareStatement(select, connection);
             return new QueryResult(connection, stmt, deduplicateIds, tempDirectory, ownsConnection);
         } catch (SQLException e) {
             try (Connection connectionToClose = ownsConnection ? connection : null;
@@ -146,11 +149,26 @@ public class QueryExecutor {
         }
     }
 
+    private PreparedStatement prepareStatement(SqlObject statement, Connection connection) throws SQLException {
+        PreparedStatement stmt = helper.prepareStatement(statement, connection);
+        if (queryTimeout > 0) {
+            try {
+                stmt.setQueryTimeout(queryTimeout);
+            } catch (SQLException e) {
+                stmt.close();
+                throw e;
+            }
+        }
+
+        return stmt;
+    }
+
     public static class Builder {
         private final DatabaseAdapter adapter;
         private final SqlQueryBuilder builder;
         private Path tempDirectory;
         private Connection connection;
+        private int queryTimeout;
         private LodPlanner lodPlanner = LodPlanner.defaults();
 
         private Builder(DatabaseAdapter adapter) {
@@ -165,6 +183,11 @@ public class QueryExecutor {
 
         public Builder connection(Connection connection) {
             this.connection = connection;
+            return this;
+        }
+
+        public Builder queryTimeout(int queryTimeout) {
+            this.queryTimeout = Math.max(queryTimeout, 0);
             return this;
         }
 
@@ -196,7 +219,8 @@ public class QueryExecutor {
                     && !select.toSql().equals(builder.build(Query.of(query),
                     SqlBuildOptions.of(selectOptions).omitDistinct(false)).toSql());
 
-            return new QueryExecutor(select, count, extent, deduplicateIds, tempDirectory, connection, adapter);
+            return new QueryExecutor(select, count, extent, deduplicateIds, tempDirectory, connection, queryTimeout,
+                    adapter);
         }
 
         private LodPlan planLodFilter(Query query) throws QueryBuildException {
