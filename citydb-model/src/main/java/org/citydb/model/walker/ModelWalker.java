@@ -283,7 +283,6 @@ public class ModelWalker implements Visitor {
             case Attribute attribute -> visit(attribute);
             case null -> {
             }
-            default -> visit(property);
         }
     }
 

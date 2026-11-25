@@ -15,7 +15,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Objects;
 import java.util.Optional;
 
-public class GeometryProperty extends Property<GeometryProperty> implements InlineProperty<Geometry<?>> {
+public final class GeometryProperty extends Property<GeometryProperty> implements InlineProperty<Geometry<?>> {
     private Geometry<?> geometry;
     private String lod;
 

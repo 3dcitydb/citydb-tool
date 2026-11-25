@@ -7,6 +7,6 @@ package org.citydb.query.filter.common;
 
 import org.citydb.query.filter.operation.*;
 
-public sealed interface ComparisonPredicate extends Predicate permits
-        Between, BinaryComparisonPredicate, In, IsNull, Like {
+public sealed interface ComparisonPredicate extends Predicate
+        permits Between, BinaryComparisonPredicate, In, IsNull, Like {
 }

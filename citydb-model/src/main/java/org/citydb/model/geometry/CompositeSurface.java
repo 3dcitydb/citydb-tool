@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Collections;
 import java.util.List;
 
-public class CompositeSurface extends SurfaceCollection<CompositeSurface> {
+public final class CompositeSurface extends SurfaceCollection<CompositeSurface> {
 
     private CompositeSurface(int initialCapacity) {
         super(initialCapacity);

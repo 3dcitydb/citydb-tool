@@ -7,7 +7,7 @@ package org.citydb.model.geometry;
 
 import org.citydb.model.common.DatabaseDescriptor;
 
-public class GeometryDescriptor extends DatabaseDescriptor {
+public final class GeometryDescriptor extends DatabaseDescriptor {
     private final long featureId;
 
     private GeometryDescriptor(long id, long featureId) {

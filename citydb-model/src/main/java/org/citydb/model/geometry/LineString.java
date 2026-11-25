@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class LineString extends Geometry<LineString> {
+public final class LineString extends Geometry<LineString> {
     private final List<Coordinate> points;
 
     private LineString(int initialCapacity) {

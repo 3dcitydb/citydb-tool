@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Collections;
 import java.util.List;
 
-public class MultiSolid extends SolidCollection<MultiSolid> {
+public final class MultiSolid extends SolidCollection<MultiSolid> {
 
     private MultiSolid(int initialCapacity) {
         super(initialCapacity);

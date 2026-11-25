@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class X3DMaterial extends SurfaceData<X3DMaterial> {
+public final class X3DMaterial extends SurfaceData<X3DMaterial> {
     private Double shininess;
     private Double transparency;
     private Double ambientIntensity;

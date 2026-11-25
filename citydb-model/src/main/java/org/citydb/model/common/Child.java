@@ -5,6 +5,16 @@
 
 package org.citydb.model.common;
 
+import org.citydb.model.address.Address;
+import org.citydb.model.appearance.Appearance;
+import org.citydb.model.appearance.SurfaceData;
+import org.citydb.model.appearance.SurfaceDataProperty;
+import org.citydb.model.change.FeatureChange;
+import org.citydb.model.feature.Feature;
+import org.citydb.model.geometry.Envelope;
+import org.citydb.model.geometry.Geometry;
+import org.citydb.model.geometry.ImplicitGeometry;
+import org.citydb.model.geometry.LinearRing;
 import org.citydb.model.property.Property;
 import org.citydb.model.util.CopySession;
 
@@ -12,7 +22,9 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class Child implements Serializable {
+public sealed abstract class Child implements Serializable
+        permits Address, Appearance, SurfaceData, SurfaceDataProperty, FeatureChange, Feature, Envelope, Geometry,
+        ImplicitGeometry, LinearRing, Property {
     private Child parent;
     private UserProperties userProperties;
 

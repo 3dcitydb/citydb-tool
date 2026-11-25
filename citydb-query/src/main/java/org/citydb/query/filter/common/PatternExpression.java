@@ -8,6 +8,5 @@ package org.citydb.query.filter.common;
 import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.StringLiteral;
 
-public sealed interface PatternExpression extends Expression permits
-        Function, StringLiteral {
+public sealed interface PatternExpression extends Expression permits Function, StringLiteral {
 }

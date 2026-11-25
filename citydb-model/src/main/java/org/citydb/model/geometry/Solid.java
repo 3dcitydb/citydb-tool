@@ -10,7 +10,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 
-public class Solid extends Geometry<Solid> {
+public final class Solid extends Geometry<Solid> {
     private final CompositeSurface shell;
 
     private Solid(CompositeSurface shell) {

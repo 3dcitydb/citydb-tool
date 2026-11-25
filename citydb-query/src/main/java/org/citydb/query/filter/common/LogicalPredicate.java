@@ -8,6 +8,5 @@ package org.citydb.query.filter.common;
 import org.citydb.query.filter.operation.BinaryBooleanPredicate;
 import org.citydb.query.filter.operation.Not;
 
-public sealed interface LogicalPredicate extends Predicate permits
-        BinaryBooleanPredicate, Not {
+public sealed interface LogicalPredicate extends Predicate permits BinaryBooleanPredicate, Not {
 }

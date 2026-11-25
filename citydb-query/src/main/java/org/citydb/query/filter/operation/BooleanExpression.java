@@ -10,8 +10,7 @@ import org.citydb.query.filter.common.Predicate;
 import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.BooleanLiteral;
 
-public sealed interface BooleanExpression extends Argument permits
-        Predicate, Function, BooleanLiteral, SqlExpression {
+public sealed interface BooleanExpression extends Argument permits Predicate, Function, BooleanLiteral, SqlExpression {
 
     default BinaryBooleanPredicate and(BooleanExpression operand) {
         return this instanceof BinaryBooleanPredicate predicate

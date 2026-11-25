@@ -9,7 +9,7 @@ import org.citydb.model.common.DatabaseDescriptor;
 
 import java.util.Optional;
 
-public class FeatureChangeDescriptor extends DatabaseDescriptor {
+public final class FeatureChangeDescriptor extends DatabaseDescriptor {
     private final int objectClassId;
     private final Long featureId;
 

@@ -17,7 +17,7 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
-public class FeatureChange extends Child implements Identifiable, Describable<FeatureChangeDescriptor> {
+public final class FeatureChange extends Child implements Identifiable, Describable<FeatureChangeDescriptor> {
     private final Name featureType;
     private String objectId;
     private String identifier;

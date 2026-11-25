@@ -224,8 +224,6 @@ public class ImportHelper {
                                 .doImport(appearanceProperty, featureId);
                 case Attribute attribute -> tableHelper.getOrCreateImporter(AttributeImporter.class)
                         .doImport(attribute, featureId);
-                default -> throw new ImportException("Unsupported property type: " +
-                        property.getClass().getSimpleName());
             };
 
             executeBatch(false, transactionMode == Importer.TransactionMode.COMMIT_BATCHES);

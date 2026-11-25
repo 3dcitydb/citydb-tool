@@ -10,7 +10,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 
-public class Point extends Geometry<Point> {
+public final class Point extends Geometry<Point> {
     private final Coordinate coordinate;
 
     private Point(Coordinate coordinate) {

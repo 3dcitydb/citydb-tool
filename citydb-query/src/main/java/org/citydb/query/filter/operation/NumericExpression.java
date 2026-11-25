@@ -11,8 +11,8 @@ import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.NumericLiteral;
 import org.citydb.query.filter.literal.PropertyRef;
 
-public sealed interface NumericExpression extends Expression permits
-        Function, NumericLiteral, PropertyRef, ArithmeticExpression {
+public sealed interface NumericExpression extends Expression
+        permits Function, NumericLiteral, PropertyRef, ArithmeticExpression {
 
     Sign getSign();
 

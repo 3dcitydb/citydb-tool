@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class ImplicitGeometry extends Child implements Referencable, Visitable {
+public final class ImplicitGeometry extends Child implements Referencable, Visitable {
     private Geometry<?> geometry;
     private ExternalFile libraryObject;
     private String objectId;

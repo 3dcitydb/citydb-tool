@@ -45,7 +45,6 @@ public class SurfaceDataPropertyImporter extends DatabaseImporter {
                         .doImport(material);
                 case GeoreferencedTexture texture ->
                         tableHelper.getOrCreateImporter(GeoreferencedTextureImporter.class).doImport(texture);
-                default -> 0;
             };
 
             if (surfaceDataId > 0) {

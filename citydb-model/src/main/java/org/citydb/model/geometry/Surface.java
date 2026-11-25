@@ -5,5 +5,6 @@
 
 package org.citydb.model.geometry;
 
-public abstract class Surface<T extends Surface<?>> extends Geometry<T> {
+public sealed abstract class Surface<T extends Surface<?>> extends Geometry<T>
+        permits Polygon, SurfaceCollection {
 }

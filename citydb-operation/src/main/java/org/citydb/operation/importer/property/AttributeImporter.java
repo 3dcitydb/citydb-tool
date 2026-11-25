@@ -75,7 +75,7 @@ public class AttributeImporter extends PropertyImporter {
                                     .doImport(property, parentId, featureId);
                     case AddressProperty property -> tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
                             .doImport(property, parentId, featureId);
-                    case null, default -> {
+                    case null -> {
                     }
                 }
             }

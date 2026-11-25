@@ -38,8 +38,6 @@ public class WKTWriter {
                 write(wkt, polygon, force3D ? 3 : polygon.getVertexDimension());
             }
             case GeometryCollection collection -> write(wkt, collection, force3D ? 3 : collection.getVertexDimension());
-            default -> throw new IllegalArgumentException("Unsupported spatial object type " +
-                    object.getClass().getName() + ".");
         }
 
         return wkt.toString();

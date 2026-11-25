@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
+public final class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
     private Name featureType;
     private String objectId;
     private String identifier;
@@ -388,7 +388,7 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
             case AppearanceProperty appearanceProperty -> addAppearance(appearanceProperty);
             case AddressProperty addressProperty -> addAddress(addressProperty);
             case Attribute attribute -> addAttribute(attribute);
-            case null, default -> {
+            case null -> {
             }
         }
     }

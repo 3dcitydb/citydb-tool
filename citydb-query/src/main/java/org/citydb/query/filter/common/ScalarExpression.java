@@ -11,8 +11,8 @@ import org.citydb.query.filter.operation.*;
 import java.util.Arrays;
 import java.util.List;
 
-public sealed interface ScalarExpression extends Argument permits
-        CharacterExpression, BooleanLiteral, DateLiteral, NumericLiteral, TimestampLiteral, ArithmeticExpression {
+public sealed interface ScalarExpression extends Argument
+        permits CharacterExpression, BooleanLiteral, DateLiteral, NumericLiteral, TimestampLiteral, ArithmeticExpression {
 
     default BinaryComparisonPredicate eq(Object operand) {
         return Operators.eq(this, operand instanceof ScalarExpression expression

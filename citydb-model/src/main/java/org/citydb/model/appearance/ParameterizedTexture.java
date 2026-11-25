@@ -12,7 +12,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.*;
 
-public class ParameterizedTexture extends Texture<ParameterizedTexture> {
+public final class ParameterizedTexture extends Texture<ParameterizedTexture> {
     private Map<LinearRing, List<TextureCoordinate>> textureCoordinates;
     private Map<Surface<?>, Matrix3x4> worldToTextureMappings;
 

@@ -7,7 +7,7 @@ package org.citydb.model.address;
 
 import org.citydb.model.common.DatabaseDescriptor;
 
-public class AddressDescriptor extends DatabaseDescriptor {
+public final class AddressDescriptor extends DatabaseDescriptor {
 
     private AddressDescriptor(long id) {
         super(id);

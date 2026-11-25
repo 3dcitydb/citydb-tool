@@ -48,8 +48,6 @@ public class WKBWriter {
             case Geometry<?> geometry -> write(geometry, force3D, buffer);
             case Envelope envelope -> write(envelope.convertToPolygon(), force3D, buffer);
             case GeometryCollection collection -> write(collection, force3D, buffer);
-            default -> throw new IllegalArgumentException("Unsupported spatial object type " +
-                    object.getClass().getName() + ".");
         };
     }
 
@@ -81,16 +79,15 @@ public class WKBWriter {
     }
 
     private void write(Geometry<?> geometry, int dimension, int srid, ByteBuffer buffer) {
-        switch (geometry.getGeometryType()) {
-            case POINT -> write((Point) geometry, dimension, srid, buffer);
-            case MULTI_POINT -> write((MultiPoint) geometry, dimension, srid, buffer);
-            case LINE_STRING -> write((LineString) geometry, dimension, srid, buffer);
-            case MULTI_LINE_STRING -> write((MultiLineString) geometry, dimension, srid, buffer);
-            case POLYGON -> write((Polygon) geometry, dimension, srid, buffer);
-            case MULTI_SURFACE, COMPOSITE_SURFACE, TRIANGULATED_SURFACE ->
-                    write((SurfaceCollection<?>) geometry, dimension, srid, buffer);
-            case SOLID -> write((Solid) geometry, dimension, srid, buffer);
-            case COMPOSITE_SOLID, MULTI_SOLID -> write((SolidCollection<?>) geometry, dimension, srid, buffer);
+        switch (geometry) {
+            case Point point -> write(point, dimension, srid, buffer);
+            case MultiPoint multiPoint -> write(multiPoint, dimension, srid, buffer);
+            case LineString lineString -> write(lineString, dimension, srid, buffer);
+            case MultiLineString multiLineString -> write(multiLineString, dimension, srid, buffer);
+            case Polygon polygon -> write(polygon, dimension, srid, buffer);
+            case SurfaceCollection<?> surfaceCollection -> write(surfaceCollection, dimension, srid, buffer);
+            case Solid solid -> write(solid, dimension, srid, buffer);
+            case SolidCollection<?> solidCollection -> write(solidCollection, dimension, srid, buffer);
         }
     }
 
@@ -169,16 +166,15 @@ public class WKBWriter {
     }
 
     private int calculateBytes(Geometry<?> geometry, int dimension, int srid) {
-        return switch (geometry.getGeometryType()) {
-            case POINT -> calculateBytes((Point) geometry, dimension, srid);
-            case MULTI_POINT -> calculateBytes((MultiPoint) geometry, dimension, srid);
-            case LINE_STRING -> calculateBytes((LineString) geometry, dimension, srid);
-            case MULTI_LINE_STRING -> calculateBytes((MultiLineString) geometry, dimension, srid);
-            case POLYGON -> calculateBytes((Polygon) geometry, dimension, srid);
-            case MULTI_SURFACE, COMPOSITE_SURFACE, TRIANGULATED_SURFACE ->
-                    calculateBytes((SurfaceCollection<?>) geometry, dimension, srid);
-            case SOLID -> calculateBytes((Solid) geometry, dimension, srid);
-            case COMPOSITE_SOLID, MULTI_SOLID -> calculateBytes((SolidCollection<?>) geometry, dimension, srid);
+        return switch (geometry) {
+            case Point point -> calculateBytes(point, dimension, srid);
+            case MultiPoint multiPoint -> calculateBytes(multiPoint, dimension, srid);
+            case LineString lineString -> calculateBytes(lineString, dimension, srid);
+            case MultiLineString multiLineString -> calculateBytes(multiLineString, dimension, srid);
+            case Polygon polygon -> calculateBytes(polygon, dimension, srid);
+            case SurfaceCollection<?> surfaceCollection -> calculateBytes(surfaceCollection, dimension, srid);
+            case Solid solid -> calculateBytes(solid, dimension, srid);
+            case SolidCollection<?> solidCollection -> calculateBytes(solidCollection, dimension, srid);
         };
     }
 

@@ -17,8 +17,9 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
-public sealed abstract class Literal<T> implements Expression permits
-        BBoxLiteral, BooleanLiteral, DateLiteral, GeometryCollectionLiteral, GeometryLiteral, NumericLiteral, StringLiteral, TimestampLiteral {
+public sealed abstract class Literal<T> implements Expression
+        permits BBoxLiteral, BooleanLiteral, DateLiteral, GeometryCollectionLiteral, GeometryLiteral, NumericLiteral,
+        StringLiteral, TimestampLiteral {
     protected T value;
 
     protected Literal(T value) {

@@ -15,7 +15,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.Objects;
 
-public class AppearanceProperty extends Property<AppearanceProperty> implements InlineProperty<Appearance> {
+public final class AppearanceProperty extends Property<AppearanceProperty> implements InlineProperty<Appearance> {
     private Appearance appearance;
 
     private AppearanceProperty(Name name) {

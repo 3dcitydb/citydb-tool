@@ -11,7 +11,8 @@ import org.citydb.model.util.CopySession;
 
 import java.util.Optional;
 
-public abstract class Texture<T extends Texture<?>> extends SurfaceData<T> {
+public sealed abstract class Texture<T extends Texture<?>> extends SurfaceData<T>
+        permits GeoreferencedTexture, ParameterizedTexture {
     private ExternalFile textureImage;
     private TextureType textureType;
     private WrapMode wrapMode;

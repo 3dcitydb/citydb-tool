@@ -5,6 +5,7 @@
 
 package org.citydb.model.geometry;
 
-public interface SpatialObject extends SrsReference {
+public sealed interface SpatialObject extends SrsReference
+        permits Envelope, Geometry, GeometryCollection {
     int getVertexDimension();
 }
