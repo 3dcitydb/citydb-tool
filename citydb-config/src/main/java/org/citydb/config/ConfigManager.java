@@ -26,7 +26,7 @@ public class ConfigManager {
 
     public <T> T read(Path inputFile, Class<T> type) throws ConfigException, IOException {
         Objects.requireNonNull(inputFile, "The input file must not be null.");
-        String content = new String(Files.readAllBytes(inputFile), StandardCharsets.UTF_8);
+        String content = Files.readString(inputFile);
         if (content.startsWith("\uFEFF")) {
             content = content.substring(1);
         }
