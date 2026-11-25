@@ -5,7 +5,7 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.query.filter.common.Expression;
 import org.citydb.query.filter.common.FilterVisitor;
@@ -14,7 +14,10 @@ import org.citydb.query.filter.common.Sign;
 import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.*;
 import org.citydb.query.filter.operation.*;
+import tools.jackson.core.JsonGenerator;
 
+import java.io.StringWriter;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class FilterJSONWriter {
@@ -26,18 +29,27 @@ public class FilterJSONWriter {
         return new FilterJSONWriter();
     }
 
-    public void write(Expression expression, JSONWriter jsonWriter) {
+    public String write(Expression expression) {
+        StringWriter writer = new StringWriter();
+        try (JsonGenerator jsonWriter = JsonMapping.mapper().createGenerator(writer)) {
+            write(expression, jsonWriter);
+        }
+
+        return writer.toString();
+    }
+
+    public void write(Expression expression, JsonGenerator jsonWriter) {
         if (expression != null) {
             expression.accept(new WriterVisitor(jsonWriter));
         }
     }
 
     private static class WriterVisitor implements FilterVisitor {
-        private final JSONWriter jsonWriter;
+        private final JsonGenerator jsonWriter;
         private final GeoJSONWriter geometryWriter;
         private final FilterTextWriter textWriter = FilterTextWriter.newInstance();
 
-        WriterVisitor(JSONWriter jsonWriter) {
+        WriterVisitor(JsonGenerator jsonWriter) {
             this.jsonWriter = jsonWriter;
             geometryWriter = new GeoJSONWriter(jsonWriter);
         }
@@ -49,7 +61,6 @@ public class FilterJSONWriter {
             } else {
                 startOp(expression.getOperator().getJSONToken().value());
                 expression.getLeftOperand().accept(this);
-                jsonWriter.writeComma();
                 expression.getRightOperand().accept(this);
                 endOp();
             }
@@ -59,15 +70,15 @@ public class FilterJSONWriter {
         public void visit(BBoxLiteral literal) {
             Coordinate lowerCorner = literal.getValue().getLowerCorner();
             Coordinate upperCorner = literal.getValue().getUpperCorner();
-            jsonWriter.startObject();
+            jsonWriter.writeStartObject();
             jsonWriter.writeName(JSONToken.BBOX.value());
-            jsonWriter.writeColon();
-            jsonWriter.write(literal.getValue().getVertexDimension() == 2
-                    ? List.of(lowerCorner.getX(), lowerCorner.getY(),
-                    upperCorner.getX(), upperCorner.getY())
-                    : List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
-                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
-            jsonWriter.endObject();
+            double[] values = literal.getValue().getVertexDimension() == 2
+                    ? new double[]{lowerCorner.getX(), lowerCorner.getY(),
+                    upperCorner.getX(), upperCorner.getY()}
+                    : new double[]{lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
+                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()};
+            jsonWriter.writeArray(values, 0, values.length);
+            jsonWriter.writeEndObject();
         }
 
         @Override
@@ -77,9 +88,7 @@ public class FilterJSONWriter {
             } else {
                 startOp(between.getOperator().getJSONToken().value());
                 between.getOperand().accept(this);
-                jsonWriter.writeComma();
                 between.getLowerBound().accept(this);
-                jsonWriter.writeComma();
                 between.getUpperBound().accept(this);
                 endOp();
             }
@@ -88,7 +97,7 @@ public class FilterJSONWriter {
         @Override
         public void visit(BinaryBooleanPredicate predicate) {
             startOp(predicate.getOperator().getJSONToken().value());
-            writeList(predicate.getOperands(), jsonWriter);
+            writeList(predicate.getOperands());
             endOp();
         }
 
@@ -96,7 +105,6 @@ public class FilterJSONWriter {
         public void visit(BinaryComparisonPredicate predicate) {
             startOp(predicate.getOperator().getJSONToken().value());
             predicate.getLeftOperand().accept(this);
-            jsonWriter.writeComma();
             predicate.getRightOperand().accept(this);
             endOp();
         }
@@ -105,36 +113,31 @@ public class FilterJSONWriter {
         public void visit(BinarySpatialPredicate predicate) {
             startOp(predicate.getOperator().getJSONToken().value());
             predicate.getLeftOperand().accept(this);
-            jsonWriter.writeComma();
             predicate.getRightOperand().accept(this);
             endOp();
         }
 
         @Override
         public void visit(BooleanLiteral literal) {
-            jsonWriter.writeBool(literal.getValue());
+            jsonWriter.writeBoolean(literal.getValue());
         }
 
         @Override
         public void visit(DateLiteral literal) {
-            jsonWriter.startObject();
+            jsonWriter.writeStartObject();
             jsonWriter.writeName(JSONToken.DATE.value());
-            jsonWriter.writeColon();
-            jsonWriter.writeLocalDate(literal.getValue());
-            jsonWriter.endObject();
+            jsonWriter.writeString(literal.getValue().format(DateTimeFormatter.ISO_LOCAL_DATE));
+            jsonWriter.writeEndObject();
         }
 
         @Override
         public void visit(DWithin dWithin) {
             startOp(dWithin.getOperator().getJSONToken().value());
             dWithin.getLeftOperand().accept(this);
-            jsonWriter.writeComma();
             dWithin.getRightOperand().accept(this);
             if (dWithin.getDistance().getValue() != 0) {
-                jsonWriter.writeComma();
-                jsonWriter.writeDouble(dWithin.getDistance().getValue());
+                jsonWriter.writeNumber(dWithin.getDistance().getValue());
                 dWithin.getDistance().getUnit().ifPresent(unit -> {
-                    jsonWriter.writeComma();
                     jsonWriter.writeString(unit.toString());
                 });
             }
@@ -147,7 +150,7 @@ public class FilterJSONWriter {
                 negate(function);
             } else {
                 startOp(function.getName().getJsonToken());
-                writeList(function.getArguments(), jsonWriter);
+                writeList(function.getArguments());
                 endOp();
             }
         }
@@ -171,10 +174,9 @@ public class FilterJSONWriter {
             } else {
                 startOp(in.getOperator().getJSONToken().value());
                 in.getOperand().accept(this);
-                jsonWriter.writeComma();
-                jsonWriter.startArray();
-                writeList(in.getValues(), jsonWriter);
-                jsonWriter.endArray();
+                jsonWriter.writeStartArray();
+                writeList(in.getValues());
+                jsonWriter.writeEndArray();
                 endOp();
             }
         }
@@ -197,7 +199,6 @@ public class FilterJSONWriter {
             } else {
                 startOp(like.getOperator().getJSONToken().value());
                 like.getOperand().accept(this);
-                jsonWriter.writeComma();
                 like.getPattern().accept(this);
                 endOp();
             }
@@ -213,9 +214,9 @@ public class FilterJSONWriter {
         @Override
         public void visit(NumericLiteral literal) {
             if (literal.isInteger()) {
-                jsonWriter.writeInt64(literal.intValue());
+                jsonWriter.writeNumber(literal.intValue());
             } else {
-                jsonWriter.writeDouble(literal.doubleValue());
+                jsonWriter.writeNumber(literal.doubleValue());
             }
         }
 
@@ -224,11 +225,10 @@ public class FilterJSONWriter {
             if (propertyRef.getSign() == Sign.MINUS) {
                 negate(propertyRef);
             } else {
-                jsonWriter.startObject();
+                jsonWriter.writeStartObject();
                 jsonWriter.writeName(JSONToken.PROPERTY.value());
-                jsonWriter.writeColon();
                 jsonWriter.writeString(textWriter.write(propertyRef));
-                jsonWriter.endObject();
+                jsonWriter.writeEndObject();
             }
         }
 
@@ -246,26 +246,23 @@ public class FilterJSONWriter {
 
         @Override
         public void visit(TimestampLiteral literal) {
-            jsonWriter.startObject();
+            jsonWriter.writeStartObject();
             jsonWriter.writeName(JSONToken.TIMESTAMP.value());
-            jsonWriter.writeColon();
-            jsonWriter.writeOffsetDateTime(literal.getValue());
-            jsonWriter.endObject();
+            jsonWriter.writeString(literal.getValue().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+            jsonWriter.writeEndObject();
         }
 
         private void startOp(String operation) {
-            jsonWriter.startObject();
+            jsonWriter.writeStartObject();
             jsonWriter.writeName(JSONToken.OP.value());
-            jsonWriter.writeColon();
             jsonWriter.writeString(operation);
             jsonWriter.writeName(JSONToken.ARGS.value());
-            jsonWriter.writeColon();
-            jsonWriter.startArray();
+            jsonWriter.writeStartArray();
         }
 
         private void endOp() {
-            jsonWriter.endArray();
-            jsonWriter.endObject();
+            jsonWriter.writeEndArray();
+            jsonWriter.writeEndObject();
         }
 
         private void negate(Predicate predicate) {
@@ -287,12 +284,9 @@ public class FilterJSONWriter {
             expression.negate();
         }
 
-        private void writeList(List<? extends Expression> expressions, JSONWriter writer) {
-            for (int i = 0; i < expressions.size(); i++) {
-                if (i != 0) {
-                    writer.writeComma();
-                }
-                expressions.get(i).accept(this);
+        private void writeList(List<? extends Expression> expressions) {
+            for (Expression expression : expressions) {
+                expression.accept(this);
             }
         }
     }

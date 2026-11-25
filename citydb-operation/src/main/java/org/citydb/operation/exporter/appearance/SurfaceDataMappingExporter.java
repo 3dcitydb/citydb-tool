@@ -21,9 +21,9 @@ public class SurfaceDataMappingExporter extends DatabaseExporter {
     protected void doExport(SurfaceData<?> surfaceData, ResultSet rs) throws SQLException {
         long geometryDataId = rs.getLong("geometry_data_id");
         helper.getSurfaceDataMapper()
-                .buildMaterialMapping(getJSONObject(rs.getString("material_mapping")), geometryDataId, surfaceData)
-                .buildTextureMapping(getJSONObject(rs.getString("texture_mapping")), geometryDataId, surfaceData)
-                .buildWorldToTextureMapping(getJSONObject(rs.getString("world_to_texture_mapping")), geometryDataId, surfaceData)
-                .buildGeoreferencedTextureMapping(getJSONObject(rs.getString("georeferenced_texture_mapping")), geometryDataId, surfaceData);
+                .buildMaterialMapping(getJsonObject(rs.getString("material_mapping")), geometryDataId, surfaceData)
+                .buildTextureMapping(getJsonObject(rs.getString("texture_mapping")), geometryDataId, surfaceData)
+                .buildWorldToTextureMapping(getJsonObject(rs.getString("world_to_texture_mapping")), geometryDataId, surfaceData)
+                .buildGeoreferencedTextureMapping(getJsonObject(rs.getString("georeferenced_texture_mapping")), geometryDataId, surfaceData);
     }
 }

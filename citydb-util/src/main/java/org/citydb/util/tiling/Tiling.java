@@ -5,8 +5,6 @@
 
 package org.citydb.util.tiling;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
@@ -16,6 +14,8 @@ import org.citydb.model.encoding.EnvelopeReader;
 import org.citydb.model.encoding.EnvelopeWriter;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.util.tiling.options.TileMatrixOrigin;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.sql.SQLException;
 import java.util.Objects;
@@ -23,10 +23,10 @@ import java.util.Optional;
 
 @SerializableConfig(name = "tilingOptions")
 public class Tiling {
-    @JSONField(serializeUsing = EnvelopeWriter.class, deserializeUsing = EnvelopeReader.class)
+    @JsonSerialize(using = EnvelopeWriter.class)
+    @JsonDeserialize(using = EnvelopeReader.class)
     private Envelope extent;
     private TilingScheme scheme;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private TileMatrixOrigin tileMatrixOrigin = TileMatrixOrigin.TOP_LEFT;
 
     public static Tiling newInstance() {

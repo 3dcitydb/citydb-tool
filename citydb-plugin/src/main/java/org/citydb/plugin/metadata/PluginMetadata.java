@@ -5,10 +5,12 @@
 
 package org.citydb.plugin.metadata;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.citydb.core.version.Version;
 import org.citydb.core.version.encoding.VersionReader;
 import org.citydb.core.version.encoding.VersionWriter;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,10 +18,11 @@ import java.util.Optional;
 
 public class PluginMetadata {
     private String name;
-    @JSONField(serializeUsing = VersionWriter.class, deserializeUsing = VersionReader.class)
+    @JsonSerialize(using = VersionWriter.class)
+    @JsonDeserialize(using = VersionReader.class)
     private Version version;
     private String url;
-    @JSONField(name = "description")
+    @JsonProperty("description")
     private final Map<String, String> descriptions = new HashMap<>();
     private PluginVendor vendor;
     private boolean startEnabled = true;

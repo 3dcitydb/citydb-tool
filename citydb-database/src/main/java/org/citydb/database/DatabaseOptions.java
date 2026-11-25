@@ -5,7 +5,7 @@
 
 package org.citydb.database;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.citydb.config.SerializableConfig;
 import org.citydb.database.connection.ConnectionDetails;
 
@@ -17,7 +17,7 @@ import java.util.UUID;
 @SerializableConfig(name = "databaseOptions")
 public class DatabaseOptions {
     private Map<String, ConnectionDetails> connections;
-    @JSONField(name = "defaultConnection")
+    @JsonProperty("defaultConnection")
     private String defaultConnectionId;
 
     public boolean hasConnections() {

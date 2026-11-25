@@ -5,9 +5,10 @@
 
 package org.citydb.cli.index;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.database.schema.Index;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.Locale;
 import java.util.Map;
@@ -17,17 +18,22 @@ public class IndexStatusBuilder {
     private IndexStatusBuilder() {
     }
 
-    public static JSONObject build(Map<Index, Boolean> indexes) {
-        return new JSONObject().fluentPut("indexes", buildIndexes(indexes));
+    public static ObjectNode build(Map<Index, Boolean> indexes) {
+        ObjectNode status = Json.objectNode();
+        status.set("indexes", buildIndexes(indexes));
+        return status;
     }
 
-    private static JSONArray buildIndexes(Map<Index, Boolean> indexes) {
-        JSONArray array = new JSONArray();
-        indexes.forEach((index, status) -> array.add(new JSONObject().fluentPut("table", index.getTable())
-                .fluentPut("columns", index.getColumns())
-                .fluentPut("type", index.getType().toString().toLowerCase(Locale.ROOT))
-                .fluentPut("name", index.getName())
-                .fluentPut("status", status ? "on" : "off")));
+    private static ArrayNode buildIndexes(Map<Index, Boolean> indexes) {
+        ArrayNode array = Json.arrayNode();
+        indexes.forEach((index, status) -> {
+            ObjectNode item = array.addObject().put("table", index.getTable());
+            ArrayNode columns = item.putArray("columns");
+            index.getColumns().forEach(columns::add);
+            item.put("type", index.getType().toString().toLowerCase(Locale.ROOT))
+                    .put("name", index.getName())
+                    .put("status", status ? "on" : "off");
+        });
 
         return array;
     }

@@ -5,8 +5,6 @@
 
 package org.citydb.io.citygml.writer;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.io.citygml.writer.options.AddressMode;
 import org.citydb.io.writer.options.OutputFormatOptions;
@@ -20,13 +18,11 @@ import java.util.Map;
 
 @SerializableConfig(name = "CityGML")
 public class CityGMLFormatOptions implements OutputFormatOptions {
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private CityGMLVersion version = CityGMLVersion.v3_0;
     private boolean prettyPrint = true;
     private boolean useLod4AsLod3;
     private boolean mapLod0RoofEdge;
     private boolean mapLod1MultiSurfaces;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private AddressMode addressMode = AddressMode.COLUMNS_FIRST;
     private List<String> xslTransforms;
     private Map<String, String> prefixes;

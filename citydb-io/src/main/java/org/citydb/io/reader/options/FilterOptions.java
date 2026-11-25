@@ -5,8 +5,6 @@
 
 package org.citydb.io.reader.options;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.common.CountLimit;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.PrefixedName;
@@ -16,16 +14,19 @@ import org.citydb.model.encoding.PrefixedNamesReader;
 import org.citydb.model.encoding.PrefixedNamesWriter;
 import org.citydb.model.feature.FeatureTypeProvider;
 import org.citydb.model.geometry.Envelope;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.*;
 
 public class FilterOptions {
-    @JSONField(serializeUsing = PrefixedNamesWriter.class, deserializeUsing = PrefixedNamesReader.class)
+    @JsonSerialize(using = PrefixedNamesWriter.class)
+    @JsonDeserialize(using = PrefixedNamesReader.class)
     private List<PrefixedName> featureTypes;
     private Set<String> ids;
-    @JSONField(serializeUsing = EnvelopeWriter.class, deserializeUsing = EnvelopeReader.class)
+    @JsonSerialize(using = EnvelopeWriter.class)
+    @JsonDeserialize(using = EnvelopeReader.class)
     private Envelope bbox;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private BboxMode bboxMode;
     private CountLimit countLimit;
 

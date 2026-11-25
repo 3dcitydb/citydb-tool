@@ -22,5 +22,8 @@ module org.citydb.database {
     exports org.citydb.database.srs;
     exports org.citydb.database.util;
 
+    opens org.citydb.database to tools.jackson.databind;
+    opens org.citydb.database.connection to tools.jackson.databind;
+
     uses org.citydb.database.adapter.DatabaseAdapter;
 }

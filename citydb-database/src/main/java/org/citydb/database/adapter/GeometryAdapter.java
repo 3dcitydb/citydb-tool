@@ -5,7 +5,6 @@
 
 package org.citydb.database.adapter;
 
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.database.geometry.GeometryBuilder;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.geometry.PropertiesBuilder;
@@ -16,6 +15,7 @@ import org.citydb.model.geometry.Geometry;
 import org.citydb.model.geometry.SpatialObject;
 import org.citydb.sqlbuilder.literal.Placeholder;
 import org.citydb.sqlbuilder.query.Select;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -49,13 +49,13 @@ public abstract class GeometryAdapter {
         return getGeometry(object, true, connection);
     }
 
-    public Geometry<?> buildGeometry(Object geometryObject, JSONObject properties) throws GeometryException {
+    public Geometry<?> buildGeometry(Object geometryObject, ObjectNode properties) throws GeometryException {
         return geometryObject != null
                 ? geometryBuilder.buildGeometry(getGeometry(geometryObject), properties)
                 : null;
     }
 
-    public JSONObject buildGeometryProperties(Geometry<?> geometry) {
+    public ObjectNode buildGeometryProperties(Geometry<?> geometry) {
         return propertiesBuilder.buildProperties(geometry);
     }
 

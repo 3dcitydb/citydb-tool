@@ -5,13 +5,14 @@
 
 package org.citydb.database.geometry;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.model.geometry.*;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 public class PropertiesBuilder {
 
-    public JSONObject buildProperties(Geometry<?> geometry) {
+    public ObjectNode buildProperties(Geometry<?> geometry) {
         if (geometry != null) {
             Hierarchy hierarchy = new Hierarchy();
             switch (geometry.getGeometryType()) {
@@ -88,22 +89,22 @@ public class PropertiesBuilder {
     }
 
     private static class Hierarchy {
-        private final JSONObject root = new JSONObject();
-        private final JSONArray children = new JSONArray();
+        private final ObjectNode root = Json.objectNode();
+        private final ArrayNode children = Json.arrayNode();
         private int geometryIndex;
 
-        private JSONObject getRoot() {
+        private ObjectNode getRoot() {
             if (!children.isEmpty()) {
-                root.put(Properties.JSON_KEY_CHILDREN, children);
+                root.set(Properties.JSON_KEY_CHILDREN, children);
             }
 
             return root;
         }
 
         private int add(Geometry<?> geometry, int parent) {
-            JSONObject item = (parent == -1 ? root : children.addObject())
-                    .fluentPut(Properties.JSON_KEY_TYPE, geometry.getGeometryType().getDatabaseValue())
-                    .fluentPut(Properties.JSON_KEY_OBJECT_ID, geometry.getOrCreateObjectId());
+            ObjectNode item = (parent == -1 ? root : children.addObject())
+                    .put(Properties.JSON_KEY_TYPE, geometry.getGeometryType().getDatabaseValue())
+                    .put(Properties.JSON_KEY_OBJECT_ID, geometry.getOrCreateObjectId());
 
             if (parent == -1) {
                 if (geometry.getVertexDimension() == 2) {

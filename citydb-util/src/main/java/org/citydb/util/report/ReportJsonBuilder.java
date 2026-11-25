@@ -5,8 +5,8 @@
 
 package org.citydb.util.report;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.core.time.TimeHelper;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -15,6 +15,9 @@ import org.citydb.database.schema.Table;
 import org.citydb.model.common.PrefixedName;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.util.report.options.FeatureScope;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,43 +34,43 @@ public class ReportJsonBuilder {
         return new ReportJsonBuilder();
     }
 
-    public JSONObject build(DatabaseReport report) {
+    public ObjectNode build(DatabaseReport report) {
         ReportOptions options = report.getOptions();
         DatabaseAdapter adapter = report.getAdapter();
 
-        JSONObject jsonReport = new JSONObject();
-        jsonReport.fluentPut("metadata", buildMetadata(options))
-                .fluentPut("summary", buildSummary(report, options, adapter))
-                .fluentPut("database", buildDatabase(report, options, adapter));
+        ObjectNode jsonReport = Json.objectNode();
+        jsonReport.set("metadata", buildMetadata(options));
+        jsonReport.set("summary", buildSummary(report, options, adapter));
+        jsonReport.set("database", buildDatabase(report, options, adapter));
 
         if (!options.isCompact()) {
-            jsonReport.fluentPut("features", buildFeatures(report, adapter))
-                    .fluentPut("geometries", buildGeometries(report))
-                    .fluentPut("addresses", buildAddresses(report))
-                    .fluentPut("appearances", buildAppearances(report))
-                    .fluentPut("extensions", buildExtensions(report))
-                    .fluentPut("codeLists", buildCodeLists(report))
-                    .fluentPut("modules", new JSONObject(report.getModules()));
+            jsonReport.set("features", buildFeatures(report, adapter));
+            jsonReport.set("geometries", buildGeometries(report));
+            jsonReport.set("addresses", buildAddresses(report));
+            jsonReport.set("appearances", buildAppearances(report));
+            jsonReport.set("extensions", buildExtensions(report));
+            jsonReport.set("codeLists", buildCodeLists(report));
+            jsonReport.set("modules", toTree(report.getModules()));
         }
 
         if (options.isIncludeGenericAttributes()) {
-            jsonReport.put("genericAttributes", buildGenericAttributes(report));
+            jsonReport.set("genericAttributes", buildGenericAttributes(report));
         }
 
         return jsonReport;
     }
 
-    private JSONObject buildMetadata(ReportOptions options) {
+    private ObjectNode buildMetadata(ReportOptions options) {
         String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
                 .format(TimeHelper.DATE_TIME_FORMATTER);
 
-        return new JSONObject()
-                .fluentPut("generatedAt", timestamp)
-                .fluentPut("featureScope", options.getFeatureScope().toValue())
-                .fluentPut("genericAttributesProcessed", options.isIncludeGenericAttributes());
+        return Json.objectNode()
+                .put("generatedAt", timestamp)
+                .put("featureScope", options.getFeatureScope().toValue())
+                .put("genericAttributesProcessed", options.isIncludeGenericAttributes());
     }
 
-    private JSONObject buildSummary(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
+    private ObjectNode buildSummary(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
         Set<String> candidates = options.getFeatureScope() == FeatureScope.ACTIVE
                 ? report.getActiveFeatures().keySet()
                 : report.getFeatures();
@@ -76,66 +79,68 @@ public class ReportJsonBuilder {
                         .isTopLevel())
                 .toList();
 
-        return new JSONObject().fluentPut("topLevelFeatures", topLevelFeatures)
-                .fluentPut("lods", new JSONArray(report.getLods().keySet()))
-                .fluentPut("themes", new JSONArray(report.getAppearances().keySet()))
-                .fluentPut("crs", buildCrs(adapter))
-                .fluentPut("extent", convertExtent(report.getExtent(), 4))
-                .fluentPut("wgs84Extent", convertExtent(report.getWgs84Extent(), 6));
+        ObjectNode summary = Json.objectNode();
+        summary.set("topLevelFeatures", toTree(topLevelFeatures));
+        summary.set("lods", toTree(report.getLods().keySet()));
+        summary.set("themes", toTree(report.getAppearances().keySet()));
+        summary.set("crs", buildCrs(adapter));
+        summary.set("extent", toTree(convertExtent(report.getExtent(), 4)));
+        summary.set("wgs84Extent", toTree(convertExtent(report.getWgs84Extent(), 6)));
+        return summary;
     }
 
-    private JSONObject buildDatabase(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
-        JSONObject database = new JSONObject();
-        database.fluentPut("name", DatabaseConstants.CITYDB_NAME)
-                .fluentPut("version", adapter.getDatabaseMetadata().getVersion().toString())
-                .fluentPut("dbms", buildDbms(adapter))
-                .fluentPut("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled())
-                .fluentPut("connection", buildDatabaseConnection(adapter));
+    private ObjectNode buildDatabase(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
+        ObjectNode database = Json.objectNode()
+                .put("name", DatabaseConstants.CITYDB_NAME)
+                .put("version", adapter.getDatabaseMetadata().getVersion().toString());
+        database.set("dbms", buildDbms(adapter));
+        database.put("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled());
+        database.set("connection", buildDatabaseConnection(adapter));
 
         DatabaseSize databaseSize = report.getDatabaseSize().orElse(null);
         if (options.isIncludeDatabaseSize() && databaseSize != null) {
-            database.put("size", buildDatabaseSize(databaseSize));
+            database.set("size", buildDatabaseSize(databaseSize));
         }
 
         return database;
     }
 
-    private JSONObject buildDbms(DatabaseAdapter adapter) {
-        JSONObject dbms = new JSONObject();
-        dbms.fluentPut("name", adapter.getDatabaseMetadata().getVendorProductName())
-                .fluentPut("version", adapter.getDatabaseMetadata().getVendorProductVersion());
+    private ObjectNode buildDbms(DatabaseAdapter adapter) {
+        ObjectNode dbms = Json.objectNode()
+                .put("name", adapter.getDatabaseMetadata().getVendorProductName())
+                .put("version", adapter.getDatabaseMetadata().getVendorProductVersion());
 
         if (adapter.getDatabaseMetadata().hasProperties()) {
-            dbms.put("properties", buildDbmsProperties(adapter));
+            dbms.set("properties", buildDbmsProperties(adapter));
         }
 
         return dbms;
     }
 
-    private JSONObject buildDbmsProperties(DatabaseAdapter adapter) {
-        JSONObject properties = new JSONObject();
-        adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> {
-            properties.putObject(id)
-                    .fluentPut("name", property.getName())
-                    .fluentPut("value", property.getValue().orElse("n/a"));
-        });
+    private ObjectNode buildDbmsProperties(DatabaseAdapter adapter) {
+        ObjectNode properties = Json.objectNode();
+        adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> properties.putObject(id)
+                .put("name", property.getName())
+                .put("value", property.getValue().orElse("n/a")));
 
         return properties;
     }
 
-    private JSONObject buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("featureCount", buildFeatureCount(report))
-                .fluentPut("topLevelFeatureCount", buildTopLevelFeatureCount(report, adapter))
-                .fluentPut("byType", buildFeaturesByType(report));
+    private ObjectNode buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
+        ObjectNode features = Json.objectNode();
+        features.set("featureCount", buildFeatureCount(report));
+        features.set("topLevelFeatureCount", buildTopLevelFeatureCount(report, adapter));
+        features.set("byType", buildFeaturesByType(report));
+        return features;
     }
 
-    private JSONObject buildFeatureCount(DatabaseReport report) {
-        return putFeatureCount(new JSONObject(),
+    private ObjectNode buildFeatureCount(DatabaseReport report) {
+        return putFeatureCount(Json.objectNode(),
                 sum(report.getActiveFeatures().values()),
                 sum(report.getTerminatedFeatures().values()));
     }
 
-    private JSONObject buildTopLevelFeatureCount(DatabaseReport report, DatabaseAdapter adapter) {
+    private ObjectNode buildTopLevelFeatureCount(DatabaseReport report, DatabaseAdapter adapter) {
         long active = report.getActiveFeatures().entrySet().stream()
                 .filter(e -> adapter.getSchemaAdapter().getSchemaMapping().getFeatureType(PrefixedName.of(e.getKey()))
                         .isTopLevel())
@@ -145,11 +150,11 @@ public class ReportJsonBuilder {
                         .isTopLevel())
                 .mapToLong(Map.Entry::getValue).sum();
 
-        return putFeatureCount(new JSONObject(), active, terminated);
+        return putFeatureCount(Json.objectNode(), active, terminated);
     }
 
-    private JSONObject buildFeaturesByType(DatabaseReport report) {
-        JSONObject featuresByType = new JSONObject();
+    private ObjectNode buildFeaturesByType(DatabaseReport report) {
+        ObjectNode featuresByType = Json.objectNode();
         report.getFeatures().forEach(featureType -> putFeatureCount(featuresByType.putObject(featureType),
                 report.getActiveFeatures().getOrDefault(featureType, 0L),
                 report.getTerminatedFeatures().getOrDefault(featureType, 0L)));
@@ -157,79 +162,85 @@ public class ReportJsonBuilder {
         return featuresByType;
     }
 
-    private JSONObject buildGeometries(DatabaseReport report) {
+    private ObjectNode buildGeometries(DatabaseReport report) {
         long geometryCount = sum(report.getGeometries().values());
 
-        return new JSONObject().fluentPut("geometryCount", geometryCount)
-                .fluentPut("implicitGeometryCount", report.getImplicitGeometryCount())
-                .fluentPut("byType", new JSONObject(report.getGeometries()))
-                .fluentPut("byLod", new JSONObject(report.getLods()));
+        ObjectNode geometries = Json.objectNode()
+                .put("geometryCount", geometryCount)
+                .put("implicitGeometryCount", report.getImplicitGeometryCount());
+        geometries.set("byType", toTree(report.getGeometries()));
+        geometries.set("byLod", toTree(report.getLods()));
+        return geometries;
     }
 
-    private JSONObject buildAddresses(DatabaseReport report) {
-        return new JSONObject().fluentPut("addressCount", report.getAddressCount());
+    private ObjectNode buildAddresses(DatabaseReport report) {
+        return Json.objectNode().put("addressCount", report.getAddressCount());
     }
 
-    private JSONObject buildAppearances(DatabaseReport report) {
+    private ObjectNode buildAppearances(DatabaseReport report) {
         long appearanceCount = sum(report.getAppearances().values());
 
-        return new JSONObject().fluentPut("appearanceCount", appearanceCount)
-                .fluentPut("hasGlobalAppearances", report.hasGlobalAppearances())
-                .fluentPut("hasMaterials", report.hasMaterials())
-                .fluentPut("hasTextures", report.hasTextures())
-                .fluentPut("hasGeoreferencedTextures", report.hasGeoreferencedTextures())
-                .fluentPut("byTheme", new JSONObject(report.getAppearances()));
+        ObjectNode appearances = Json.objectNode()
+                .put("appearanceCount", appearanceCount)
+                .put("hasGlobalAppearances", report.hasGlobalAppearances())
+                .put("hasMaterials", report.hasMaterials())
+                .put("hasTextures", report.hasTextures())
+                .put("hasGeoreferencedTextures", report.hasGeoreferencedTextures());
+        appearances.set("byTheme", toTree(report.getAppearances()));
+        return appearances;
     }
 
-    private JSONObject buildGenericAttributes(DatabaseReport report) {
-        JSONObject genericAttributes = new JSONObject();
+    private ObjectNode buildGenericAttributes(DatabaseReport report) {
+        ObjectNode genericAttributes = Json.objectNode();
         report.getGenericAttributes().forEach((featureType, attributes) -> {
-            JSONObject object = genericAttributes.putObject(featureType);
-            attributes.forEach((name, types) -> object.put(name, new JSONArray(types)));
+            ObjectNode object = genericAttributes.putObject(featureType);
+            attributes.forEach((name, types) -> object.set(name, toTree(types)));
         });
 
         return genericAttributes;
     }
 
-    private JSONArray buildExtensions(DatabaseReport report) {
-        JSONArray extensions = new JSONArray();
-        report.getADEs().forEach((name, value) -> extensions.add(new JSONObject()
-                .fluentPut("name", name)
-                .fluentPut("description", value.first())
-                .fluentPut("version", value.second())));
+    private ArrayNode buildExtensions(DatabaseReport report) {
+        ArrayNode extensions = Json.arrayNode();
+        report.getADEs().forEach((name, value) -> extensions.addObject()
+                .put("name", name)
+                .put("description", value.first())
+                .put("version", value.second()));
 
         return extensions;
     }
 
-    private JSONObject buildCodeLists(DatabaseReport report) {
-        JSONObject codeLists = new JSONObject();
-        report.getCodeLists().forEach((type, identifiers) -> codeLists.putArray(type).addAll(identifiers));
+    private ObjectNode buildCodeLists(DatabaseReport report) {
+        ObjectNode codeLists = Json.objectNode();
+        report.getCodeLists().forEach((type, identifiers) -> codeLists.set(type, toTree(identifiers)));
 
         return codeLists;
     }
 
-    private JSONObject buildCrs(DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                .fluentPut("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
-                .fluentPut("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
+    private ObjectNode buildCrs(DatabaseAdapter adapter) {
+        return Json.objectNode()
+                .put("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
+                .put("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
+                .put("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
     }
 
-    private JSONObject buildDatabaseConnection(DatabaseAdapter adapter) {
-        JSONObject connection = new JSONObject().fluentPut("databaseType", adapter.getConnectionDetails().getDatabaseType())
-                .fluentPut("host", adapter.getConnectionDetails().getHost())
-                .fluentPut("port", adapter.getConnectionDetails().getPort())
-                .fluentPut("database", adapter.getConnectionDetails().getDatabase())
-                .fluentPut("schema", adapter.getConnectionDetails().getSchema())
-                .fluentPut("user", adapter.getConnectionDetails().getUser());
+    private ObjectNode buildDatabaseConnection(DatabaseAdapter adapter) {
+        ObjectNode connection = Json.objectNode()
+                .put("databaseType", adapter.getConnectionDetails().getDatabaseType())
+                .put("host", adapter.getConnectionDetails().getHost())
+                .put("port", adapter.getConnectionDetails().getPort())
+                .put("database", adapter.getConnectionDetails().getDatabase())
+                .put("schema", adapter.getConnectionDetails().getSchema())
+                .put("user", adapter.getConnectionDetails().getUser());
 
         if (adapter.getConnectionDetails().hasProperties()) {
-            connection.put("properties", adapter.getConnectionDetails().getProperties());
+            connection.set("properties", toTree(adapter.getConnectionDetails().getProperties()));
         }
 
         return connection;
     }
 
-    private JSONObject buildDatabaseSize(DatabaseSize databaseSize) {
+    private ObjectNode buildDatabaseSize(DatabaseSize databaseSize) {
         Map<String, Long> byTable = databaseSize.getTableSizes().entrySet().stream()
                 .filter(e -> Table.CONTENT_TABLES.contains(e.getKey()))
                 .collect(Collectors.toMap(
@@ -238,9 +249,11 @@ public class ReportJsonBuilder {
                         (v1, v2) -> v1,
                         TreeMap::new));
 
-        return new JSONObject().fluentPut("databaseSize", databaseSize.getDatabaseSize())
-                .fluentPut("schemaSize", databaseSize.getSchemaSize())
-                .fluentPut("byTable", byTable);
+        ObjectNode size = Json.objectNode()
+                .put("databaseSize", databaseSize.getDatabaseSize())
+                .put("schemaSize", databaseSize.getSchemaSize());
+        size.set("byTable", toTree(byTable));
+        return size;
     }
 
     private List<Double> convertExtent(Envelope extent, int decimalPlaces) {
@@ -261,9 +274,13 @@ public class ReportJsonBuilder {
         }
     }
 
-    private JSONObject putFeatureCount(JSONObject parent, long active, long terminated) {
-        return parent.fluentPut("active", active)
-                .fluentPut("terminated", terminated);
+    private ObjectNode putFeatureCount(ObjectNode parent, long active, long terminated) {
+        return parent.put("active", active)
+                .put("terminated", terminated);
+    }
+
+    private JsonNode toTree(Object value) {
+        return JsonMapping.mapper().valueToTree(value);
     }
 
     private long sum(Collection<Long> values) {

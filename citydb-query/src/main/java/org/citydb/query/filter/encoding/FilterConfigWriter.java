@@ -5,19 +5,14 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.query.filter.Filter;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.lang.reflect.Type;
-
-public class FilterConfigWriter implements ObjectWriter<Filter> {
+public class FilterConfigWriter extends ValueSerializer<Filter> {
     @Override
-    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
-        if (o instanceof Filter filter) {
-            FilterJSONWriter.newInstance().write(filter.getExpression(), jsonWriter);
-        } else {
-            jsonWriter.writeNull();
-        }
+    public void serialize(Filter filter, JsonGenerator generator, SerializationContext context) {
+        FilterJSONWriter.newInstance().write(filter.getExpression(), generator);
     }
 }

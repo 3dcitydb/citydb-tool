@@ -5,7 +5,6 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.model.geometry.LineString;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.geometry.Polygon;
@@ -44,10 +43,8 @@ class GeometryCollectionLiteralTest {
 
     @Test
     void roundTripsJson() throws FilterParseException {
-        try (JSONWriter jsonWriter = JSONWriter.of()) {
-            FilterJSONWriter.newInstance().write(Filter.ofJSON(JSON).getExpression(), jsonWriter);
-            assertMixedCollection(Filter.ofJSON(jsonWriter.toString()));
-        }
+        String json = FilterJSONWriter.newInstance().write(Filter.ofJSON(JSON).getExpression());
+        assertMixedCollection(Filter.ofJSON(json));
     }
 
     @Test

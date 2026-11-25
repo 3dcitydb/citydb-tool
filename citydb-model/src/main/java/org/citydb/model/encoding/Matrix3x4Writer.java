@@ -5,19 +5,19 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.model.common.Matrix3x4;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.lang.reflect.Type;
-
-public class Matrix3x4Writer implements ObjectWriter<Matrix3x4> {
+public class Matrix3x4Writer extends ValueSerializer<Matrix3x4> {
     @Override
-    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
-        if (o instanceof Matrix3x4 matrix) {
-            jsonWriter.write(matrix.toRowMajor());
-        } else {
-            jsonWriter.writeNull();
+    public void serialize(Matrix3x4 matrix, JsonGenerator generator, SerializationContext context) {
+        generator.writeStartArray();
+        for (Double value : matrix.toRowMajor()) {
+            generator.writeNumber(value);
         }
+
+        generator.writeEndArray();
     }
 }

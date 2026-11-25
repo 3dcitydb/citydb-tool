@@ -5,7 +5,7 @@
 
 package org.citydb.query;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.CountLimit;
 import org.citydb.config.common.SrsReference;
@@ -22,6 +22,8 @@ import org.citydb.query.filter.encoding.FilterConfigWriter;
 import org.citydb.query.lod.LodFilter;
 import org.citydb.query.sorting.Sorting;
 import org.citydb.query.temptable.TempTableFilter;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,16 +31,18 @@ import java.util.Optional;
 
 @SerializableConfig(name = "query")
 public class Query {
-    @JSONField(serializeUsing = PrefixedNamesWriter.class, deserializeUsing = PrefixedNamesReader.class)
+    @JsonSerialize(using = PrefixedNamesWriter.class)
+    @JsonDeserialize(using = PrefixedNamesReader.class)
     private List<PrefixedName> featureTypes;
-    @JSONField(serializeUsing = FilterConfigWriter.class, deserializeUsing = FilterConfigReader.class)
+    @JsonSerialize(using = FilterConfigWriter.class)
+    @JsonDeserialize(using = FilterConfigReader.class)
     private Filter filter;
     private SrsReference filterSrs;
     private Validity validity;
     private LodFilter lodFilter;
     private Sorting sorting;
     private CountLimit countLimit;
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private List<TempTableFilter> tempTableFilters;
 
     public static Query newInstance() {

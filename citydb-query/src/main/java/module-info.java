@@ -19,4 +19,8 @@ module org.citydb.query {
     exports org.citydb.query.lod;
     exports org.citydb.query.sorting;
     exports org.citydb.query.temptable;
+
+    opens org.citydb.query to tools.jackson.databind;
+    opens org.citydb.query.lod to tools.jackson.databind;
+    opens org.citydb.query.sorting to tools.jackson.databind;
 }

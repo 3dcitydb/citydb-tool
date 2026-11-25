@@ -5,7 +5,6 @@
 
 package org.citydb.util.report;
 
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.core.tuple.Pair;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.metadata.DatabaseSize;
@@ -18,6 +17,7 @@ import org.citydb.model.common.Namespaces;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.model.geometry.GeometryType;
 import org.citydb.util.report.options.FeatureScope;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -317,7 +317,7 @@ public class DatabaseReport {
         return !alias.isEmpty() ? alias + ":" + name.getLocalName() : name.getLocalName();
     }
 
-    public JSONObject toJSON() {
+    public ObjectNode toJSON() {
         return new ReportJsonBuilder().build(this);
     }
 

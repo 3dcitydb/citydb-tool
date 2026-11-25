@@ -5,10 +5,7 @@
 
 package org.citydb.operation.exporter.common;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONReader;
+import org.citydb.core.json.Json;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
@@ -22,6 +19,8 @@ import org.citydb.model.property.DataType;
 import org.citydb.operation.exporter.ExportException;
 import org.citydb.operation.exporter.ExportHelper;
 import org.citydb.operation.exporter.util.TableHelper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -64,12 +63,12 @@ public abstract class DatabaseExporter {
         return !rs.wasNull() ? value == 1 : null;
     }
 
-    protected JSONObject getJSONObject(String content) {
-        return JSON.parseObject(content, JSONReader.Feature.UseDoubleForDecimals);
+    protected ObjectNode getJsonObject(String content) {
+        return Json.readObject(content);
     }
 
-    protected JSONArray getJSONArray(String content) {
-        return JSON.parseArray(content, JSONReader.Feature.UseDoubleForDecimals);
+    protected ArrayNode getJsonArray(String content) {
+        return Json.readArray(content);
     }
 
     protected Name getName(String nameColumn, String namespaceIdColumn, ResultSet rs) throws SQLException {
@@ -93,9 +92,9 @@ public abstract class DatabaseExporter {
 
     protected ArrayValue getArrayValue(String content) {
         if (content != null) {
-            JSONArray json = getJSONArray(content);
+            ArrayNode json = getJsonArray(content);
             if (json != null) {
-                return ArrayValue.ofList(json);
+                return ArrayValue.ofList(Json.listOf(json));
             }
         }
 

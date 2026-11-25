@@ -44,13 +44,13 @@ module org.citydb.cli {
     opens org.citydb.cli to info.picocli;
     opens org.citydb.cli.common to info.picocli;
     opens org.citydb.cli.connect to info.picocli;
-    opens org.citydb.cli.deleter to info.picocli;
+    opens org.citydb.cli.deleter to info.picocli, tools.jackson.databind;
     opens org.citydb.cli.deleter.options to info.picocli;
-    opens org.citydb.cli.exporter to info.picocli;
+    opens org.citydb.cli.exporter to info.picocli, tools.jackson.databind;
     opens org.citydb.cli.exporter.citygml to info.picocli;
     opens org.citydb.cli.exporter.cityjson to info.picocli;
     opens org.citydb.cli.exporter.options to info.picocli;
-    opens org.citydb.cli.importer to info.picocli;
+    opens org.citydb.cli.importer to info.picocli, tools.jackson.databind;
     opens org.citydb.cli.importer.citygml to info.picocli;
     opens org.citydb.cli.importer.cityjson to info.picocli;
     opens org.citydb.cli.importer.options to info.picocli;

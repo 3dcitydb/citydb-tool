@@ -5,10 +5,11 @@
 
 package org.citydb.operation.deleter;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.encoding.DateTimeReader;
 import org.citydb.operation.deleter.options.DeleteMode;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -17,15 +18,15 @@ import java.util.Optional;
 public class DeleteOptions {
     public static final int DEFAULT_COMMIT_AFTER = 1000;
 
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private DeleteMode mode = DeleteMode.TERMINATE;
     private int commitAfter;
+    @JsonDeserialize(using = DateTimeReader.class)
     private OffsetDateTime terminationDate;
     private String updatingPerson;
     private String reasonForUpdate;
     private String lineage;
 
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private int numberOfThreads;
 
     public DeleteMode getMode() {

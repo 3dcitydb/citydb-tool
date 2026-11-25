@@ -5,32 +5,35 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.reader.ObjectReader;
 import org.citydb.model.common.PrefixedName;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PrefixedNamesReader implements ObjectReader<List<PrefixedName>> {
+public class PrefixedNamesReader extends ValueDeserializer<List<PrefixedName>> {
     @Override
-    public List<PrefixedName> readObject(JSONReader jsonReader, Type type, Object o, long l) {
-        if (jsonReader.isArray()) {
-            List<PrefixedName> featureTypes = new ArrayList<>();
-            for (Object item : jsonReader.readArray()) {
-                if (item instanceof JSONObject object) {
-                    String name = object.getString("name");
-                    if (name != null) {
-                        featureTypes.add(PrefixedName.of(name, object.getString("namespace")));
-                    }
-                }
+    public List<PrefixedName> deserialize(JsonParser parser, DeserializationContext context) {
+        JsonNode array = context.readTree(parser);
+        if (!array.isArray()) {
+            return context.reportInputMismatch(this, "Expected an array of names.");
+        }
+
+        List<PrefixedName> names = new ArrayList<>(array.size());
+        for (JsonNode item : array) {
+            JsonNode name = item.get("name");
+            if (!item.isObject() || name == null || !name.isString()) {
+                return context.reportInputMismatch(this, "Each entry requires a 'name' string.");
             }
 
-            return featureTypes;
-        } else {
-            return null;
+            JsonNode namespace = item.get("namespace");
+            names.add(PrefixedName.of(name.stringValue(),
+                    namespace != null && !namespace.isNull() ? namespace.asString() : null));
         }
+
+        return names;
     }
 }

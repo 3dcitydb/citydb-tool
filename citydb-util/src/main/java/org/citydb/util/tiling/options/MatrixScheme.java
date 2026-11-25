@@ -5,14 +5,12 @@
 
 package org.citydb.util.tiling.options;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.util.tiling.TileMatrix;
 import org.citydb.util.tiling.TilingException;
 import org.citydb.util.tiling.TilingScheme;
 
-@JSONType(typeName = "Matrix")
 public class MatrixScheme extends TilingScheme {
     private int columns = 1;
     private int rows = 1;

@@ -5,8 +5,6 @@
 
 package org.citydb.util.tiling.options;
 
-import com.alibaba.fastjson2.annotation.JSONField;
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.srs.SpatialReference;
@@ -20,15 +18,17 @@ import org.citydb.model.geometry.Point;
 import org.citydb.util.tiling.TileMatrix;
 import org.citydb.util.tiling.TilingException;
 import org.citydb.util.tiling.TilingScheme;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.sql.SQLException;
 import java.util.Optional;
 
-@JSONType(typeName = "Dimension")
 public class DimensionScheme extends TilingScheme {
     private Dimension width;
     private Dimension height;
-    @JSONField(serializeUsing = PointWriter.class, deserializeUsing = PointReader.class)
+    @JsonSerialize(using = PointWriter.class)
+    @JsonDeserialize(using = PointReader.class)
     private Point gridPoint;
 
     public static DimensionScheme of(double width, double height) {

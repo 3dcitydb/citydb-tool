@@ -5,15 +5,12 @@
 
 package org.citydb.util.report;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.config.SerializableConfig;
 import org.citydb.util.report.options.FeatureScope;
 
 @SerializableConfig(name = "reportOptions")
 public class ReportOptions {
     private int numberOfThreads;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private FeatureScope featureScope = FeatureScope.ALL;
     private boolean compact;
     private boolean includeGenericAttributes;

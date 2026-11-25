@@ -5,15 +5,15 @@
 
 package org.citydb.query.filter.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.model.geometry.*;
+import tools.jackson.core.JsonGenerator;
 
 import java.util.List;
 
 public class GeoJSONWriter {
-    private final JSONWriter jsonWriter;
+    private final JsonGenerator jsonWriter;
 
-    GeoJSONWriter(JSONWriter jsonWriter) {
+    GeoJSONWriter(JsonGenerator jsonWriter) {
         this.jsonWriter = jsonWriter;
     }
 
@@ -34,22 +34,17 @@ public class GeoJSONWriter {
     void writeCollection(List<? extends Geometry<?>> members) {
         startGeometry(JSONToken.GEOMETRYCOLLECTION);
         jsonWriter.writeName(JSONToken.GEOMETRIES.value());
-        jsonWriter.writeColon();
-        jsonWriter.startArray();
-        for (int i = 0; i < members.size(); i++) {
-            if (i != 0) {
-                jsonWriter.writeComma();
-            }
-            write(members.get(i));
+        jsonWriter.writeStartArray();
+        for (Geometry<?> member : members) {
+            write(member);
         }
-        jsonWriter.endArray();
+        jsonWriter.writeEndArray();
         endGeometry();
     }
 
     private void writePoint(Point point) {
         startGeometry(JSONToken.POINT);
         jsonWriter.writeName(JSONToken.COORDINATES.value());
-        jsonWriter.writeColon();
         writeCoordinate(point.getCoordinate());
         endGeometry();
     }
@@ -74,13 +69,8 @@ public class GeoJSONWriter {
         startGeometry(JSONToken.MULTIPOINT);
         startCoordinates();
 
-        if (!multiPoint.getPoints().isEmpty()) {
-            for (int i = 0; i < multiPoint.getPoints().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
-                writeCoordinate(multiPoint.getPoints().get(i).getCoordinate());
-            }
+        for (Point point : multiPoint.getPoints()) {
+            writeCoordinate(point.getCoordinate());
         }
 
         endCoordinates();
@@ -92,14 +82,11 @@ public class GeoJSONWriter {
         startCoordinates();
 
         if (!multiLineString.getLineStrings().isEmpty()) {
-            jsonWriter.startArray();
-            for (int i = 0; i < multiLineString.getLineStrings().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
-                writeCoordinates(multiLineString.getLineStrings().get(i));
+            jsonWriter.writeStartArray();
+            for (LineString lineString : multiLineString.getLineStrings()) {
+                writeCoordinates(lineString);
             }
-            jsonWriter.endArray();
+            jsonWriter.writeEndArray();
         }
 
         endCoordinates();
@@ -111,14 +98,11 @@ public class GeoJSONWriter {
         startCoordinates();
 
         if (!surfaceCollection.getPolygons().isEmpty()) {
-            jsonWriter.startArray();
-            for (int i = 0; i < surfaceCollection.getPolygons().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
-                writeCoordinates(surfaceCollection.getPolygons().get(i));
+            jsonWriter.writeStartArray();
+            for (Polygon polygon : surfaceCollection.getPolygons()) {
+                writeCoordinates(polygon);
             }
-            jsonWriter.endArray();
+            jsonWriter.writeEndArray();
         }
 
         endCoordinates();
@@ -126,66 +110,54 @@ public class GeoJSONWriter {
     }
 
     private void writeCoordinate(Coordinate coordinate) {
-        jsonWriter.write(coordinate.getDimension() == 2
-                ? List.of(coordinate.getX(), coordinate.getY())
-                : List.of(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
+        double[] values = coordinate.getDimension() == 2
+                ? new double[]{coordinate.getX(), coordinate.getY()}
+                : new double[]{coordinate.getX(), coordinate.getY(), coordinate.getZ()};
+        jsonWriter.writeArray(values, 0, values.length);
     }
 
-
     private void writeCoordinates(LineString lineString) {
-        for (int i = 0; i < lineString.getPoints().size(); i++) {
-            if (i != 0) {
-                jsonWriter.writeComma();
-            }
-            writeCoordinate(lineString.getPoints().get(i));
+        for (Coordinate coordinate : lineString.getPoints()) {
+            writeCoordinate(coordinate);
         }
     }
 
     private void writeCoordinates(LinearRing linearRing) {
-        for (int i = 0; i < linearRing.getPoints().size(); i++) {
-            if (i != 0) {
-                jsonWriter.writeComma();
-            }
-            writeCoordinate(linearRing.getPoints().get(i));
+        for (Coordinate coordinate : linearRing.getPoints()) {
+            writeCoordinate(coordinate);
         }
     }
 
     private void writeCoordinates(Polygon polygon) {
-        jsonWriter.startArray();
+        jsonWriter.writeStartArray();
         writeCoordinates(polygon.getExteriorRing());
-        jsonWriter.endArray();
+        jsonWriter.writeEndArray();
 
         if (polygon.hasInteriorRings()) {
-            jsonWriter.writeComma();
-            for (int i = 0; i < polygon.getInteriorRings().size(); i++) {
-                if (i != 0) {
-                    jsonWriter.writeComma();
-                }
-                jsonWriter.startArray();
-                writeCoordinates(polygon.getInteriorRings().get(i));
-                jsonWriter.endArray();
+            for (LinearRing ring : polygon.getInteriorRings()) {
+                jsonWriter.writeStartArray();
+                writeCoordinates(ring);
+                jsonWriter.writeEndArray();
             }
         }
     }
 
     private void startGeometry(JSONToken type) {
-        jsonWriter.startObject();
+        jsonWriter.writeStartObject();
         jsonWriter.writeName(JSONToken.TYPE.value());
-        jsonWriter.writeColon();
         jsonWriter.writeString(type.value());
     }
 
     private void endGeometry() {
-        jsonWriter.endObject();
+        jsonWriter.writeEndObject();
     }
 
     private void startCoordinates() {
         jsonWriter.writeName(JSONToken.COORDINATES.value());
-        jsonWriter.writeColon();
-        jsonWriter.startArray();
+        jsonWriter.writeStartArray();
     }
 
     private void endCoordinates() {
-        jsonWriter.endArray();
+        jsonWriter.writeEndArray();
     }
 }

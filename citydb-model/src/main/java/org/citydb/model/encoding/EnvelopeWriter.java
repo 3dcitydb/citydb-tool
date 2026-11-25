@@ -5,43 +5,44 @@
 
 package org.citydb.model.encoding;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.writer.ObjectWriter;
 import org.citydb.config.common.SrsReference;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.lang.reflect.Type;
-import java.util.List;
-
-public class EnvelopeWriter implements ObjectWriter<Envelope> {
+public class EnvelopeWriter extends ValueSerializer<Envelope> {
     @Override
-    public void write(JSONWriter jsonWriter, Object o, Object o1, Type type, long l) {
-        if (o instanceof Envelope envelope) {
-            Coordinate lowerCorner = envelope.getLowerCorner();
-            Coordinate upperCorner = envelope.getUpperCorner();
+    public void serialize(Envelope envelope, JsonGenerator generator, SerializationContext context) {
+        Coordinate lowerCorner = envelope.getLowerCorner();
+        Coordinate upperCorner = envelope.getUpperCorner();
+        boolean is3D = envelope.getVertexDimension() != 2;
 
-            jsonWriter.startObject();
-            jsonWriter.writeName("coordinates");
-            jsonWriter.writeColon();
-            jsonWriter.write(envelope.getVertexDimension() == 2
-                    ? List.of(lowerCorner.getX(), lowerCorner.getY(),
-                    upperCorner.getX(), upperCorner.getY())
-                    : List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
-                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
-
-            if (envelope.getSRID().isPresent() || envelope.getSrsIdentifier().isPresent()) {
-                jsonWriter.writeName("srs");
-                jsonWriter.writeColon();
-                jsonWriter.writeAs(new SrsReference()
-                                .setSRID(envelope.getSRID().orElse(null))
-                                .setIdentifier(envelope.getSrsIdentifier().orElse(null)),
-                        SrsReference.class);
-            }
-
-            jsonWriter.endObject();
-        } else {
-            jsonWriter.writeNull();
+        generator.writeStartObject();
+        generator.writeName("coordinates");
+        generator.writeStartArray();
+        generator.writeNumber(lowerCorner.getX());
+        generator.writeNumber(lowerCorner.getY());
+        if (is3D) {
+            generator.writeNumber(lowerCorner.getZ());
         }
+
+        generator.writeNumber(upperCorner.getX());
+        generator.writeNumber(upperCorner.getY());
+        if (is3D) {
+            generator.writeNumber(upperCorner.getZ());
+        }
+
+        generator.writeEndArray();
+
+        if (envelope.getSRID().isPresent() || envelope.getSrsIdentifier().isPresent()) {
+            generator.writeName("srs");
+            context.writeValue(generator, new SrsReference()
+                    .setSRID(envelope.getSRID().orElse(null))
+                    .setIdentifier(envelope.getSrsIdentifier().orElse(null)));
+        }
+
+        generator.writeEndObject();
     }
 }

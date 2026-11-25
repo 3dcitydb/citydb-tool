@@ -5,8 +5,6 @@
 
 package org.citydb.cli.importer;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
 import org.citydb.cli.common.IndexMode;
 import org.citydb.cli.importer.options.ImportMode;
 import org.citydb.config.SerializableConfig;
@@ -16,9 +14,7 @@ import java.util.Optional;
 
 @SerializableConfig(name = "importOptions")
 public class ImportOptions extends org.citydb.operation.importer.ImportOptions {
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private ImportMode mode = ImportMode.IMPORT_ALL;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private IndexMode indexMode = IndexMode.KEEP;
     private FilterOptions filterOptions;
 

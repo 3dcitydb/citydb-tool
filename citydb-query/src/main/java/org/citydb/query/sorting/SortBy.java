@@ -5,25 +5,26 @@
 
 package org.citydb.query.sorting;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.citydb.query.filter.encoding.FilterParseException;
 import org.citydb.query.filter.encoding.FilterTextParser;
 import org.citydb.query.filter.literal.PropertyRef;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.util.Optional;
 
 public class SortBy {
-    @JSONField(serializeUsing = PropertyConfigWriter.class, deserializeUsing = PropertyConfigReader.class)
+    @JsonSerialize(using = PropertyConfigWriter.class)
+    @JsonDeserialize(using = PropertyConfigReader.class)
     private PropertyRef property;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private SortOrder sortOrder;
 
     public Optional<PropertyRef> getProperty() {
         return Optional.ofNullable(property);
     }
 
-    @JSONField(name = "property")
+    @JsonProperty("property")
     public SortBy setProperty(PropertyRef property) {
         this.property = property;
         return this;

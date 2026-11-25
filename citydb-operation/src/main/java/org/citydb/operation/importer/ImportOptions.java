@@ -5,13 +5,15 @@
 
 package org.citydb.operation.importer;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.citydb.config.SerializableConfig;
+import org.citydb.config.encoding.DateTimeReader;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
 import org.citydb.operation.importer.options.CreationDateMode;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.nio.file.Path;
 import java.time.OffsetDateTime;
@@ -24,14 +26,15 @@ public class ImportOptions {
     private int numberOfThreads;
     private String updatingPerson;
     private String reasonForUpdate;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private CreationDateMode creationDateMode = CreationDateMode.ATTRIBUTE_OR_NOW;
+    @JsonDeserialize(using = DateTimeReader.class)
     private OffsetDateTime creationDate;
     private String lineage;
-    @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
+    @JsonSerialize(using = Matrix3x4Writer.class)
+    @JsonDeserialize(using = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
 
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private OffsetDateTime importTime;
 
     public boolean isFailFast() {

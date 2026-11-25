@@ -5,7 +5,7 @@
 
 package org.citydb.operation.exporter;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.citydb.config.SerializableConfig;
 import org.citydb.config.common.SrsReference;
 import org.citydb.core.concurrent.LazyCheckedInitializer;
@@ -19,6 +19,8 @@ import org.citydb.operation.exporter.options.AppearanceOptions;
 import org.citydb.operation.exporter.options.ExternalFileResolver;
 import org.citydb.operation.exporter.options.ImplicitGeometryScope;
 import org.citydb.operation.exporter.options.LodOptions;
+import tools.jackson.databind.annotation.JsonDeserialize;
+import tools.jackson.databind.annotation.JsonSerialize;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,25 +29,26 @@ import java.util.Optional;
 
 @SerializableConfig(name = "exportOptions")
 public class ExportOptions {
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private final LazyCheckedInitializer<OutputFile, IOException> tempOutputFile = LazyCheckedInitializer.of(
             () -> new RegularOutputFile(Files.createTempDirectory("citydb-").resolve("output.tmp")));
 
     private int numberOfThreads;
     private boolean useAbsoluteResourcePaths;
     private SrsReference targetSrs;
-    @JSONField(serializeUsing = Matrix3x4Writer.class, deserializeUsing = Matrix3x4Reader.class)
+    @JsonSerialize(using = Matrix3x4Writer.class)
+    @JsonDeserialize(using = Matrix3x4Reader.class)
     private Matrix3x4 affineTransform;
     private LodOptions lodOptions;
     private AppearanceOptions appearanceOptions;
 
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private Validity validity;
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private OutputFile outputFile;
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private ImplicitGeometryScope implicitGeometryScope;
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private ExternalFileResolver externalFileResolver;
 
     public int getNumberOfThreads() {

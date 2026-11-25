@@ -5,18 +5,19 @@
 
 package org.citydb.util.tiling;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONType;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.model.geometry.Coordinate;
 import org.citydb.model.geometry.Envelope;
 import org.citydb.util.tiling.options.DimensionScheme;
 import org.citydb.util.tiling.options.MatrixScheme;
 
-@JSONType(serializeFeatures = JSONWriter.Feature.WriteClassName,
-        typeKey = "type",
-        seeAlso = {DimensionScheme.class, MatrixScheme.class},
-        seeAlsoDefault = MatrixScheme.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = MatrixScheme.class)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = DimensionScheme.class, name = "Dimension"),
+        @JsonSubTypes.Type(value = MatrixScheme.class, name = "Matrix")
+})
 public abstract class TilingScheme {
     protected abstract TileMatrix buildTileMatrix(Envelope extent, DatabaseAdapter adapter) throws TilingException;
 

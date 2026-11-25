@@ -5,70 +5,76 @@
 
 package org.citydb.cli.util;
 
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.connection.ConnectionDetails;
+import tools.jackson.databind.node.ObjectNode;
 
 public class ConnectionInfoBuilder {
 
     private ConnectionInfoBuilder() {
     }
 
-    public static JSONObject build(DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("connection", buildDatabaseConnection(adapter.getConnectionDetails()))
-                .fluentPut("database", buildDatabase(adapter));
+    public static ObjectNode build(DatabaseAdapter adapter) {
+        ObjectNode info = Json.objectNode();
+        info.set("connection", buildDatabaseConnection(adapter.getConnectionDetails()));
+        info.set("database", buildDatabase(adapter));
+        return info;
     }
 
-    private static JSONObject buildDatabaseConnection(ConnectionDetails connectionDetails) {
-        JSONObject connection = new JSONObject().fluentPut("databaseType", connectionDetails.getDatabaseType())
-                .fluentPut("host", connectionDetails.getHost())
-                .fluentPut("port", connectionDetails.getPort())
-                .fluentPut("database", connectionDetails.getDatabase())
-                .fluentPut("schema", connectionDetails.getSchema())
-                .fluentPut("user", connectionDetails.getUser());
+    private static ObjectNode buildDatabaseConnection(ConnectionDetails connectionDetails) {
+        ObjectNode connection = Json.objectNode()
+                .put("databaseType", connectionDetails.getDatabaseType())
+                .put("host", connectionDetails.getHost())
+                .put("port", connectionDetails.getPort())
+                .put("database", connectionDetails.getDatabase())
+                .put("schema", connectionDetails.getSchema())
+                .put("user", connectionDetails.getUser());
 
         if (connectionDetails.hasProperties()) {
-            connection.put("properties", connectionDetails.getProperties());
+            connection.set("properties", JsonMapping.mapper().valueToTree(connectionDetails.getProperties()));
         }
 
         return connection;
     }
 
-    private static JSONObject buildDatabase(DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("name", DatabaseConstants.CITYDB_NAME)
-                .fluentPut("version", adapter.getDatabaseMetadata().getVersion().toString())
-                .fluentPut("dbms", buildDbms(adapter))
-                .fluentPut("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled())
-                .fluentPut("crs", buildCrs(adapter));
+    private static ObjectNode buildDatabase(DatabaseAdapter adapter) {
+        ObjectNode database = Json.objectNode()
+                .put("name", DatabaseConstants.CITYDB_NAME)
+                .put("version", adapter.getDatabaseMetadata().getVersion().toString());
+        database.set("dbms", buildDbms(adapter));
+        database.put("hasChangelogEnabled", adapter.getDatabaseMetadata().isChangelogEnabled());
+        database.set("crs", buildCrs(adapter));
+        return database;
     }
 
-    private static JSONObject buildDbms(DatabaseAdapter adapter) {
-        JSONObject dbms = new JSONObject();
-        dbms.fluentPut("name", adapter.getDatabaseMetadata().getVendorProductName())
-                .fluentPut("version", adapter.getDatabaseMetadata().getVendorProductVersion());
+    private static ObjectNode buildDbms(DatabaseAdapter adapter) {
+        ObjectNode dbms = Json.objectNode()
+                .put("name", adapter.getDatabaseMetadata().getVendorProductName())
+                .put("version", adapter.getDatabaseMetadata().getVendorProductVersion());
 
         if (adapter.getDatabaseMetadata().hasProperties()) {
-            dbms.put("properties", buildDbmsProperties(adapter));
+            dbms.set("properties", buildDbmsProperties(adapter));
         }
 
         return dbms;
     }
 
-    private static JSONObject buildDbmsProperties(DatabaseAdapter adapter) {
-        JSONObject properties = new JSONObject();
-        adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> {
-            properties.putObject(id)
-                    .fluentPut("name", property.getName())
-                    .fluentPut("value", property.getValue().orElse("n/a"));
-        });
+    private static ObjectNode buildDbmsProperties(DatabaseAdapter adapter) {
+        ObjectNode properties = Json.objectNode();
+        adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> properties.putObject(id)
+                .put("name", property.getName())
+                .put("value", property.getValue().orElse("n/a")));
 
         return properties;
     }
 
-    private static JSONObject buildCrs(DatabaseAdapter adapter) {
-        return new JSONObject().fluentPut("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
-                .fluentPut("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
-                .fluentPut("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
+    private static ObjectNode buildCrs(DatabaseAdapter adapter) {
+        return Json.objectNode()
+                .put("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
+                .put("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
+                .put("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
     }
 }

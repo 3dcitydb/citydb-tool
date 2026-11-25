@@ -5,8 +5,6 @@
 
 package org.citydb.cli.info;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.cli.CommandHelper;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.common.Command;
@@ -14,6 +12,7 @@ import org.citydb.cli.common.ConnectionOptions;
 import org.citydb.cli.common.Inject;
 import org.citydb.cli.common.ThreadsOptions;
 import org.citydb.config.ConfigException;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.util.IndexHelper;
 import org.citydb.util.report.DatabaseReport;
@@ -91,7 +90,7 @@ public class InfoCommand implements Command {
         if (outputOptions.isOutputSpecified()) {
             logger.info("Writing database report as JSON to {}.", outputOptions);
             try (OutputStream stream = outputOptions.openStream()) {
-                JSON.writeTo(stream, report.toJSON(), JSONWriter.Feature.PrettyFormatWith2Space);
+                JsonMapping.prettyMapper().writeValue(stream, report.toJSON());
             } catch (Exception e) {
                 throw new ExecutionException("Failed to write database report as JSON.", e);
             }

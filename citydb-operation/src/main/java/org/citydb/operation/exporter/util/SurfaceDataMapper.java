@@ -5,13 +5,13 @@
 
 package org.citydb.operation.exporter.util;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.appearance.TextureCoordinate;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
 public class SurfaceDataMapper {
     private final Map<SurfaceData<?>, List<String>> materialMappings = new IdentityHashMap<>();
@@ -19,10 +19,10 @@ public class SurfaceDataMapper {
     private final Map<SurfaceData<?>, Map<String, List<Double>>> worldToTextureMappings = new IdentityHashMap<>();
     private final Map<SurfaceData<?>, List<String>> georeferencedTextureMappings = new IdentityHashMap<>();
 
-    public SurfaceDataMapper buildMaterialMapping(JSONObject mapping, long geometryDataId, SurfaceData<?> surfaceData) {
+    public SurfaceDataMapper buildMaterialMapping(ObjectNode mapping, long geometryDataId, SurfaceData<?> surfaceData) {
         if (mapping != null) {
-            for (Map.Entry<String, Object> entry : mapping.entrySet()) {
-                if (entry.getValue() == Boolean.TRUE) {
+            for (Map.Entry<String, JsonNode> entry : mapping.properties()) {
+                if (entry.getValue().isBoolean() && entry.getValue().booleanValue()) {
                     materialMappings.computeIfAbsent(surfaceData, v -> new ArrayList<>())
                             .add(getKey(geometryDataId, entry.getKey()));
                 }
@@ -32,20 +32,20 @@ public class SurfaceDataMapper {
         return this;
     }
 
-    public SurfaceDataMapper buildTextureMapping(JSONObject mapping, long geometryDataId, SurfaceData<?> surfaceData) {
+    public SurfaceDataMapper buildTextureMapping(ObjectNode mapping, long geometryDataId, SurfaceData<?> surfaceData) {
         if (mapping != null) {
-            for (Map.Entry<String, Object> entry : mapping.entrySet()) {
-                if (entry.getValue() instanceof JSONArray rings) {
+            for (Map.Entry<String, JsonNode> entry : mapping.properties()) {
+                if (entry.getValue() instanceof ArrayNode rings) {
                     List<List<TextureCoordinate>> textureCoordinates = new ArrayList<>();
-                    for (Object ring : rings) {
-                        if (ring instanceof JSONArray ringArray) {
+                    for (JsonNode ring : rings) {
+                        if (ring instanceof ArrayNode ringArray) {
                             List<TextureCoordinate> ringCoordinates = new ArrayList<>();
-                            for (Object coordinates : ringArray) {
-                                if (coordinates instanceof JSONArray coordinatesArray && coordinatesArray.size() > 1) {
-                                    Float s = coordinatesArray.getFloat(0);
-                                    Float t = coordinatesArray.getFloat(1);
-                                    if (s != null && t != null) {
-                                        ringCoordinates.add(TextureCoordinate.of(s, t));
+                            for (JsonNode coordinates : ringArray) {
+                                if (coordinates instanceof ArrayNode coordinatesArray && coordinatesArray.size() > 1) {
+                                    JsonNode s = coordinatesArray.get(0);
+                                    JsonNode t = coordinatesArray.get(1);
+                                    if (s.isNumber() && t.isNumber()) {
+                                        ringCoordinates.add(TextureCoordinate.of(s.floatValue(), t.floatValue()));
                                     }
                                 }
                             }
@@ -67,12 +67,12 @@ public class SurfaceDataMapper {
         return this;
     }
 
-    public SurfaceDataMapper buildWorldToTextureMapping(JSONObject mapping, long geometryDataId, SurfaceData<?> surfaceData) {
+    public SurfaceDataMapper buildWorldToTextureMapping(ObjectNode mapping, long geometryDataId, SurfaceData<?> surfaceData) {
         if (mapping != null) {
-            for (Map.Entry<String, Object> entry : mapping.entrySet()) {
-                if (entry.getValue() instanceof JSONArray array) {
-                    List<Double> worldToTexture = IntStream.range(0, array.size())
-                            .mapToObj(array::getDouble)
+            for (Map.Entry<String, JsonNode> entry : mapping.properties()) {
+                if (entry.getValue() instanceof ArrayNode array) {
+                    List<Double> worldToTexture = array.valueStream()
+                            .map(value -> value.isNumber() ? value.doubleValue() : null)
                             .toList();
                     worldToTextureMappings.computeIfAbsent(surfaceData, v -> new HashMap<>())
                             .put(getKey(geometryDataId, entry.getKey()), worldToTexture);
@@ -83,10 +83,10 @@ public class SurfaceDataMapper {
         return this;
     }
 
-    public SurfaceDataMapper buildGeoreferencedTextureMapping(JSONObject mapping, long geometryDataId, SurfaceData<?> surfaceData) {
+    public SurfaceDataMapper buildGeoreferencedTextureMapping(ObjectNode mapping, long geometryDataId, SurfaceData<?> surfaceData) {
         if (mapping != null) {
-            for (Map.Entry<String, Object> entry : mapping.entrySet()) {
-                if (entry.getValue() == Boolean.TRUE) {
+            for (Map.Entry<String, JsonNode> entry : mapping.properties()) {
+                if (entry.getValue().isBoolean() && entry.getValue().booleanValue()) {
                     georeferencedTextureMappings.computeIfAbsent(surfaceData, v -> new ArrayList<>())
                             .add(getKey(geometryDataId, entry.getKey()));
                 }

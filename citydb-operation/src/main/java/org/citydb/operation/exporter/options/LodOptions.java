@@ -5,15 +5,11 @@
 
 package org.citydb.operation.exporter.options;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
-
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class LodOptions {
     private Set<String> lods;
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private LodMode mode;
 
     public boolean hasLods() {

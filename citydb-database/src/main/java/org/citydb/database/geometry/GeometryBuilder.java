@@ -5,9 +5,11 @@
 
 package org.citydb.database.geometry;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.model.geometry.*;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -17,10 +19,9 @@ import java.util.stream.Collectors;
 
 public class GeometryBuilder {
 
-    public Geometry<?> buildGeometry(Geometry<?> geometry, JSONObject properties) throws GeometryException {
+    public Geometry<?> buildGeometry(Geometry<?> geometry, ObjectNode properties) throws GeometryException {
         if (geometry != null && properties != null) {
-            JSONArray children = properties.getJSONArray(Properties.JSON_KEY_CHILDREN);
-            if (children != null && !children.isEmpty()) {
+            if (properties.get(Properties.JSON_KEY_CHILDREN) instanceof ArrayNode children && !children.isEmpty()) {
                 List<? extends Geometry<?>> primitives = getPrimitives(geometry);
                 geometry = buildGeometry(properties, null, primitives);
 
@@ -37,8 +38,8 @@ public class GeometryBuilder {
                 }
             }
 
-            geometry.setObjectId(properties.getString(Properties.JSON_KEY_OBJECT_ID));
-            if (properties.getBooleanValue(Properties.JSON_KEY_IS_2D, false)) {
+            geometry.setObjectId(Json.getString(properties, Properties.JSON_KEY_OBJECT_ID));
+            if (properties.path(Properties.JSON_KEY_IS_2D).asBoolean(false)) {
                 geometry.force2D();
             }
         }
@@ -46,15 +47,14 @@ public class GeometryBuilder {
         return geometry;
     }
 
-    private Geometry<?> buildGeometry(int childIndex, JSONArray children, Map<Integer, Geometry<?>> geometries, List<? extends Geometry<?>> primitives) throws GeometryException {
+    private Geometry<?> buildGeometry(int childIndex, ArrayNode children, Map<Integer, Geometry<?>> geometries, List<? extends Geometry<?>> primitives) throws GeometryException {
         Geometry<?> geometry = geometries.get(childIndex);
         if (geometry == null) {
-            JSONObject child = children.getJSONObject(childIndex);
-            if (child == null) {
+            if (!(children.get(childIndex) instanceof ObjectNode child)) {
                 throw new GeometryException("Invalid JSON object in children array at index " + childIndex + ".");
             }
 
-            Integer parentIndex = child.getInteger(Properties.JSON_KEY_PARENT);
+            Integer parentIndex = Json.getInteger(child, Properties.JSON_KEY_PARENT);
             if (parentIndex == null) {
                 parentIndex = -1;
             } else if (parentIndex < 0 || parentIndex >= children.size()) {
@@ -67,14 +67,14 @@ public class GeometryBuilder {
             }
 
             geometry = buildGeometry(child, parent, primitives)
-                    .setObjectId(child.getString(Properties.JSON_KEY_OBJECT_ID));
+                    .setObjectId(Json.getString(child, Properties.JSON_KEY_OBJECT_ID));
             geometries.put(childIndex, geometry);
         }
 
         return geometry;
     }
 
-    private Geometry<?> buildGeometry(JSONObject item, Geometry<?> parent, List<? extends Geometry<?>> primitives) throws GeometryException {
+    private Geometry<?> buildGeometry(JsonNode item, Geometry<?> parent, List<? extends Geometry<?>> primitives) throws GeometryException {
         return switch (getType(item)) {
             case POINT -> {
                 Point point = getPrimitive(item, primitives, Point.class);
@@ -92,7 +92,7 @@ public class GeometryBuilder {
             }
             case POLYGON -> {
                 Polygon polygon = getPrimitive(item, primitives, Polygon.class);
-                polygon.setReversed(item.getBooleanValue(Properties.JSON_KEY_IS_REVERSED, false));
+                polygon.setReversed(item.path(Properties.JSON_KEY_IS_REVERSED).asBoolean(false));
                 if (parent instanceof SurfaceCollection<?> surfaceCollection) {
                     surfaceCollection.getPolygons().add(polygon);
                 }
@@ -169,8 +169,8 @@ public class GeometryBuilder {
         }
     }
 
-    private <T extends Geometry<?>> T getPrimitive(JSONObject item, List<? extends Geometry<?>> primitives, Class<T> type) throws GeometryException {
-        Integer index = item.getInteger(Properties.JSON_KEY_GEOMETRY_INDEX);
+    private <T extends Geometry<?>> T getPrimitive(JsonNode item, List<? extends Geometry<?>> primitives, Class<T> type) throws GeometryException {
+        Integer index = Json.getInteger(item, Properties.JSON_KEY_GEOMETRY_INDEX);
         if (index == null) {
             throw new GeometryException("Missing geometry index.");
         } else if (index < 0 || index >= primitives.size()) {
@@ -185,8 +185,8 @@ public class GeometryBuilder {
         }
     }
 
-    private GeometryType getType(JSONObject item) throws GeometryException {
-        GeometryType type = GeometryType.fromDatabaseValue(item.getIntValue(Properties.JSON_KEY_TYPE, -1));
+    private GeometryType getType(JsonNode item) throws GeometryException {
+        GeometryType type = GeometryType.fromDatabaseValue(item.path(Properties.JSON_KEY_TYPE).asInt(-1));
         if (type != null) {
             return type;
         } else {

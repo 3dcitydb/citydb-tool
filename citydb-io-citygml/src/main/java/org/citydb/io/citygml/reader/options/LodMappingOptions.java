@@ -5,14 +5,10 @@
 
 package org.citydb.io.citygml.reader.options;
 
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.annotation.JSONField;
-
 import java.util.Map;
 import java.util.TreeMap;
 
 public class LodMappingOptions {
-    @JSONField(serializeFeatures = JSONWriter.Feature.WriteEnumUsingToString)
     private LodMappingStrategy strategy;
     private Map<Integer, String> mappings;
 

@@ -5,13 +5,14 @@
 
 package org.citydb.operation.importer.appearance;
 
-import com.alibaba.fastjson2.JSONArray;
+import org.citydb.core.json.Json;
 import org.citydb.database.schema.Sequence;
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.util.matrix.Matrix;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.sql.SQLException;
 import java.util.Collections;
@@ -34,9 +35,9 @@ public class GeoreferencedTextureImporter extends TextureImporter {
     public long doImport(GeoreferencedTexture texture) throws ImportException, SQLException {
         long surfaceDataId = nextSequenceValue(Sequence.SURFACE_DATA);
 
-        JSONArray orientation = texture.getOrientation()
+        ArrayNode orientation = texture.getOrientation()
                 .map(Matrix::toRowMajor)
-                .map(JSONArray::new)
+                .map(Json::arrayOf)
                 .orElse(null);
 
         setJsonOrNull(11, getJson(orientation));

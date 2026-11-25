@@ -5,7 +5,6 @@
 
 package org.citydb.operation.importer.appearance;
 
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.database.schema.Table;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.operation.importer.ImportException;
@@ -39,10 +38,10 @@ public class SurfaceDataMappingImporter extends DatabaseImporter {
 
             stmt.setLong(1, surfaceDataId);
             stmt.setLong(2, entry.getKey());
-            setJsonOrNull(3, getJson(mapping.getMaterialMapping(), JSONWriter.Feature.LargeObject));
-            setJsonOrNull(4, getJson(mapping.getTextureMapping(), JSONWriter.Feature.LargeObject));
-            setJsonOrNull(5, getJson(mapping.getWorldToTextureMapping(), JSONWriter.Feature.LargeObject));
-            setJsonOrNull(6, getJson(mapping.getGeoreferencedTextureMapping(), JSONWriter.Feature.LargeObject));
+            setJsonOrNull(3, getJson(mapping.getMaterialMapping()));
+            setJsonOrNull(4, getJson(mapping.getTextureMapping()));
+            setJsonOrNull(5, getJson(mapping.getWorldToTextureMapping()));
+            setJsonOrNull(6, getJson(mapping.getGeoreferencedTextureMapping()));
 
             addBatch();
         }

@@ -5,12 +5,11 @@
 
 package org.citydb.cli.index.status;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONWriter;
 import org.citydb.cli.ExecutionException;
 import org.citydb.cli.index.IndexController;
 import org.citydb.cli.index.IndexStatusBuilder;
 import org.citydb.cli.index.options.OutputOptions;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.schema.Index;
 import org.citydb.database.util.IndexHelper;
@@ -52,7 +51,7 @@ public class IndexStatusCommand extends IndexController {
         if (outputOptions.isOutputSpecified()) {
             logger.info("Writing indexes status as JSON to {}.", outputOptions);
             try (OutputStream stream = outputOptions.openStream()) {
-                JSON.writeTo(stream, IndexStatusBuilder.build(indexes), JSONWriter.Feature.PrettyFormatWith2Space);
+                JsonMapping.prettyMapper().writeValue(stream, IndexStatusBuilder.build(indexes));
             } catch (Exception e) {
                 throw new ExecutionException("Failed to write indexes status as JSON.", e);
             }
