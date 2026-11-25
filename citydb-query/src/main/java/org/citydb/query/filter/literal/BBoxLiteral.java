@@ -9,7 +9,7 @@ import org.citydb.model.geometry.Envelope;
 import org.citydb.query.filter.common.FilterVisitor;
 import org.citydb.query.filter.common.GeometryExpression;
 
-public class BBoxLiteral extends Literal<Envelope> implements GeometryExpression {
+public final class BBoxLiteral extends Literal<Envelope> implements GeometryExpression {
 
     private BBoxLiteral(Envelope value) {
         super(value);

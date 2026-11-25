@@ -11,7 +11,7 @@ import org.citydb.query.filter.operation.BooleanExpression;
 
 import java.util.Locale;
 
-public class BooleanLiteral extends Literal<Boolean> implements BooleanExpression, ScalarExpression {
+public final class BooleanLiteral extends Literal<Boolean> implements BooleanExpression, ScalarExpression {
     public static final BooleanLiteral TRUE = new BooleanLiteral(true);
     public static final BooleanLiteral FALSE = new BooleanLiteral(false);
 

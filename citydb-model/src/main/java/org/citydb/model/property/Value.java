@@ -56,21 +56,13 @@ public class Value implements Serializable {
     }
 
     public boolean asBoolean(boolean defaultValue) {
-        if (value instanceof Boolean bool) {
-            return bool;
-        } else if (value instanceof Number number) {
-            return number.doubleValue() != 0;
-        } else if (value instanceof String) {
-            if ("true".equalsIgnoreCase(value.toString())
-                    || "1".equals(value)) {
-                return true;
-            } else if ("false".equalsIgnoreCase(value.toString())
-                    || "0".equals(value)) {
-                return false;
-            }
-        }
-
-        return defaultValue;
+        return switch (value) {
+            case Boolean bool -> bool;
+            case Number number -> number.doubleValue() != 0;
+            case String str when "true".equalsIgnoreCase(str) || "1".equals(str) -> true;
+            case String str when "false".equalsIgnoreCase(str) || "0".equals(str) -> false;
+            default -> defaultValue;
+        };
     }
 
     public boolean isInt() {
@@ -192,14 +184,11 @@ public class Value implements Serializable {
     }
 
     public String asString(String defaultValue) {
-        if (value instanceof String str) {
-            return str;
-        } else if (value instanceof Boolean bool) {
-            return bool ? "true" : "false";
-        } else if (value instanceof Number) {
-            return String.valueOf(value);
-        }
-
-        return defaultValue;
+        return switch (value) {
+            case String str -> str;
+            case Boolean bool -> bool ? "true" : "false";
+            case Number number -> String.valueOf(number);
+            default -> defaultValue;
+        };
     }
 }

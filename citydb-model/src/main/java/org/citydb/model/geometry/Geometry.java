@@ -14,7 +14,9 @@ import org.citydb.model.walker.ModelWalker;
 
 import java.util.Optional;
 
-public abstract class Geometry<T extends Geometry<?>> extends Child implements SpatialObject, Referencable, Visitable, Describable<GeometryDescriptor> {
+public sealed abstract class Geometry<T extends Geometry<?>> extends Child
+        implements SpatialObject, Referencable, Visitable, Describable<GeometryDescriptor>
+        permits LineString, MultiLineString, MultiPoint, Point, Solid, SolidCollection, Surface {
     private String objectId;
     private Integer srid;
     private String srsIdentifier;

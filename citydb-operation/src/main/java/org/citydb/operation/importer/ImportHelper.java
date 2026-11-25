@@ -208,28 +208,23 @@ public class ImportHelper {
             inheritedLifespan = Lifespan.NONE;
             sequenceValues = sequenceGenerator.generateNextValues(property);
 
-            PropertyDescriptor descriptor;
-            if (property instanceof FeatureProperty featureProperty) {
-                descriptor = tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
+            PropertyDescriptor descriptor = switch (property) {
+                case FeatureProperty featureProperty -> tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
                         .doImport(featureProperty, featureId);
-            } else if (property instanceof GeometryProperty geometryProperty) {
-                descriptor = tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
-                        .doImport(geometryProperty, featureId);
-            } else if (property instanceof ImplicitGeometryProperty implicitGeometryProperty) {
-                descriptor = tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
-                        .doImport(implicitGeometryProperty, featureId);
-            } else if (property instanceof AddressProperty addressProperty) {
-                descriptor = tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
+                case GeometryProperty geometryProperty ->
+                        tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
+                                .doImport(geometryProperty, featureId);
+                case ImplicitGeometryProperty implicitGeometryProperty ->
+                        tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
+                                .doImport(implicitGeometryProperty, featureId);
+                case AddressProperty addressProperty -> tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
                         .doImport(addressProperty, featureId);
-            } else if (property instanceof AppearanceProperty appearanceProperty) {
-                descriptor = tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
-                        .doImport(appearanceProperty, featureId);
-            } else if (property instanceof Attribute attribute) {
-                descriptor = tableHelper.getOrCreateImporter(AttributeImporter.class)
+                case AppearanceProperty appearanceProperty ->
+                        tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
+                                .doImport(appearanceProperty, featureId);
+                case Attribute attribute -> tableHelper.getOrCreateImporter(AttributeImporter.class)
                         .doImport(attribute, featureId);
-            } else {
-                throw new ImportException("Unsupported property type: " + property.getClass().getSimpleName());
-            }
+            };
 
             executeBatch(false, transactionMode == Importer.TransactionMode.COMMIT_BATCHES);
             return descriptor;

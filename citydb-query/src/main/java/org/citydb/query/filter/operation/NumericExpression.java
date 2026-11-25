@@ -7,9 +7,12 @@ package org.citydb.query.filter.operation;
 
 import org.citydb.query.filter.common.Expression;
 import org.citydb.query.filter.common.Sign;
+import org.citydb.query.filter.function.Function;
 import org.citydb.query.filter.literal.NumericLiteral;
+import org.citydb.query.filter.literal.PropertyRef;
 
-public interface NumericExpression extends Expression {
+public sealed interface NumericExpression extends Expression
+        permits Function, NumericLiteral, PropertyRef, ArithmeticExpression {
 
     Sign getSign();
 

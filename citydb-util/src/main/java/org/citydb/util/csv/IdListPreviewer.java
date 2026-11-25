@@ -70,7 +70,7 @@ public class IdListPreviewer {
         if (records.size() - header > 0) {
             int columns = records.stream().mapToInt(record -> record.length).max().orElse(0);
             int[] widths = computeColumnWidths(columns, records, lineNumbers);
-            int selectedIndex = getSelectedIndex(options, header == 1 ? records.get(0) : null);
+            int selectedIndex = getSelectedIndex(options, header == 1 ? records.getFirst() : null);
 
             consumer.accept(" ".repeat(widths[0]) + IntStream.range(0, columns)
                     .mapToObj(i -> center(getColumnIndex(i, selectedIndex == i), widths[i + 1], "-"))
@@ -78,7 +78,7 @@ public class IdListPreviewer {
 
             if (header > 0) {
                 consumer.accept(" ".repeat(widths[0]) + IntStream.range(0, columns)
-                        .mapToObj(i -> center(getValue(records.get(0), i), widths[i + 1], " "))
+                        .mapToObj(i -> center(getValue(records.getFirst(), i), widths[i + 1], " "))
                         .collect(Collectors.joining("|")));
                 consumer.accept(" ".repeat(widths[0]) + IntStream.range(0, columns)
                         .mapToObj(i -> "-".repeat(widths[i + 1]))

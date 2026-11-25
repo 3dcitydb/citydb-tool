@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class Polygon extends Surface<Polygon> {
+public final class Polygon extends Surface<Polygon> {
     private final LinearRing exteriorRing;
     private List<LinearRing> interiorRings;
     private boolean reversed;

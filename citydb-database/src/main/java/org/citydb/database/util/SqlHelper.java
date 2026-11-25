@@ -48,26 +48,17 @@ public abstract class SqlHelper {
             Object value = placeholders.get(i).getValue()
                     .orElseThrow(() -> new SQLException("The placeholder at index " + index + " lacks a value."));
 
-            if (value instanceof Boolean booleanValue) {
-                stmt.setInt(index, booleanValue ? 1 : 0);
-            } else if (value instanceof String stringValue) {
-                stmt.setString(index, stringValue);
-            } else if (value instanceof Double doubleValue) {
-                stmt.setDouble(index, doubleValue);
-            } else if (value instanceof Long longValue) {
-                stmt.setLong(index, longValue);
-            } else if (value instanceof Integer intValue) {
-                stmt.setInt(index, intValue);
-            } else if (value instanceof Number number) {
-                stmt.setDouble(index, number.doubleValue());
-            } else if (value instanceof Date date) {
-                stmt.setDate(index, date);
-            } else if (value instanceof Timestamp timestamp) {
-                stmt.setTimestamp(index, timestamp);
-            } else if (value instanceof SpatialObject object) {
-                prepareStatement(index, object, stmt);
-            } else {
-                throw new SQLException("A placeholder value of type " + value.getClass().getName() +
+            switch (value) {
+                case Boolean booleanValue -> stmt.setInt(index, booleanValue ? 1 : 0);
+                case String stringValue -> stmt.setString(index, stringValue);
+                case Double doubleValue -> stmt.setDouble(index, doubleValue);
+                case Long longValue -> stmt.setLong(index, longValue);
+                case Integer intValue -> stmt.setInt(index, intValue);
+                case Number number -> stmt.setDouble(index, number.doubleValue());
+                case Date date -> stmt.setDate(index, date);
+                case Timestamp timestamp -> stmt.setTimestamp(index, timestamp);
+                case SpatialObject object -> prepareStatement(index, object, stmt);
+                default -> throw new SQLException("A placeholder value of type " + value.getClass().getName() +
                         " is not supported.");
             }
         }
@@ -108,20 +99,16 @@ public abstract class SqlHelper {
     public String toSql(SqlObject object, SqlBuildOptions options) {
         options.setPlaceholderBuilder((placeholder, op) -> {
             Object value = placeholder.getValue().orElse(null);
-            if (value instanceof Boolean booleanValue) {
-                return booleanValue ? "1" : "0";
-            } else if (value instanceof String
-                    || value instanceof Date) {
-                return "'" + value + "'";
-            } else if (value instanceof Timestamp timestamp) {
-                return "'" + timestamp.toInstant()
+            return switch (value) {
+                case Boolean booleanValue -> booleanValue ? "1" : "0";
+                case String string -> "'" + string + "'";
+                case Date date -> "'" + date + "'";
+                case Timestamp timestamp -> "'" + timestamp.toInstant()
                         .atOffset(ZoneOffset.UTC)
                         .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "'";
-            } else if (value instanceof SpatialObject spatialObject) {
-                return toSql(spatialObject);
-            } else {
-                return String.valueOf(value);
-            }
+                case SpatialObject spatialObject -> toSql(spatialObject);
+                case null, default -> String.valueOf(value);
+            };
         });
 
         return SqlBuilder.newInstance().build(object, options);

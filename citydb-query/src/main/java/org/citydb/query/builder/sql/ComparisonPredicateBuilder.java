@@ -45,19 +45,14 @@ public class ComparisonPredicateBuilder {
     }
 
     BuildResult build(ComparisonPredicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
-        if (predicate instanceof BinaryComparisonPredicate binaryComparisonPredicate) {
-            return build(binaryComparisonPredicate, select, context, negate);
-        } else if (predicate instanceof Between between) {
-            return build(between, select, context, negate);
-        } else if (predicate instanceof org.citydb.query.filter.operation.In in) {
-            return build(in, select, context, negate);
-        } else if (predicate instanceof IsNull isNull) {
-            return build(isNull, select, context, negate);
-        } else if (predicate instanceof org.citydb.query.filter.operation.Like like) {
-            return build(like, select, context, negate);
-        } else {
-            throw new QueryBuildException("Unsupported comparison predicate.");
-        }
+        return switch (predicate) {
+            case BinaryComparisonPredicate binaryComparisonPredicate ->
+                    build(binaryComparisonPredicate, select, context, negate);
+            case Between between -> build(between, select, context, negate);
+            case org.citydb.query.filter.operation.In in -> build(in, select, context, negate);
+            case IsNull isNull -> build(isNull, select, context, negate);
+            case org.citydb.query.filter.operation.Like like -> build(like, select, context, negate);
+        };
     }
 
     private BuildResult build(BinaryComparisonPredicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
@@ -123,7 +118,7 @@ public class ComparisonPredicateBuilder {
         }
 
         helper.cast(values);
-        helper.cast(operand, values.get(0));
+        helper.cast(operand, values.getFirst());
 
         operand.requireType(Type.SCALAR_TYPES, () -> "A value of type '" + operand.getType() +
                 "' cannot be used as operand of an in predicate.");
@@ -132,7 +127,7 @@ public class ComparisonPredicateBuilder {
                     "' cannot be used as value of an in predicate.");
         }
 
-        if (operand.getType() != values.get(0).getType()) {
+        if (operand.getType() != values.getFirst().getType()) {
             throw new QueryBuildException("Type mismatch between the operand and values of an in predicate.");
         } else if (values.size() > 1) {
             Set<Type> types = values.stream()
@@ -154,7 +149,7 @@ public class ComparisonPredicateBuilder {
             negate = negate ^ in.getOperator() == ComparisonOperator.NOT_IN;
             values.add(operand);
             return valueExpressions.size() == 1
-                    ? BuildResult.of(Operators.eq(operandExpression, valueExpressions.get(0), negate), values)
+                    ? BuildResult.of(Operators.eq(operandExpression, valueExpressions.getFirst(), negate), values)
                     : BuildResult.of(In.of(operandExpression, valueExpressions, negate), values);
         } else {
             throw new QueryBuildException("Failed to build in predicate.");

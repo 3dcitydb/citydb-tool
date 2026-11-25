@@ -35,7 +35,7 @@ public class FunctionBuilder {
 
     private BuildResult accenti(Function function, Select select, SqlContext context, boolean negate) throws QueryBuildException {
         requireArguments(1, function);
-        BuildResult argument = filterBuilder.build(function.getArguments().get(0), select, context, negate);
+        BuildResult argument = filterBuilder.build(function.getArguments().getFirst(), select, context, negate);
 
         argument.cast(Type.STRING, helper);
         requireType(argument, Type.STRING, function.getName());
@@ -50,7 +50,7 @@ public class FunctionBuilder {
 
     private BuildResult casei(Function function, Select select, SqlContext context, boolean negate) throws QueryBuildException {
         requireArguments(1, function);
-        BuildResult argument = filterBuilder.build(function.getArguments().get(0), select, context, negate);
+        BuildResult argument = filterBuilder.build(function.getArguments().getFirst(), select, context, negate);
 
         argument.cast(Type.STRING, helper);
         requireType(argument, Type.STRING, function.getName());

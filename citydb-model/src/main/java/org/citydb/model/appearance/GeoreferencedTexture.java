@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
+public final class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
     private Point referencePoint;
     private Matrix2x2 orientation;
     private List<Surface<?>> targets;

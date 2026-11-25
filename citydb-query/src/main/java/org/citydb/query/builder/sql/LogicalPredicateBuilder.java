@@ -41,7 +41,7 @@ public class LogicalPredicateBuilder {
 
     private BuildResult build(BinaryBooleanPredicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
         if (predicate.getOperands().size() == 1) {
-            return filterBuilder.build(predicate.getOperands().get(0), select, context, negate);
+            return filterBuilder.build(predicate.getOperands().getFirst(), select, context, negate);
         } else {
             List<BooleanExpression> operands = new ArrayList<>();
             for (Expression expression : predicate.getOperands()) {

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class GeometryCollection implements SpatialObject {
+public final class GeometryCollection implements SpatialObject {
     private final List<Geometry<?>> geometries;
     private Integer srid;
     private String srsIdentifier;

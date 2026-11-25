@@ -13,7 +13,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SolidCollection<T extends SolidCollection<?>> extends Geometry<T> {
+public sealed abstract class SolidCollection<T extends SolidCollection<?>> extends Geometry<T>
+        permits CompositeSolid, MultiSolid {
     private final List<Solid> solids;
 
     SolidCollection(int initialCapacity) {

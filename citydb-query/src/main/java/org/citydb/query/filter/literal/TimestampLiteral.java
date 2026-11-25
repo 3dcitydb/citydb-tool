@@ -18,7 +18,7 @@ import java.util.Optional;
 import static java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 import static java.time.temporal.ChronoField.OFFSET_SECONDS;
 
-public class TimestampLiteral extends Literal<OffsetDateTime> implements ScalarExpression {
+public final class TimestampLiteral extends Literal<OffsetDateTime> implements ScalarExpression {
     public static final DateTimeFormatter OFFSET_DATE_TIME = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
             .append(ISO_LOCAL_DATE_TIME)

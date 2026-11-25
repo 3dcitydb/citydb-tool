@@ -11,7 +11,7 @@ import org.citydb.sqlbuilder.query.QueryStatement;
 
 import java.util.Objects;
 
-public class SqlExpression implements BooleanExpression {
+public final class SqlExpression implements BooleanExpression {
     private final StringLiteral queryExpression;
 
     private SqlExpression(StringLiteral queryExpression) {

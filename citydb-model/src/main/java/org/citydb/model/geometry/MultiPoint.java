@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class MultiPoint extends Geometry<MultiPoint> {
+public final class MultiPoint extends Geometry<MultiPoint> {
     private final List<Point> points;
 
     private MultiPoint(int initialCapacity) {

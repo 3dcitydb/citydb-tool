@@ -16,7 +16,7 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 
-public class Attribute extends Property<Attribute> {
+public final class Attribute extends Property<Attribute> {
     private Long intValue;
     private Double doubleValue;
     private String stringValue;

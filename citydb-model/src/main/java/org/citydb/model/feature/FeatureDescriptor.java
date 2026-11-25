@@ -7,7 +7,7 @@ package org.citydb.model.feature;
 
 import org.citydb.model.common.DatabaseDescriptor;
 
-public class FeatureDescriptor extends DatabaseDescriptor {
+public final class FeatureDescriptor extends DatabaseDescriptor {
     private final int objectClassId;
     private long sequenceId;
 

@@ -5,11 +5,17 @@
 
 package org.citydb.query.filter.common;
 
+import org.citydb.query.filter.function.Function;
+import org.citydb.query.filter.literal.BBoxLiteral;
+import org.citydb.query.filter.literal.GeometryCollectionLiteral;
+import org.citydb.query.filter.literal.GeometryLiteral;
+import org.citydb.query.filter.literal.PropertyRef;
 import org.citydb.query.filter.operation.BinarySpatialPredicate;
 import org.citydb.query.filter.operation.DWithin;
 import org.citydb.query.filter.operation.Operators;
 
-public interface GeometryExpression extends Argument {
+public sealed interface GeometryExpression extends Argument
+        permits Function, BBoxLiteral, GeometryCollectionLiteral, GeometryLiteral, PropertyRef {
 
     default BinarySpatialPredicate intersects(GeometryExpression operand) {
         return Operators.intersects(this, operand);

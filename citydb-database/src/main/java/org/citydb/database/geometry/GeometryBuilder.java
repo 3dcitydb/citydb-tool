@@ -120,11 +120,11 @@ public class GeometryBuilder {
     private Geometry<?> castGeometry(Geometry<?> geometry, GeometryType type) throws GeometryException {
         try {
             return switch (type) {
-                case POINT -> getPrimitives(geometry, Point.class).get(0);
+                case POINT -> getPrimitives(geometry, Point.class).getFirst();
                 case MULTI_POINT -> MultiPoint.of(getPrimitives(geometry, Point.class));
-                case LINE_STRING -> getPrimitives(geometry, LineString.class).get(0);
+                case LINE_STRING -> getPrimitives(geometry, LineString.class).getFirst();
                 case MULTI_LINE_STRING -> MultiLineString.of(getPrimitives(geometry, LineString.class));
-                case POLYGON -> getPrimitives(geometry, Polygon.class).get(0);
+                case POLYGON -> getPrimitives(geometry, Polygon.class).getFirst();
                 case MULTI_SURFACE -> MultiSurface.of(getPrimitives(geometry, Polygon.class));
                 case TRIANGULATED_SURFACE -> TriangulatedSurface.of(getPrimitives(geometry, Polygon.class));
                 case COMPOSITE_SURFACE -> CompositeSurface.of(getPrimitives(geometry, Polygon.class));
@@ -162,7 +162,7 @@ public class GeometryBuilder {
     @SuppressWarnings("unchecked")
     private <T extends Geometry<?>> List<T> getPrimitives(Geometry<?> geometry, Class<T> type) {
         List<? extends Geometry<?>> primitives = getPrimitives(geometry);
-        if (!primitives.isEmpty() && type.isInstance(primitives.get(0))) {
+        if (!primitives.isEmpty() && type.isInstance(primitives.getFirst())) {
             return (List<T>) primitives;
         } else {
             throw new ClassCastException();

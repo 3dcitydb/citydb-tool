@@ -76,13 +76,11 @@ public class FilterJSONParser {
     }
 
     private Expression readExpression(JsonNode json) throws FilterParseException {
-        if (json instanceof ObjectNode object) {
-            return readObject(object);
-        } else if (json instanceof ArrayNode array) {
-            return readArray(array);
-        } else {
-            return readLiteral(json);
-        }
+        return switch (json) {
+            case ObjectNode object -> readObject(object);
+            case ArrayNode array -> readArray(array);
+            case null, default -> readLiteral(json);
+        };
     }
 
     private <T extends Expression> T readExpression(JsonNode json, Class<T> type) throws FilterParseException {

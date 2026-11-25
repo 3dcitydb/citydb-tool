@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Collections;
 import java.util.List;
 
-public class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> {
+public final class TriangulatedSurface extends SurfaceCollection<TriangulatedSurface> {
 
     private TriangulatedSurface(int initialCapacity) {
         super(initialCapacity);

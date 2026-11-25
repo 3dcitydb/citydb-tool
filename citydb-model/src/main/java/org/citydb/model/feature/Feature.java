@@ -17,7 +17,7 @@ import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
+public final class Feature extends Child implements Identifiable, Visitable, Describable<FeatureDescriptor> {
     private Name featureType;
     private String objectId;
     private String identifier;
@@ -381,18 +381,15 @@ public class Feature extends Child implements Identifiable, Visitable, Describab
     }
 
     public void addProperty(Property<?> property) {
-        if (property instanceof FeatureProperty featureProperty) {
-            addFeature(featureProperty);
-        } else if (property instanceof GeometryProperty geometryProperty) {
-            addGeometry(geometryProperty);
-        } else if (property instanceof ImplicitGeometryProperty implicitGeometryProperty) {
-            addImplicitGeometry(implicitGeometryProperty);
-        } else if (property instanceof AppearanceProperty appearanceProperty) {
-            addAppearance(appearanceProperty);
-        } else if (property instanceof AddressProperty addressProperty) {
-            addAddress(addressProperty);
-        } else if (property instanceof Attribute attribute) {
-            addAttribute(attribute);
+        switch (property) {
+            case FeatureProperty featureProperty -> addFeature(featureProperty);
+            case GeometryProperty geometryProperty -> addGeometry(geometryProperty);
+            case ImplicitGeometryProperty implicitGeometryProperty -> addImplicitGeometry(implicitGeometryProperty);
+            case AppearanceProperty appearanceProperty -> addAppearance(appearanceProperty);
+            case AddressProperty addressProperty -> addAddress(addressProperty);
+            case Attribute attribute -> addAttribute(attribute);
+            case null -> {
+            }
         }
     }
 

@@ -5,5 +5,8 @@
 
 package org.citydb.query.filter.common;
 
-public interface SpatialPredicate extends Predicate {
+import org.citydb.query.filter.operation.BinarySpatialPredicate;
+import org.citydb.query.filter.operation.DWithin;
+
+public sealed interface SpatialPredicate extends Predicate permits BinarySpatialPredicate, DWithin {
 }

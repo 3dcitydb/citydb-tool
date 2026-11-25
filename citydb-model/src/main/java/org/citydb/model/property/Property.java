@@ -13,7 +13,9 @@ import org.citydb.model.util.CopySession;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class Property<T extends Property<?>> extends Child implements Describable<PropertyDescriptor> {
+public sealed abstract class Property<T extends Property<?>> extends Child implements Describable<PropertyDescriptor>
+        permits AddressProperty, AppearanceProperty, Attribute, FeatureProperty, GeometryProperty,
+        ImplicitGeometryProperty {
     private Name name;
     private Name dataType;
     private PropertyDescriptor descriptor;

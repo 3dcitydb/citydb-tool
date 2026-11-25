@@ -7,6 +7,7 @@ package org.citydb.query.filter.common;
 
 import org.citydb.query.filter.operation.BooleanExpression;
 
-public interface Predicate extends BooleanExpression {
+public sealed interface Predicate extends BooleanExpression
+        permits ComparisonPredicate, LogicalPredicate, SpatialPredicate {
     BooleanExpression negate();
 }

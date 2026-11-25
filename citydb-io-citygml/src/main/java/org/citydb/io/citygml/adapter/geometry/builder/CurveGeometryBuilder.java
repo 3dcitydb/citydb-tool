@@ -35,7 +35,7 @@ public class CurveGeometryBuilder extends GeometryBuilder {
                     return MultiLineString.of(processor.lineStrings);
                 } else {
                     return processor.lineStrings.size() == 1
-                            ? processor.lineStrings.get(0)
+                            ? processor.lineStrings.getFirst()
                             : MultiLineString.of(processor.lineStrings);
                 }
             } else {

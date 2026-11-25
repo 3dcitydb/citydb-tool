@@ -7,7 +7,7 @@ package org.citydb.model.appearance;
 
 import org.citydb.model.common.DatabaseDescriptor;
 
-public class AppearanceDescriptor extends DatabaseDescriptor {
+public final class AppearanceDescriptor extends DatabaseDescriptor {
     private long featureId;
     private long implicitGeometryId;
 

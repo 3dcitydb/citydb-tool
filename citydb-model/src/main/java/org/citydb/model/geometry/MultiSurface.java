@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Collections;
 import java.util.List;
 
-public class MultiSurface extends SurfaceCollection<MultiSurface> {
+public final class MultiSurface extends SurfaceCollection<MultiSurface> {
 
     private MultiSurface(int initialCapacity) {
         super(initialCapacity);

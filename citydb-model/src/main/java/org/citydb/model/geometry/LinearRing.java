@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.*;
 
-public class LinearRing extends Child implements Referencable {
+public final class LinearRing extends Child implements Referencable {
     private final List<Coordinate> points;
     private String objectId;
 

@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
-public class MultiLineString extends Geometry<MultiLineString> {
+public final class MultiLineString extends Geometry<MultiLineString> {
     private final List<LineString> lineStrings;
 
     private MultiLineString(int initialCapacity) {

@@ -149,12 +149,12 @@ public class GeometryCopier {
             surfaceData = copier.shallowCopy(source, session);
             surfaceData.setId(null);
 
-            if (surfaceData instanceof ParameterizedTexture texture) {
-                texture.setTextureParameterizations(null);
-            } else if (surfaceData instanceof X3DMaterial material) {
-                material.setTargets(null);
-            } else if (surfaceData instanceof GeoreferencedTexture texture) {
-                texture.setTargets(null);
+            switch (surfaceData) {
+                case ParameterizedTexture texture -> texture.setTextureParameterizations(null);
+                case X3DMaterial material -> material.setTargets(null);
+                case GeoreferencedTexture texture -> texture.setTargets(null);
+                default -> {
+                }
             }
 
             Appearance appearance = getOrCreateAppearance(source.getParent(Appearance.class));

@@ -15,7 +15,8 @@ import org.citydb.model.util.CopySession;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class SurfaceData<T extends SurfaceData<?>> extends Child implements Identifiable, Visitable {
+public sealed abstract class SurfaceData<T extends SurfaceData<?>> extends Child implements Identifiable, Visitable
+        permits Texture, X3DMaterial {
     private String objectId;
     private String identifier;
     private String identifierCodeSpace;

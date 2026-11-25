@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty> implements InlineOrByReferenceProperty<ImplicitGeometry, ImplicitGeometryReference> {
+public final class ImplicitGeometryProperty extends Property<ImplicitGeometryProperty> implements InlineOrByReferenceProperty<ImplicitGeometry, ImplicitGeometryReference> {
     private ImplicitGeometry implicitGeometry;
     private ImplicitGeometryReference reference;
     private Matrix4x4 transformationMatrix;

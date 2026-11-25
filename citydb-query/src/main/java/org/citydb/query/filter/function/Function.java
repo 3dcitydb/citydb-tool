@@ -11,7 +11,7 @@ import org.citydb.query.filter.operation.NumericExpression;
 
 import java.util.*;
 
-public class Function implements BooleanExpression, CharacterExpression, GeometryExpression, NumericExpression, PatternExpression {
+public final class Function implements BooleanExpression, CharacterExpression, GeometryExpression, NumericExpression, PatternExpression {
     private final FunctionName name;
     private final List<Argument> arguments;
     private Sign sign;

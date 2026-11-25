@@ -9,6 +9,7 @@ import org.citydb.core.json.JsonMapping;
 import org.citydb.plugin.metadata.PluginMetadata;
 
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -185,7 +186,7 @@ public class PluginManager {
                     base = base.substring(4, separator);
                 }
 
-                Path path = Paths.get(new URL(base).toURI());
+                Path path = Paths.get(URI.create(base));
                 return Files.isRegularFile(path) ? path.getParent() : path;
             }
         } catch (Exception e) {

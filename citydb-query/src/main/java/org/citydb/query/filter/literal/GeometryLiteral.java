@@ -9,7 +9,7 @@ import org.citydb.model.geometry.Geometry;
 import org.citydb.query.filter.common.FilterVisitor;
 import org.citydb.query.filter.common.GeometryExpression;
 
-public class GeometryLiteral extends Literal<Geometry<?>> implements GeometryExpression {
+public final class GeometryLiteral extends Literal<Geometry<?>> implements GeometryExpression {
 
     private GeometryLiteral(Geometry<?> value) {
         super(value);

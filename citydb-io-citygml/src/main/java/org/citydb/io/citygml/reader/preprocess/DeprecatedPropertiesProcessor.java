@@ -564,7 +564,7 @@ public class DeprecatedPropertiesProcessor {
                     if (properties.getLod4MultiSolid() != null) {
                         MultiSolidProperty property = properties.getLod4MultiSolid();
                         if (property.getObject() != null && property.getObject().getSolidMember().size() == 1) {
-                            plantCover.setLod3Solid(property.getObject().getSolidMember().get(0));
+                            plantCover.setLod3Solid(property.getObject().getSolidMember().getFirst());
                         } else {
                             processLod4Geometry(property, plantCover);
                         }

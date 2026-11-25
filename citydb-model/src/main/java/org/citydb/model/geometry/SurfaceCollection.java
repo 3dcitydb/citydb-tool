@@ -13,7 +13,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class SurfaceCollection<T extends SurfaceCollection<?>> extends Surface<T> {
+public sealed abstract class SurfaceCollection<T extends SurfaceCollection<?>> extends Surface<T>
+        permits CompositeSurface, MultiSurface, TriangulatedSurface {
     private final List<Polygon> polygons;
 
     SurfaceCollection(int initialCapacity) {

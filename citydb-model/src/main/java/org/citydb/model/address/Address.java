@@ -12,7 +12,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.Optional;
 
-public class Address extends Child implements Identifiable, Visitable, Describable<AddressDescriptor> {
+public final class Address extends Child implements Identifiable, Visitable, Describable<AddressDescriptor> {
     private String objectId;
     private String identifier;
     private String identifierCodeSpace;

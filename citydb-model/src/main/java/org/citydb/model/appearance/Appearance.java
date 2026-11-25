@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 import java.util.List;
 import java.util.Optional;
 
-public class Appearance extends Child implements Identifiable, Visitable, Describable<AppearanceDescriptor> {
+public final class Appearance extends Child implements Identifiable, Visitable, Describable<AppearanceDescriptor> {
     private String objectId;
     private String identifier;
     private String identifierCodeSpace;

@@ -10,7 +10,7 @@ import org.citydb.query.filter.common.FilterVisitor;
 
 import java.util.Objects;
 
-public class Between implements ComparisonPredicate {
+public final class Between implements ComparisonPredicate {
     private final NumericExpression operand;
     private final NumericExpression lowerBound;
     private final NumericExpression upperBound;

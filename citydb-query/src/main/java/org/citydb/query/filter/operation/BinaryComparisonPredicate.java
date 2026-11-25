@@ -11,7 +11,7 @@ import org.citydb.query.filter.common.ScalarExpression;
 
 import java.util.Objects;
 
-public class BinaryComparisonPredicate implements ComparisonPredicate {
+public final class BinaryComparisonPredicate implements ComparisonPredicate {
     private ComparisonOperator operator;
     private final ScalarExpression leftOperand;
     private final ScalarExpression rightOperand;

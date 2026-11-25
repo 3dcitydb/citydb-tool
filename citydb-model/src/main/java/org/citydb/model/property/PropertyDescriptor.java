@@ -7,7 +7,7 @@ package org.citydb.model.property;
 
 import org.citydb.model.common.DatabaseDescriptor;
 
-public class PropertyDescriptor extends DatabaseDescriptor {
+public final class PropertyDescriptor extends DatabaseDescriptor {
     private final long featureId;
     private long parentId;
 

@@ -5,5 +5,7 @@
 
 package org.citydb.query.filter.common;
 
-public interface Argument extends Expression {
+import org.citydb.query.filter.operation.BooleanExpression;
+
+public sealed interface Argument extends Expression permits GeometryExpression, ScalarExpression, BooleanExpression {
 }

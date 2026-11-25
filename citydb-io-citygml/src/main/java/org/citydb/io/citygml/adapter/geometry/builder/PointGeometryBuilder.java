@@ -34,7 +34,7 @@ public class PointGeometryBuilder extends GeometryBuilder {
                     return MultiPoint.of(processor.points);
                 } else {
                     return processor.points.size() == 1
-                            ? processor.points.get(0)
+                            ? processor.points.getFirst()
                             : MultiPoint.of(processor.points);
                 }
             } else {

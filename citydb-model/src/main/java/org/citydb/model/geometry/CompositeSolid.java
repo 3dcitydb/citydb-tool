@@ -11,7 +11,7 @@ import org.citydb.model.util.CopySession;
 import java.util.Collections;
 import java.util.List;
 
-public class CompositeSolid extends SolidCollection<CompositeSolid> {
+public final class CompositeSolid extends SolidCollection<CompositeSolid> {
 
     private CompositeSolid(int initialCapacity) {
         super(initialCapacity);

@@ -12,7 +12,7 @@ import org.citydb.query.filter.common.GeometryExpression;
 import java.util.List;
 import java.util.Objects;
 
-public class GeometryCollectionLiteral extends Literal<List<GeometryLiteral>> implements GeometryExpression {
+public final class GeometryCollectionLiteral extends Literal<List<GeometryLiteral>> implements GeometryExpression {
 
     private GeometryCollectionLiteral(List<GeometryLiteral> members) {
         super(members);

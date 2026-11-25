@@ -11,7 +11,7 @@ import org.citydb.query.filter.common.Sign;
 
 import java.util.Objects;
 
-public class ArithmeticExpression implements NumericExpression, ScalarExpression {
+public final class ArithmeticExpression implements NumericExpression, ScalarExpression {
     private final ArithmeticOperator operator;
     private final NumericExpression leftOperand;
     private NumericExpression rightOperand;
