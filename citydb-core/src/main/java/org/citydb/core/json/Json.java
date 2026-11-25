@@ -3,7 +3,7 @@
  * Copyright virtualcitysystems GmbH <https://vc.systems>
  */
 
-package org.citydb.database.util;
+package org.citydb.core.json;
 
 import tools.jackson.core.StreamWriteFeature;
 import tools.jackson.core.TokenStreamFactory;
@@ -23,10 +23,6 @@ public final class Json {
             .build();
 
     private Json() {
-    }
-
-    public static JsonMapper mapper() {
-        return MAPPER;
     }
 
     public static ObjectNode objectNode() {
@@ -98,7 +94,7 @@ public final class Json {
         } else if (node.isValueNode()) {
             return node.asString();
         } else {
-            return Json.write(node);
+            return write(node);
         }
     }
 }

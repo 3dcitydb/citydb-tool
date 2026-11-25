@@ -5,7 +5,7 @@
 
 package org.citydb.cli.index;
 
-import org.citydb.core.json.JsonMapping;
+import org.citydb.core.json.Json;
 import org.citydb.database.schema.Index;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -19,13 +19,13 @@ public class IndexStatusBuilder {
     }
 
     public static ObjectNode build(Map<Index, Boolean> indexes) {
-        ObjectNode status = JsonMapping.mapper().createObjectNode();
+        ObjectNode status = Json.objectNode();
         status.set("indexes", buildIndexes(indexes));
         return status;
     }
 
     private static ArrayNode buildIndexes(Map<Index, Boolean> indexes) {
-        ArrayNode array = JsonMapping.mapper().createArrayNode();
+        ArrayNode array = Json.arrayNode();
         indexes.forEach((index, status) -> {
             ObjectNode item = array.addObject().put("table", index.getTable());
             ArrayNode columns = item.putArray("columns");

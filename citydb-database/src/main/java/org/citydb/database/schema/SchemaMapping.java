@@ -62,7 +62,7 @@ public class SchemaMapping {
                 ? Name.of(name.getLocalName(), getNamespaceByAlias(name.getPrefix().orElse(null)).getURI())
                 : Name.of(name.getLocalName(), name.getNamespace());
     }
-    
+
     public Collection<DataType> getDataTypes() {
         return dataTypesById.values();
     }

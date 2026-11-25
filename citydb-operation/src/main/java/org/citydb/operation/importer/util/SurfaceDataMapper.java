@@ -5,7 +5,7 @@
 
 package org.citydb.operation.importer.util;
 
-import org.citydb.database.util.Json;
+import org.citydb.core.json.Json;
 import org.citydb.model.appearance.*;
 import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.geometry.GeometryDescriptor;

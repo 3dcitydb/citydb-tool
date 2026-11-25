@@ -5,6 +5,7 @@
 
 package org.citydb.cli.util;
 
+import org.citydb.core.json.Json;
 import org.citydb.core.json.JsonMapping;
 import org.citydb.database.DatabaseConstants;
 import org.citydb.database.adapter.DatabaseAdapter;
@@ -17,14 +18,14 @@ public class ConnectionInfoBuilder {
     }
 
     public static ObjectNode build(DatabaseAdapter adapter) {
-        ObjectNode info = objectNode();
+        ObjectNode info = Json.objectNode();
         info.set("connection", buildDatabaseConnection(adapter.getConnectionDetails()));
         info.set("database", buildDatabase(adapter));
         return info;
     }
 
     private static ObjectNode buildDatabaseConnection(ConnectionDetails connectionDetails) {
-        ObjectNode connection = objectNode()
+        ObjectNode connection = Json.objectNode()
                 .put("databaseType", connectionDetails.getDatabaseType())
                 .put("host", connectionDetails.getHost())
                 .put("port", connectionDetails.getPort())
@@ -40,7 +41,7 @@ public class ConnectionInfoBuilder {
     }
 
     private static ObjectNode buildDatabase(DatabaseAdapter adapter) {
-        ObjectNode database = objectNode()
+        ObjectNode database = Json.objectNode()
                 .put("name", DatabaseConstants.CITYDB_NAME)
                 .put("version", adapter.getDatabaseMetadata().getVersion().toString());
         database.set("dbms", buildDbms(adapter));
@@ -50,7 +51,7 @@ public class ConnectionInfoBuilder {
     }
 
     private static ObjectNode buildDbms(DatabaseAdapter adapter) {
-        ObjectNode dbms = objectNode()
+        ObjectNode dbms = Json.objectNode()
                 .put("name", adapter.getDatabaseMetadata().getVendorProductName())
                 .put("version", adapter.getDatabaseMetadata().getVendorProductVersion());
 
@@ -62,7 +63,7 @@ public class ConnectionInfoBuilder {
     }
 
     private static ObjectNode buildDbmsProperties(DatabaseAdapter adapter) {
-        ObjectNode properties = objectNode();
+        ObjectNode properties = Json.objectNode();
         adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> properties.putObject(id)
                 .put("name", property.getName())
                 .put("value", property.getValue().orElse("n/a")));
@@ -71,13 +72,9 @@ public class ConnectionInfoBuilder {
     }
 
     private static ObjectNode buildCrs(DatabaseAdapter adapter) {
-        return objectNode()
+        return Json.objectNode()
                 .put("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
                 .put("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
                 .put("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
-    }
-
-    private static ObjectNode objectNode() {
-        return JsonMapping.mapper().createObjectNode();
     }
 }

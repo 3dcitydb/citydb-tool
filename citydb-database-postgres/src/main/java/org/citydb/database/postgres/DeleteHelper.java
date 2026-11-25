@@ -5,8 +5,8 @@
 
 package org.citydb.database.postgres;
 
+import org.citydb.core.json.Json;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.Json;
 import org.citydb.database.util.SqlHelper;
 import tools.jackson.databind.node.ObjectNode;
 

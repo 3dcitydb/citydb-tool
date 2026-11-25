@@ -5,9 +5,9 @@
 
 package org.citydb.database.schema;
 
+import org.citydb.core.json.Json;
 import org.citydb.core.version.Version;
 import org.citydb.database.adapter.DatabaseAdapter;
-import org.citydb.database.util.Json;
 import org.citydb.model.common.Name;
 import org.citydb.model.common.Namespaces;
 import org.citydb.model.common.PrefixedName;

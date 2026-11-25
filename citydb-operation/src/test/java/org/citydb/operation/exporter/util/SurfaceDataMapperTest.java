@@ -5,7 +5,7 @@
 
 package org.citydb.operation.exporter.util;
 
-import org.citydb.database.util.Json;
+import org.citydb.core.json.Json;
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.appearance.ParameterizedTexture;
 import org.citydb.model.appearance.TextureCoordinate;

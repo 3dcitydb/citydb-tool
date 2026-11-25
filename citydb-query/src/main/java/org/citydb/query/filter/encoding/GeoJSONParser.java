@@ -5,11 +5,11 @@
 
 package org.citydb.query.filter.encoding;
 
+import org.citydb.core.json.Json;
 import org.citydb.model.geometry.*;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public class GeoJSONParser {
             String type = FilterJSONParser.getString(geometry, JSONToken.TYPE.value());
             ArrayNode coordinates = getArray(geometry, JSONToken.COORDINATES.value());
             if (coordinates == null) {
-                coordinates = JsonNodeFactory.instance.arrayNode();
+                coordinates = Json.arrayNode();
             }
 
             return switch (JSONToken.of(type)) {

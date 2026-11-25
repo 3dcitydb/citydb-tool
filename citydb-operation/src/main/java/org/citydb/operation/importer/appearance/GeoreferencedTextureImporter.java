@@ -5,8 +5,8 @@
 
 package org.citydb.operation.importer.appearance;
 
+import org.citydb.core.json.Json;
 import org.citydb.database.schema.Sequence;
-import org.citydb.database.util.Json;
 import org.citydb.model.appearance.GeoreferencedTexture;
 import org.citydb.model.geometry.Point;
 import org.citydb.model.util.matrix.Matrix;

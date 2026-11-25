@@ -5,6 +5,7 @@
 
 package org.citydb.util.report;
 
+import org.citydb.core.json.Json;
 import org.citydb.core.json.JsonMapping;
 import org.citydb.core.time.TimeHelper;
 import org.citydb.database.DatabaseConstants;
@@ -37,7 +38,7 @@ public class ReportJsonBuilder {
         ReportOptions options = report.getOptions();
         DatabaseAdapter adapter = report.getAdapter();
 
-        ObjectNode jsonReport = objectNode();
+        ObjectNode jsonReport = Json.objectNode();
         jsonReport.set("metadata", buildMetadata(options));
         jsonReport.set("summary", buildSummary(report, options, adapter));
         jsonReport.set("database", buildDatabase(report, options, adapter));
@@ -63,7 +64,7 @@ public class ReportJsonBuilder {
         String timestamp = TimeHelper.toDateTime(LocalDateTime.now().withNano(0))
                 .format(TimeHelper.DATE_TIME_FORMATTER);
 
-        return objectNode()
+        return Json.objectNode()
                 .put("generatedAt", timestamp)
                 .put("featureScope", options.getFeatureScope().toValue())
                 .put("genericAttributesProcessed", options.isIncludeGenericAttributes());
@@ -78,7 +79,7 @@ public class ReportJsonBuilder {
                         .isTopLevel())
                 .toList();
 
-        ObjectNode summary = objectNode();
+        ObjectNode summary = Json.objectNode();
         summary.set("topLevelFeatures", toTree(topLevelFeatures));
         summary.set("lods", toTree(report.getLods().keySet()));
         summary.set("themes", toTree(report.getAppearances().keySet()));
@@ -89,7 +90,7 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildDatabase(DatabaseReport report, ReportOptions options, DatabaseAdapter adapter) {
-        ObjectNode database = objectNode()
+        ObjectNode database = Json.objectNode()
                 .put("name", DatabaseConstants.CITYDB_NAME)
                 .put("version", adapter.getDatabaseMetadata().getVersion().toString());
         database.set("dbms", buildDbms(adapter));
@@ -105,7 +106,7 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildDbms(DatabaseAdapter adapter) {
-        ObjectNode dbms = objectNode()
+        ObjectNode dbms = Json.objectNode()
                 .put("name", adapter.getDatabaseMetadata().getVendorProductName())
                 .put("version", adapter.getDatabaseMetadata().getVendorProductVersion());
 
@@ -117,7 +118,7 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildDbmsProperties(DatabaseAdapter adapter) {
-        ObjectNode properties = objectNode();
+        ObjectNode properties = Json.objectNode();
         adapter.getDatabaseMetadata().getProperties().forEach((id, property) -> properties.putObject(id)
                 .put("name", property.getName())
                 .put("value", property.getValue().orElse("n/a")));
@@ -126,7 +127,7 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildFeatures(DatabaseReport report, DatabaseAdapter adapter) {
-        ObjectNode features = objectNode();
+        ObjectNode features = Json.objectNode();
         features.set("featureCount", buildFeatureCount(report));
         features.set("topLevelFeatureCount", buildTopLevelFeatureCount(report, adapter));
         features.set("byType", buildFeaturesByType(report));
@@ -134,7 +135,7 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildFeatureCount(DatabaseReport report) {
-        return putFeatureCount(objectNode(),
+        return putFeatureCount(Json.objectNode(),
                 sum(report.getActiveFeatures().values()),
                 sum(report.getTerminatedFeatures().values()));
     }
@@ -149,11 +150,11 @@ public class ReportJsonBuilder {
                         .isTopLevel())
                 .mapToLong(Map.Entry::getValue).sum();
 
-        return putFeatureCount(objectNode(), active, terminated);
+        return putFeatureCount(Json.objectNode(), active, terminated);
     }
 
     private ObjectNode buildFeaturesByType(DatabaseReport report) {
-        ObjectNode featuresByType = objectNode();
+        ObjectNode featuresByType = Json.objectNode();
         report.getFeatures().forEach(featureType -> putFeatureCount(featuresByType.putObject(featureType),
                 report.getActiveFeatures().getOrDefault(featureType, 0L),
                 report.getTerminatedFeatures().getOrDefault(featureType, 0L)));
@@ -164,7 +165,7 @@ public class ReportJsonBuilder {
     private ObjectNode buildGeometries(DatabaseReport report) {
         long geometryCount = sum(report.getGeometries().values());
 
-        ObjectNode geometries = objectNode()
+        ObjectNode geometries = Json.objectNode()
                 .put("geometryCount", geometryCount)
                 .put("implicitGeometryCount", report.getImplicitGeometryCount());
         geometries.set("byType", toTree(report.getGeometries()));
@@ -173,13 +174,13 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildAddresses(DatabaseReport report) {
-        return objectNode().put("addressCount", report.getAddressCount());
+        return Json.objectNode().put("addressCount", report.getAddressCount());
     }
 
     private ObjectNode buildAppearances(DatabaseReport report) {
         long appearanceCount = sum(report.getAppearances().values());
 
-        ObjectNode appearances = objectNode()
+        ObjectNode appearances = Json.objectNode()
                 .put("appearanceCount", appearanceCount)
                 .put("hasGlobalAppearances", report.hasGlobalAppearances())
                 .put("hasMaterials", report.hasMaterials())
@@ -190,7 +191,7 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildGenericAttributes(DatabaseReport report) {
-        ObjectNode genericAttributes = objectNode();
+        ObjectNode genericAttributes = Json.objectNode();
         report.getGenericAttributes().forEach((featureType, attributes) -> {
             ObjectNode object = genericAttributes.putObject(featureType);
             attributes.forEach((name, types) -> object.set(name, toTree(types)));
@@ -200,7 +201,7 @@ public class ReportJsonBuilder {
     }
 
     private ArrayNode buildExtensions(DatabaseReport report) {
-        ArrayNode extensions = JsonMapping.mapper().createArrayNode();
+        ArrayNode extensions = Json.arrayNode();
         report.getADEs().forEach((name, value) -> extensions.addObject()
                 .put("name", name)
                 .put("description", value.first())
@@ -210,21 +211,21 @@ public class ReportJsonBuilder {
     }
 
     private ObjectNode buildCodeLists(DatabaseReport report) {
-        ObjectNode codeLists = objectNode();
+        ObjectNode codeLists = Json.objectNode();
         report.getCodeLists().forEach((type, identifiers) -> codeLists.set(type, toTree(identifiers)));
 
         return codeLists;
     }
 
     private ObjectNode buildCrs(DatabaseAdapter adapter) {
-        return objectNode()
+        return Json.objectNode()
                 .put("srid", adapter.getDatabaseMetadata().getSpatialReference().getSRID())
                 .put("identifier", adapter.getDatabaseMetadata().getSpatialReference().getIdentifier())
                 .put("name", adapter.getDatabaseMetadata().getSpatialReference().getName());
     }
 
     private ObjectNode buildDatabaseConnection(DatabaseAdapter adapter) {
-        ObjectNode connection = objectNode()
+        ObjectNode connection = Json.objectNode()
                 .put("databaseType", adapter.getConnectionDetails().getDatabaseType())
                 .put("host", adapter.getConnectionDetails().getHost())
                 .put("port", adapter.getConnectionDetails().getPort())
@@ -248,7 +249,7 @@ public class ReportJsonBuilder {
                         (v1, v2) -> v1,
                         TreeMap::new));
 
-        ObjectNode size = objectNode()
+        ObjectNode size = Json.objectNode()
                 .put("databaseSize", databaseSize.getDatabaseSize())
                 .put("schemaSize", databaseSize.getSchemaSize());
         size.set("byTable", toTree(byTable));
@@ -276,10 +277,6 @@ public class ReportJsonBuilder {
     private ObjectNode putFeatureCount(ObjectNode parent, long active, long terminated) {
         return parent.put("active", active)
                 .put("terminated", terminated);
-    }
-
-    private ObjectNode objectNode() {
-        return JsonMapping.mapper().createObjectNode();
     }
 
     private JsonNode toTree(Object value) {

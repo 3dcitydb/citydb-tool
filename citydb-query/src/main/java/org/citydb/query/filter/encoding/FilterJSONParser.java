@@ -5,6 +5,7 @@
 
 package org.citydb.query.filter.encoding;
 
+import org.citydb.core.json.Json;
 import org.citydb.core.json.JsonMapping;
 import org.citydb.database.srs.SrsUnit;
 import org.citydb.model.geometry.Coordinate;
@@ -17,7 +18,6 @@ import org.citydb.query.filter.operation.*;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
-import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.time.LocalDate;
@@ -114,7 +114,7 @@ public class FilterJSONParser {
             if (op != null) {
                 return readOperation(op, args instanceof ArrayNode array
                         ? array
-                        : JsonNodeFactory.instance.arrayNode());
+                        : Json.arrayNode());
             } else if (date != null) {
                 return readDateLiteral(date);
             } else if (timestamp != null) {

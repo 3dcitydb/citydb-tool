@@ -15,7 +15,10 @@ import org.citydb.model.common.Matrix3x4;
 import org.citydb.model.encoding.Matrix3x4Reader;
 import org.citydb.model.encoding.Matrix3x4Writer;
 import org.citydb.model.feature.Validity;
-import org.citydb.operation.exporter.options.*;
+import org.citydb.operation.exporter.options.AppearanceOptions;
+import org.citydb.operation.exporter.options.ExternalFileResolver;
+import org.citydb.operation.exporter.options.ImplicitGeometryScope;
+import org.citydb.operation.exporter.options.LodOptions;
 import tools.jackson.databind.annotation.JsonDeserialize;
 import tools.jackson.databind.annotation.JsonSerialize;
 

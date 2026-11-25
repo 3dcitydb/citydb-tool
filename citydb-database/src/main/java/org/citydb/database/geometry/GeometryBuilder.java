@@ -5,7 +5,7 @@
 
 package org.citydb.database.geometry;
 
-import org.citydb.database.util.Json;
+import org.citydb.core.json.Json;
 import org.citydb.model.geometry.*;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;

@@ -6,12 +6,12 @@
 package org.citydb.operation.importer.common;
 
 import org.citydb.core.file.FileLocator;
+import org.citydb.core.json.Json;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
-import org.citydb.database.util.Json;
 import org.citydb.model.address.Address;
 import org.citydb.model.appearance.SurfaceData;
 import org.citydb.model.common.ExternalFile;

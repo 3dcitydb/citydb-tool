@@ -12,7 +12,6 @@ import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
 public class SurfaceDataMapper {
     private final Map<SurfaceData<?>, List<String>> materialMappings = new IdentityHashMap<>();
@@ -72,8 +71,8 @@ public class SurfaceDataMapper {
         if (mapping != null) {
             for (Map.Entry<String, JsonNode> entry : mapping.properties()) {
                 if (entry.getValue() instanceof ArrayNode array) {
-                    List<Double> worldToTexture = IntStream.range(0, array.size())
-                            .mapToObj(i -> array.get(i).isNumber() ? array.get(i).doubleValue() : null)
+                    List<Double> worldToTexture = array.valueStream()
+                            .map(value -> value.isNumber() ? value.doubleValue() : null)
                             .toList();
                     worldToTextureMappings.computeIfAbsent(surfaceData, v -> new HashMap<>())
                             .put(getKey(geometryDataId, entry.getKey()), worldToTexture);

@@ -5,7 +5,6 @@
 
 package org.citydb.operation.exporter.options;
 
-
 import java.util.LinkedHashSet;
 import java.util.Set;
 

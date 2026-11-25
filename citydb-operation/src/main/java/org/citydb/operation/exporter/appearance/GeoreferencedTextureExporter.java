@@ -13,7 +13,6 @@ import tools.jackson.databind.node.ArrayNode;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.stream.IntStream;
 
 public class GeoreferencedTextureExporter extends TextureExporter {
 
@@ -26,8 +25,8 @@ public class GeoreferencedTextureExporter extends TextureExporter {
 
         ArrayNode orientation = getJsonArray(rs.getString("gt_orientation"));
         if (orientation != null) {
-            texture.setOrientation(IntStream.range(0, orientation.size())
-                    .mapToObj(i -> orientation.get(i).isNumber() ? orientation.get(i).doubleValue() : null)
+            texture.setOrientation(orientation.valueStream()
+                    .map(value -> value.isNumber() ? value.doubleValue() : null)
                     .toList());
         }
 

@@ -5,8 +5,8 @@
 
 package org.citydb.operation.importer.property;
 
+import org.citydb.core.json.Json;
 import org.citydb.database.schema.Sequence;
-import org.citydb.database.util.Json;
 import org.citydb.model.property.*;
 import org.citydb.operation.importer.ImportException;
 import org.citydb.operation.importer.ImportHelper;

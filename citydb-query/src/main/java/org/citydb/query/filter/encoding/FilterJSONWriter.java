@@ -284,8 +284,8 @@ public class FilterJSONWriter {
         }
 
         private void writeList(List<? extends Expression> expressions) {
-            for (int i = 0; i < expressions.size(); i++) {
-                expressions.get(i).accept(this);
+            for (Expression expression : expressions) {
+                expression.accept(this);
             }
         }
     }

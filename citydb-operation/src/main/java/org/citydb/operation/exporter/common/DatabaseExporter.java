@@ -5,10 +5,10 @@
 
 package org.citydb.operation.exporter.common;
 
+import org.citydb.core.json.Json;
 import org.citydb.database.adapter.DatabaseAdapter;
 import org.citydb.database.geometry.GeometryException;
 import org.citydb.database.schema.SchemaMapping;
-import org.citydb.database.util.Json;
 import org.citydb.database.util.OperationHelper;
 import org.citydb.model.appearance.Color;
 import org.citydb.model.common.Name;

@@ -5,7 +5,6 @@
 
 package org.citydb.io.citygml.reader.options;
 
-
 import java.util.Map;
 import java.util.TreeMap;
 

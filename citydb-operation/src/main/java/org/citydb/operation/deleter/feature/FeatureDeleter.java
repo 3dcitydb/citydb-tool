@@ -5,7 +5,7 @@
 
 package org.citydb.operation.deleter.feature;
 
-import org.citydb.database.util.Json;
+import org.citydb.core.json.Json;
 import org.citydb.operation.deleter.DeleteException;
 import org.citydb.operation.deleter.DeleteHelper;
 import org.citydb.operation.deleter.common.DatabaseDeleter;

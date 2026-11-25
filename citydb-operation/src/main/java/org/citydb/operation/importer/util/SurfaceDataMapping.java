@@ -5,7 +5,7 @@
 
 package org.citydb.operation.importer.util;
 
-import org.citydb.database.util.Json;
+import org.citydb.core.json.Json;
 import tools.jackson.databind.node.ObjectNode;
 
 public class SurfaceDataMapping {

@@ -5,9 +5,9 @@
 
 package org.citydb.operation.importer.address;
 
+import org.citydb.core.json.Json;
 import org.citydb.database.schema.Sequence;
 import org.citydb.database.schema.Table;
-import org.citydb.database.util.Json;
 import org.citydb.model.address.Address;
 import org.citydb.model.address.AddressDescriptor;
 import org.citydb.model.property.Value;
