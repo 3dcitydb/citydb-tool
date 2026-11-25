@@ -107,16 +107,13 @@ public class SchemaPathBuilder {
 
     private Node getNode(PropertyRef propertyRef, Node parent, boolean useGenericsAsFallback) throws SchemaPathException {
         Name name = getName(propertyRef);
-        Node node = null;
-        if (parent.getSchemaObject() instanceof FeatureType type) {
-            node = getNode(name, type);
-        } else if (parent.getSchemaObject() instanceof DataType type) {
-            node = getNode(name, type);
-        } else if (parent.getSchemaObject() instanceof Property property) {
-            node = getNode(name, property);
-        } else if (parent.getSchemaObject() instanceof GenericAttribute attribute) {
-            node = getNode(name, attribute);
-        }
+        Node node = switch (parent.getSchemaObject()) {
+            case FeatureType type -> getNode(name, type);
+            case DataType type -> getNode(name, type);
+            case Property property -> getNode(name, property);
+            case GenericAttribute attribute -> getNode(name, attribute);
+            case null, default -> null;
+        };
 
         return node != null ? node : getNode(propertyRef, name, parent, useGenericsAsFallback);
     }

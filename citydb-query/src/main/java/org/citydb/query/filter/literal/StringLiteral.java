@@ -11,7 +11,7 @@ import org.citydb.query.filter.common.PatternExpression;
 import org.citydb.query.filter.operation.Like;
 import org.citydb.query.filter.operation.Operators;
 
-public class StringLiteral extends Literal<String> implements PatternExpression, CharacterExpression {
+public final class StringLiteral extends Literal<String> implements PatternExpression, CharacterExpression {
 
     private StringLiteral(String value) {
         super(value);

@@ -78,30 +78,28 @@ public class FilterBuilder {
     }
 
     BuildResult build(Expression expression, Select select, SqlContext context, String joinType, boolean negate, boolean resolveValue) throws QueryBuildException {
-        BuildResult result;
-        if (expression instanceof ComparisonPredicate comparisonPredicate) {
-            result = predicateQueryBuilder.build(comparisonPredicate, context, negate);
-        } else if (expression instanceof SpatialPredicate spatialPredicate) {
-            result = predicateQueryBuilder.build(spatialPredicate, context, negate);
-        } else if (expression instanceof LogicalPredicate logicalPredicate) {
-            result = logicalPredicateBuilder.build(logicalPredicate, select, context, negate);
-        } else if (expression instanceof SqlExpression sqlExpression) {
-            result = sqlExpressionBuilder.build(sqlExpression, context, negate);
-        } else if (expression instanceof ArithmeticExpression arithmeticExpression) {
-            result = arithmeticExpressionBuilder.build(arithmeticExpression, select, context, negate);
-        } else if (expression instanceof Function function) {
-            result = functionBuilder.build(function, select, context, negate);
-        } else if (expression instanceof Literal<?> literal) {
-            result = build(literal, negate);
-        } else if (expression instanceof PropertyRef propertyRef) {
-            result = BuildResult.of(propertyRef);
-            if (resolveValue) {
-                SqlContext scope = context.isIsolated() ? SqlContext.isolatedOf(context) : context;
-                result.update(helper.getContextBuilder().build(propertyRef, select, scope, joinType, true));
+        BuildResult result = switch (expression) {
+            case ComparisonPredicate comparisonPredicate ->
+                    predicateQueryBuilder.build(comparisonPredicate, context, negate);
+            case SpatialPredicate spatialPredicate -> predicateQueryBuilder.build(spatialPredicate, context, negate);
+            case LogicalPredicate logicalPredicate ->
+                    logicalPredicateBuilder.build(logicalPredicate, select, context, negate);
+            case SqlExpression sqlExpression -> sqlExpressionBuilder.build(sqlExpression, context, negate);
+            case ArithmeticExpression arithmeticExpression ->
+                    arithmeticExpressionBuilder.build(arithmeticExpression, select, context, negate);
+            case Function function -> functionBuilder.build(function, select, context, negate);
+            case Literal<?> literal -> build(literal, negate);
+            case PropertyRef propertyRef -> {
+                BuildResult propertyResult = BuildResult.of(propertyRef);
+                if (resolveValue) {
+                    SqlContext scope = context.isIsolated() ? SqlContext.isolatedOf(context) : context;
+                    propertyResult.update(helper.getContextBuilder().build(propertyRef, select, scope, joinType, true));
+                }
+
+                yield propertyResult;
             }
-        } else {
-            throw new QueryBuildException("Unsupported filter expression.");
-        }
+            case null -> throw new QueryBuildException("Unsupported filter expression.");
+        };
 
         if (resolveValue) {
             applySign(expression, result);
@@ -111,29 +109,22 @@ public class FilterBuilder {
     }
 
     private BuildResult build(Literal<?> literal, boolean negate) throws QueryBuildException {
-        if (literal instanceof BooleanLiteral booleanLiteral) {
-            return BuildResult.of(Placeholder.of(booleanLiteral.getValue() ^ negate), Type.BOOLEAN);
-        } else if (literal instanceof NumericLiteral numericLiteral) {
-            return numericLiteral.isInteger()
+        return switch (literal) {
+            case BooleanLiteral booleanLiteral ->
+                    BuildResult.of(Placeholder.of(booleanLiteral.getValue() ^ negate), Type.BOOLEAN);
+            case NumericLiteral numericLiteral -> numericLiteral.isInteger()
                     ? BuildResult.of(Placeholder.of(numericLiteral.intValue()), Type.INTEGER)
                     : BuildResult.of(Placeholder.of(numericLiteral.doubleValue()), Type.DOUBLE);
-        } else if (literal instanceof StringLiteral stringLiteral) {
-            return BuildResult.of(Placeholder.of(stringLiteral.getValue()), Type.STRING);
-        } else if (literal instanceof TimestampLiteral timestampLiteral) {
-            return BuildResult.of(Placeholder.of(
+            case StringLiteral stringLiteral -> BuildResult.of(Placeholder.of(stringLiteral.getValue()), Type.STRING);
+            case TimestampLiteral timestampLiteral -> BuildResult.of(Placeholder.of(
                     Timestamp.from(timestampLiteral.getValue().toInstant())), Type.TIMESTAMP);
-        } else if (literal instanceof DateLiteral dateLiteral) {
-            return BuildResult.of(Placeholder.of(Date.valueOf(dateLiteral.getValue())), Type.DATE);
-        } else if (literal instanceof BBoxLiteral bboxLiteral) {
-            return BuildResult.of(Placeholder.of(bboxLiteral.getValue()), Type.ENVELOPE);
-        } else if (literal instanceof GeometryLiteral geometryLiteral) {
-            return BuildResult.of(Placeholder.of(geometryLiteral.getValue()), Type.GEOMETRY);
-        } else if (literal instanceof GeometryCollectionLiteral collectionLiteral) {
-            return build(collectionLiteral);
-        } else {
-            throw new QueryBuildException("Unsupported literal value '" +
-                    literal.getValue().getClass().getSimpleName() + "'.");
-        }
+            case DateLiteral dateLiteral ->
+                    BuildResult.of(Placeholder.of(Date.valueOf(dateLiteral.getValue())), Type.DATE);
+            case BBoxLiteral bboxLiteral -> BuildResult.of(Placeholder.of(bboxLiteral.getValue()), Type.ENVELOPE);
+            case GeometryLiteral geometryLiteral ->
+                    BuildResult.of(Placeholder.of(geometryLiteral.getValue()), Type.GEOMETRY);
+            case GeometryCollectionLiteral collectionLiteral -> build(collectionLiteral);
+        };
     }
 
     private BuildResult build(GeometryCollectionLiteral literal) {

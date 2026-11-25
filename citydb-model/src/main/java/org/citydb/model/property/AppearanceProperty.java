@@ -48,16 +48,12 @@ public class AppearanceProperty extends Property<AppearanceProperty> implements 
 
     @Override
     public boolean removeFromParent() {
-        Child parent = getParent().orElse(null);
-        if (parent instanceof Feature feature) {
-            return feature.getAppearances().remove(this);
-        } else if (parent instanceof ImplicitGeometry geometry) {
-            return geometry.getAppearances().remove(this);
-        } else if (parent instanceof Attribute attribute) {
-            return attribute.getProperties().remove(this);
-        } else {
-            return false;
-        }
+        return switch (getParent().orElse(null)) {
+            case Feature feature -> feature.getAppearances().remove(this);
+            case ImplicitGeometry geometry -> geometry.getAppearances().remove(this);
+            case Attribute attribute -> attribute.getProperties().remove(this);
+            case null, default -> false;
+        };
     }
 
     @Override

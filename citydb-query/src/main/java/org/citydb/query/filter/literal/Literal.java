@@ -17,7 +17,8 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class Literal<T> implements Expression {
+public sealed abstract class Literal<T> implements Expression permits
+        BBoxLiteral, BooleanLiteral, DateLiteral, GeometryCollectionLiteral, GeometryLiteral, NumericLiteral, StringLiteral, TimestampLiteral {
     protected T value;
 
     protected Literal(T value) {
@@ -25,21 +26,15 @@ public abstract class Literal<T> implements Expression {
     }
 
     public static ScalarExpression ofScalar(Object value) {
-        if (value instanceof ScalarExpression expression) {
-            return expression;
-        } else if (value instanceof String stringValue) {
-            return StringLiteral.of(stringValue);
-        } else if (value instanceof Number number) {
-            return NumericLiteral.of(number);
-        } else if (value instanceof Boolean bool) {
-            return BooleanLiteral.of(bool);
-        } else if (value instanceof LocalDate localDate) {
-            return DateLiteral.of(localDate);
-        } else if (value instanceof OffsetDateTime offsetDateTime) {
-            return TimestampLiteral.of(offsetDateTime);
-        } else {
-            return StringLiteral.of(value);
-        }
+        return switch (value) {
+            case ScalarExpression expression -> expression;
+            case String stringValue -> StringLiteral.of(stringValue);
+            case Number number -> NumericLiteral.of(number);
+            case Boolean bool -> BooleanLiteral.of(bool);
+            case LocalDate localDate -> DateLiteral.of(localDate);
+            case OffsetDateTime offsetDateTime -> TimestampLiteral.of(offsetDateTime);
+            case null, default -> StringLiteral.of(value);
+        };
     }
 
     public T getValue() {

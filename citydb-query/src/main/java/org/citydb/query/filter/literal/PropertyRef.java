@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public class PropertyRef implements GeometryExpression, NumericExpression, CharacterExpression {
+public final class PropertyRef implements GeometryExpression, NumericExpression, CharacterExpression {
     private final PrefixedName name;
     private final String typeCast;
     private Predicate filter;

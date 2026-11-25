@@ -7,6 +7,7 @@ package org.citydb.query.builder.sql;
 
 import org.citydb.query.builder.QueryBuildException;
 import org.citydb.query.filter.common.ComparisonPredicate;
+import org.citydb.query.filter.common.LogicalPredicate;
 import org.citydb.query.filter.common.Predicate;
 import org.citydb.query.filter.common.SpatialPredicate;
 import org.citydb.query.filter.operation.*;
@@ -73,19 +74,19 @@ public class PredicateQueryBuilder {
 
     private BuildResult build(Predicate predicate, Select select, SqlContext context, boolean negate) throws QueryBuildException {
         SqlContext scope = SqlContext.isolatedOf(context);
-        if (predicate instanceof ComparisonPredicate comparisonPredicate) {
-            return comparisonPredicateBuilder.build(comparisonPredicate, select, scope, negate);
-        } else if (predicate instanceof SpatialPredicate spatialPredicate) {
-            return spatialPredicateBuilder.build(spatialPredicate, select, scope, negate);
-        } else {
-            throw new QueryBuildException("Unsupported predicate.");
-        }
+        return switch (predicate) {
+            case ComparisonPredicate comparisonPredicate ->
+                    comparisonPredicateBuilder.build(comparisonPredicate, select, scope, negate);
+            case SpatialPredicate spatialPredicate ->
+                    spatialPredicateBuilder.build(spatialPredicate, select, scope, negate);
+            case LogicalPredicate logicalPredicate -> throw new QueryBuildException("Unsupported predicate.");
+        };
     }
 
     private Select toSubQuery(Select query, BuildResult result, Values values) throws QueryBuildException {
         // the first join becomes the FROM table, its join condition links the subquery to the outer row
         List<Join> joins = new ArrayList<>(query.getJoins());
-        Join first = joins.remove(0);
+        Join first = joins.removeFirst();
         query.removeJoins()
                 .from(first.getTable())
                 .where(first.getConditions().toArray(BooleanExpression[]::new));
@@ -120,21 +121,17 @@ public class PredicateQueryBuilder {
                 .map(Operators::isNull)
                 .forEach(conditions::add);
 
-        return conditions.size() == 1 ? conditions.get(0) : Operators.or(conditions);
+        return conditions.size() == 1 ? conditions.getFirst() : Operators.or(conditions);
     }
 
     private boolean isInverted(Predicate predicate) {
-        if (predicate instanceof In in) {
-            return in.getOperator() == ComparisonOperator.NOT_IN;
-        } else if (predicate instanceof Like like) {
-            return like.getOperator() == ComparisonOperator.NOT_LIKE;
-        } else if (predicate instanceof Between between) {
-            return between.getOperator() == ComparisonOperator.NOT_BETWEEN;
-        } else if (predicate instanceof IsNull isNull) {
-            return isNull.getOperator() == ComparisonOperator.IS_NULL;
-        } else {
-            return false;
-        }
+        return switch (predicate) {
+            case In in -> in.getOperator() == ComparisonOperator.NOT_IN;
+            case Like like -> like.getOperator() == ComparisonOperator.NOT_LIKE;
+            case Between between -> between.getOperator() == ComparisonOperator.NOT_BETWEEN;
+            case IsNull isNull -> isNull.getOperator() == ComparisonOperator.IS_NULL;
+            case null, default -> false;
+        };
     }
 
     private boolean containsColumn(org.citydb.sqlbuilder.common.Expression expression) {

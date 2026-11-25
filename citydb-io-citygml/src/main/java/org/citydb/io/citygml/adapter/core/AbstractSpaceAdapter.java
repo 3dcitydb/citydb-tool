@@ -325,7 +325,7 @@ public abstract class AbstractSpaceAdapter<T extends AbstractSpace> extends Abst
             case MULTI_SOLID:
                 MultiSolid multiSolid = (MultiSolid) geometry;
                 if (multiSolid.getSolids().size() == 1) {
-                    target.setLod3Solid(helper.getGeometryProperty(multiSolid.getSolids().get(0),
+                    target.setLod3Solid(helper.getGeometryProperty(multiSolid.getSolids().getFirst(),
                             SolidPropertyAdapter.class));
                     break;
                 }

@@ -5,5 +5,9 @@
 
 package org.citydb.query.filter.common;
 
-public interface PatternExpression extends Expression {
+import org.citydb.query.filter.function.Function;
+import org.citydb.query.filter.literal.StringLiteral;
+
+public sealed interface PatternExpression extends Expression permits
+        Function, StringLiteral {
 }

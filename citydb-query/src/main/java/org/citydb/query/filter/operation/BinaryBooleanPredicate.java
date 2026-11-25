@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class BinaryBooleanPredicate implements LogicalPredicate {
+public final class BinaryBooleanPredicate implements LogicalPredicate {
     private final BooleanOperator operator;
     private final List<BooleanExpression> operands;
 

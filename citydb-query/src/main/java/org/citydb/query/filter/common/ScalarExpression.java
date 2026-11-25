@@ -5,16 +5,14 @@
 
 package org.citydb.query.filter.common;
 
-import org.citydb.query.filter.literal.Literal;
-import org.citydb.query.filter.operation.BinaryComparisonPredicate;
-import org.citydb.query.filter.operation.In;
-import org.citydb.query.filter.operation.IsNull;
-import org.citydb.query.filter.operation.Operators;
+import org.citydb.query.filter.literal.*;
+import org.citydb.query.filter.operation.*;
 
 import java.util.Arrays;
 import java.util.List;
 
-public interface ScalarExpression extends Argument {
+public sealed interface ScalarExpression extends Argument permits
+        CharacterExpression, BooleanLiteral, DateLiteral, NumericLiteral, TimestampLiteral, ArithmeticExpression {
 
     default BinaryComparisonPredicate eq(Object operand) {
         return Operators.eq(this, operand instanceof ScalarExpression expression

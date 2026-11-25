@@ -8,7 +8,6 @@ package org.citydb.database.geometry;
 import org.citydb.model.geometry.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class WKTWriter {
     private boolean includeSRID;
@@ -32,15 +31,14 @@ public class WKTWriter {
             writeSRID(wkt, object);
         }
 
-        if (object instanceof Geometry<?> geometry) {
-            write(wkt, geometry, force3D ? 3 : geometry.getVertexDimension());
-        } else if (object instanceof Envelope envelope) {
-            Polygon polygon = envelope.convertToPolygon();
-            write(wkt, polygon, force3D ? 3 : polygon.getVertexDimension());
-        } else if (object instanceof GeometryCollection collection) {
-            write(wkt, collection, force3D ? 3 : collection.getVertexDimension());
-        } else {
-            throw new IllegalArgumentException("Unsupported spatial object type " +
+        switch (object) {
+            case Geometry<?> geometry -> write(wkt, geometry, force3D ? 3 : geometry.getVertexDimension());
+            case Envelope envelope -> {
+                Polygon polygon = envelope.convertToPolygon();
+                write(wkt, polygon, force3D ? 3 : polygon.getVertexDimension());
+            }
+            case GeometryCollection collection -> write(wkt, collection, force3D ? 3 : collection.getVertexDimension());
+            default -> throw new IllegalArgumentException("Unsupported spatial object type " +
                     object.getClass().getName() + ".");
         }
 
@@ -115,7 +113,7 @@ public class WKTWriter {
             addCoordinateFlag(wkt, dimension);
             List<Coordinate> coordinates = multiPoint.getPoints().stream()
                     .map(Point::getCoordinate)
-                    .collect(Collectors.toList());
+                    .toList();
             addCoordinates(wkt, coordinates, dimension);
         }
     }

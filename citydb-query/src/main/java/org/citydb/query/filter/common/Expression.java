@@ -5,6 +5,10 @@
 
 package org.citydb.query.filter.common;
 
-public interface Expression {
+import org.citydb.query.filter.literal.Literal;
+import org.citydb.query.filter.operation.NumericExpression;
+
+public sealed interface Expression permits
+        Argument, PatternExpression, NumericExpression, Literal {
     void accept(FilterVisitor visitor);
 }

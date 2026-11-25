@@ -52,7 +52,7 @@ public class SurfaceGeometryBuilder extends GeometryBuilder {
                     surface = TriangulatedSurface.of(processor.polygons);
                 } else if (source instanceof AbstractSurface) {
                     surface = processor.polygons.size() == 1
-                            ? processor.polygons.get(0)
+                            ? processor.polygons.getFirst()
                             : CompositeSurface.of(processor.polygons);
                 } else {
                     surface = MultiSurface.of(processor.polygons);

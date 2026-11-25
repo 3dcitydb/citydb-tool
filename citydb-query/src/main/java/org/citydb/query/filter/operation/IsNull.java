@@ -11,7 +11,7 @@ import org.citydb.query.filter.common.FilterVisitor;
 
 import java.util.Objects;
 
-public class IsNull implements ComparisonPredicate {
+public final class IsNull implements ComparisonPredicate {
     private final Expression operand;
     private ComparisonOperator operator;
 

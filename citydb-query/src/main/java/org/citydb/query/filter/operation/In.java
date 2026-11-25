@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class In implements ComparisonPredicate {
+public final class In implements ComparisonPredicate {
     private final ScalarExpression operand;
     private final List<ScalarExpression> values;
     private ComparisonOperator operator;

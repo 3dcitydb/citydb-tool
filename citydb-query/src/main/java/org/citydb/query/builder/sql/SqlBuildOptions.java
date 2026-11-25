@@ -7,11 +7,7 @@ package org.citydb.query.builder.sql;
 
 import org.citydb.query.lod.LodPlan;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class SqlBuildOptions {
     private boolean omitDistinct;

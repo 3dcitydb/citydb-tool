@@ -12,7 +12,7 @@ import org.citydb.query.filter.common.SpatialPredicate;
 
 import java.util.Objects;
 
-public class BinarySpatialPredicate implements SpatialPredicate {
+public final class BinarySpatialPredicate implements SpatialPredicate {
     private SpatialOperator operator;
     private final GeometryExpression leftOperand;
     private final GeometryExpression rightOperand;

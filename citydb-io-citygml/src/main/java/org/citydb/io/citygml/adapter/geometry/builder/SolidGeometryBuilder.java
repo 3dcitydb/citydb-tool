@@ -36,7 +36,7 @@ public class SolidGeometryBuilder extends GeometryBuilder {
                     return CompositeSolid.of(processor.solids);
                 } else {
                     return processor.solids.size() == 1
-                            ? processor.solids.get(0)
+                            ? processor.solids.getFirst()
                             : MultiSolid.of(processor.solids);
                 }
             } else {

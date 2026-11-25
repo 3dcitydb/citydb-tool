@@ -12,7 +12,7 @@ import org.citydb.query.filter.common.PatternExpression;
 
 import java.util.Objects;
 
-public class Like implements ComparisonPredicate {
+public final class Like implements ComparisonPredicate {
     public static final String WILDCARD = "%";
     public static final String SINGLE_CHAR = "_";
     public static final String ESCAPE_CHAR = "\\";

@@ -56,7 +56,7 @@ public class CrossLodReferenceResolver {
                         boolean inline = !session.hasClone(entry.getKey());
                         AbstractGeometry clone = geometryCopier.copy(entry.getKey(), feature, session);
 
-                        GeometryProperty<?> targetProperty = entry.getValue().get(0);
+                        GeometryProperty<?> targetProperty = entry.getValue().getFirst();
                         if (inline) {
                             targetProperty.setInlineObjectIfValid(clone);
                             targetProperty.setHref(null);

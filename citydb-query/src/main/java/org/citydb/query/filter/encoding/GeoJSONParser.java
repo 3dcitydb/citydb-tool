@@ -86,8 +86,8 @@ public class GeoJSONParser {
 
         if (!rings.isEmpty()) {
             return rings.size() == 1
-                    ? Polygon.of(rings.get(0))
-                    : Polygon.of(rings.get(0), rings.subList(1, rings.size()));
+                    ? Polygon.of(rings.getFirst())
+                    : Polygon.of(rings.getFirst(), rings.subList(1, rings.size()));
         } else {
             throw new FilterParseException("Found empty ring array for polygon geometry.");
         }

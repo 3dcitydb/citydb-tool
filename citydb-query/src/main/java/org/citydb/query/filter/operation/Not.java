@@ -10,7 +10,7 @@ import org.citydb.query.filter.common.LogicalPredicate;
 
 import java.util.Objects;
 
-public class Not implements LogicalPredicate {
+public final class Not implements LogicalPredicate {
     private final BooleanExpression operand;
 
     private Not(BooleanExpression operand) {

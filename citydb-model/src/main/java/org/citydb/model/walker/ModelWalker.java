@@ -274,20 +274,16 @@ public class ModelWalker implements Visitor {
     }
 
     public void walk(Property<?> property) {
-        if (property instanceof FeatureProperty featureProperty) {
-            visit(featureProperty);
-        } else if (property instanceof GeometryProperty geometryProperty) {
-            visit(geometryProperty);
-        } else if (property instanceof ImplicitGeometryProperty implicitGeometryProperty) {
-            visit(implicitGeometryProperty);
-        } else if (property instanceof AppearanceProperty appearanceProperty) {
-            visit(appearanceProperty);
-        } else if (property instanceof AddressProperty addressProperty) {
-            visit(addressProperty);
-        } else if (property instanceof Attribute attribute) {
-            visit(attribute);
-        } else if (property != null) {
-            visit(property);
+        switch (property) {
+            case FeatureProperty featureProperty -> visit(featureProperty);
+            case GeometryProperty geometryProperty -> visit(geometryProperty);
+            case ImplicitGeometryProperty implicitGeometryProperty -> visit(implicitGeometryProperty);
+            case AppearanceProperty appearanceProperty -> visit(appearanceProperty);
+            case AddressProperty addressProperty -> visit(addressProperty);
+            case Attribute attribute -> visit(attribute);
+            case null -> {
+            }
+            default -> visit(property);
         }
     }
 
@@ -302,16 +298,14 @@ public class ModelWalker implements Visitor {
 
         if (attribute.hasProperties()) {
             for (Property<?> child : attribute.getProperties().getAll()) {
-                if (child instanceof FeatureProperty property) {
-                    visit(property);
-                } else if (child instanceof GeometryProperty property) {
-                    visit(property);
-                } else if (child instanceof AppearanceProperty property) {
-                    visit(property);
-                } else if (child instanceof ImplicitGeometryProperty property) {
-                    visit(property);
-                } else if (child instanceof Attribute childAttribute) {
-                    visit(childAttribute);
+                switch (child) {
+                    case FeatureProperty property -> visit(property);
+                    case GeometryProperty property -> visit(property);
+                    case AppearanceProperty property -> visit(property);
+                    case ImplicitGeometryProperty property -> visit(property);
+                    case Attribute childAttribute -> visit(childAttribute);
+                    case null, default -> {
+                    }
                 }
             }
         }

@@ -12,7 +12,7 @@ import org.citydb.query.filter.operation.NumericExpression;
 
 import java.util.Optional;
 
-public class NumericLiteral extends Literal<Number> implements NumericExpression, ScalarExpression {
+public final class NumericLiteral extends Literal<Number> implements NumericExpression, ScalarExpression {
     private final boolean isInteger;
 
     private NumericLiteral(long value) {

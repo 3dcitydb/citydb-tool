@@ -11,7 +11,7 @@ import org.citydb.query.filter.common.ScalarExpression;
 import java.time.LocalDate;
 import java.util.Optional;
 
-public class DateLiteral extends Literal<LocalDate> implements ScalarExpression {
+public final class DateLiteral extends Literal<LocalDate> implements ScalarExpression {
 
     private DateLiteral(LocalDate value) {
         super(value);

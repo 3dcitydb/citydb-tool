@@ -44,16 +44,13 @@ public class WKBWriter {
     }
 
     private <T extends ByteBuffer> T write(SpatialObject object, boolean force3D, T buffer) {
-        if (object instanceof Geometry<?> geometry) {
-            return write(geometry, force3D, buffer);
-        } else if (object instanceof Envelope envelope) {
-            return write(envelope.convertToPolygon(), force3D, buffer);
-        } else if (object instanceof GeometryCollection collection) {
-            return write(collection, force3D, buffer);
-        } else {
-            throw new IllegalArgumentException("Unsupported spatial object type " +
+        return switch (object) {
+            case Geometry<?> geometry -> write(geometry, force3D, buffer);
+            case Envelope envelope -> write(envelope.convertToPolygon(), force3D, buffer);
+            case GeometryCollection collection -> write(collection, force3D, buffer);
+            default -> throw new IllegalArgumentException("Unsupported spatial object type " +
                     object.getClass().getName() + ".");
-        }
+        };
     }
 
     private <T extends ByteBuffer> T write(GeometryCollection collection, boolean force3D, T buffer) {

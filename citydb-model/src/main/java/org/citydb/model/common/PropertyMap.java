@@ -100,7 +100,7 @@ public class PropertyMap<T extends Property<?>> implements Serializable {
     public Optional<T> getFirst(Name name) {
         List<T> properties = get(name);
         return !properties.isEmpty()
-                ? Optional.of(properties.get(0))
+                ? Optional.of(properties.getFirst())
                 : Optional.empty();
     }
 

@@ -27,11 +27,7 @@ import org.citydb.sqlbuilder.query.Select;
 import org.citydb.sqlbuilder.query.Window;
 import org.citydb.sqlbuilder.schema.Table;
 
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class SqlContextBuilder {
     private final FilterBuilder filterBuilder;

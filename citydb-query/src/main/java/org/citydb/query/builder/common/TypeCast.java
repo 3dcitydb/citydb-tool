@@ -41,7 +41,7 @@ public enum TypeCast {
     }
 
     public String getIdentifier() {
-        return identifiers.get(0);
+        return identifiers.getFirst();
     }
 
     public DataType getType() {
@@ -50,6 +50,6 @@ public enum TypeCast {
 
     @Override
     public String toString() {
-        return identifiers.get(0);
+        return identifiers.getFirst();
     }
 }
