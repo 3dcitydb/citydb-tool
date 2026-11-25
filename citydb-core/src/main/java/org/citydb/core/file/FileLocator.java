@@ -8,6 +8,7 @@ package org.citydb.core.file;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -97,7 +98,7 @@ public class FileLocator {
     private static URL parseURL(String location) {
         if (location.indexOf("://") > 0) {
             try {
-                return new URL(location);
+                return URI.create(location).toURL();
             } catch (Exception e) {
                 //
             }
