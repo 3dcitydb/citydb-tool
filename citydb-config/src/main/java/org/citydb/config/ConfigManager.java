@@ -9,7 +9,6 @@ import org.citydb.core.json.JsonMapping;
 import tools.jackson.core.JacksonException;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;

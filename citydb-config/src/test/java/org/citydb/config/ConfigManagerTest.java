@@ -8,12 +8,13 @@ package org.citydb.config;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ConfigManagerTest {
     @TempDir
@@ -39,12 +40,10 @@ public class ConfigManagerTest {
     }
 
     @Test
-    public void invalidUtf8IsReplaced() throws Exception {
+    public void invalidUtf8IsRejected() throws Exception {
         Path file = tempDir.resolve("latin1.json");
         Files.write(file, "{\"options\": {\"lineage\": \"Straße\"}}".getBytes(StandardCharsets.ISO_8859_1));
 
-        Config config = ConfigManager.newInstance().read(file, Config.class);
-        String lineage = config.get("options", Options.class).lineage;
-        assertTrue(lineage.startsWith("Stra") && lineage.endsWith("e"), lineage);
+        assertThrows(MalformedInputException.class, () -> ConfigManager.newInstance().read(file, Config.class));
     }
 }
