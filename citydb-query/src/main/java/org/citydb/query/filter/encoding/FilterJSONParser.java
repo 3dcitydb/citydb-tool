@@ -96,20 +96,20 @@ public class FilterJSONParser {
                 words.add(matcher.group(0).toLowerCase(Locale.ROOT));
             }
 
-            throw new FilterParseException("Failed to parse '" + toString(json) + "' as " + String.join(" ", words) + ".");
+            throw new FilterParseException("Failed to parse " + json + " as " + String.join(" ", words) + ".");
         }
     }
 
     private Expression readObject(ObjectNode object) throws FilterParseException {
         try {
-            String op = getString(object, JSONToken.OP.value());
+            String op = Json.getString(object, JSONToken.OP.value());
             JsonNode args = object.get(JSONToken.ARGS.value());
-            String date = getString(object, JSONToken.DATE.value());
-            String timestamp = getString(object, JSONToken.TIMESTAMP.value());
+            String date = Json.getString(object, JSONToken.DATE.value());
+            String timestamp = Json.getString(object, JSONToken.TIMESTAMP.value());
             JsonNode interval = object.get(JSONToken.INTERVAL.value());
             JsonNode bbox = object.get(JSONToken.BBOX.value());
-            JSONToken type = JSONToken.of(getString(object, JSONToken.TYPE.value()));
-            String property = getString(object, JSONToken.PROPERTY.value());
+            JSONToken type = JSONToken.of(Json.getString(object, JSONToken.TYPE.value()));
+            String property = Json.getString(object, JSONToken.PROPERTY.value());
 
             if (op != null) {
                 return readOperation(op, args instanceof ArrayNode array
@@ -362,7 +362,7 @@ public class FilterJSONParser {
     }
 
     private GeometryExpression readGeometryLiteral(ObjectNode geometry) throws FilterParseException {
-        return JSONToken.of(getString(geometry, JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION
+        return JSONToken.of(Json.getString(geometry, JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION
                 ? GeometryCollectionLiteral.of(geometryParser.parseCollection(geometry))
                 : GeometryLiteral.of(geometryParser.parse(geometry));
     }
@@ -402,21 +402,6 @@ public class FilterJSONParser {
         } else {
             return readLiteral(node.toString());
         }
-    }
-
-    static String getString(JsonNode object, String name) {
-        JsonNode value = object.get(name);
-        if (value == null || value.isNull()) {
-            return null;
-        } else if (value.isValueNode()) {
-            return value.asString();
-        } else {
-            return value.toString();
-        }
-    }
-
-    static String toString(JsonNode node) {
-        return node != null && node.isString() ? node.stringValue() : String.valueOf(node);
     }
 
     private Expression readPropertyRef(String property) throws FilterParseException {

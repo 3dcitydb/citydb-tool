@@ -25,9 +25,7 @@ import tools.jackson.databind.node.ObjectNode;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 public abstract class DatabaseExporter {
     protected final ExportHelper helper;
@@ -96,9 +94,7 @@ public abstract class DatabaseExporter {
         if (content != null) {
             ArrayNode json = getJsonArray(content);
             if (json != null) {
-                List<Object> values = new ArrayList<>(json.size());
-                json.forEach(value -> values.add(Json.toJava(value)));
-                return ArrayValue.ofList(values);
+                return ArrayValue.ofList(Json.listOf(json));
             }
         }
 

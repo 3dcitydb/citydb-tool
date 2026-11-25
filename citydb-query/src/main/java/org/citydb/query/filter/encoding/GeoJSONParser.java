@@ -22,7 +22,7 @@ public class GeoJSONParser {
 
     Geometry<?> parse(ObjectNode geometry) throws FilterParseException {
         try {
-            String type = FilterJSONParser.getString(geometry, JSONToken.TYPE.value());
+            String type = Json.getString(geometry, JSONToken.TYPE.value());
             ArrayNode coordinates = getArray(geometry, JSONToken.COORDINATES.value());
             if (coordinates == null) {
                 coordinates = Json.arrayNode();
@@ -52,7 +52,7 @@ public class GeoJSONParser {
             List<Geometry<?>> members = new ArrayList<>(geometries.size());
             for (JsonNode element : geometries) {
                 if (element instanceof ObjectNode geometry) {
-                    if (JSONToken.of(FilterJSONParser.getString(geometry, JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION) {
+                    if (JSONToken.of(Json.getString(geometry, JSONToken.TYPE.value())) == JSONToken.GEOMETRYCOLLECTION) {
                         throw new FilterParseException("Nested geometry collections are not supported.");
                     }
 
@@ -175,8 +175,7 @@ public class GeoJSONParser {
         if (value.isNumber()) {
             return value.doubleValue();
         } else {
-            throw new FilterParseException("Failed to parse '" + FilterJSONParser.toString(value) +
-                    "' as coordinate value.");
+            throw new FilterParseException("Failed to parse " + value + " as coordinate value.");
         }
     }
 
@@ -187,8 +186,7 @@ public class GeoJSONParser {
         } else if (value instanceof ArrayNode array) {
             return array;
         } else {
-            throw new FilterParseException("Failed to parse '" + FilterJSONParser.toString(value) +
-                    "' as JSON array.");
+            throw new FilterParseException("Failed to parse " + value + " as JSON array.");
         }
     }
 }

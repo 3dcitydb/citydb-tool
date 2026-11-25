@@ -13,6 +13,7 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public final class Json {
@@ -80,7 +81,13 @@ public final class Json {
         return value != null && value.isNumber() ? value.intValue() : null;
     }
 
-    public static Object toJava(JsonNode node) {
+    public static List<Object> listOf(ArrayNode array) {
+        List<Object> values = new ArrayList<>(array.size());
+        array.forEach(value -> values.add(toScalar(value)));
+        return values;
+    }
+
+    private static Object toScalar(JsonNode node) {
         if (node == null || node.isNull()) {
             return null;
         } else if (node.isBoolean()) {

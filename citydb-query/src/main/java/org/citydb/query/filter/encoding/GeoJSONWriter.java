@@ -110,11 +110,11 @@ public class GeoJSONWriter {
     }
 
     private void writeCoordinate(Coordinate coordinate) {
-        writeDoubles(jsonWriter, coordinate.getDimension() == 2
-                ? List.of(coordinate.getX(), coordinate.getY())
-                : List.of(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
+        double[] values = coordinate.getDimension() == 2
+                ? new double[]{coordinate.getX(), coordinate.getY()}
+                : new double[]{coordinate.getX(), coordinate.getY(), coordinate.getZ()};
+        jsonWriter.writeArray(values, 0, values.length);
     }
-
 
     private void writeCoordinates(LineString lineString) {
         for (Coordinate coordinate : lineString.getPoints()) {
@@ -158,14 +158,6 @@ public class GeoJSONWriter {
     }
 
     private void endCoordinates() {
-        jsonWriter.writeEndArray();
-    }
-
-    static void writeDoubles(JsonGenerator jsonWriter, List<Double> values) {
-        jsonWriter.writeStartArray();
-        for (double value : values) {
-            jsonWriter.writeNumber(value);
-        }
         jsonWriter.writeEndArray();
     }
 }

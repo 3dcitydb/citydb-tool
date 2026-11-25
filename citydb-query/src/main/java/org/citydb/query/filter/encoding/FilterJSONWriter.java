@@ -72,11 +72,12 @@ public class FilterJSONWriter {
             Coordinate upperCorner = literal.getValue().getUpperCorner();
             jsonWriter.writeStartObject();
             jsonWriter.writeName(JSONToken.BBOX.value());
-            GeoJSONWriter.writeDoubles(jsonWriter, literal.getValue().getVertexDimension() == 2
-                    ? List.of(lowerCorner.getX(), lowerCorner.getY(),
-                    upperCorner.getX(), upperCorner.getY())
-                    : List.of(lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
-                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()));
+            double[] values = literal.getValue().getVertexDimension() == 2
+                    ? new double[]{lowerCorner.getX(), lowerCorner.getY(),
+                    upperCorner.getX(), upperCorner.getY()}
+                    : new double[]{lowerCorner.getX(), lowerCorner.getY(), lowerCorner.getZ(),
+                    upperCorner.getX(), upperCorner.getY(), upperCorner.getZ()};
+            jsonWriter.writeArray(values, 0, values.length);
             jsonWriter.writeEndObject();
         }
 
