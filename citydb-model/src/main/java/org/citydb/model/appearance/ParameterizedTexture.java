@@ -11,6 +11,7 @@ import org.citydb.model.geometry.Surface;
 import org.citydb.model.util.CopySession;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public final class ParameterizedTexture extends Texture<ParameterizedTexture> {
     private Map<LinearRing, List<TextureCoordinate>> textureCoordinates;
@@ -95,9 +96,8 @@ public final class ParameterizedTexture extends Texture<ParameterizedTexture> {
 
         if (hasTextureCoordinates()) {
             targets.addAll(textureCoordinates.keySet().stream()
-                    .map(linearRing -> linearRing.getParent().orElse(null))
+                    .<Surface<?>>map(linearRing -> linearRing.getParent(Surface.class))
                     .filter(Objects::nonNull)
-                    .map(surface -> (Surface<?>) surface)
                     .toList());
         }
 
@@ -106,6 +106,20 @@ public final class ParameterizedTexture extends Texture<ParameterizedTexture> {
         }
 
         return targets;
+    }
+
+    @Override
+    public void removeTargetsIf(Predicate<? super Surface<?>> filter) {
+        if (hasTextureCoordinates()) {
+            textureCoordinates.keySet().removeIf(ring -> {
+                Surface<?> surface = ring.getParent(Surface.class);
+                return surface != null && filter.test(surface);
+            });
+        }
+
+        if (hasWorldToTextureMappings()) {
+            worldToTextureMappings.keySet().removeIf(filter);
+        }
     }
 
     @Override

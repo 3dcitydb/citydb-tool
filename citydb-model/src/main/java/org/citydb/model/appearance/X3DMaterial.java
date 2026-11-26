@@ -15,6 +15,7 @@ import org.citydb.model.util.CopySession;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public final class X3DMaterial extends SurfaceData<X3DMaterial> {
     private Double shininess;
@@ -124,6 +125,13 @@ public final class X3DMaterial extends SurfaceData<X3DMaterial> {
         }
 
         return this;
+    }
+
+    @Override
+    public void removeTargetsIf(Predicate<? super Surface<?>> filter) {
+        if (targets != null) {
+            targets.removeIf(filter);
+        }
     }
 
     @Override

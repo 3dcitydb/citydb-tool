@@ -14,6 +14,7 @@ import org.citydb.model.util.CopySession;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public sealed abstract class SurfaceData<T extends SurfaceData<?>> extends Child implements Identifiable, Visitable
         permits Texture, X3DMaterial {
@@ -27,6 +28,8 @@ public sealed abstract class SurfaceData<T extends SurfaceData<?>> extends Child
     public abstract Name getName();
 
     public abstract List<Surface<?>> getTargets();
+
+    public abstract void removeTargetsIf(Predicate<? super Surface<?>> filter);
 
     @Override
     public Optional<String> getObjectId() {

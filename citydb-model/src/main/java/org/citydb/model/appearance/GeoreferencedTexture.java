@@ -13,6 +13,7 @@ import org.citydb.model.util.CopySession;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 public final class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
     private Point referencePoint;
@@ -80,6 +81,13 @@ public final class GeoreferencedTexture extends Texture<GeoreferencedTexture> {
         }
 
         return this;
+    }
+
+    @Override
+    public void removeTargetsIf(Predicate<? super Surface<?>> filter) {
+        if (targets != null) {
+            targets.removeIf(filter);
+        }
     }
 
     @Override
