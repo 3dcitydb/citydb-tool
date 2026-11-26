@@ -81,7 +81,8 @@ public abstract class StatisticsHelper {
         }
 
         Map<FeatureType, Long> featureCount = new IdentityHashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             SchemaMapping schemaMapping = getSchemaMapping();
             while (rs.next()) {
@@ -116,7 +117,8 @@ public abstract class StatisticsHelper {
         }
 
         Map<FeatureType, FeatureInfo> featureCount = new IdentityHashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             SchemaMapping schemaMapping = getSchemaMapping();
             while (rs.next()) {
@@ -163,7 +165,8 @@ public abstract class StatisticsHelper {
         }
 
         Map<GeometryType, Long> geometryCount = new EnumMap<>(GeometryType.class);
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 GeometryType geometryType = GeometryType.fromDatabaseValue(rs.getInt(1));
@@ -197,7 +200,8 @@ public abstract class StatisticsHelper {
                 .select(Function.of("count", implicitGeometry.column("id")))
                 .from(implicitGeometry);
 
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             FeatureType featureType = getSchemaMapping().getFeatureType(Name.of("ImplicitGeometry", Namespaces.CORE));
             return Pair.of(featureType, rs.next() ? rs.getLong(1) : 0);
@@ -225,7 +229,8 @@ public abstract class StatisticsHelper {
         }
 
         Set<String> lods = new HashSet<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 lods.add(rs.getString(1));
@@ -255,7 +260,8 @@ public abstract class StatisticsHelper {
         }
 
         Map<String, Long> appearanceCount = new HashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 String name = rs.getString(1);
@@ -285,7 +291,8 @@ public abstract class StatisticsHelper {
         }
 
         Set<String> themes = new HashSet<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 String theme = rs.getString(1);
@@ -336,7 +343,8 @@ public abstract class StatisticsHelper {
 
         adapter.getSchemaAdapter().getDummyTable().ifPresent(select::from);
 
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             return rs.next()
                     ? new SurfaceDataInfo(rs.getBoolean(1), rs.getBoolean(2), rs.getBoolean(3))
@@ -373,7 +381,8 @@ public abstract class StatisticsHelper {
         }
 
         Map<FeatureType, Long> surfaceDataCount = new IdentityHashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             SchemaMapping schemaMapping = getSchemaMapping();
             while (rs.next()) {
@@ -401,7 +410,8 @@ public abstract class StatisticsHelper {
                         .and(appearance.column("implicit_geometry_id").isNull()))
                 .fetch(1);
 
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             return rs.next();
         }
@@ -427,7 +437,8 @@ public abstract class StatisticsHelper {
                         .eq(schemaMapping.getNamespaceByURI(Namespaces.GENERICS).getId()));
 
         Map<FeatureType, Map<String, Set<DataType>>> genericAttributes = new IdentityHashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 FeatureType featureType = schemaMapping.getFeatureType(rs.getInt(1));
@@ -472,7 +483,8 @@ public abstract class StatisticsHelper {
             select.where(address.column("id").in(inner));
         }
 
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             FeatureType featureType = getSchemaMapping().getFeatureType(Name.of("Address", Namespaces.CORE));
             return Pair.of(featureType, rs.next() ? rs.getLong(1) : 0);
@@ -500,7 +512,8 @@ public abstract class StatisticsHelper {
         }
 
         Map<String, Long> featureCount = new HashMap<>();
-        try (PreparedStatement stmt = connection.prepareStatement(select.toSql());
+        try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper().prepareStatement(select, connection,
+                StatementOptions.defaults().fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
                 featureCount.put(rs.getString(1), rs.getLong(2));

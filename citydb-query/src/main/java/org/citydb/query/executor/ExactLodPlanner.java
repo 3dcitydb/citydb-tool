@@ -6,6 +6,7 @@
 package org.citydb.query.executor;
 
 import org.citydb.database.adapter.DatabaseAdapter;
+import org.citydb.database.util.StatementOptions;
 import org.citydb.query.lod.LodFilter;
 import org.citydb.query.lod.LodPlan;
 import org.citydb.query.lod.LodSearch;
@@ -41,7 +42,7 @@ class ExactLodPlanner implements LodPlanner {
                             .fetch(max + 1)));
 
             try (PreparedStatement stmt = adapter.getSchemaAdapter().getSqlHelper()
-                    .prepareStatement(count, connection);
+                    .prepareStatement(count, connection, StatementOptions.defaults().fetchSize(0));
                  ResultSet rs = stmt.executeQuery()) {
                 searches.put(group, rs.next() && rs.getLong(1) <= max
                         ? LodSearch.BOTTOM_UP

@@ -22,6 +22,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class SqlHelper {
     private final DatabaseAdapter adapter;
@@ -41,29 +42,47 @@ public abstract class SqlHelper {
     public abstract void setStringArrayOrNull(PreparedStatement stmt, int index, Collection<String> values) throws SQLException;
 
     public PreparedStatement prepareStatement(SqlObject statement, Connection connection) throws SQLException {
+        return prepareStatement(statement, connection, StatementOptions.defaults());
+    }
+
+    public PreparedStatement prepareStatement(SqlObject statement, Connection connection, StatementOptions options) throws SQLException {
+        Objects.requireNonNull(options, "The statement options must not be null.");
         PreparedStatement stmt = connection.prepareStatement(statement.toSql());
-        List<Placeholder> placeholders = statement.getPlaceholders();
-        for (int i = 0; i < placeholders.size(); i++) {
-            int index = i + 1;
-            Object value = placeholders.get(i).getValue()
-                    .orElseThrow(() -> new SQLException("The placeholder at index " + index + " lacks a value."));
+        try {
+            List<Placeholder> placeholders = statement.getPlaceholders();
+            for (int i = 0; i < placeholders.size(); i++) {
+                int index = i + 1;
+                Object value = placeholders.get(i).getValue()
+                        .orElseThrow(() -> new SQLException("The placeholder at index " + index + " lacks a value."));
 
-            switch (value) {
-                case Boolean booleanValue -> stmt.setInt(index, booleanValue ? 1 : 0);
-                case String stringValue -> stmt.setString(index, stringValue);
-                case Double doubleValue -> stmt.setDouble(index, doubleValue);
-                case Long longValue -> stmt.setLong(index, longValue);
-                case Integer intValue -> stmt.setInt(index, intValue);
-                case Number number -> stmt.setDouble(index, number.doubleValue());
-                case Date date -> stmt.setDate(index, date);
-                case Timestamp timestamp -> stmt.setTimestamp(index, timestamp);
-                case SpatialObject object -> prepareStatement(index, object, stmt);
-                default -> throw new SQLException("A placeholder value of type " + value.getClass().getName() +
-                        " is not supported.");
+                switch (value) {
+                    case Boolean booleanValue -> stmt.setInt(index, booleanValue ? 1 : 0);
+                    case String stringValue -> stmt.setString(index, stringValue);
+                    case Double doubleValue -> stmt.setDouble(index, doubleValue);
+                    case Long longValue -> stmt.setLong(index, longValue);
+                    case Integer intValue -> stmt.setInt(index, intValue);
+                    case Number number -> stmt.setDouble(index, number.doubleValue());
+                    case Date date -> stmt.setDate(index, date);
+                    case Timestamp timestamp -> stmt.setTimestamp(index, timestamp);
+                    case SpatialObject object -> prepareStatement(index, object, stmt);
+                    default -> throw new SQLException("A placeholder value of type " + value.getClass().getName() +
+                            " is not supported.");
+                }
             }
-        }
 
-        return stmt;
+            if (options.getFetchSize().isPresent()) {
+                stmt.setFetchSize(options.getFetchSize().get());
+            }
+
+            if (options.getQueryTimeout() > 0) {
+                stmt.setQueryTimeout(options.getQueryTimeout());
+            }
+
+            return stmt;
+        } catch (SQLException e) {
+            stmt.close();
+            throw e;
+        }
     }
 
     private void prepareStatement(int index, SpatialObject object, PreparedStatement stmt) throws SQLException {
@@ -76,12 +95,20 @@ public abstract class SqlHelper {
     }
 
     public long count(Select select) throws SQLException {
+        return count(select, StatementOptions.defaults());
+    }
+
+    public long count(Select select, StatementOptions options) throws SQLException {
         try (Connection connection = adapter.getPool().getConnection()) {
-            return count(select, connection);
+            return count(select, connection, options);
         }
     }
 
     public long count(Select select, Connection connection) throws SQLException {
+        return count(select, connection, StatementOptions.defaults());
+    }
+
+    public long count(Select select, Connection connection, StatementOptions options) throws SQLException {
         Table table = Table.of(Select.of(select)
                 .removeOrderBy()
                 .removeOffset()
@@ -90,7 +117,8 @@ public abstract class SqlHelper {
                 .select(Function.of("count", WildcardColumn.newInstance()))
                 .from(table);
 
-        try (PreparedStatement stmt = prepareStatement(count, connection);
+        Objects.requireNonNull(options, "The statement options must not be null.");
+        try (PreparedStatement stmt = prepareStatement(count, connection, StatementOptions.of(options).fetchSize(0));
              ResultSet rs = stmt.executeQuery()) {
             return rs.next() ? rs.getLong(1) : 0;
         }
