@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.List;
 
 /**
@@ -33,7 +31,6 @@ import java.util.List;
  * hardcodes {@code ["position", "uv0"]} as the lookup key. The encoder
  * fills the per-vertex stream with {@code (0, 0)} on untextured triangles.
  */
-@JSONType(alphabetic = false)
 public class GeometryDefinition {
     private List<Object> geometryBuffers;
 
@@ -98,7 +95,6 @@ public class GeometryDefinition {
      * {@link Store.GeometrySchema#full()} (required by ArcGIS Pro's
      * loader). When changing the layout here, update that copy in sync.
      */
-    @JSONType(alphabetic = false)
     public static class LegacyBuffer {
         private final int offset = 8;
         private final AttrSchema position = AttrSchema.vertex("Float32", 3);
@@ -122,7 +118,6 @@ public class GeometryDefinition {
         }
     }
 
-    @JSONType(alphabetic = false)
     public static class AttrSchema {
         private final String type;
         private final int component;

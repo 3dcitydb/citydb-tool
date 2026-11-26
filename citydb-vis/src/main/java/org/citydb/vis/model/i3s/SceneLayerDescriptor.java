@@ -5,7 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.styling.DefaultObjectStyle;
@@ -14,7 +13,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@JSONType(alphabetic = false)
 public class SceneLayerDescriptor {
     /**
      * Indices into {@link #geometryDefinitions} / {@link #materialDefinitions}.

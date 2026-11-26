@@ -5,14 +5,15 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONWriter;
+import org.citydb.core.json.Json;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.tiles3d.MetadataProperty;
 import org.citydb.vis.model.tiles3d.MetadataSchema;
 import org.citydb.vis.styling.DefaultObjectStyle;
+import org.citydb.vis.util.JsonHelper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -128,7 +129,7 @@ final class GltfJsonBuilder {
     }
 
     byte[] build() {
-        JSONObject root = new JSONObject();
+        ObjectNode root = Json.objectNode();
         writeAsset(root);
 
         AccessorLayout accessors = writeAccessors(root);
@@ -140,17 +141,16 @@ final class GltfJsonBuilder {
         writeMeshes(root, accessors, materials);
         writeExtensions(root);
 
-        return root.toJSONString(JSONWriter.Feature.PrettyFormatWith2Space)
-                .getBytes(StandardCharsets.UTF_8);
+        return JsonHelper.toPrettyString(root).getBytes(StandardCharsets.UTF_8);
     }
 
     // ---- Section writers -------------------------------------------------
 
-    private static void writeAsset(JSONObject root) {
-        JSONObject asset = new JSONObject();
+    private static void writeAsset(ObjectNode root) {
+        ObjectNode asset = Json.objectNode();
         asset.put("version", "2.0");
         asset.put("generator", "3DCityDB citydb-tool");
-        root.put("asset", asset);
+        root.set("asset", asset);
     }
 
     /**
@@ -162,13 +162,13 @@ final class GltfJsonBuilder {
      * {@code EXT_instance_features} referencing the shared property table.
      * Mesh indices parallel node order.
      */
-    private void writeScene(JSONObject root, AccessorLayout accessors) {
+    private void writeScene(ObjectNode root, AccessorLayout accessors) {
         root.put("scene", 0);
-        JSONArray sceneNodes = new JSONArray();
-        JSONArray nodes = new JSONArray();
+        ArrayNode sceneNodes = Json.arrayNode();
+        ArrayNode nodes = Json.arrayNode();
 
         if (!primitives.isEmpty()) {
-            JSONObject node = new JSONObject();
+            ObjectNode node = Json.objectNode();
             node.put("mesh", nodes.size());
             sceneNodes.add(nodes.size());
             nodes.add(node);
@@ -176,45 +176,45 @@ final class GltfJsonBuilder {
         for (int i = 0; i < instancedNodes.size(); i++) {
             InstancedNode in = instancedNodes.get(i);
             int[] trs = accessors.instancedTrs.get(i);
-            JSONObject node = new JSONObject();
+            ObjectNode node = Json.objectNode();
             node.put("mesh", nodes.size());
 
-            JSONObject instancingExt = new JSONObject();
-            JSONObject instAttributes = new JSONObject();
+            ObjectNode instancingExt = Json.objectNode();
+            ObjectNode instAttributes = Json.objectNode();
             instAttributes.put("TRANSLATION", trs[0]);
             instAttributes.put("ROTATION", trs[1]);
             instAttributes.put("SCALE", trs[2]);
             instAttributes.put("_FEATURE_ID_0", trs[3]);
-            instancingExt.put("attributes", instAttributes);
+            instancingExt.set("attributes", instAttributes);
 
-            JSONObject instanceFeaturesExt = new JSONObject();
-            JSONArray featureIdsArr = new JSONArray();
-            JSONObject featureIdDef = new JSONObject();
+            ObjectNode instanceFeaturesExt = Json.objectNode();
+            ArrayNode featureIdsArr = Json.arrayNode();
+            ObjectNode featureIdDef = Json.objectNode();
             featureIdDef.put("featureCount", in.instanceCount);
             featureIdDef.put("attribute", 0);
             featureIdDef.put("propertyTable", 0);
             featureIdsArr.add(featureIdDef);
-            instanceFeaturesExt.put("featureIds", featureIdsArr);
+            instanceFeaturesExt.set("featureIds", featureIdsArr);
 
-            JSONObject nodeExtensions = new JSONObject();
-            nodeExtensions.put("EXT_mesh_gpu_instancing", instancingExt);
-            nodeExtensions.put("EXT_instance_features", instanceFeaturesExt);
-            node.put("extensions", nodeExtensions);
+            ObjectNode nodeExtensions = Json.objectNode();
+            nodeExtensions.set("EXT_mesh_gpu_instancing", instancingExt);
+            nodeExtensions.set("EXT_instance_features", instanceFeaturesExt);
+            node.set("extensions", nodeExtensions);
 
             sceneNodes.add(nodes.size());
             nodes.add(node);
         }
 
-        JSONArray scenes = new JSONArray();
-        JSONObject scene = new JSONObject();
-        scene.put("nodes", sceneNodes);
+        ArrayNode scenes = Json.arrayNode();
+        ObjectNode scene = Json.objectNode();
+        scene.set("nodes", sceneNodes);
         scenes.add(scene);
-        root.put("scenes", scenes);
-        root.put("nodes", nodes);
+        root.set("scenes", scenes);
+        root.set("nodes", nodes);
     }
 
-    private AccessorLayout writeAccessors(JSONObject root) {
-        JSONArray accessors = new JSONArray();
+    private AccessorLayout writeAccessors(ObjectNode root) {
+        ArrayNode accessors = Json.arrayNode();
         List<PrimitiveAccessors> main = new ArrayList<>(primitives.size());
         for (Primitive p : primitives) {
             main.add(addPrimitiveAccessors(accessors, p));
@@ -245,11 +245,11 @@ final class GltfJsonBuilder {
             int accF = accessors.size() - 1;
             instancedTrs.add(new int[]{accT, accR, accS, accF});
         }
-        root.put("accessors", accessors);
+        root.set("accessors", accessors);
         return new AccessorLayout(main, instanced, instancedTrs);
     }
 
-    private static PrimitiveAccessors addPrimitiveAccessors(JSONArray accessors, Primitive p) {
+    private static PrimitiveAccessors addPrimitiveAccessors(ArrayNode accessors, Primitive p) {
         accessors.add(makeAccessor(p.bvPositions, COMPONENT_TYPE_FLOAT, p.vertexCount,
                 "VEC3", p.posMin, p.posMax));
         int accPosition = accessors.size() - 1;
@@ -305,10 +305,10 @@ final class GltfJsonBuilder {
                 accIndices, accFeatureId, accOutline);
     }
 
-    private void writeBufferViews(JSONObject root) {
-        JSONArray bvArray = new JSONArray();
+    private void writeBufferViews(ObjectNode root) {
+        ArrayNode bvArray = Json.arrayNode();
         for (GltfBufferView bv : bufferViews) {
-            JSONObject bvObj = new JSONObject();
+            ObjectNode bvObj = Json.objectNode();
             bvObj.put("buffer", 0);
             bvObj.put("byteOffset", bv.byteOffset());
             bvObj.put("byteLength", bv.byteLength());
@@ -317,15 +317,15 @@ final class GltfJsonBuilder {
             }
             bvArray.add(bvObj);
         }
-        root.put("bufferViews", bvArray);
+        root.set("bufferViews", bvArray);
     }
 
-    private void writeBuffers(JSONObject root) {
-        JSONArray buffersArr = new JSONArray();
-        JSONObject buffer = new JSONObject();
+    private void writeBuffers(ObjectNode root) {
+        ArrayNode buffersArr = Json.arrayNode();
+        ObjectNode buffer = Json.objectNode();
         buffer.put("byteLength", binLength);
         buffersArr.add(buffer);
-        root.put("buffers", buffersArr);
+        root.set("buffers", buffersArr);
     }
 
     /**
@@ -337,11 +337,11 @@ final class GltfJsonBuilder {
      * the surface; with shading on, the primitive carries normals and renders
      * PBR-shaded. Shared by the textured / plain / colored material paths.
      */
-    private JSONObject finishMaterial(JSONObject pbr, boolean blend) {
+    private ObjectNode finishMaterial(ObjectNode pbr, boolean blend) {
         pbr.put("metallicFactor", 0.0);
         pbr.put("roughnessFactor", 1.0);
-        JSONObject material = new JSONObject();
-        material.put("pbrMetallicRoughness", pbr);
+        ObjectNode material = Json.objectNode();
+        material.set("pbrMetallicRoughness", pbr);
         if (blend) {
             material.put("alphaMode", "BLEND");
         }
@@ -393,8 +393,8 @@ final class GltfJsonBuilder {
      * Returns the resolved material indices so {@link #writeMeshes} can
      * reference them.
      */
-    private MaterialIndices writeMaterials(JSONObject root) {
-        JSONArray materials = new JSONArray();
+    private MaterialIndices writeMaterials(ObjectNode root) {
+        ArrayNode materials = Json.arrayNode();
         int pageCount = bvTextures.size();
         int[] texturedIdx = new int[pageCount];
         Arrays.fill(texturedIdx, -1);
@@ -436,26 +436,26 @@ final class GltfJsonBuilder {
         int textureSlot = 0;
         for (int p = 0; p < pageCount; p++) {
             if (!pageUsed[p]) continue;
-            JSONObject pbr = new JSONObject();
-            JSONObject baseColorTexture = new JSONObject();
+            ObjectNode pbr = Json.objectNode();
+            ObjectNode baseColorTexture = Json.objectNode();
             baseColorTexture.put("index", textureSlot++);
             baseColorTexture.put("texCoord", 0);
-            pbr.put("baseColorTexture", baseColorTexture);
+            pbr.set("baseColorTexture", baseColorTexture);
             texturedIdx[p] = materials.size();
             materials.add(finishMaterial(pbr, false));
         }
 
         Map<DefaultObjectStyle, Integer> plainIdxByStyle = new HashMap<>(plainStyles.size() * 2);
         for (DefaultObjectStyle style : plainStyles) {
-            JSONObject pbr = new JSONObject();
+            ObjectNode pbr = Json.objectNode();
             boolean blend = false;
             // baseColorFactor: only emit when the style is non-default
             // opaque white; the glTF default is opaque white so omitting
             // the field keeps the JSON minimal in the common case.
             if (style.hasNonDefaultColor()) {
-                JSONArray baseColorFactor = new JSONArray();
+                ArrayNode baseColorFactor = Json.arrayNode();
                 for (float v : style.toLinearRgba()) baseColorFactor.add(v);
-                pbr.put("baseColorFactor", baseColorFactor);
+                pbr.set("baseColorFactor", baseColorFactor);
                 blend = style.hasAlpha();
             }
             plainIdxByStyle.put(style, materials.size());
@@ -466,7 +466,7 @@ final class GltfJsonBuilder {
             // Colored primitives carry their colour in vertex COLOR_0, so the
             // PBR block keeps its defaults (no baseColorFactor).
             untexturedColoredIdx = materials.size();
-            materials.add(finishMaterial(new JSONObject(), coloredNeedsBlend));
+            materials.add(finishMaterial(Json.objectNode(), coloredNeedsBlend));
         }
 
         // One textured material per distinct instanced prototype atlas page;
@@ -474,24 +474,24 @@ final class GltfJsonBuilder {
         // (writeTextures appends the images in the same order).
         Map<Integer, Integer> instancedTexturedByBvAtlas = new HashMap<>();
         for (int bvAtlas : instancedAtlasBvs) {
-            JSONObject pbr = new JSONObject();
-            JSONObject baseColorTexture = new JSONObject();
+            ObjectNode pbr = Json.objectNode();
+            ObjectNode baseColorTexture = Json.objectNode();
             baseColorTexture.put("index", textureSlot++);
             baseColorTexture.put("texCoord", 0);
-            pbr.put("baseColorTexture", baseColorTexture);
+            pbr.set("baseColorTexture", baseColorTexture);
             instancedTexturedByBvAtlas.put(bvAtlas, materials.size());
             materials.add(finishMaterial(pbr, false));
         }
 
-        root.put("materials", materials);
+        root.set("materials", materials);
         return new MaterialIndices(texturedIdx, plainIdxByStyle, untexturedColoredIdx,
                 instancedTexturedByBvAtlas);
     }
 
-    private void addUnlitExtension(JSONObject material) {
-        JSONObject extensions = new JSONObject();
-        extensions.put("KHR_materials_unlit", new JSONObject());
-        material.put("extensions", extensions);
+    private void addUnlitExtension(ObjectNode material) {
+        ObjectNode extensions = Json.objectNode();
+        extensions.set("KHR_materials_unlit", Json.objectNode());
+        material.set("extensions", extensions);
         unlitUsed = true;
     }
 
@@ -514,13 +514,13 @@ final class GltfJsonBuilder {
         return instancedAtlasBvs;
     }
 
-    private static void addImageTexture(JSONArray images, JSONArray textures, int bufferView) {
-        JSONObject image = new JSONObject();
+    private static void addImageTexture(ArrayNode images, ArrayNode textures, int bufferView) {
+        ObjectNode image = Json.objectNode();
         image.put("bufferView", bufferView);
         image.put("mimeType", "image/jpeg");
         images.add(image);
 
-        JSONObject texture = new JSONObject();
+        ObjectNode texture = Json.objectNode();
         texture.put("sampler", 0);
         texture.put("source", images.size() - 1);
         textures.add(texture);
@@ -533,9 +533,9 @@ final class GltfJsonBuilder {
      * order so they line up with the {@code textureSlot} counter used by
      * {@link #writeMaterials}.
      */
-    private void writeTextures(JSONObject root) {
-        JSONArray images = new JSONArray();
-        JSONArray textures = new JSONArray();
+    private void writeTextures(ObjectNode root) {
+        ArrayNode images = Json.arrayNode();
+        ArrayNode textures = Json.arrayNode();
         for (int bv : bvTextures) {
             if (bv < 0) continue;
             addImageTexture(images, textures, bv);
@@ -550,46 +550,46 @@ final class GltfJsonBuilder {
             return;
         }
 
-        JSONArray samplers = new JSONArray();
-        JSONObject sampler = new JSONObject();
+        ArrayNode samplers = Json.arrayNode();
+        ObjectNode sampler = Json.objectNode();
         sampler.put("magFilter", 9729); // LINEAR
         sampler.put("minFilter", 9987); // LINEAR_MIPMAP_LINEAR
         samplers.add(sampler);
-        root.put("samplers", samplers);
+        root.set("samplers", samplers);
 
-        root.put("images", images);
-        root.put("textures", textures);
+        root.set("images", images);
+        root.set("textures", textures);
     }
 
-    private void writeMeshes(JSONObject root, AccessorLayout accessors,
+    private void writeMeshes(ObjectNode root, AccessorLayout accessors,
                              MaterialIndices materials) {
-        JSONArray meshes = new JSONArray();
+        ArrayNode meshes = Json.arrayNode();
 
         if (!primitives.isEmpty()) {
-            JSONArray primitivesArr = new JSONArray();
+            ArrayNode primitivesArr = Json.arrayNode();
             for (int i = 0; i < primitives.size(); i++) {
                 primitivesArr.add(writePrimitiveJson(primitives.get(i),
                         accessors.main.get(i), materials));
             }
-            JSONObject mesh = new JSONObject();
-            mesh.put("primitives", primitivesArr);
+            ObjectNode mesh = Json.objectNode();
+            mesh.set("primitives", primitivesArr);
             meshes.add(mesh);
         }
 
         for (int n = 0; n < instancedNodes.size(); n++) {
             InstancedNode in = instancedNodes.get(n);
             List<PrimitiveAccessors> perPrim = accessors.instanced.get(n);
-            JSONArray primitivesArr = new JSONArray();
+            ArrayNode primitivesArr = Json.arrayNode();
             for (int i = 0; i < in.primitives.size(); i++) {
                 primitivesArr.add(writePrimitiveJson(in.primitives.get(i),
                         perPrim.get(i), materials));
             }
-            JSONObject mesh = new JSONObject();
-            mesh.put("primitives", primitivesArr);
+            ObjectNode mesh = Json.objectNode();
+            mesh.set("primitives", primitivesArr);
             meshes.add(mesh);
         }
 
-        root.put("meshes", meshes);
+        root.set("meshes", meshes);
     }
 
     /**
@@ -599,11 +599,11 @@ final class GltfJsonBuilder {
      * don't (their feature identity is per instance, declared on the node
      * via {@code EXT_instance_features}).
      */
-    private JSONObject writePrimitiveJson(Primitive p, PrimitiveAccessors acc,
+    private ObjectNode writePrimitiveJson(Primitive p, PrimitiveAccessors acc,
                                           MaterialIndices materials) {
-        JSONObject primitive = new JSONObject();
+        ObjectNode primitive = Json.objectNode();
 
-        JSONObject attributes = new JSONObject();
+        ObjectNode attributes = Json.objectNode();
         attributes.put("POSITION", acc.position);
         if (acc.normal >= 0) {
             attributes.put("NORMAL", acc.normal);
@@ -617,7 +617,7 @@ final class GltfJsonBuilder {
         if (acc.featureId >= 0) {
             attributes.put("_FEATURE_ID_0", acc.featureId);
         }
-        primitive.put("attributes", attributes);
+        primitive.set("attributes", attributes);
         primitive.put("indices", acc.indices);
         int materialIdx;
         if (p.atlasPage >= 0) {
@@ -631,11 +631,11 @@ final class GltfJsonBuilder {
         }
         primitive.put("material", materialIdx);
 
-        JSONObject primExtensions = new JSONObject();
+        ObjectNode primExtensions = Json.objectNode();
         if (acc.featureId >= 0) {
-            JSONObject meshFeaturesExt = new JSONObject();
-            JSONArray featureIdsArr = new JSONArray();
-            JSONObject featureIdDef = new JSONObject();
+            ObjectNode meshFeaturesExt = Json.objectNode();
+            ArrayNode featureIdsArr = Json.arrayNode();
+            ObjectNode featureIdDef = Json.objectNode();
             // Per the EXT_mesh_features spec, featureCount is the number of
             // unique features identified by THIS primitive's attribute — the
             // per-page/per-style split means each primitive references only a
@@ -644,30 +644,30 @@ final class GltfJsonBuilder {
             featureIdDef.put("attribute", 0);
             featureIdDef.put("propertyTable", 0);
             featureIdsArr.add(featureIdDef);
-            meshFeaturesExt.put("featureIds", featureIdsArr);
-            primExtensions.put("EXT_mesh_features", meshFeaturesExt);
+            meshFeaturesExt.set("featureIds", featureIdsArr);
+            primExtensions.set("EXT_mesh_features", meshFeaturesExt);
         }
         if (acc.outline >= 0) {
             // CESIUM_primitive_outline: the referenced accessor holds pairs
             // of vertex indices, each pair one edge to render as an outline.
-            JSONObject outlineExt = new JSONObject();
+            ObjectNode outlineExt = Json.objectNode();
             outlineExt.put("indices", acc.outline);
-            primExtensions.put("CESIUM_primitive_outline", outlineExt);
+            primExtensions.set("CESIUM_primitive_outline", outlineExt);
         }
         if (!primExtensions.isEmpty()) {
-            primitive.put("extensions", primExtensions);
+            primitive.set("extensions", primExtensions);
         }
 
         return primitive;
     }
 
-    private void writeExtensions(JSONObject root) {
-        JSONObject structMeta = buildStructuralMetadata();
-        JSONObject rootExtensions = new JSONObject();
-        rootExtensions.put("EXT_structural_metadata", structMeta);
-        root.put("extensions", rootExtensions);
+    private void writeExtensions(ObjectNode root) {
+        ObjectNode structMeta = buildStructuralMetadata();
+        ObjectNode rootExtensions = Json.objectNode();
+        rootExtensions.set("EXT_structural_metadata", structMeta);
+        root.set("extensions", rootExtensions);
 
-        JSONArray extUsed = new JSONArray();
+        ArrayNode extUsed = Json.arrayNode();
         if (!primitives.isEmpty()) {
             extUsed.add("EXT_mesh_features");
         }
@@ -682,9 +682,9 @@ final class GltfJsonBuilder {
             // non-supporting loaders fail cleanly instead. EXT_instance_features
             // stays optional: without it the geometry still renders correctly,
             // only per-instance picking degrades.
-            JSONArray extRequired = new JSONArray();
+            ArrayNode extRequired = Json.arrayNode();
             extRequired.add("EXT_mesh_gpu_instancing");
-            root.put("extensionsRequired", extRequired);
+            root.set("extensionsRequired", extRequired);
         }
         if (unlitUsed) {
             extUsed.add("KHR_materials_unlit");
@@ -699,37 +699,37 @@ final class GltfJsonBuilder {
         if (outlineUsed) {
             extUsed.add("CESIUM_primitive_outline");
         }
-        root.put("extensionsUsed", extUsed);
+        root.set("extensionsUsed", extUsed);
     }
 
-    private JSONObject buildStructuralMetadata() {
-        JSONObject meta = new JSONObject();
+    private ObjectNode buildStructuralMetadata() {
+        ObjectNode meta = Json.objectNode();
 
-        JSONObject schema = new JSONObject();
+        ObjectNode schema = Json.objectNode();
         schema.put("id", MetadataSchema.SCHEMA_ID);
-        JSONObject classes = new JSONObject();
-        JSONObject featureClass = new JSONObject();
-        JSONObject properties = new JSONObject();
+        ObjectNode classes = Json.objectNode();
+        ObjectNode featureClass = Json.objectNode();
+        ObjectNode properties = Json.objectNode();
         for (AttrField field : attrFields) {
             MetadataProperty mp = MetadataProperty.of(field.type());
-            JSONObject prop = new JSONObject();
+            ObjectNode prop = Json.objectNode();
             prop.put("type", mp.type());
             if (mp.componentType() != null) {
                 prop.put("componentType", mp.componentType());
             }
-            properties.put(field.name(), prop);
+            properties.set(field.name(), prop);
         }
-        featureClass.put("properties", properties);
-        classes.put("feature", featureClass);
-        schema.put("classes", classes);
-        meta.put("schema", schema);
+        featureClass.set("properties", properties);
+        classes.set("feature", featureClass);
+        schema.set("classes", classes);
+        meta.set("schema", schema);
 
-        JSONArray propTables = new JSONArray();
-        JSONObject propTable = new JSONObject();
+        ArrayNode propTables = Json.arrayNode();
+        ObjectNode propTable = Json.objectNode();
         propTable.put("class", "feature");
         propTable.put("count", propertyRowCount);
 
-        JSONObject propTableProps = new JSONObject();
+        ObjectNode propTableProps = Json.objectNode();
         for (int i = 0; i < attrFields.size(); i++) {
             AttrField field = attrFields.get(i);
             PropertyTableBufferViews pbv = propBvs.get(i);
@@ -737,37 +737,37 @@ final class GltfJsonBuilder {
             if (pbv.valuesBv() < 0) {
                 continue;
             }
-            JSONObject propDef = new JSONObject();
+            ObjectNode propDef = Json.objectNode();
             propDef.put("values", pbv.valuesBv());
             if (field.type() == AttrType.STRING) {
                 propDef.put("stringOffsets", pbv.offsetsBv());
             }
-            propTableProps.put(field.name(), propDef);
+            propTableProps.set(field.name(), propDef);
         }
-        propTable.put("properties", propTableProps);
+        propTable.set("properties", propTableProps);
         propTables.add(propTable);
-        meta.put("propertyTables", propTables);
+        meta.set("propertyTables", propTables);
 
         return meta;
     }
 
-    private static JSONObject makeAccessor(int bufferView, int componentType,
+    private static ObjectNode makeAccessor(int bufferView, int componentType,
                                            int count, String type,
                                            float[] min, float[] max) {
-        JSONObject acc = new JSONObject();
+        ObjectNode acc = Json.objectNode();
         acc.put("bufferView", bufferView);
         acc.put("componentType", componentType);
         acc.put("count", count);
         acc.put("type", type);
         if (min != null) {
-            JSONArray minArr = new JSONArray();
+            ArrayNode minArr = Json.arrayNode();
             for (float v : min) minArr.add(v);
-            acc.put("min", minArr);
+            acc.set("min", minArr);
         }
         if (max != null) {
-            JSONArray maxArr = new JSONArray();
+            ArrayNode maxArr = Json.arrayNode();
             for (float v : max) maxArr.add(v);
-            acc.put("max", maxArr);
+            acc.set("max", maxArr);
         }
         return acc;
     }

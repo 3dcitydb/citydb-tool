@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,14 +16,12 @@ import java.util.List;
  * {@code mostFrequentValues}. Built from an {@link AttributeStats.Result}
  * snapshot.
  */
-@JSONType(alphabetic = false)
 public record StatisticsResource(Stats stats) {
 
     public static StatisticsResource of(AttributeStats.Result result) {
         return new StatisticsResource(Stats.from(result));
     }
 
-    @JSONType(alphabetic = false)
     public record Stats(long totalValuesCount,
                         Double min, Double max, Double avg, Double stddev,
                         Double sum, Double variance,
@@ -51,7 +47,6 @@ public record StatisticsResource(Stats stats) {
         }
     }
 
-    @JSONType(alphabetic = false)
     public record MostFrequentValue(String value, long count) {
     }
 }

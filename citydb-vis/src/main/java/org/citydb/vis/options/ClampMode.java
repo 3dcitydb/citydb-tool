@@ -5,12 +5,8 @@
 
 package org.citydb.vis.options;
 
-import com.alibaba.fastjson2.JSONReader;
-import com.alibaba.fastjson2.JSONWriter;
-import com.alibaba.fastjson2.reader.ObjectReader;
-import com.alibaba.fastjson2.writer.ObjectWriter;
-
-import java.lang.reflect.Type;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
  * How the exporter places each feature vertically before tiling.
@@ -43,17 +39,22 @@ public enum ClampMode {
 
     /**
      * The CLI / config spelling of this mode (kebab-case), e.g.
-     * {@code cesium-world-terrain}.
+     * {@code cesium-world-terrain}. Also the JSON config representation, so
+     * the config spelling matches the CLI {@code --clamp-to-ground} spelling
+     * exactly instead of the enum constant name.
      */
+    @JsonValue
     public String getValue() {
         return value;
     }
 
     /**
      * Resolve a CLI / config token (case-insensitive, kebab-case) to a mode.
+     * Also used to read the mode from a JSON config.
      *
      * @throws IllegalArgumentException if the token matches no mode
      */
+    @JsonCreator
     public static ClampMode fromValue(String value) {
         if (value != null) {
             for (ClampMode mode : values()) {
@@ -69,38 +70,5 @@ public enum ClampMode {
     @Override
     public String toString() {
         return value;
-    }
-
-    /**
-     * fastjson2 serializer that writes a {@code ClampMode} as its kebab-case
-     * {@link #getValue() value} (e.g. {@code "cesium-world-terrain"}) instead of
-     * the enum constant name, so the JSON config spelling matches the CLI
-     * {@code --clamp-to-ground} spelling exactly. Wired up via
-     * {@code @JSONField(serializeUsing = ...)} on the format-options field.
-     */
-    public static class JsonWriter implements ObjectWriter<ClampMode> {
-        @Override
-        public void write(JSONWriter jsonWriter, Object object, Object fieldName,
-                          Type fieldType, long features) {
-            if (object == null) {
-                jsonWriter.writeNull();
-            } else {
-                jsonWriter.writeString(((ClampMode) object).value);
-            }
-        }
-    }
-
-    /**
-     * fastjson2 deserializer that reads a {@code ClampMode} from its kebab-case
-     * {@link #getValue() value}, the counterpart of {@link JsonWriter}. Wired up
-     * via {@code @JSONField(deserializeUsing = ...)} on the format-options field.
-     */
-    public static class JsonReader implements ObjectReader<ClampMode> {
-        @Override
-        public ClampMode readObject(JSONReader jsonReader, Type fieldType,
-                                    Object fieldName, long features) {
-            String value = jsonReader.readString();
-            return value != null ? fromValue(value) : null;
-        }
     }
 }

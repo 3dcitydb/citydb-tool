@@ -5,20 +5,18 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
 
 import java.util.List;
 
 /**
  * 3D Tiles 1.1 tileset descriptor POJO, serialized to {@code tileset.json}
- * or sub-tileset JSON via FastJSON2.
+ * or sub-tileset JSON via Jackson.
  * <p>
  * The {@code schema} field is only set on the root tileset (via
- * {@link #ofRoot}); sub-tilesets leave it null, which FastJSON2 omits
- * from the output by default.
+ * {@link #ofRoot}); sub-tilesets leave it null, which the JSON mapper omits
+ * from the output.
  */
-@JSONType(alphabetic = false)
 public class TilesetDescriptor {
     private TilesetAsset asset;
     private MetadataSchema schema;

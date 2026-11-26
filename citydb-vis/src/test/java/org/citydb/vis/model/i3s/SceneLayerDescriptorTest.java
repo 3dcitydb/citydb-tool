@@ -5,8 +5,7 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.styling.DefaultObjectStyle;
@@ -14,6 +13,7 @@ import org.citydb.vis.util.ColorUtils;
 import org.citydb.vis.util.JsonHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -82,35 +82,35 @@ class SceneLayerDescriptorTest {
 
     private void assertSlotCount(Path dir, boolean textures, boolean colors, boolean styles,
                                  int expected) throws IOException {
-        JSONObject json = descriptor(dir, textures, colors, styles, false,
+        JsonNode json = descriptor(dir, textures, colors, styles, false,
                 DefaultObjectStyle.defaults());
         String where = "textures=" + textures + " colors=" + colors + " styles=" + styles;
 
-        assertEquals(expected, json.getJSONArray("geometryDefinitions").size(),
+        assertEquals(expected, json.get("geometryDefinitions").size(),
                 "geometryDefinitions count for " + where);
         // The two lists are indexed by the SAME node-page value, so any
         // divergence in length means some slot has no material at all.
-        assertEquals(expected, json.getJSONArray("materialDefinitions").size(),
+        assertEquals(expected, json.get("materialDefinitions").size(),
                 "materialDefinitions must stay 1:1 with geometryDefinitions for " + where);
     }
 
     @Test
     void everySlotDeclaresUv0AndTheColorLaneExactlyWhereItIsEmitted(@TempDir Path dir)
             throws IOException {
-        JSONArray definitions = descriptor(dir, true, true, true, false,
-                DefaultObjectStyle.defaults()).getJSONArray("geometryDefinitions");
+        JsonNode definitions = descriptor(dir, true, true, true, false,
+                DefaultObjectStyle.defaults()).get("geometryDefinitions");
 
         for (int i = 0; i < definitions.size(); i++) {
             // CesiumJS's I3SLayer._findBestGeometryBuffers looks slots up by
             // the hardcoded key ["position", "uv0"] — an untextured slot that
             // omits uv0 is simply never selected.
-            assertNotNull(buffer(definitions, i).getJSONObject("uv0"), "uv0 on slot " + i);
-            assertNotNull(buffer(definitions, i).getJSONObject("position"), "position on slot " + i);
+            assertNotNull(buffer(definitions, i).get("uv0"), "uv0 on slot " + i);
+            assertNotNull(buffer(definitions, i).get("position"), "position on slot " + i);
         }
 
         // Slot 0 is the plain slot; the encoder never emits COLOR_0 there.
         assertNull(buffer(definitions, SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX)
-                .getJSONObject("color"), "the untextured slot must not declare COLOR_0");
+                .get("color"), "the untextured slot must not declare COLOR_0");
         // Every colored slot declares it.
         for (int i : new int[]{
                 SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX,
@@ -118,7 +118,7 @@ class SceneLayerDescriptorTest {
                 SceneLayerDescriptor.VERTEX_COLORED_BLEND_DEFINITION_INDEX,
                 SceneLayerDescriptor.STYLED_COLORED_OPAQUE_DEFINITION_INDEX,
                 SceneLayerDescriptor.STYLED_COLORED_BLEND_DEFINITION_INDEX}) {
-            assertNotNull(buffer(definitions, i).getJSONObject("color"),
+            assertNotNull(buffer(definitions, i).get("color"),
                     "COLOR_0 must be declared on slot " + i);
         }
     }
@@ -126,11 +126,11 @@ class SceneLayerDescriptorTest {
     @Test
     void texturedSlotDropsTheColorLaneWhenTheLayerHasNoX3dMaterial(@TempDir Path dir)
             throws IOException {
-        JSONArray definitions = descriptor(dir, true, false, false, false,
-                DefaultObjectStyle.defaults()).getJSONArray("geometryDefinitions");
+        JsonNode definitions = descriptor(dir, true, false, false, false,
+                DefaultObjectStyle.defaults()).get("geometryDefinitions");
 
         assertNull(buffer(definitions, SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX)
-                        .getJSONObject("color"),
+                        .get("color"),
                 "a textured layer without baked colors must not declare COLOR_0");
     }
 
@@ -140,21 +140,21 @@ class SceneLayerDescriptorTest {
         // ArcGIS Pro / Online refuse a layer whose legacy buffer omits NORMAL,
         // which is why --enable-shading is mandatory for those targets. The
         // toggle must move every slot together with the encoder.
-        JSONArray unlit = descriptor(dir, true, true, true, false,
-                DefaultObjectStyle.defaults()).getJSONArray("geometryDefinitions");
+        JsonNode unlit = descriptor(dir, true, true, true, false,
+                DefaultObjectStyle.defaults()).get("geometryDefinitions");
         for (int i = 0; i < unlit.size(); i++) {
-            assertNull(buffer(unlit, i).getJSONObject("normal"),
+            assertNull(buffer(unlit, i).get("normal"),
                     "slot " + i + " must not declare NORMAL without --enable-shading");
         }
 
-        JSONArray shaded = descriptor(dir, true, true, true, true,
-                DefaultObjectStyle.defaults()).getJSONArray("geometryDefinitions");
+        JsonNode shaded = descriptor(dir, true, true, true, true,
+                DefaultObjectStyle.defaults()).get("geometryDefinitions");
         assertEquals(unlit.size(), shaded.size(), "shading must not change the slot count");
         for (int i = 0; i < shaded.size(); i++) {
-            JSONObject normal = buffer(shaded, i).getJSONObject("normal");
+            JsonNode normal = buffer(shaded, i).get("normal");
             assertNotNull(normal, "slot " + i + " must declare NORMAL with --enable-shading");
-            assertEquals("Float32", normal.getString("type"));
-            assertEquals(3, normal.getIntValue("component"));
+            assertEquals("Float32", normal.path("type").asString(null));
+            assertEquals(3, normal.path("component").asInt(0));
         }
     }
 
@@ -166,117 +166,117 @@ class SceneLayerDescriptorTest {
         // textured-shaded buffer flavour, and getting it wrong is what makes
         // Pro refuse the SLPK — so it gets its own case rather than riding
         // along on the all-flags-on layer above.
-        JSONArray definitions = descriptor(dir, true, false, false, true,
-                DefaultObjectStyle.defaults()).getJSONArray("geometryDefinitions");
+        JsonNode definitions = descriptor(dir, true, false, false, true,
+                DefaultObjectStyle.defaults()).get("geometryDefinitions");
         assertEquals(2, definitions.size());
 
-        JSONObject textured = buffer(definitions,
+        JsonNode textured = buffer(definitions,
                 SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX);
-        assertNotNull(textured.getJSONObject("normal"), "ArcGIS requires NORMAL");
-        assertNotNull(textured.getJSONObject("uv0"));
-        assertNull(textured.getJSONObject("color"),
+        assertNotNull(textured.get("normal"), "ArcGIS requires NORMAL");
+        assertNotNull(textured.get("uv0"));
+        assertNull(textured.get("color"),
                 "no X3DMaterial in this layer, so no COLOR_0 may be declared");
         assertNotNull(buffer(definitions, SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX)
-                .getJSONObject("normal"));
+                .get("normal"));
     }
 
     @Test
     void legacyBufferDeclaresTheHeaderOffsetAndPerFeatureLanes(@TempDir Path dir)
             throws IOException {
-        JSONObject buffer = buffer(descriptor(dir, false, false, false, true,
-                DefaultObjectStyle.defaults()).getJSONArray("geometryDefinitions"), 0);
+        JsonNode buffer = buffer(descriptor(dir, false, false, false, true,
+                DefaultObjectStyle.defaults()).get("geometryDefinitions"), 0);
 
         // offset 8 = UInt32 vertexCount + UInt32 featureCount, matching the
         // two header ints I3SGeometryEncoderTest reads off the binary stream.
-        assertEquals(8, buffer.getIntValue("offset"));
+        assertEquals(8, buffer.path("offset").asInt(0));
 
-        JSONObject featureId = buffer.getJSONObject("featureId");
-        assertEquals("UInt64", featureId.getString("type"));
-        assertEquals(1, featureId.getIntValue("component"));
-        assertEquals("per-feature", featureId.getString("binding"));
+        JsonNode featureId = buffer.get("featureId");
+        assertEquals("UInt64", featureId.path("type").asString(null));
+        assertEquals(1, featureId.path("component").asInt(0));
+        assertEquals("per-feature", featureId.path("binding").asString(null));
 
-        JSONObject faceRange = buffer.getJSONObject("faceRange");
-        assertEquals("UInt32", faceRange.getString("type"));
-        assertEquals(2, faceRange.getIntValue("component"));
-        assertEquals("per-feature", faceRange.getString("binding"));
+        JsonNode faceRange = buffer.get("faceRange");
+        assertEquals("UInt32", faceRange.path("type").asString(null));
+        assertEquals(2, faceRange.path("component").asInt(0));
+        assertEquals("per-feature", faceRange.path("binding").asString(null));
 
         // Vertex-bound lanes carry no binding at all (not "per-vertex").
-        assertNull(buffer.getJSONObject("position").getString("binding"));
+        assertNull(buffer.get("position").path("binding").asString(null));
     }
 
     // ---- materials ---------------------------------------------------------
 
     @Test
     void everyMaterialDeclaresBothCullFaceAndDoubleSided(@TempDir Path dir) throws IOException {
-        JSONArray materials = descriptor(dir, true, true, true, false,
-                DefaultObjectStyle.defaults()).getJSONArray("materialDefinitions");
+        JsonNode materials = descriptor(dir, true, true, true, false,
+                DefaultObjectStyle.defaults()).get("materialDefinitions");
 
         for (int i = 0; i < materials.size(); i++) {
-            JSONObject material = materials.getJSONObject(i);
+            JsonNode material = materials.get(i);
             // ArcGIS Pro reads the I3S 1.6-era cullFace enum, CesiumJS reads
             // the glTF-aligned doubleSided boolean. Both are needed because
             // CityGML wall winding is routinely inconsistent.
-            assertEquals("none", material.getString("cullFace"), "cullFace on material " + i);
-            assertTrue(material.getBooleanValue("doubleSided"), "doubleSided on material " + i);
-            assertNotNull(material.getJSONObject("pbrMetallicRoughness"), "pbr on material " + i);
+            assertEquals("none", material.path("cullFace").asString(null), "cullFace on material " + i);
+            assertTrue(material.path("doubleSided").asBoolean(false), "doubleSided on material " + i);
+            assertNotNull(material.get("pbrMetallicRoughness"), "pbr on material " + i);
         }
     }
 
     @Test
     void blendSlotsCarryLowercaseAlphaModeAndOpaqueSlotsCarryNone(@TempDir Path dir)
             throws IOException {
-        JSONArray materials = descriptor(dir, true, true, true, false,
-                DefaultObjectStyle.defaults()).getJSONArray("materialDefinitions");
+        JsonNode materials = descriptor(dir, true, true, true, false,
+                DefaultObjectStyle.defaults()).get("materialDefinitions");
 
         // ArcGIS Pro 3.x rejects the uppercase glTF spelling outright, so the
         // I3S spec literal is asserted verbatim.
-        assertEquals("blend", materials.getJSONObject(
-                SceneLayerDescriptor.VERTEX_COLORED_BLEND_DEFINITION_INDEX).getString("alphaMode"));
-        assertEquals("blend", materials.getJSONObject(
-                SceneLayerDescriptor.STYLED_COLORED_BLEND_DEFINITION_INDEX).getString("alphaMode"));
+        assertEquals("blend", materials.get(
+                SceneLayerDescriptor.VERTEX_COLORED_BLEND_DEFINITION_INDEX).path("alphaMode").asString(null));
+        assertEquals("blend", materials.get(
+                SceneLayerDescriptor.STYLED_COLORED_BLEND_DEFINITION_INDEX).path("alphaMode").asString(null));
 
         // Opaque slots omit the key entirely and rely on the I3S default.
-        assertNull(materials.getJSONObject(
-                SceneLayerDescriptor.VERTEX_COLORED_OPAQUE_DEFINITION_INDEX).getString("alphaMode"));
-        assertNull(materials.getJSONObject(
-                SceneLayerDescriptor.STYLED_COLORED_OPAQUE_DEFINITION_INDEX).getString("alphaMode"));
-        assertNull(materials.getJSONObject(
-                SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX).getString("alphaMode"));
+        assertNull(materials.get(
+                SceneLayerDescriptor.VERTEX_COLORED_OPAQUE_DEFINITION_INDEX).path("alphaMode").asString(null));
+        assertNull(materials.get(
+                SceneLayerDescriptor.STYLED_COLORED_OPAQUE_DEFINITION_INDEX).path("alphaMode").asString(null));
+        assertNull(materials.get(
+                SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX).path("alphaMode").asString(null));
     }
 
     @Test
     void texturedMaterialBindsTextureSetZeroAndTheLayerDeclaresIt(@TempDir Path dir)
             throws IOException {
-        JSONObject json = descriptor(dir, true, false, false, false,
+        JsonNode json = descriptor(dir, true, false, false, false,
                 DefaultObjectStyle.defaults());
 
-        JSONObject pbr = json.getJSONArray("materialDefinitions")
-                .getJSONObject(SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX)
-                .getJSONObject("pbrMetallicRoughness");
-        JSONObject baseColorTexture = pbr.getJSONObject("baseColorTexture");
+        JsonNode pbr = json.get("materialDefinitions")
+                .get(SceneLayerDescriptor.TEXTURED_DEFINITION_INDEX)
+                .get("pbrMetallicRoughness");
+        JsonNode baseColorTexture = pbr.get("baseColorTexture");
         assertNotNull(baseColorTexture, "the textured slot must bind a base color texture");
-        assertEquals(0, baseColorTexture.getIntValue("textureSetDefinitionId"));
-        assertEquals(0, baseColorTexture.getIntValue("texCoord"));
+        assertEquals(0, baseColorTexture.path("textureSetDefinitionId").asInt(0));
+        assertEquals(0, baseColorTexture.path("texCoord").asInt(0));
 
         // The referenced texture set must actually be declared, as JPEG.
-        JSONArray sets = json.getJSONArray("textureSetDefinitions");
+        JsonNode sets = json.get("textureSetDefinitions");
         assertEquals(1, sets.size());
-        assertEquals("jpg", sets.getJSONObject(0).getJSONArray("formats")
-                .getJSONObject(0).getString("format"));
+        assertEquals("jpg", sets.get(0).get("formats")
+                .get(0).path("format").asString(null));
         assertEquals(List.of("image/jpeg"),
-                json.getJSONObject("store").getJSONArray("textureEncoding").toList(String.class));
+                json.get("store").get("textureEncoding").valueStream().map(JsonNode::asString).toList());
     }
 
     @Test
     void untexturedLayerDeclaresNoTextureSetAndNoTextureEncoding(@TempDir Path dir)
             throws IOException {
-        JSONObject json = descriptor(dir, false, false, false, false,
+        JsonNode json = descriptor(dir, false, false, false, false,
                 DefaultObjectStyle.defaults());
 
-        assertFalse(json.containsKey("textureSetDefinitions"));
-        assertFalse(json.getJSONObject("store").containsKey("textureEncoding"));
-        assertNull(json.getJSONArray("materialDefinitions").getJSONObject(0)
-                        .getJSONObject("pbrMetallicRoughness").getJSONObject("baseColorTexture"),
+        assertFalse(json.has("textureSetDefinitions"));
+        assertFalse(json.get("store").has("textureEncoding"));
+        assertNull(json.get("materialDefinitions").get(0)
+                        .get("pbrMetallicRoughness").get("baseColorTexture"),
                 "an untextured material must not reference a texture set");
     }
 
@@ -287,29 +287,29 @@ class SceneLayerDescriptorTest {
         // baseColorFactor (glTF/I3S define the field in linear space) while
         // alpha passes through, and alpha < 1 promotes the slot to blend.
         DefaultObjectStyle style = DefaultObjectStyle.parseColor("#ff8000cc");
-        JSONObject material = descriptor(dir, false, false, false, false, style)
-                .getJSONArray("materialDefinitions")
-                .getJSONObject(SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX);
+        JsonNode material = descriptor(dir, false, false, false, false, style)
+                .get("materialDefinitions")
+                .get(SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX);
 
-        JSONArray factor = material.getJSONObject("pbrMetallicRoughness")
-                .getJSONArray("baseColorFactor");
+        JsonNode factor = material.get("pbrMetallicRoughness")
+                .get("baseColorFactor");
         assertEquals(4, factor.size());
-        assertEquals(ColorUtils.srgbToLinear(1f), factor.getFloatValue(0), 1e-6);
-        assertEquals(ColorUtils.srgbToLinear(0x80 / 255f), factor.getFloatValue(1), 1e-6);
-        assertEquals(ColorUtils.srgbToLinear(0f), factor.getFloatValue(2), 1e-6);
-        assertEquals(0xcc / 255f, factor.getFloatValue(3), 1e-6, "alpha passes through unchanged");
-        assertEquals("blend", material.getString("alphaMode"));
+        assertEquals(ColorUtils.srgbToLinear(1f), factor.path(0).asDouble(0), 1e-6);
+        assertEquals(ColorUtils.srgbToLinear(0x80 / 255f), factor.path(1).asDouble(0), 1e-6);
+        assertEquals(ColorUtils.srgbToLinear(0f), factor.path(2).asDouble(0), 1e-6);
+        assertEquals(0xcc / 255f, factor.path(3).asDouble(0), 1e-6, "alpha passes through unchanged");
+        assertEquals("blend", material.path("alphaMode").asString(null));
     }
 
     @Test
     void defaultWhiteStyleEmitsNoBaseColorFactor(@TempDir Path dir) throws IOException {
-        JSONObject pbr = descriptor(dir, false, false, false, false, DefaultObjectStyle.defaults())
-                .getJSONArray("materialDefinitions")
-                .getJSONObject(SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX)
-                .getJSONObject("pbrMetallicRoughness");
+        JsonNode pbr = descriptor(dir, false, false, false, false, DefaultObjectStyle.defaults())
+                .get("materialDefinitions")
+                .get(SceneLayerDescriptor.UNTEXTURED_DEFINITION_INDEX)
+                .get("pbrMetallicRoughness");
 
         // Opaque white is the PBR default — emitting it would be noise.
-        assertFalse(pbr.containsKey("baseColorFactor"));
+        assertFalse(pbr.has("baseColorFactor"));
     }
 
     // ---- attribute schema --------------------------------------------------
@@ -317,13 +317,13 @@ class SceneLayerDescriptorTest {
     @Test
     void attributeResourcesAreIndexAlignedAcrossFieldsStorageAndStatistics(@TempDir Path dir)
             throws IOException {
-        JSONObject json = descriptor(dir, false, false, false, false,
+        JsonNode json = descriptor(dir, false, false, false, false,
                 DefaultObjectStyle.defaults());
 
-        JSONArray fields = json.getJSONArray("fields");
-        JSONArray storage = json.getJSONArray("attributeStorageInfo");
-        JSONArray statistics = json.getJSONArray("statisticsInfo");
-        JSONArray popupFields = json.getJSONObject("popupInfo").getJSONArray("fieldInfos");
+        JsonNode fields = json.get("fields");
+        JsonNode storage = json.get("attributeStorageInfo");
+        JsonNode statistics = json.get("statisticsInfo");
+        JsonNode popupFields = json.get("popupInfo").get("fieldInfos");
         assertEquals(FIELDS.size(), fields.size());
         assertEquals(FIELDS.size(), storage.size());
         assertEquals(FIELDS.size(), statistics.size());
@@ -335,42 +335,42 @@ class SceneLayerDescriptorTest {
         // silently pairs a field with another field's values.
         for (int i = 0; i < FIELDS.size(); i++) {
             String name = FIELDS.get(i).name();
-            assertEquals(name, fields.getJSONObject(i).getString("name"), "fields[" + i + "]");
-            assertEquals(name, storage.getJSONObject(i).getString("name"), "storage[" + i + "]");
-            assertEquals("f_" + i, storage.getJSONObject(i).getString("key"));
-            assertEquals(name, statistics.getJSONObject(i).getString("name"));
-            assertEquals("f_" + i, statistics.getJSONObject(i).getString("key"));
-            assertEquals("statistics/f_" + i + "/0", statistics.getJSONObject(i).getString("href"));
-            assertEquals(name, popupFields.getJSONObject(i).getString("fieldName"));
+            assertEquals(name, fields.get(i).path("name").asString(null), "fields[" + i + "]");
+            assertEquals(name, storage.get(i).path("name").asString(null), "storage[" + i + "]");
+            assertEquals("f_" + i, storage.get(i).path("key").asString(null));
+            assertEquals(name, statistics.get(i).path("name").asString(null));
+            assertEquals("f_" + i, statistics.get(i).path("key").asString(null));
+            assertEquals("statistics/f_" + i + "/0", statistics.get(i).path("href").asString(null));
+            assertEquals(name, popupFields.get(i).path("fieldName").asString(null));
         }
     }
 
     @Test
     void attrTypesMapToEsriFieldTypesAndBinaryValueTypes(@TempDir Path dir) throws IOException {
-        JSONObject json = descriptor(dir, false, false, false, false,
+        JsonNode json = descriptor(dir, false, false, false, false,
                 DefaultObjectStyle.defaults());
-        JSONArray fields = json.getJSONArray("fields");
-        JSONArray storage = json.getJSONArray("attributeStorageInfo");
+        JsonNode fields = json.get("fields");
+        JsonNode storage = json.get("attributeStorageInfo");
 
-        assertEquals("esriFieldTypeString", fields.getJSONObject(0).getString("type"));
-        assertEquals("esriFieldTypeOID", fields.getJSONObject(1).getString("type"));
-        assertEquals("esriFieldTypeInteger", fields.getJSONObject(3).getString("type"));
-        assertEquals("esriFieldTypeDouble", fields.getJSONObject(4).getString("type"));
+        assertEquals("esriFieldTypeString", fields.get(0).path("type").asString(null));
+        assertEquals("esriFieldTypeOID", fields.get(1).path("type").asString(null));
+        assertEquals("esriFieldTypeInteger", fields.get(3).path("type").asString(null));
+        assertEquals("esriFieldTypeDouble", fields.get(4).path("type").asString(null));
 
         // STRING carries the two-section layout (byte counts + UTF-8 values);
         // the numeric types carry a single values section.
-        JSONObject stringStorage = storage.getJSONObject(0);
+        JsonNode stringStorage = storage.get(0);
         assertEquals(List.of("attributeByteCounts", "attributeValues"),
-                stringStorage.getJSONArray("ordering").toList(String.class));
+                stringStorage.get("ordering").valueStream().map(JsonNode::asString).toList());
         assertEquals("UTF-8",
-                stringStorage.getJSONObject("attributeValues").getString("encoding"));
-        assertEquals(2, stringStorage.getJSONArray("header").size());
+                stringStorage.get("attributeValues").path("encoding").asString(null));
+        assertEquals(2, stringStorage.get("header").size());
 
         assertEquals("Oid32", valueType(storage, 1));
         assertEquals("Int32", valueType(storage, 3));
         assertEquals("Float64", valueType(storage, 4));
         assertEquals(List.of("attributeValues"),
-                storage.getJSONObject(3).getJSONArray("ordering").toList(String.class));
+                storage.get(3).get("ordering").valueStream().map(JsonNode::asString).toList());
     }
 
     @Test
@@ -380,16 +380,16 @@ class SceneLayerDescriptorTest {
         // string. Esri resolves the OID by convention from the name, so the
         // layer has to state it explicitly or picking breaks in ArcGIS.
         assertEquals("OID", descriptor(dir, false, false, false, false,
-                DefaultObjectStyle.defaults()).getString("objectIdField"));
+                DefaultObjectStyle.defaults()).path("objectIdField").asString(null));
     }
 
     @Test
     void layerWithoutAnOidFieldOmitsObjectIdField(@TempDir Path dir) throws IOException {
-        JSONObject json = descriptorFor(dir, List.of(new AttrField("name", AttrType.STRING)),
+        JsonNode json = descriptorFor(dir, List.of(new AttrField("name", AttrType.STRING)),
                 false, false, false, false, DefaultObjectStyle.defaults());
 
-        assertFalse(json.containsKey("objectIdField"));
-        assertEquals(1, json.getJSONArray("fields").size());
+        assertFalse(json.has("objectIdField"));
+        assertEquals(1, json.get("fields").size());
     }
 
     // ---- layer / store identity -------------------------------------------
@@ -397,48 +397,61 @@ class SceneLayerDescriptorTest {
     @Test
     void layerVersionIsALifecycleUuidWhileTheI3sVersionLivesInTheStore(@TempDir Path dir)
             throws IOException {
-        JSONObject json = descriptor(dir, false, false, false, false,
+        JsonNode json = descriptor(dir, false, false, false, false,
                 DefaultObjectStyle.defaults());
 
         // ArcGIS Pro rejects a non-UUID here and silently drops the whole
         // fields array on parse, which breaks the identify popup while the
         // layer still renders — confusing enough to be worth pinning.
-        String version = json.getString("version");
+        String version = json.path("version").asString(null);
         assertEquals(version.toUpperCase(), version, "layer version must be an uppercase UUID");
         assertEquals(version, UUID.fromString(version).toString().toUpperCase());
 
-        assertEquals("1.9", json.getJSONObject("store").getString("version"),
+        assertEquals("1.9", json.get("store").path("version").asString(null),
                 "store.version carries the I3S spec version, not the layer lifecycle id");
-        assertEquals("3DObject", json.getString("layerType"));
-        assertEquals(List.of("View", "Query"), json.getJSONArray("capabilities").toList(String.class));
-        assertEquals(0, json.getIntValue("id"));
+        assertEquals("3DObject", json.path("layerType").asString(null));
+        assertEquals(List.of("View", "Query"), json.get("capabilities").valueStream().map(JsonNode::asString).toList());
+        assertEquals(0, json.path("id").asInt(0));
+    }
+
+    @Test
+    void propertiesAreWrittenInDeclarationOrder(@TempDir Path dir) throws IOException {
+        // Jackson 3 sorts properties alphabetically by default; JsonHelper
+        // turns that off so the model classes control the layout of the file.
+        JsonNode store = descriptor(dir, false, false, false, false,
+                DefaultObjectStyle.defaults()).get("store");
+
+        assertEquals(List.of("id", "profile", "version", "resourcePattern", "rootNode", "extent",
+                        "indexCRS", "vertexCRS", "normalReferenceFrame", "lodType", "lodModel",
+                        "defaultGeometrySchema", "geometryEncoding"),
+                List.copyOf(store.propertyNames()));
     }
 
     @Test
     void storeDeclaresTheProfileCrsAndDefaultGeometrySchemaArcgisRequires(@TempDir Path dir)
             throws IOException {
-        JSONObject store = descriptor(dir, false, false, false, false,
-                DefaultObjectStyle.defaults()).getJSONObject("store");
+        JsonNode store = descriptor(dir, false, false, false, false,
+                DefaultObjectStyle.defaults()).get("store");
 
-        assertEquals("meshpyramids", store.getString("profile"));
-        assertEquals("./nodes/root", store.getString("rootNode"));
-        assertEquals("earth-centered", store.getString("normalReferenceFrame"));
-        assertEquals("MeshPyramid", store.getString("lodType"));
-        assertEquals("node-switching", store.getString("lodModel"));
-        assertEquals("application/octet-stream", store.getString("geometryEncoding"));
-        assertEquals("http://www.opengis.net/def/crs/EPSG/0/4326", store.getString("indexCRS"));
-        assertEquals("http://www.opengis.net/def/crs/EPSG/0/4326", store.getString("vertexCRS"));
+        assertEquals("meshpyramids", store.path("profile").asString(null));
+        assertEquals("./nodes/root", store.path("rootNode").asString(null));
+        assertEquals("earth-centered", store.path("normalReferenceFrame").asString(null));
+        assertEquals("MeshPyramid", store.path("lodType").asString(null));
+        assertEquals("node-switching", store.path("lodModel").asString(null));
+        assertEquals("application/octet-stream", store.path("geometryEncoding").asString(null));
+        assertEquals("http://www.opengis.net/def/crs/EPSG/0/4326", store.path("indexCRS").asString(null));
+        assertEquals("http://www.opengis.net/def/crs/EPSG/0/4326", store.path("vertexCRS").asString(null));
 
         // ArcGIS Pro's loader rejects a layer with no defaultGeometrySchema,
         // independently of the per-slot buffers declared above.
-        JSONObject schema = store.getJSONObject("defaultGeometrySchema");
+        JsonNode schema = store.get("defaultGeometrySchema");
         assertNotNull(schema);
-        assertEquals("triangles", schema.getString("geometryType"));
-        assertEquals("PerAttributeArray", schema.getString("topology"));
+        assertEquals("triangles", schema.path("geometryType").asString(null));
+        assertEquals("PerAttributeArray", schema.path("topology").asString(null));
         assertEquals(List.of("position", "normal", "uv0", "color"),
-                schema.getJSONArray("ordering").toList(String.class));
+                schema.get("ordering").valueStream().map(JsonNode::asString).toList());
         assertEquals(List.of("id", "faceRange"),
-                schema.getJSONArray("featureAttributeOrder").toList(String.class));
+                schema.get("featureAttributeOrder").valueStream().map(JsonNode::asString).toList());
     }
 
     @Test
@@ -446,54 +459,54 @@ class SceneLayerDescriptorTest {
         // Internal extent is [minX, minY, minZ, maxX, maxY, maxZ]. The store
         // wants a flat 2D box, fullExtent wants XY before Z — two different
         // reshuffles of the same array, both easy to get index-wrong.
-        JSONObject json = descriptor(dir, false, false, false, false,
+        JsonNode json = descriptor(dir, false, false, false, false,
                 DefaultObjectStyle.defaults());
 
         assertEquals(List.of(8.1, 48.7, 8.2, 48.8),
-                json.getJSONObject("store").getJSONArray("extent").toList(Double.class));
+                json.get("store").get("extent").valueStream().map(JsonNode::doubleValue).toList());
 
-        JSONObject fullExtent = json.getJSONObject("fullExtent");
-        assertEquals(8.1, fullExtent.getDoubleValue("xmin"), 1e-12);
-        assertEquals(48.7, fullExtent.getDoubleValue("ymin"), 1e-12);
-        assertEquals(8.2, fullExtent.getDoubleValue("xmax"), 1e-12);
-        assertEquals(48.8, fullExtent.getDoubleValue("ymax"), 1e-12);
-        assertEquals(10.0, fullExtent.getDoubleValue("zmin"), 1e-12);
-        assertEquals(30.0, fullExtent.getDoubleValue("zmax"), 1e-12);
+        JsonNode fullExtent = json.get("fullExtent");
+        assertEquals(8.1, fullExtent.path("xmin").asDouble(0), 1e-12);
+        assertEquals(48.7, fullExtent.path("ymin").asDouble(0), 1e-12);
+        assertEquals(8.2, fullExtent.path("xmax").asDouble(0), 1e-12);
+        assertEquals(48.8, fullExtent.path("ymax").asDouble(0), 1e-12);
+        assertEquals(10.0, fullExtent.path("zmin").asDouble(0), 1e-12);
+        assertEquals(30.0, fullExtent.path("zmax").asDouble(0), 1e-12);
     }
 
     @Test
     void nodePagesInfoMatchesThePageSizeTheSerializerWritesWith(@TempDir Path dir)
             throws IOException {
-        JSONObject nodePages = descriptor(dir, false, false, false, false,
-                DefaultObjectStyle.defaults()).getJSONObject("nodePages");
+        JsonNode nodePages = descriptor(dir, false, false, false, false,
+                DefaultObjectStyle.defaults()).get("nodePages");
 
         // 64 is a literal here for the same reason it is one in
         // I3SJsonSerializerTest: consumers locate a node as
         // floor(index / nodesPerPage) using THIS advertised value, so the
         // manifest and the emitted pages must break together, not drift.
-        assertEquals(64, nodePages.getIntValue("nodesPerPage"));
-        assertEquals("maxScreenThresholdSQ", nodePages.getString("lodSelectionMetricType"));
+        assertEquals(64, nodePages.path("nodesPerPage").asInt(0));
+        assertEquals("maxScreenThresholdSQ", nodePages.path("lodSelectionMetricType").asString(null));
     }
 
     @Test
     void spatialAndHeightModelDeclarationsFollowTheExportCrsContract(@TempDir Path dir)
             throws IOException {
-        JSONObject json = descriptor(dir, false, false, false, false,
+        JsonNode json = descriptor(dir, false, false, false, false,
                 DefaultObjectStyle.defaults());
 
-        JSONObject spatialReference = json.getJSONObject("spatialReference");
-        assertEquals(4326, spatialReference.getIntValue("wkid"));
-        assertEquals(4326, spatialReference.getIntValue("latestWkid"));
+        JsonNode spatialReference = json.get("spatialReference");
+        assertEquals(4326, spatialReference.path("wkid").asInt(0));
+        assertEquals(4326, spatialReference.path("latestWkid").asInt(0));
 
-        JSONObject heightModel = json.getJSONObject("heightModelInfo");
-        assertEquals("gravity_related_height", heightModel.getString("heightModel"));
-        assertEquals("EGM96_Geoid", heightModel.getString("vertCRS"));
-        assertEquals("meter", heightModel.getString("heightUnit"));
+        JsonNode heightModel = json.get("heightModelInfo");
+        assertEquals("gravity_related_height", heightModel.path("heightModel").asString(null));
+        assertEquals("EGM96_Geoid", heightModel.path("vertCRS").asString(null));
+        assertEquals("meter", heightModel.path("heightUnit").asString(null));
     }
 
     // ---- fixture -----------------------------------------------------------
 
-    private static JSONObject descriptor(Path dir, boolean hasTextures, boolean hasColors,
+    private static JsonNode descriptor(Path dir, boolean hasTextures, boolean hasColors,
                                          boolean hasStyleOverrides, boolean enableShading,
                                          DefaultObjectStyle defaultStyle) throws IOException {
         return descriptorFor(dir, FIELDS, hasTextures, hasColors, hasStyleOverrides,
@@ -501,7 +514,7 @@ class SceneLayerDescriptorTest {
     }
 
     /** Build, serialize through the production writer config, and parse back. */
-    private static JSONObject descriptorFor(Path dir, List<AttrField> attrFields,
+    private static JsonNode descriptorFor(Path dir, List<AttrField> attrFields,
                                             boolean hasTextures, boolean hasColors,
                                             boolean hasStyleOverrides, boolean enableShading,
                                             DefaultObjectStyle defaultStyle) throws IOException {
@@ -515,15 +528,15 @@ class SceneLayerDescriptorTest {
 
         Path file = dir.resolve("index.json");
         JsonHelper.writePojo(file, descriptor);
-        return JSONObject.parseObject(Files.readString(file));
+        return Json.readObject(Files.readString(file));
     }
 
     /** The single legacy geometry buffer declared on definition slot {@code index}. */
-    private static JSONObject buffer(JSONArray definitions, int index) {
-        return definitions.getJSONObject(index).getJSONArray("geometryBuffers").getJSONObject(0);
+    private static JsonNode buffer(JsonNode definitions, int index) {
+        return definitions.get(index).get("geometryBuffers").get(0);
     }
 
-    private static String valueType(JSONArray storage, int index) {
-        return storage.getJSONObject(index).getJSONObject("attributeValues").getString("valueType");
+    private static String valueType(JsonNode storage, int index) {
+        return storage.get(index).get("attributeValues").path("valueType").asString(null);
     }
 }

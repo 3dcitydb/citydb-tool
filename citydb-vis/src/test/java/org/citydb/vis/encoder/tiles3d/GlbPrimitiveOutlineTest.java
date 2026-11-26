@@ -5,16 +5,15 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.model.common.Name;
-import org.citydb.vis.encoder.TriangleRouter;
 import org.citydb.vis.encoder.TriangleRouter.RoutedTriangle;
+import org.citydb.vis.encoder.TriangleRouter;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.geometry.VertexWelder;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -111,24 +110,24 @@ class GlbPrimitiveOutlineTest {
                 .metadata(1, List.of(), List.of())
                 .enableShading(false)
                 .build();
-        JSONObject root = JSON.parseObject(new String(jsonBytes, StandardCharsets.UTF_8));
+        JsonNode root = Json.readObject(new String(jsonBytes, StandardCharsets.UTF_8));
 
-        assertTrue(root.getJSONArray("extensionsUsed").contains("CESIUM_primitive_outline"));
-        JSONArray extRequired = root.getJSONArray("extensionsRequired");
-        assertTrue(extRequired == null || !extRequired.contains("CESIUM_primitive_outline"),
+        assertTrue(root.get("extensionsUsed").valueStream().anyMatch(n -> "CESIUM_primitive_outline".equals(n.asString())));
+        JsonNode extRequired = root.get("extensionsRequired");
+        assertTrue(extRequired == null || !extRequired.valueStream().anyMatch(n -> "CESIUM_primitive_outline".equals(n.asString())),
                 "outline degrades gracefully and must not be required");
 
-        JSONObject primitive = root.getJSONArray("meshes").getJSONObject(0)
-                .getJSONArray("primitives").getJSONObject(0);
-        JSONObject outlineExt = primitive.getJSONObject("extensions")
-                .getJSONObject("CESIUM_primitive_outline");
+        JsonNode primitive = root.get("meshes").get(0)
+                .get("primitives").get(0);
+        JsonNode outlineExt = primitive.get("extensions")
+                .get("CESIUM_primitive_outline");
         assertNotNull(outlineExt, "primitive must carry the outline extension");
 
-        JSONObject accessor = root.getJSONArray("accessors")
-                .getJSONObject(outlineExt.getIntValue("indices"));
-        assertEquals(COMPONENT_TYPE_UNSIGNED_INT, accessor.getIntValue("componentType"));
-        assertEquals("SCALAR", accessor.getString("type"));
-        assertEquals(6, accessor.getIntValue("count"),
+        JsonNode accessor = root.get("accessors")
+                .get(outlineExt.path("indices").asInt(0));
+        assertEquals(COMPONENT_TYPE_UNSIGNED_INT, accessor.path("componentType").asInt(0));
+        assertEquals("SCALAR", accessor.path("type").asString(null));
+        assertEquals(6, accessor.path("count").asInt(0),
                 "three outlined edges of one triangle -> six indices");
     }
 
@@ -148,8 +147,8 @@ class GlbPrimitiveOutlineTest {
                 .metadata(1, List.of(), List.of())
                 .enableShading(false)
                 .build();
-        JSONObject root = JSON.parseObject(new String(jsonBytes, StandardCharsets.UTF_8));
+        JsonNode root = Json.readObject(new String(jsonBytes, StandardCharsets.UTF_8));
 
-        assertFalse(root.getJSONArray("extensionsUsed").contains("CESIUM_primitive_outline"));
+        assertFalse(root.get("extensionsUsed").valueStream().anyMatch(n -> "CESIUM_primitive_outline".equals(n.asString())));
     }
 }

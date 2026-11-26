@@ -5,8 +5,5 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
-@JSONType(alphabetic = false)
 public record TileContent(String uri) {
 }

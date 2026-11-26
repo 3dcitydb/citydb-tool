@@ -5,6 +5,7 @@
 
 package org.citydb.vis.integration;
 
+import org.citydb.core.json.Json;
 import org.citydb.vis.I3SAdapter;
 import org.citydb.vis.options.I3SFormatOptions;
 import org.junit.jupiter.api.Test;
@@ -42,8 +43,8 @@ class RailwaySceneI3SExportIT extends AbstractRailwaySceneExportIT {
         Path descriptor = layerDir.resolve("index.json");
         assertTrue(Files.isRegularFile(descriptor),
                 "Missing I3S scene layer descriptor: " + descriptor);
-        assertTrue(com.alibaba.fastjson2.JSON.parseObject(Files.readString(descriptor))
-                        .containsKey("store"),
+        assertTrue(Json.readObject(Files.readString(descriptor))
+                        .has("store"),
                 "Scene layer descriptor is not a valid I3S 3dSceneLayer (no 'store').");
 
         Path nodesDir = layerDir.resolve("nodes");
@@ -101,7 +102,7 @@ class RailwaySceneI3SExportIT extends AbstractRailwaySceneExportIT {
             try (GZIPInputStream in = new GZIPInputStream(new ByteArrayInputStream(gzipped))) {
                 json = new String(in.readAllBytes(), StandardCharsets.UTF_8);
             }
-            assertTrue(com.alibaba.fastjson2.JSON.parseObject(json).containsKey("store"),
+            assertTrue(Json.readObject(json).has("store"),
                     "Packaged scene layer descriptor is not a valid I3S 3dSceneLayer.");
 
             // No loose-folder path may leak into the archive, every entry must

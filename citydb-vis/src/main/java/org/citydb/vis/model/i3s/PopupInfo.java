@@ -5,7 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
 
 import java.util.ArrayList;
@@ -23,7 +22,6 @@ import java.util.Map;
  * attribute buffers are correct. An empty {@code mediaInfos} list is also
  * emitted to match the shape of reference layers (e.g. NYC Attributed).
  */
-@JSONType(alphabetic = false)
 public class PopupInfo {
     private String title;
     private List<FieldInfo> fieldInfos;
@@ -49,7 +47,6 @@ public class PopupInfo {
         return info;
     }
 
-    @JSONType(alphabetic = false)
     public record FieldInfo(String fieldName, String label, boolean visible) {
     }
 }

@@ -5,14 +5,14 @@
 
 package org.citydb.vis.encoder.i3s;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 import org.citydb.vis.model.FeatureData;
 import org.citydb.vis.scene.SceneNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -60,30 +60,30 @@ class I3SJsonSerializerTest {
 
         new I3SJsonSerializer().writeNodeFeatures(tempDir, new SceneNode(3, 1), features, aabbs);
 
-        JSONObject doc = JSONObject.parseObject(Files.readString(tempDir.resolve("nodes")
+        JsonNode doc = Json.readObject(Files.readString(tempDir.resolve("nodes")
                 .resolve("3").resolve("features").resolve("0").resolve("index.json")));
 
         // The JS SDK requires exactly this schema to enable feature picking.
-        assertEquals(Set.of("featureData", "geometryData"), doc.keySet());
-        JSONArray geometryData = doc.getJSONArray("geometryData");
+        assertEquals(Set.of("featureData", "geometryData"), Set.copyOf(doc.propertyNames()));
+        JsonNode geometryData = doc.get("geometryData");
         assertEquals(1, geometryData.size());
-        assertEquals("./geometries/0", geometryData.getJSONObject(0).getString("href"));
+        assertEquals("./geometries/0", geometryData.get(0).path("href").asString(null));
 
-        JSONArray featureData = doc.getJSONArray("featureData");
+        JsonNode featureData = doc.get("featureData");
         assertEquals(2, featureData.size());
-        JSONObject first = featureData.getJSONObject(0);
-        assertEquals(7L, first.getLongValue("id"));
+        JsonNode first = featureData.get(0);
+        assertEquals(7L, first.path("id").asLong(0));
         // position is the mbb centroid; mbb is the feature's exact AABB —
         // distinct per feature, or the pick BVH collapses.
-        JSONArray position = first.getJSONArray("position");
-        assertEquals(8.15, position.getDoubleValue(0), 1e-12);
-        assertEquals(48.75, position.getDoubleValue(1), 1e-12);
-        assertEquals(20.0, position.getDoubleValue(2), 1e-12);
-        JSONArray mbb = first.getJSONArray("mbb");
+        JsonNode position = first.get("position");
+        assertEquals(8.15, position.path(0).asDouble(0), 1e-12);
+        assertEquals(48.75, position.path(1).asDouble(0), 1e-12);
+        assertEquals(20.0, position.path(2).asDouble(0), 1e-12);
+        JsonNode mbb = first.get("mbb");
         assertEquals(6, mbb.size());
-        assertEquals(8.1, mbb.getDoubleValue(0), 1e-12);
-        assertEquals(30.0, mbb.getDoubleValue(5), 1e-12);
-        assertEquals(9L, featureData.getJSONObject(1).getLongValue("id"));
+        assertEquals(8.1, mbb.path(0).asDouble(0), 1e-12);
+        assertEquals(30.0, mbb.path(5).asDouble(0), 1e-12);
+        assertEquals(9L, featureData.get(1).path("id").asLong(0));
     }
 
     @Test
@@ -91,11 +91,11 @@ class I3SJsonSerializerTest {
             throws IOException {
         new I3SJsonSerializer().writeNodeSharedResource(tempDir, new SceneNode(3, 1));
 
-        JSONObject doc = JSONObject.parseObject(Files.readString(tempDir.resolve("nodes")
+        JsonNode doc = Json.readObject(Files.readString(tempDir.resolve("nodes")
                 .resolve("3").resolve("shared").resolve("sharedResource").resolve("index.json")));
 
         // Esri's validator rejects an empty materialDefinitions object.
-        JSONObject materials = doc.getJSONObject("materialDefinitions");
+        JsonNode materials = doc.get("materialDefinitions");
         assertNotNull(materials);
         assertFalse(materials.isEmpty(),
                 "materialDefinitions must be non-empty for the SLPK validator");
@@ -117,7 +117,7 @@ class I3SJsonSerializerTest {
             Path statsFile = tempDir.resolve("statistics")
                     .resolve("f_" + i).resolve("0").resolve("index.json");
             assertTrue(Files.isRegularFile(statsFile), "missing stats resource: " + statsFile);
-            assertNotNull(JSONObject.parseObject(Files.readString(statsFile)));
+            assertNotNull(Json.readObject(Files.readString(statsFile)));
         }
     }
 
@@ -128,10 +128,10 @@ class I3SJsonSerializerTest {
         // floor(index / 64), so a silent change of the constant must fail here.
         new I3SJsonSerializer().writeNodePages(tempDir, sceneNodes(64), Set.of(), false);
 
-        JSONArray entries = readNodePage(tempDir, 0).getJSONArray("nodes");
+        JsonNode entries = readNodePage(tempDir, 0).get("nodes");
         assertEquals(64, entries.size());
-        assertEquals(0, entries.getJSONObject(0).getIntValue("index"));
-        assertEquals(63, entries.getJSONObject(63).getIntValue("index"));
+        assertEquals(0, entries.get(0).path("index").asInt(0));
+        assertEquals(63, entries.get(63).path("index").asInt(0));
         assertFalse(Files.exists(tempDir.resolve("nodepages").resolve("1")),
                 "the 64th node must not open a second page");
     }
@@ -143,13 +143,13 @@ class I3SJsonSerializerTest {
 
         // Page 0 stays full; the subList math must not duplicate node 63/64
         // across the boundary or clip the last page short.
-        JSONArray firstPage = readNodePage(tempDir, 0).getJSONArray("nodes");
+        JsonNode firstPage = readNodePage(tempDir, 0).get("nodes");
         assertEquals(64, firstPage.size());
-        assertEquals(63, firstPage.getJSONObject(63).getIntValue("index"));
+        assertEquals(63, firstPage.get(63).path("index").asInt(0));
 
-        JSONArray secondPage = readNodePage(tempDir, 1).getJSONArray("nodes");
+        JsonNode secondPage = readNodePage(tempDir, 1).get("nodes");
         assertEquals(1, secondPage.size());
-        assertEquals(64, secondPage.getJSONObject(0).getIntValue("index"));
+        assertEquals(64, secondPage.get(0).path("index").asInt(0));
 
         assertFalse(Files.exists(tempDir.resolve("nodepages").resolve("2")));
     }
@@ -161,20 +161,20 @@ class I3SJsonSerializerTest {
 
         new I3SJsonSerializer().writeNodePages(tempDir, nodes, Set.of(1), false);
 
-        JSONArray entries = readNodePage(tempDir, 0).getJSONArray("nodes");
+        JsonNode entries = readNodePage(tempDir, 0).get("nodes");
         // Only the node listed in meshNodeIndices may carry a mesh — ArcGIS
         // requests geometry for every entry that declares one, so a mesh on
         // an empty node 404s while a missing mesh on a leaf drops geometry.
-        assertNull(entries.getJSONObject(0).getJSONObject("mesh"));
-        assertNull(entries.getJSONObject(2).getJSONObject("mesh"));
+        assertNull(entries.get(0).get("mesh"));
+        assertNull(entries.get(2).get("mesh"));
 
-        JSONObject mesh = entries.getJSONObject(1).getJSONObject("mesh");
+        JsonNode mesh = entries.get(1).get("mesh");
         assertNotNull(mesh, "mesh node must carry a mesh entry");
         // Geometry/material/attribute resources are the node's own index.
-        assertEquals(1, mesh.getJSONObject("geometry").getIntValue("resource"));
-        assertEquals(6, mesh.getJSONObject("geometry").getIntValue("vertexCount"));
-        assertEquals(2, mesh.getJSONObject("geometry").getIntValue("featureCount"));
-        assertEquals(1, mesh.getJSONObject("material").getIntValue("resource"));
+        assertEquals(1, mesh.get("geometry").path("resource").asInt(0));
+        assertEquals(6, mesh.get("geometry").path("vertexCount").asInt(0));
+        assertEquals(2, mesh.get("geometry").path("featureCount").asInt(0));
+        assertEquals(1, mesh.get("material").path("resource").asInt(0));
     }
 
     @Test
@@ -205,10 +205,10 @@ class I3SJsonSerializerTest {
         return nodes;
     }
 
-    private static JSONObject readNodePage(Path tempDir, int page) throws IOException {
+    private static JsonNode readNodePage(Path tempDir, int page) throws IOException {
         Path pageFile = tempDir.resolve("nodepages")
                 .resolve(String.valueOf(page)).resolve("index.json");
         assertTrue(Files.isRegularFile(pageFile), "missing node page: " + pageFile);
-        return JSONObject.parseObject(Files.readString(pageFile));
+        return Json.readObject(Files.readString(pageFile));
     }
 }

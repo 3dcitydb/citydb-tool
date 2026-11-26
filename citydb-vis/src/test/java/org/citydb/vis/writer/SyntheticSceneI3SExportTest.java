@@ -5,13 +5,12 @@
 
 package org.citydb.vis.writer;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.I3SAdapter;
 import org.citydb.vis.options.I3SFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -60,11 +59,11 @@ class SyntheticSceneI3SExportTest extends AbstractSyntheticSceneExportTest {
         Path descriptor = layerDir.resolve("index.json");
         assertTrue(Files.isRegularFile(descriptor), "Missing scene layer descriptor: " + descriptor);
 
-        JSONObject layer = JSON.parseObject(Files.readString(descriptor));
-        JSONObject store = layer.getJSONObject("store");
+        JsonNode layer = Json.readObject(Files.readString(descriptor));
+        JsonNode store = layer.get("store");
         assertTrue(store != null, "Descriptor is not a valid I3S 3dSceneLayer (no 'store').");
-        assertEquals("1.9", store.getString("version"), "I3S store version must stay 1.9.");
-        assertEquals(64, layer.getJSONObject("nodePages").getIntValue("nodesPerPage"),
+        assertEquals("1.9", store.path("version").asString(null), "I3S store version must stay 1.9.");
+        assertEquals(64, layer.get("nodePages").path("nodesPerPage").asInt(0),
                 "nodesPerPage must match the page size the writer actually pages by.");
 
         // The scene spans ~220 m at a 50 m grid edge, so partitioning must place
@@ -84,7 +83,7 @@ class SyntheticSceneI3SExportTest extends AbstractSyntheticSceneExportTest {
         // clients cannot reach it.
         Path nodePage = layerDir.resolve("nodepages").resolve("0").resolve("index.json");
         assertTrue(Files.isRegularFile(nodePage), "Missing node page: " + nodePage);
-        JSONArray pagedNodes = JSON.parseObject(Files.readString(nodePage)).getJSONArray("nodes");
+        JsonNode pagedNodes = Json.readObject(Files.readString(nodePage)).get("nodes");
         assertTrue(pagedNodes != null && pagedNodes.size() >= nodes.size(),
                 "Node page lists " + (pagedNodes == null ? 0 : pagedNodes.size())
                         + " nodes but " + nodes.size() + " node directories were written.");
@@ -99,7 +98,7 @@ class SyntheticSceneI3SExportTest extends AbstractSyntheticSceneExportTest {
                 continue;
             }
             assertEquals(Set.of("featureData", "geometryData"),
-                    JSON.parseObject(Files.readString(features)).keySet(),
+                    Set.copyOf(Json.readObject(Files.readString(features)).propertyNames()),
                     "Unexpected feature-document schema in " + features);
         }
     }
@@ -139,12 +138,12 @@ class SyntheticSceneI3SExportTest extends AbstractSyntheticSceneExportTest {
         Path layerDir = layerDir(sceneDir);
         // Locate the OBJECTID column by name rather than by its fixed index, so
         // this stays honest if the schema head is ever reordered.
-        JSONArray fields = JSON.parseObject(Files.readString(layerDir.resolve("index.json")))
-                .getJSONArray("attributeStorageInfo");
+        JsonNode fields = Json.readObject(Files.readString(layerDir.resolve("index.json")))
+                .get("attributeStorageInfo");
         assertTrue(fields != null && !fields.isEmpty(), "Layer declares no attributeStorageInfo.");
         int objectIdColumn = -1;
         for (int i = 0; i < fields.size(); i++) {
-            if ("OBJECTID".equals(fields.getJSONObject(i).getString("name"))) {
+            if ("OBJECTID".equals(fields.get(i).path("name").asString(null))) {
                 objectIdColumn = i;
                 break;
             }

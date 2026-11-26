@@ -5,14 +5,13 @@
 
 package org.citydb.vis.integration;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.Tiles3DAdapter;
 import org.citydb.vis.options.Tiles3DFormatOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -24,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Stream;
+import javax.imageio.ImageIO;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -52,15 +52,15 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
         // valid (a 3D Tiles tileset has mandatory "asset" and "root" members).
         Path tileset = sceneDir.resolve("tileset.json");
         assertTrue(Files.isRegularFile(tileset), "Missing 3D Tiles entry point: " + tileset);
-        var descriptor = com.alibaba.fastjson2.JSON.parseObject(Files.readString(tileset));
-        assertTrue(descriptor.containsKey("asset") && descriptor.containsKey("root"),
+        var descriptor = Json.readObject(Files.readString(tileset));
+        assertTrue(descriptor.has("asset") && descriptor.has("root"),
                 "tileset.json is not a valid 3D Tiles tileset (missing 'asset'/'root').");
 
         // Per-cell placement invariant: the root tile must be identity (no
         // transform) — global ECEF placement now happens per cell so cells stay
         // tangent to the ellipsoid at their own centers rather than on one
         // dataset-wide plane (which floats far cells by the curvature sagitta).
-        assertFalse(descriptor.getJSONObject("root").containsKey("transform"),
+        assertFalse(descriptor.get("root").has("transform"),
                 "Root tile must not carry a transform under per-cell placement.");
 
         // At least one tile (a cell root, in a subtree file) must carry a real
@@ -131,22 +131,22 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
     private static void assertAtlasPagesWithinCap(Path glb, int maxAtlasSize) throws IOException {
         byte[] bytes = Files.readAllBytes(glb);
         int jsonLength = readIntLE(bytes, 12); // little-endian chunk length
-        JSONObject root = com.alibaba.fastjson2.JSON.parseObject(
+        JsonNode root = Json.readObject(
                 new String(bytes, 20, jsonLength, StandardCharsets.UTF_8));
-        JSONArray images = root.getJSONArray("images");
+        JsonNode images = root.get("images");
         if (images == null) {
             return;
         }
-        JSONArray bufferViews = root.getJSONArray("bufferViews");
+        JsonNode bufferViews = root.get("bufferViews");
         int binStart = 20 + jsonLength + 8; // skip the BIN chunk's own header
         for (int i = 0; i < images.size(); i++) {
-            Integer bv = images.getJSONObject(i).getInteger("bufferView");
+            Integer bv = Json.getInteger(images.get(i), "bufferView");
             if (bv == null) {
                 continue;
             }
-            JSONObject view = bufferViews.getJSONObject(bv);
-            int offset = view.getIntValue("byteOffset");
-            int length = view.getIntValue("byteLength");
+            JsonNode view = bufferViews.get(bv);
+            int offset = view.path("byteOffset").asInt(0);
+            int length = view.path("byteLength").asInt(0);
             BufferedImage img = ImageIO.read(
                     new ByteArrayInputStream(bytes, binStart + offset, length));
             assertTrue(img != null,
@@ -215,29 +215,29 @@ class RailwaySceneTiles3DExportIT extends AbstractRailwaySceneExportIT {
      */
     private static boolean hasEcefTransform(Path subtreeJson) {
         try {
-            JSONObject descriptor = com.alibaba.fastjson2.JSON.parseObject(Files.readString(subtreeJson));
-            return tileHasEcefTransform(descriptor.getJSONObject("root"));
+            JsonNode descriptor = Json.readObject(Files.readString(subtreeJson));
+            return tileHasEcefTransform(descriptor.get("root"));
         } catch (Exception e) {
             return false;
         }
     }
 
-    private static boolean tileHasEcefTransform(JSONObject tile) {
+    private static boolean tileHasEcefTransform(JsonNode tile) {
         if (tile == null) {
             return false;
         }
-        JSONArray t = tile.getJSONArray("transform");
+        JsonNode t = tile.get("transform");
         if (t != null && t.size() == 16) {
-            double tx = t.getDoubleValue(12), ty = t.getDoubleValue(13), tz = t.getDoubleValue(14);
+            double tx = t.path(12).asDouble(0), ty = t.path(13).asDouble(0), tz = t.path(14).asDouble(0);
             double r = Math.sqrt(tx * tx + ty * ty + tz * tz);
             if (r > 6.0e6 && r < 7.0e6) {
                 return true;
             }
         }
-        JSONArray children = tile.getJSONArray("children");
+        JsonNode children = tile.get("children");
         if (children != null) {
             for (int i = 0; i < children.size(); i++) {
-                if (tileHasEcefTransform(children.getJSONObject(i))) {
+                if (tileHasEcefTransform(children.get(i))) {
                     return true;
                 }
             }

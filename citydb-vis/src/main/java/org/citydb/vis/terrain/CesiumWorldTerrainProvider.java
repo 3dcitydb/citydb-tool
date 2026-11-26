@@ -5,12 +5,14 @@
 
 package org.citydb.vis.terrain;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.VisExportException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -116,27 +118,27 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
 
-        JSONObject endpoint = fetchIonEndpoint(ionToken);
-        this.assetToken = endpoint.getString("accessToken");
-        String baseUrl = endpoint.getString("url");
+        ObjectNode endpoint = fetchIonEndpoint(ionToken);
+        this.assetToken = Json.getString(endpoint, "accessToken");
+        String baseUrl = Json.getString(endpoint, "url");
         if (baseUrl == null || assetToken == null) {
             throw new VisExportException("Cesium ion endpoint response for World " +
                     "Terrain is missing 'url' or 'accessToken'.");
         }
 
-        JSONObject layer = fetchLayerJson(baseUrl);
+        ObjectNode layer = fetchLayerJson(baseUrl);
         this.tileUrlTemplate = buildTileUrlTemplate(baseUrl, layer);
-        this.availabilityLevels = layer.getIntValue("metadataAvailability", 0);
+        this.availabilityLevels = intValue(layer, "metadataAvailability", 0);
 
         if (availabilityLevels > 0) {
             this.acceptHeader = ACCEPT_METADATA;
             this.staticAvailable = null;
-            this.maxZoom = layer.getIntValue("maxzoom", DEFAULT_MAX_ZOOM);
+            this.maxZoom = intValue(layer, "maxzoom", DEFAULT_MAX_ZOOM);
             logger.info("Cesium World Terrain ready: metadata availability " +
                             "(availabilityLevels={}, maxzoom={}, base {}).",
                     availabilityLevels, maxZoom, baseUrl);
         } else {
-            JSONArray levels = layer.getJSONArray("available");
+            ArrayNode levels = Json.getArray(layer, "available");
             if (levels == null || levels.isEmpty()) {
                 throw new VisExportException("Cesium World Terrain layer.json has neither " +
                         "'metadataAvailability' nor a non-empty 'available' array.");
@@ -263,11 +265,27 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
         return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
     }
 
-    private static JSONObject parseJsonBody(byte[] body) throws IOException {
-        return JSON.parseObject(new String(decompress(body), StandardCharsets.UTF_8));
+    private static ObjectNode parseJsonBody(byte[] body) throws IOException {
+        ObjectNode object;
+        try {
+            object = Json.readObject(new String(decompress(body), StandardCharsets.UTF_8));
+        } catch (JacksonException e) {
+            // Jackson 3 parse errors are unchecked; rethrow as IOException so
+            // the callers report them like any other failed response.
+            throw new IOException("Response body is not valid JSON.", e);
+        }
+        if (object == null) {
+            throw new IOException("Response body is not a JSON object.");
+        }
+        return object;
     }
 
-    private JSONObject fetchIonEndpoint(String ionToken) throws VisExportException {
+    private static int intValue(JsonNode node, String name, int defaultValue) {
+        Integer value = Json.getInteger(node, name);
+        return value != null ? value : defaultValue;
+    }
+
+    private ObjectNode fetchIonEndpoint(String ionToken) throws VisExportException {
         try {
             HttpResponse<byte[]> response = httpGet(ION_ENDPOINT + ionToken,
                     "Accept", "application/json");
@@ -289,7 +307,7 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
         }
     }
 
-    private JSONObject fetchLayerJson(String baseUrl) throws VisExportException {
+    private ObjectNode fetchLayerJson(String baseUrl) throws VisExportException {
         String url = baseUrl.endsWith("/") ? baseUrl + "layer.json" : baseUrl + "/layer.json";
         try {
             HttpResponse<byte[]> response = httpGet(url,
@@ -308,13 +326,13 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
         }
     }
 
-    private static String buildTileUrlTemplate(String baseUrl, JSONObject layer) throws VisExportException {
-        JSONArray tiles = layer.getJSONArray("tiles");
+    private static String buildTileUrlTemplate(String baseUrl, ObjectNode layer) throws VisExportException {
+        ArrayNode tiles = Json.getArray(layer, "tiles");
         if (tiles == null || tiles.isEmpty()) {
             throw new VisExportException("Cesium World Terrain layer.json has no 'tiles' template.");
         }
-        String template = tiles.getString(0);
-        String version = layer.getString("version");
+        String template = tiles.get(0).asString();
+        String version = Json.getString(layer, "version");
         if (version != null) {
             template = template.replace("{version}", version);
         }
@@ -328,17 +346,17 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
      * {@code result[level-or-offset] = ranges}. Coordinates are kept verbatim in
      * TMS, with no y-flip (this provider works entirely in TMS).
      */
-    private static List<int[][]> parseLevelRanges(JSONArray levels) {
+    private static List<int[][]> parseLevelRanges(ArrayNode levels) {
         List<int[][]> result = new ArrayList<>(levels.size());
         for (int l = 0; l < levels.size(); l++) {
-            JSONArray rects = levels.getJSONArray(l);
+            JsonNode rects = levels.get(l);
             int[][] levelRects = new int[rects.size()][4];
             for (int r = 0; r < rects.size(); r++) {
-                JSONObject rect = rects.getJSONObject(r);
-                levelRects[r][0] = rect.getIntValue("startX");
-                levelRects[r][1] = rect.getIntValue("startY");
-                levelRects[r][2] = rect.getIntValue("endX");
-                levelRects[r][3] = rect.getIntValue("endY");
+                JsonNode rect = rects.get(r);
+                levelRects[r][0] = intValue(rect, "startX", 0);
+                levelRects[r][1] = intValue(rect, "startY", 0);
+                levelRects[r][2] = intValue(rect, "endX", 0);
+                levelRects[r][3] = intValue(rect, "endY", 0);
             }
             result.add(levelRects);
         }
@@ -389,7 +407,8 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
 
             List<int[][]> meta = null;
             if (decoded.metadataJson() != null) {
-                JSONArray avail = JSON.parseObject(decoded.metadataJson()).getJSONArray("available");
+                ObjectNode metadata = Json.readObject(decoded.metadataJson());
+                ArrayNode avail = metadata != null ? Json.getArray(metadata, "available") : null;
                 if (avail != null) {
                     meta = parseLevelRanges(avail);
                 }
@@ -397,7 +416,7 @@ public final class CesiumWorldTerrainProvider implements TerrainElevationProvide
             return new TerrainTile(decoded.tile(), meta);
         } catch (IOException | RuntimeException e) {
             // RuntimeException covers IllegalArgumentException from the decoder
-            // and any fastjson2 parse error on the METADATA JSON — all per-tile
+            // and any Jackson parse error on the METADATA JSON — all per-tile
             // recoverable, so the point falls back to a coarser level.
             logger.debug("Failed to fetch/decode terrain tile {}/{}/{}: {}",
                     level, x, y, e.getMessage());

@@ -64,7 +64,7 @@ module org.citydb.cli {
     opens org.citydb.cli.index.drop to info.picocli;
     opens org.citydb.cli.index.options to info.picocli;
     opens org.citydb.cli.index.status to info.picocli;
-    opens org.citydb.cli.visExporter to info.picocli;
+    opens org.citydb.cli.visExporter to info.picocli, tools.jackson.databind;
     opens org.citydb.cli.visExporter.i3s to info.picocli;
     opens org.citydb.cli.visExporter.tiles3d to info.picocli;
     opens org.citydb.cli.visExporter.options to info.picocli;

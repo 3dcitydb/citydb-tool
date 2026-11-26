@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 /**
  * Single entry of the layer's {@code statisticsInfo[]} array. Pairs an
  * {@link AttributeStorageInfo} entry (by matching {@code key}) with the
@@ -26,7 +24,6 @@ import com.alibaba.fastjson2.annotation.JSONType;
  *       trigger {@code PATH_COMPATIBILITY_WARNING}.</li>
  * </ul>
  */
-@JSONType(alphabetic = false)
 public record StatisticsInfo(String key, String name, String href) {
 
     public static StatisticsInfo of(int index, String fieldName) {

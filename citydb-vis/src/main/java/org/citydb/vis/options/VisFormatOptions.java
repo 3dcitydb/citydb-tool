@@ -5,7 +5,7 @@
 
 package org.citydb.vis.options;
 
-import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.citydb.database.schema.SchemaMapping;
 import org.citydb.io.writer.options.OutputFormatOptions;
 import org.citydb.vis.VisExportException;
@@ -39,8 +39,7 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     // ELLIPSOID / CESIUM_WORLD_TERRAIN select an active clamp target. Serialized
     // by its kebab-case value ("ellipsoid" / "cesium-world-terrain") so the JSON
     // config spelling matches the CLI --clamp-to-ground spelling exactly, rather
-    // than fastjson2's default enum-constant-name form (CESIUM_WORLD_TERRAIN).
-    @JSONField(serializeUsing = ClampMode.JsonWriter.class, deserializeUsing = ClampMode.JsonReader.class)
+    // than the enum-constant-name form (CESIUM_WORLD_TERRAIN); see ClampMode.
     private ClampMode clampMode;
     private double textureScale = 1.0;
     private int maxAtlasSize = 1024;
@@ -53,16 +52,16 @@ public abstract class VisFormatOptions implements OutputFormatOptions {
     // carries; the runtime ObjectStyleRegistry / AttributeProjection are
     // built from them by buildStyleRegistry() / buildAttributeProjection()
     // and are themselves excluded from serialization (they hold a
-    // SchemaMapping and a sealed-type tree that fastjson2 cannot round-trip).
+    // SchemaMapping and a sealed-type tree that cannot be round-tripped).
     // Keeping the raw strings in the config gives --default-color /
     // --feature-type-style / --attributes a clean JSON home with full CLI parity.
     private String defaultColor;
     private Map<String, String> featureTypeStyles;
     private List<String> attributes;
 
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private ObjectStyleRegistry styleRegistry = ObjectStyleRegistry.empty();
-    @JSONField(serialize = false, deserialize = false)
+    @JsonIgnore
     private AttributeProjection attributeProjection;
 
     // Cesium ion access token for Cesium World Terrain clamping. Stored in

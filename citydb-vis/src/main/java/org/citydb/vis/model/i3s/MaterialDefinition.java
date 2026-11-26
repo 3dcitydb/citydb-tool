@@ -5,7 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.styling.DefaultObjectStyle;
 
 import java.util.List;
@@ -31,7 +30,6 @@ import java.util.List;
  * is instead managed by the encoder's up-normal trick (see
  * {@link org.citydb.vis.encoder.i3s.I3SGeometryEncoder}).
  */
-@JSONType(alphabetic = false)
 public class MaterialDefinition {
     private static final String CULL_FACE = "none";
     // I3S 1.9 spec uses lowercase alpha-mode values ("opaque", "blend",
@@ -132,17 +130,15 @@ public class MaterialDefinition {
     /**
      * I3S 1.9 PBR section. {@code baseColorFactor} is a linear-space
      * {@code [r, g, b, a]} multiplier per the I3S spec (mirrors glTF). Stored
-     * as a {@code List<Float>} (rather than a fixed array) so fastjson2 can
+     * as a {@code List<Float>} (rather than a fixed array) so the JSON mapper can
      * omit it cleanly via the default null-skipping behaviour when the
      * caller leaves it at the spec default of {@code [1, 1, 1, 1]}.
      */
-    @JSONType(alphabetic = false)
     public record PbrMetallicRoughness(BaseColorTexture baseColorTexture,
                                        List<Float> baseColorFactor,
                                        int metallicFactor) {
     }
 
-    @JSONType(alphabetic = false)
     public record BaseColorTexture(int textureSetDefinitionId, int texCoord) {
     }
 }

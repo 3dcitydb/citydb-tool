@@ -5,11 +5,8 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.Map;
 
-@JSONType(alphabetic = false)
 public class MetadataClass {
     private final Map<String, MetadataProperty> properties;
 

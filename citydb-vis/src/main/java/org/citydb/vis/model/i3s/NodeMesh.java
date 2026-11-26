@@ -5,10 +5,8 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.SceneNode;
 
-@JSONType(alphabetic = false)
 public class NodeMesh {
     private MeshMaterial material;
     private MeshGeometry geometry;

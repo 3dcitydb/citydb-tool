@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.List;
 
 /**
@@ -21,11 +19,9 @@ import java.util.List;
  * geometry buffer file; with the single-buffer layout it always points
  * at {@code ./geometries/0} (the uncompressed legacy I3S 1.9 binary).
  */
-@JSONType(alphabetic = false)
 public record NodeFeatureDocument(List<FeatureEntry> featureData,
                                   List<GeometryDataRef> geometryData) {
 
-    @JSONType(alphabetic = false)
     public record GeometryDataRef(String href) {
     }
 

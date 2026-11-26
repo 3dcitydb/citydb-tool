@@ -5,7 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 
@@ -29,7 +28,6 @@ import java.util.Set;
  *   <li>{@code material.resource} must be non-negative.</li>
  * </ul>
  */
-@JSONType(alphabetic = false)
 public class NodePageEntry {
     private int index;
     private Obb obb;
@@ -51,7 +49,7 @@ public class NodePageEntry {
 
         entry.lodThreshold = node.getLodThreshold();
 
-        // Omit children for leaf nodes (null → not serialized by fastjson2).
+        // Omit children for leaf nodes (null → not serialized).
         // Esri's own I3S samples follow this convention; ArcGIS treats an
         // explicit empty array as a non-leaf with zero children, which is
         // semantically different from "this is a leaf".
@@ -64,7 +62,7 @@ public class NodePageEntry {
             entry.children = childIndices;
         }
 
-        // Omit parentIndex for root node (null → not serialized by fastjson2).
+        // Omit parentIndex for root node (null → not serialized).
         // ArcGIS rejects -1 as "not convertible to Int".
         entry.parentIndex = node.getParent() != null
                 ? node.getParent().getIndex() : null;
@@ -83,7 +81,6 @@ public class NodePageEntry {
      * (east / north / up); {@code quaternion} is the ENU→ECEF rotation at
      * {@code center}, supplied by {@link BoundingVolume#toObbQuaternion()}.
      */
-    @JSONType(alphabetic = false)
     public record Obb(double[] center, double[] halfSize, double[] quaternion) {
     }
 }

@@ -5,7 +5,6 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 
@@ -14,13 +13,12 @@ import java.util.List;
 
 /**
  * A tile node in the tileset hierarchy. Optional properties are left null
- * and omitted from the output by fastjson2's default null-skipping — this
+ * and omitted from the output by the JSON mapper's null-skipping — this
  * keeps tileset JSON compliant with the 3D Tiles spec (which treats
  * unspecified fields as absent, not as JSON {@code null}) and avoids
  * emitting {@code "content":null} / {@code "children":null} /
  * {@code "transform":null} clutter on every tile.
  */
-@JSONType(alphabetic = false)
 public class TileNode {
     private static final String REFINE_REPLACE = "REPLACE";
 

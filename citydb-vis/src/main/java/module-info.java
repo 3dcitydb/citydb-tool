@@ -1,7 +1,7 @@
 module org.citydb.vis {
     requires org.citydb.io;
     requires org.citydb.database;
-    requires com.alibaba.fastjson2;
+    requires tools.jackson.databind;
     requires org.slf4j;
     requires texture.atlas.creator;
     requires java.desktop;
@@ -13,8 +13,9 @@ module org.citydb.vis {
     exports org.citydb.vis.options;
     exports org.citydb.vis.styling;
 
-    opens org.citydb.vis.model.i3s;
-    opens org.citydb.vis.model.tiles3d;
+    opens org.citydb.vis.model.i3s to tools.jackson.databind;
+    opens org.citydb.vis.model.tiles3d to tools.jackson.databind;
+    opens org.citydb.vis.options to tools.jackson.databind;
 
     provides org.citydb.io.IOAdapter with
             org.citydb.vis.I3SAdapter,

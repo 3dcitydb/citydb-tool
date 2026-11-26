@@ -5,14 +5,12 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.scene.BoundingVolume;
 
 /**
  * 3D Tiles bounding volume expressed as a geographic {@code region}:
  * {@code [west, south, east, north, minHeight, maxHeight]} in radians/meters.
  */
-@JSONType(alphabetic = false)
 public record TileBoundingVolume(double[] region) {
 
     public static TileBoundingVolume fromExtent(double[] extent) {

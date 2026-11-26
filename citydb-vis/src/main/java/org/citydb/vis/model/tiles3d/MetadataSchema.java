@@ -5,14 +5,12 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrField;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-@JSONType(alphabetic = false)
 public class MetadataSchema {
     public static final String SCHEMA_ID = "citydb_feature_schema";
 

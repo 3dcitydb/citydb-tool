@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 /**
  * Single entry of a node's {@code features/0/index.json} {@code featureData}
  * array per the I3S 1.9 spec. The {@code id} is the integer feature index
@@ -21,6 +19,5 @@ import com.alibaba.fastjson2.annotation.JSONType;
  * per-node pick BVH; a shared node-level bbox collapses the BVH and
  * makes picks intermittently miss under oblique camera angles.
  */
-@JSONType(alphabetic = false)
 public record FeatureEntry(long id, double[] position, double[] mbb) {
 }

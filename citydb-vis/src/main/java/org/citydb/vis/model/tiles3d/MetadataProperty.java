@@ -5,10 +5,8 @@
 
 package org.citydb.vis.model.tiles3d;
 
-import com.alibaba.fastjson2.annotation.JSONType;
 import org.citydb.vis.model.AttrType;
 
-@JSONType(alphabetic = false)
 public record MetadataProperty(String type, String componentType) {
 
     /**

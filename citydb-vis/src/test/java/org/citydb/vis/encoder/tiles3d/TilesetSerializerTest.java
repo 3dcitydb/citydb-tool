@@ -5,12 +5,12 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.scene.BoundingVolume;
 import org.citydb.vis.scene.SceneNode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -59,22 +59,22 @@ class TilesetSerializerTest {
         new TilesetSerializer().writeRootTileset(tempDir, globalRoot, aggRoot,
                 new double[]{8.0, 48.0, 0.0, 9.0, 49.0, 100.0}, List.of(), tilePaths, GE_RATIO);
 
-        JSONObject tileset = JSONObject.parseObject(
+        JsonNode tileset = Json.readObject(
                 Files.readString(tempDir.resolve("tileset.json")));
-        assertEquals("1.1", tileset.getJSONObject("asset").getString("version"));
+        assertEquals("1.1", tileset.get("asset").path("version").asString(null));
 
         // Root geometricError = globalRoot radius × ratio, > 0 so Cesium
         // refines into the subtree child instead of rendering null content.
-        double rootGeo = tileset.getDoubleValue("geometricError");
+        double rootGeo = tileset.path("geometricError").asDouble(0);
         assertEquals(globalRoot.getBoundingVolume().getRadius() * GE_RATIO, rootGeo, 1e-9);
         assertTrue(rootGeo > 0);
 
-        JSONObject root = tileset.getJSONObject("root");
-        assertEquals("REPLACE", root.getString("refine"));
-        JSONArray children = root.getJSONArray("children");
+        JsonNode root = tileset.get("root");
+        assertEquals("REPLACE", root.path("refine").asString(null));
+        JsonNode children = root.get("children");
         assertEquals(1, children.size());
         assertEquals("subtrees/0.json",
-                children.getJSONObject(0).getJSONObject("content").getString("uri"));
+                children.get(0).get("content").path("uri").asString(null));
     }
 
     @Test
@@ -104,40 +104,40 @@ class TilesetSerializerTest {
 
         // subtrees/0.json: aggRoot inline, leafCell inline with GLB one level
         // up, splitCell as external ref.
-        JSONObject aggTileset = JSONObject.parseObject(
+        JsonNode aggTileset = Json.readObject(
                 Files.readString(subtreesDir.resolve("0.json")));
-        JSONObject aggTile = aggTileset.getJSONObject("root");
-        assertEquals("REPLACE", aggTile.getString("refine"));
-        JSONArray aggChildren = aggTile.getJSONArray("children");
+        JsonNode aggTile = aggTileset.get("root");
+        assertEquals("REPLACE", aggTile.path("refine").asString(null));
+        JsonNode aggChildren = aggTile.get("children");
         assertEquals(2, aggChildren.size());
 
-        JSONObject leafTile = aggChildren.getJSONObject(0);
-        assertEquals("../tiles/0/0.glb", leafTile.getJSONObject("content").getString("uri"));
-        assertEquals(0.0, leafTile.getDoubleValue("geometricError"),
+        JsonNode leafTile = aggChildren.get(0);
+        assertEquals("../tiles/0/0.glb", leafTile.get("content").path("uri").asString(null));
+        assertEquals(0.0, leafTile.path("geometricError").asDouble(0),
                 "mesh leaves must carry geometricError 0");
 
-        JSONObject splitRef = aggChildren.getJSONObject(1);
-        assertEquals("0/1.json", splitRef.getJSONObject("content").getString("uri"));
-        assertNull(splitRef.getJSONArray("children"),
+        JsonNode splitRef = aggChildren.get(1);
+        assertEquals("0/1.json", splitRef.get("content").path("uri").asString(null));
+        assertNull(splitRef.get("children"),
                 "external refs must not inline the subtree's children");
 
         // subtrees/0/1.json: splitCell inline with its two mesh leaves, GLB
         // URIs navigating two levels up.
-        JSONObject splitTileset = JSONObject.parseObject(
+        JsonNode splitTileset = Json.readObject(
                 Files.readString(subtreesDir.resolve("0").resolve("1.json")));
-        JSONArray splitChildren = splitTileset.getJSONObject("root").getJSONArray("children");
+        JsonNode splitChildren = splitTileset.get("root").get("children");
         assertEquals(2, splitChildren.size());
         assertEquals("../../tiles/0/1/0.glb",
-                splitChildren.getJSONObject(0).getJSONObject("content").getString("uri"));
+                splitChildren.get(0).get("content").path("uri").asString(null));
         assertEquals("../../tiles/0/1/1.glb",
-                splitChildren.getJSONObject(1).getJSONObject("content").getString("uri"));
+                splitChildren.get(1).get("content").path("uri").asString(null));
 
         // Intermediate geometricError = R × ratio; propagated identically to
         // the external-ref view and the inline root of the subtree file.
         double expected = splitCell.getBoundingVolume().getRadius() * GE_RATIO;
-        assertEquals(expected, splitRef.getDoubleValue("geometricError"), 1e-9);
+        assertEquals(expected, splitRef.path("geometricError").asDouble(0), 1e-9);
         assertEquals(expected,
-                splitTileset.getJSONObject("root").getDoubleValue("geometricError"), 1e-9);
+                splitTileset.get("root").path("geometricError").asDouble(0), 1e-9);
     }
 
     @Test
@@ -148,24 +148,24 @@ class TilesetSerializerTest {
         new TilesetSerializer().writeSubTileset(subtreesDir, aggRoot,
                 Set.of(2, 4, 5), tilePaths, cellTransforms(), new AtomicInteger(), GE_RATIO);
 
-        JSONObject aggTileset = JSONObject.parseObject(
+        JsonNode aggTileset = Json.readObject(
                 Files.readString(subtreesDir.resolve("0.json")));
-        JSONArray aggChildren = aggTileset.getJSONObject("root").getJSONArray("children");
+        JsonNode aggChildren = aggTileset.get("root").get("children");
 
         // Inline leaf cell carries its transform.
-        JSONArray leafTransform = aggChildren.getJSONObject(0).getJSONArray("transform");
+        JsonNode leafTransform = aggChildren.get(0).get("transform");
         assertNotNull(leafTransform);
-        assertEquals(10.0, leafTransform.getDoubleValue(12), 1e-12);
+        assertEquals(10.0, leafTransform.path(12).asDouble(0), 1e-12);
 
         // External-ref view of the split cell must stay identity (absent):
         // the transform is applied inside the referenced subtree file instead.
-        assertNull(aggChildren.getJSONObject(1).getJSONArray("transform"),
+        assertNull(aggChildren.get(1).get("transform"),
                 "transform on the external ref would be applied twice");
-        JSONObject splitTileset = JSONObject.parseObject(
+        JsonNode splitTileset = Json.readObject(
                 Files.readString(subtreesDir.resolve("0").resolve("1.json")));
-        JSONArray splitTransform = splitTileset.getJSONObject("root").getJSONArray("transform");
+        JsonNode splitTransform = splitTileset.get("root").get("transform");
         assertNotNull(splitTransform);
-        assertEquals(20.0, splitTransform.getDoubleValue(12), 1e-12);
+        assertEquals(20.0, splitTransform.path(12).asDouble(0), 1e-12);
     }
 
     // ---- fixture -----------------------------------------------------------

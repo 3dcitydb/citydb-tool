@@ -5,15 +5,15 @@
 
 package org.citydb.vis.options;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONReader;
+import org.citydb.core.json.Json;
+import org.citydb.core.json.JsonMapping;
 import org.citydb.vis.VisExportException;
 import org.citydb.vis.appearance.AtlasFallbackStrategy;
 import org.citydb.vis.appearance.AtlasOverflowMode;
 import org.citydb.vis.attribute.AttributeProjection;
 import org.citydb.vis.styling.DefaultObjectStyle;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 import java.util.List;
 import java.util.Map;
@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Pins the CLI ↔ JSON-config bridge on {@link VisFormatOptions}: styling and
- * attribute projection are configured as plain strings (which fastjson2 can
+ * attribute projection are configured as plain strings (which the JSON mapper can
  * round-trip) and only turned into their runtime objects by
  * {@link VisFormatOptions#buildStyleRegistry} /
  * {@link VisFormatOptions#buildAttributeProjection}, which the CLI controller
@@ -50,8 +50,8 @@ class VisFormatOptionsResolveTest {
     }
 
     private static Tiles3DFormatOptions roundTrip(VisFormatOptions options) {
-        return JSON.parseObject(JSON.toJSONString(options), Tiles3DFormatOptions.class,
-                JSONReader.Feature.UseDoubleForDecimals);
+        return JsonMapping.mapper().readValue(JsonMapping.mapper().writeValueAsString(options),
+                Tiles3DFormatOptions.class);
     }
 
     // ---- defaults before any build call ------------------------------------
@@ -95,12 +95,12 @@ class VisFormatOptionsResolveTest {
         options.buildAttributeProjection();
         assertNotNull(options.getAttributeProjection());
 
-        JSONObject json = JSON.parseObject(JSON.toJSONString(options));
+        JsonNode json = Json.readObject(JsonMapping.mapper().writeValueAsString(options));
 
-        // fastjson2 cannot round-trip a SchemaMapping-holding registry or a
+        // The JSON mapper cannot round-trip a SchemaMapping-holding registry or a
         // sealed Source tree, so both must be absent from the written config.
-        assertFalse(json.containsKey("styleRegistry"));
-        assertFalse(json.containsKey("attributeProjection"));
+        assertFalse(json.has("styleRegistry"));
+        assertFalse(json.has("attributeProjection"));
 
         // Reloading yields the raw strings but NOT the runtime objects — the
         // caller is required to rebuild them after merging CLI overrides.

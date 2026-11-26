@@ -5,12 +5,9 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.List;
 import java.util.UUID;
 
-@JSONType(alphabetic = false)
 public class Store {
     private static final String EPSG_4326_URI = "http://www.opengis.net/def/crs/EPSG/0/4326";
 
@@ -57,7 +54,6 @@ public class Store {
         return store;
     }
 
-    @JSONType(alphabetic = false)
     public static class GeometrySchema {
         private String geometryType;
         private List<HeaderEntry> header;
@@ -88,15 +84,12 @@ public class Store {
         }
     }
 
-    @JSONType(alphabetic = false)
     public record HeaderEntry(String property, String type) {
     }
 
-    @JSONType(alphabetic = false)
     public record AttributeDef(String valueType, int valuesPerElement) {
     }
 
-    @JSONType(alphabetic = false)
     public static class VertexAttributes {
         private AttributeDef position;
         private AttributeDef normal;
@@ -113,7 +106,6 @@ public class Store {
         }
     }
 
-    @JSONType(alphabetic = false)
     public static class FeatureAttributes {
         private AttributeDef id;
         private AttributeDef faceRange;

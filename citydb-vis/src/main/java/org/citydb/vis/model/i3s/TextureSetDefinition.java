@@ -5,8 +5,6 @@
 
 package org.citydb.vis.model.i3s;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.List;
 
 public class TextureSetDefinition {
@@ -18,7 +16,6 @@ public class TextureSetDefinition {
         return definition;
     }
 
-    @JSONType(alphabetic = false)
     public record Format(String name, String format) {
     }
 }

@@ -5,12 +5,13 @@
 
 package org.citydb.vis.writer.i3s;
 
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.vis.model.i3s.SceneLayer;
 import org.citydb.vis.util.BufferUtils;
 import org.citydb.vis.util.ProgressLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.io.ByteArrayOutputStream;
 import java.io.FilterOutputStream;
@@ -238,13 +239,13 @@ public final class SlpkPackager {
     }
 
     private static String buildMetadataJson(int nodeCount) {
-        JSONObject meta = new JSONObject();
+        ObjectNode meta = Json.objectNode();
         meta.put("folderPattern", "BASIC");
         meta.put("archiveCompressionType", "STORE");
         meta.put("resourceCompressionType", "GZIP");
         meta.put("I3SVersion", SceneLayer.I3S_VERSION);
         meta.put("nodeCount", nodeCount);
-        return meta.toJSONString();
+        return Json.write(meta);
     }
 
     // ---- ZIP writing with offset tracking ---------------------------------

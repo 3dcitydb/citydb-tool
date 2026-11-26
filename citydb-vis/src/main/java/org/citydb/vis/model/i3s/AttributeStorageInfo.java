@@ -8,11 +8,8 @@ package org.citydb.vis.model.i3s;
 import org.citydb.vis.model.AttrField;
 import org.citydb.vis.model.AttrType;
 
-import com.alibaba.fastjson2.annotation.JSONType;
-
 import java.util.List;
 
-@JSONType(alphabetic = false)
 public class AttributeStorageInfo {
     private String key;
     private String name;
@@ -48,11 +45,9 @@ public class AttributeStorageInfo {
         return info;
     }
 
-    @JSONType(alphabetic = false)
     public record HeaderEntry(String property, String valueType) {
     }
 
-    @JSONType(alphabetic = false)
     public static class ValueInfo {
         private String valueType;
         private int valuesPerElement;

@@ -5,9 +5,10 @@
 
 package org.citydb.vis.writer.i3s;
 
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import tools.jackson.databind.JsonNode;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -132,13 +133,13 @@ class SlpkPackagerTest {
         Path slpk = pack(tempDir);
 
         try (ZipFile zip = new ZipFile(slpk.toFile())) {
-            JSONObject metadata = JSONObject.parseObject(new String(
+            JsonNode metadata = Json.readObject(new String(
                     zip.getInputStream(zip.getEntry("metadata.json")).readAllBytes(),
                     StandardCharsets.UTF_8));
-            assertEquals("STORE", metadata.getString("archiveCompressionType"));
-            assertEquals("GZIP", metadata.getString("resourceCompressionType"));
-            assertEquals(1, metadata.getIntValue("nodeCount"));
-            assertNotNull(metadata.getString("I3SVersion"));
+            assertEquals("STORE", metadata.path("archiveCompressionType").asString(null));
+            assertEquals("GZIP", metadata.path("resourceCompressionType").asString(null));
+            assertEquals(1, metadata.path("nodeCount").asInt(0));
+            assertNotNull(metadata.path("I3SVersion").asString(null));
         }
     }
 

@@ -5,9 +5,7 @@
 
 package org.citydb.vis.encoder.tiles3d;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
+import org.citydb.core.json.Json;
 import org.citydb.model.common.Name;
 import org.citydb.vis.geometry.TriangleMesh;
 import org.citydb.vis.model.FeatureData;
@@ -15,6 +13,7 @@ import org.citydb.vis.model.InstanceBatch;
 import org.citydb.vis.model.InstancedFeature;
 import org.citydb.vis.styling.ObjectStyleRegistry;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -103,18 +102,18 @@ class InstancedNodeEncoderTest {
                 .metadata(propFeatures.size(), List.of(), List.of())
                 .enableShading(false)
                 .build();
-        JSONObject root = JSON.parseObject(new String(jsonBytes, StandardCharsets.UTF_8));
+        JsonNode root = Json.readObject(new String(jsonBytes, StandardCharsets.UTF_8));
 
-        assertEquals(2, root.getJSONArray("materials").size());
-        assertEquals(2, root.getJSONArray("images").size());
-        assertEquals(2, root.getJSONArray("textures").size());
-        JSONArray meshPrims = root.getJSONArray("meshes").getJSONObject(0)
-                .getJSONArray("primitives");
+        assertEquals(2, root.get("materials").size());
+        assertEquals(2, root.get("images").size());
+        assertEquals(2, root.get("textures").size());
+        JsonNode meshPrims = root.get("meshes").get(0)
+                .get("primitives");
         assertEquals(2, meshPrims.size());
-        assertNotEquals(meshPrims.getJSONObject(0).getIntValue("material"),
-                meshPrims.getJSONObject(1).getIntValue("material"),
+        assertNotEquals(meshPrims.get(0).path("material").asInt(0),
+                meshPrims.get(1).path("material").asInt(0),
                 "per-page primitives must not share a material");
-        assertTrue(root.getJSONArray("extensionsRequired").contains("EXT_mesh_gpu_instancing"));
+        assertTrue(root.get("extensionsRequired").valueStream().anyMatch(n -> "EXT_mesh_gpu_instancing".equals(n.asString())));
     }
 
     /**
@@ -199,13 +198,13 @@ class InstancedNodeEncoderTest {
                 .metadata(propFeatures.size(), List.of(), List.of())
                 .enableShading(false)
                 .build();
-        JSONObject root = JSON.parseObject(new String(jsonBytes, StandardCharsets.UTF_8));
-        assertTrue(root.getJSONArray("extensionsUsed").contains("CESIUM_primitive_outline"),
+        JsonNode root = Json.readObject(new String(jsonBytes, StandardCharsets.UTF_8));
+        assertTrue(root.get("extensionsUsed").valueStream().anyMatch(n -> "CESIUM_primitive_outline".equals(n.asString())),
                 "outline on an instanced primitive must be declared in extensionsUsed");
-        JSONObject primitive = root.getJSONArray("meshes").getJSONObject(0)
-                .getJSONArray("primitives").getJSONObject(0);
-        assertTrue(primitive.getJSONObject("extensions")
-                        .containsKey("CESIUM_primitive_outline"),
+        JsonNode primitive = root.get("meshes").get(0)
+                .get("primitives").get(0);
+        assertTrue(primitive.get("extensions")
+                        .has("CESIUM_primitive_outline"),
                 "instanced primitive JSON must reference the outline accessor");
     }
 }
