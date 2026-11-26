@@ -199,38 +199,53 @@ public class ImportHelper {
     }
 
     PropertyDescriptor importProperty(Property<?> property, long featureId) throws ImportException {
+        return importProperties(List.of(new PropertyImport(property, featureId))).getFirst();
+    }
+
+    List<PropertyDescriptor> importProperties(List<PropertyImport> imports) throws ImportException {
         try {
-            if (transformer != null) {
-                transformer.transform(property);
+            List<Property<?>> properties = new ArrayList<>(imports.size());
+            for (PropertyImport propertyImport : imports) {
+                if (transformer != null) {
+                    transformer.transform(propertyImport.property());
+                }
+
+                properties.add(propertyImport.property());
             }
 
             importTime = options.getImportTime().orElseGet(() -> OffsetDateTime.now().withNano(0));
             inheritedLifespan = Lifespan.NONE;
-            sequenceValues = sequenceGenerator.generateNextValues(property);
+            sequenceValues = sequenceGenerator.generateNextValues(properties);
 
-            PropertyDescriptor descriptor = switch (property) {
-                case FeatureProperty featureProperty -> tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
-                        .doImport(featureProperty, featureId);
-                case GeometryProperty geometryProperty ->
-                        tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
-                                .doImport(geometryProperty, featureId);
-                case ImplicitGeometryProperty implicitGeometryProperty ->
-                        tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
-                                .doImport(implicitGeometryProperty, featureId);
-                case AddressProperty addressProperty -> tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
-                        .doImport(addressProperty, featureId);
-                case AppearanceProperty appearanceProperty ->
-                        tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
-                                .doImport(appearanceProperty, featureId);
-                case Attribute attribute -> tableHelper.getOrCreateImporter(AttributeImporter.class)
-                        .doImport(attribute, featureId);
-            };
+            List<PropertyDescriptor> descriptors = new ArrayList<>(imports.size());
+            for (PropertyImport propertyImport : imports) {
+                descriptors.add(doImport(propertyImport.property(), propertyImport.featureId()));
+            }
 
             executeBatch(false, transactionMode == Importer.TransactionMode.COMMIT_BATCHES);
-            return descriptor;
+            return descriptors;
         } catch (Exception e) {
-            throw new ImportException("Failed to import property.", e);
+            throw new ImportException("Failed to import properties.", e);
         }
+    }
+
+    private PropertyDescriptor doImport(Property<?> property, long featureId) throws ImportException, SQLException {
+        return switch (property) {
+            case FeatureProperty featureProperty -> tableHelper.getOrCreateImporter(FeaturePropertyImporter.class)
+                    .doImport(featureProperty, featureId);
+            case GeometryProperty geometryProperty -> tableHelper.getOrCreateImporter(GeometryPropertyImporter.class)
+                    .doImport(geometryProperty, featureId);
+            case ImplicitGeometryProperty implicitGeometryProperty ->
+                    tableHelper.getOrCreateImporter(ImplicitGeometryPropertyImporter.class)
+                            .doImport(implicitGeometryProperty, featureId);
+            case AddressProperty addressProperty -> tableHelper.getOrCreateImporter(AddressPropertyImporter.class)
+                    .doImport(addressProperty, featureId);
+            case AppearanceProperty appearanceProperty ->
+                    tableHelper.getOrCreateImporter(AppearancePropertyImporter.class)
+                            .doImport(appearanceProperty, featureId);
+            case Attribute attribute -> tableHelper.getOrCreateImporter(AttributeImporter.class)
+                    .doImport(attribute, featureId);
+        };
     }
 
     public void executeBatch(Table table) throws SQLException {

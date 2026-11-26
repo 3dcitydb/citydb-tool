@@ -23,10 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -163,6 +160,10 @@ public class Importer implements AutoCloseable {
 
     public CompletableFuture<PropertyDescriptor> importProperty(Property<?> property, long featureId) {
         return doImport(() -> contexts.get().importProperty(property, featureId));
+    }
+
+    public CompletableFuture<List<PropertyDescriptor>> importProperties(List<PropertyImport> imports) {
+        return doImport(() -> contexts.get().importProperties(List.copyOf(imports)));
     }
 
     public Importer registerTargets(CacheType type, Map<String, Long> targets) throws ImportException {

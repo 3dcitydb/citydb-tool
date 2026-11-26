@@ -27,10 +27,7 @@ import org.citydb.operation.importer.reference.CacheType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class SequenceGenerator {
     private final ImportHelper helper;
@@ -48,9 +45,12 @@ public class SequenceGenerator {
         return generateNextValues(processor);
     }
 
-    public SequenceValues generateNextValues(Property<?> property) throws SQLException {
+    public SequenceValues generateNextValues(Collection<? extends Property<?>> properties) throws SQLException {
         Processor processor = new Processor();
-        processor.walk(property);
+        for (Property<?> property : properties) {
+            processor.walk(property);
+        }
+
         return generateNextValues(processor);
     }
 
